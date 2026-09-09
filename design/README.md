@@ -48,8 +48,16 @@ masks them itself.
 
 ## Known gaps
 
-Designed but not drawn, or drawn but not exported:
+The canvas predates §5a of the specification, so none of the selection features
+are designed. Several states inside the practice loop are also missing.
 
-- The browse-and-star screen from §5a of the spec has no design yet.
-- The expanded twelve-topic list is drawn (24) but only for the stats card.
-- Personal-deck states assume zero cards; nothing shows a populated personal deck.
+`next-brief.md` holds the full analysis and a ready-to-paste brief for the next
+design round. In short:
+
+- **Blocking** — the browse-and-star screen, the deck and `only=` dimensions at
+  session start, any indication that a filtered session is running, めくる's four
+  rating buttons, all of 話す, and a card with no audio in 聞く.
+- **Important** — first-run deck download, leaving and resuming a session, an
+  expired session cookie (distinct from offline, which 25 covers).
+- **Smaller** — a populated personal deck, the topic picker at twelve entries,
+  pitch accent switched on, sign-out confirmation.
