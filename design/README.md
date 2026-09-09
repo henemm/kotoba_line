@@ -46,6 +46,32 @@ Frame sizes: 390 × 844 (iPhone), 834 × 1194 (iPad portrait), 1194 × 834 (land
 the safe circle), and a 180 for iOS. Square, no rounding, no transparency; iOS
 masks them itself.
 
+## Where the built screens depart from the canvas
+
+Three, all on **22/26 Settings**, and all because the drawing promises something
+the data does not yet support. Each is a row that would have been a dead
+control.
+
+- **The deck rows have no toggles.** `user_settings` has no per-deck column, and
+  with one deck imported a switch could only turn the whole app off. The rows
+  are a name and a count. The personal deck stays at zero cards exactly as the
+  design intends, so the second import has somewhere to land.
+- **"Topics in a session" is not there.** It leads to the topic picker (23),
+  which is drawn but not wired, and a chevron that goes nowhere is worse than a
+  row that is not yet offered.
+- **Pitch accent is not there.** Kaishi *does* carry it — 1,500 of its 1,501
+  notes have a Pitch Accent field — but it arrives as katakana wrapped in
+  inline-styled spans that draw the overline and the drop, the import does not
+  map it, and no card row holds it. Rendering it means parsing that markup into
+  moras rather than handing it to `innerHTML`, which this client never does.
+  Until then the switch would write a value nothing reads. See `next-brief.md`:
+  "pitch accent switched on" is also an undesigned state.
+
+Two annotations on 22 are wrong rather than unimplemented, and were already
+recorded in `next-brief.md`: the new-card range is **5–40, and zero is not
+legitimate** (the product owner's ruling), and the diagnostics line for the
+audio cache reads "nothing cached yet" until phase 5 gives it a cache to count.
+
 ## Known gaps
 
 The canvas predates §5a of the specification, so none of the selection features

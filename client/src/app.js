@@ -3,6 +3,7 @@ import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
 import { sessionScreen } from "./screens/session.js";
+import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
 import { el, render, statusBar } from "./ui/dom.js";
 
@@ -21,7 +22,11 @@ const state = {
   // covered and the tab bar never competes with an answer.
   session: undefined,
   summary: undefined,
-  sessionLength: 20,
+  // The server's copy of the settings, so the session length and the sound
+  // note agree with the Settings screen on every device. Held here rather
+  // than fetched per screen because the practice tab needs it before the
+  // Settings tab has ever been opened.
+  settings: { newPerDay: 15, sessionLength: 20, readAloud: true, pitchAccent: false },
   online: navigator.onLine,
   pendingEvents: 0,
   jokerBadge: false,
@@ -75,24 +80,16 @@ function tabBar() {
   );
 }
 
-function placeholder(title, note) {
-  return el(
-    "div",
-    { style: { flex: "1", display: "flex", flexDirection: "column" } },
-    el("div", { style: { padding: "6px 26px 22px", fontSize: "17px", fontWeight: "700" }, text: title }),
-    el("p", {
-      style: { margin: "0", padding: "0 26px", fontSize: "14px", lineHeight: "1.6", color: "var(--ink-muted)" },
-      text: note,
-    }),
-  );
-}
-
 function currentScreen() {
   if (state.tab === "practise") {
     return practiseScreen({
-      sessionLength: state.sessionLength,
+      sessionLength: state.settings.sessionLength,
+      readAloud: state.settings.readAloud,
       onSessionLength: (len) => {
-        state.sessionLength = len;
+        state.settings = { ...state.settings, sessionLength: len };
+        // Best effort: the picker is a shortcut into the same stored setting,
+        // and a session started offline should not be blocked by it.
+        api.updateSettings({ sessionLength: len }).catch(() => {});
       },
       onStart: startSession,
       onDrillTopic: () => {
@@ -102,7 +99,19 @@ function currentScreen() {
     });
   }
   if (state.tab === "stats") return statsScreen();
-  return placeholder("Settings", "Designed in 22; wiring comes next.");
+  return settingsScreen({
+    user: state.user,
+    onSettings: (settings) => {
+      state.settings = settings;
+    },
+    onSignOut: () => {
+      state.user = undefined;
+      state.tab = "practise";
+      state.session = undefined;
+      state.summary = undefined;
+      renderApp();
+    },
+  });
 }
 
 function startSession({ mode = "choose", ...filters } = {}) {
@@ -118,6 +127,7 @@ function renderApp() {
     render(app, signInScreen({ onSignedIn: (user) => {
       state.user = user;
       state.tab = "practise";
+      loadSettings();
       renderApp();
     } }));
     return;
@@ -146,7 +156,8 @@ function renderApp() {
       sessionScreen({
         mode,
         filters,
-        limit: state.sessionLength === "All" ? 60 : state.sessionLength,
+        limit: state.settings.sessionLength,
+        readAloud: state.settings.readAloud,
         onExit: () => {
           state.session = undefined;
           renderApp();
@@ -176,6 +187,21 @@ window.addEventListener("offline", () => {
   renderApp();
 });
 
+/**
+ * Fetch the stored settings and redraw. Failure is not an error worth showing
+ * on the practice tab: the defaults above match the schema's, so the worst an
+ * offline start costs is a session length she can change on the next screen.
+ */
+async function loadSettings() {
+  try {
+    const { settings } = await api.settings();
+    state.settings = settings;
+    renderApp();
+  } catch {
+    /* keep the defaults */
+  }
+}
+
 /** Restore the session if the cookie is still good, otherwise sign in. */
 try {
   state.user = await api.me();
@@ -185,3 +211,4 @@ try {
 }
 
 renderApp();
+if (state.user) loadSettings();

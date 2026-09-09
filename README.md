@@ -10,10 +10,10 @@ iPad never disagree. Fully usable offline; events reconcile afterwards.
 
 **Status: phase 4, in progress.** The server is complete — schema,
 authentication, the event log with FSRS scheduling, the deck import (1,500 cards
-with audio, 191 topic-tagged), and the whole API including §5a's filters. The
-client has sign-in, the practise tab, Stats, and a working session in 選ぶ with
-its summary. The other three modes wait on the design round described in
-`design/next-brief.md`.
+with audio, 191 topic-tagged), and the whole API including §5a's filters and the
+settings. The client has sign-in, the practise tab, Stats, Settings, and a
+working session in 選ぶ with its summary. The other three modes wait on the
+design round described in `design/next-brief.md`.
 
 Deployable now — `ops/README.md` is the runbook.
 

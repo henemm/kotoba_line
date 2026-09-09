@@ -33,7 +33,7 @@ in `server/README.md`.
 | Tab bar | 11 | done — three tabs, active dot, joker badge |
 | Offline strip | 25 | done — the three states, never during a session |
 | Stats | 02, 12, 24 | done — level, streak, jokers, maturity, topics with the truncation rule |
-| Settings | 22, 26 | placeholder; the API is partly ready |
+| Settings | 22, 26 | done — daily load, decks, sound, account, diagnostics |
 | Session | 16 | done for 選ぶ — the other three lines need their cards designed |
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |

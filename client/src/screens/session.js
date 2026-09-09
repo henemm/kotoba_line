@@ -30,7 +30,14 @@ const uuid = () =>
  * card is designed; めくる needs four rating buttons and 話す needs its own
  * states, and neither is drawn (design/next-brief.md).
  */
-export function sessionScreen({ mode = "choose", filters = {}, limit = 20, onFinish, onExit }) {
+export function sessionScreen({
+  mode = "choose",
+  filters = {},
+  limit = 20,
+  readAloud = true,
+  onFinish,
+  onExit,
+}) {
   const line = modeByKey(mode) ?? modeByKey("choose");
   const root = el("div.session", { style: { "--rail": line.colour } });
   render(root, el("div.loading", { text: "…" }));
@@ -135,8 +142,11 @@ export function sessionScreen({ mode = "choose", filters = {}, limit = 20, onFin
       }),
     );
 
+    // "Read cards aloud" governs what happens on its own. The ♪ button above
+    // still works with it off — tapping it is an explicit request, and a
+    // setting about automatic sound should not disable a control just pressed.
     unlock();
-    say(card.word, card.word_audio);
+    if (readAloud) say(card.word, card.word_audio);
 
     const options = shuffle([card, ...pickDistractors(card, pool)]);
 
@@ -183,7 +193,7 @@ export function sessionScreen({ mode = "choose", filters = {}, limit = 20, onFin
     });
 
     if (card.sentence) {
-      say(card.sentence, card.sentence_audio, { rate: 0.85 });
+      if (readAloud) say(card.sentence, card.sentence_audio, { rate: 0.85 });
       area.append(revealedSentence(card));
     }
 

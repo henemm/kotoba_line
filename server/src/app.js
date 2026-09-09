@@ -6,6 +6,7 @@ import { pruneExpiredSessions, userForToken } from "./sessions.js";
 import authRoutes from "./routes/auth.js";
 import eventRoutes from "./routes/events.js";
 import deckRoutes from "./routes/deck.js";
+import settingsRoutes from "./routes/settings.js";
 import statsRoutes from "./routes/stats.js";
 
 /**
@@ -20,6 +21,11 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
     logger: logger ?? { level: config.logLevel },
     // nginx is the only entry point (§9) and sets X-Forwarded-For.
     trustProxy: true,
+    // Fastify's default is to *delete* a property `additionalProperties: false`
+    // rejects, so a misspelled field returns 200 and changes nothing. That is
+    // the same shape of failure as the media path that 404'd invisibly: the
+    // request looks like it worked. Reject instead.
+    ajv: { customOptions: { removeAdditional: false } },
   });
 
   app.decorate("db", database);
@@ -42,6 +48,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   await app.register(eventRoutes);
   await app.register(statsRoutes);
   await app.register(deckRoutes);
+  await app.register(settingsRoutes);
 
   app.addHook("onClose", async () => database.close());
 

@@ -8,6 +8,7 @@ import { splitEmphasis } from "../src/screens/session.js";
 import { mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
+import { when } from "../src/screens/settings.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -252,5 +253,22 @@ describe("where the audio lives", () => {
     assert.ok(url.startsWith("/kotoba/media/"));
     assert.ok(!url.includes(" "));
     assert.equal(decodeURIComponent(url), "/kotoba/media/私_ワタシ━_0_NHK-2016.mp3");
+  });
+});
+
+describe("the diagnostics clock", () => {
+  const at = (iso) => Date.parse(iso) / 1000;
+
+  it("shows a time for today and a date for anything older", () => {
+    const now = new Date("2026-09-09T20:00:00");
+    assert.match(when(at("2026-09-09T09:38:00"), now), /^\d{2}:\d{2}$/);
+    assert.match(when(at("2026-09-04T09:38:00"), now), /^\d{2} \w{3,4}$/);
+  });
+
+  it("does not call yesterday evening today just because the clock is close", () => {
+    // The trap is comparing elapsed hours rather than calendar days: 23:50
+    // and 00:10 are ten hours apart in neither direction that matters.
+    const now = new Date("2026-09-09T00:10:00");
+    assert.match(when(at("2026-09-08T23:50:00"), now), /^\d{2} \w{3,4}$/);
   });
 });

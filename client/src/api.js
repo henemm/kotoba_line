@@ -77,4 +77,7 @@ export const api = {
   star: (cardId, starred) => request("/stars", { method: "POST", body: { cardId, starred } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
   stats: () => request("/stats"),
+
+  settings: () => request("/settings"),
+  updateSettings: (patch) => request("/settings", { method: "PATCH", body: patch }),
 };
