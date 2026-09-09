@@ -8,8 +8,9 @@ Self-hosted behind nginx under the path `/kotoba/`, with a small Fastify + SQLit
 backend. Progress is derived from an append-only review log, so an iPhone and an
 iPad never disagree. Fully usable offline; events reconcile afterwards.
 
-**Status: phase 2.** The backend runs — schema, authentication, and the
-append-only event log with FSRS scheduling. No deck and no client yet.
+**Status: phase 3.** The backend runs — schema, authentication, the append-only
+event log with FSRS scheduling, and the deck import: 1,500 cards with audio.
+Cards carry no topic tags yet, and there is no client.
 
 ## Repository layout
 
@@ -21,6 +22,7 @@ append-only event log with FSRS scheduling. No deck and no client yet.
 | `design/` | Screen designs for everything around the practice loop — 26 screens with named states, iPhone and iPad. See `design/README.md`. |
 | `prototype/kotoba-line.html` | Working prototype of the four modes. The agreed visual direction, not a placeholder. |
 | `server/` | Node 22 + Fastify + better-sqlite3 — the schema, authentication and sessions. See `server/README.md`. |
+| `import/` | Deck acquisition, conversion and verification. See `import/README.md`. |
 | `ops/` | Dockerfile, compose file, nginx configuration. |
 
 ## Where to start

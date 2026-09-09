@@ -1,0 +1,14 @@
+{
+  "name": "kotoba-line",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "import": "node import/import-deck.js",
+    "verify-import": "node import/verify.js",
+    "test:import": "node --test import/test/*.test.js"
+  }
+}
