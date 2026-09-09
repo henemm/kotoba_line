@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover so the home indicator inset is ours to respect -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#141824">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ことばライン">
+<title>ことばライン</title>
+
+<link rel="manifest" href="./manifest.webmanifest">
+<!-- iOS ignores manifest icons for the home screen (§7). -->
+<link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon-180.png">
+
+<link rel="stylesheet" href="./src/ui/tokens.css">
+<link rel="stylesheet" href="./src/ui/base.css">
+<link rel="stylesheet" href="./src/ui/screens.css">
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>

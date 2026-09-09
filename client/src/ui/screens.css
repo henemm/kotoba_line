@@ -1,0 +1,449 @@
+/* ══ 01 Sign in ═══════════════════════════════════════════════════
+   The rail runs the four line colours in order and terminates at the
+   primary action — the start of a line rather than a form. */
+
+.signin {
+  flex: 1;
+  position: relative;
+  padding: 34px 24px 0 62px;
+}
+
+.signin .rail {
+  position: absolute;
+  left: 32px;
+  top: 44px;
+  bottom: 150px;
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    var(--line-choose) 0 22%,
+    var(--line-listen) 22% 48%,
+    var(--line-speak) 48% 74%,
+    var(--line-flip) 74% 100%
+  );
+}
+
+.signin .block {
+  position: relative;
+}
+
+.signin .block .stop {
+  position: absolute;
+  left: -40px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--night);
+  box-sizing: border-box;
+}
+
+.signin .title {
+  margin-bottom: 44px;
+}
+.signin .title .stop {
+  top: 8px;
+  border: 5px solid var(--line-choose);
+}
+.signin h1 {
+  margin: 0;
+  font-family: var(--jp);
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+.signin .tagline {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.signin .name {
+  margin-bottom: 34px;
+}
+.signin .name .stop {
+  top: 26px;
+  border: 5px solid var(--line-listen);
+}
+.signin .name input {
+  width: 100%;
+  height: 56px;
+  background: var(--surface);
+  border: 0;
+  border-radius: 13px;
+  padding: 0 18px;
+  font: 600 18px/1 inherit;
+  color: var(--ink);
+  /* One line; a long handle truncates rather than wrapping. */
+  text-overflow: ellipsis;
+}
+.signin .name input::placeholder {
+  color: var(--ink-dim);
+}
+
+.signin .pin .stop {
+  top: 26px;
+  border: 5px solid var(--line-speak);
+}
+.signin .pin .cells {
+  display: flex;
+  gap: 8px;
+}
+.signin .pin .cell {
+  flex: 1;
+  height: 58px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+.signin .pin .cell .filled {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--ink);
+  display: block;
+}
+.signin .pin .cell.focus {
+  border-color: var(--ink);
+}
+.signin .pin .cell.focus .caret {
+  width: 2px;
+  height: 24px;
+  background: var(--ink);
+  display: block;
+}
+/* A hidden field carries the real input, so the OS keyboard and password
+   managers behave while the cells stay a drawing. */
+.signin .pin .capture {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+/* The message slot is always present, so nothing reflows when it fills. */
+.signin .message {
+  min-height: 22px;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.signin .message .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: block;
+  flex: none;
+}
+.signin .message span:last-child {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.signin[data-state="error"] .pin .stop {
+  border-color: var(--no);
+}
+.signin[data-state="error"] .pin .cell {
+  border-color: var(--no);
+}
+.signin[data-state="error"] .message .dot {
+  background: var(--no);
+}
+.signin[data-state="error"] .message span:last-child {
+  color: var(--no);
+}
+
+/* Rate limited: the whole form goes inert and the rail loses its colour. */
+.signin[data-state="limited"] .rail {
+  opacity: 0.35;
+}
+.signin[data-state="limited"] .title .stop {
+  opacity: 0.35;
+}
+.signin[data-state="limited"] .name {
+  opacity: 0.45;
+}
+.signin[data-state="limited"] .pin .stop {
+  border-color: var(--surface-hi);
+}
+.signin[data-state="limited"] .pin .cells {
+  opacity: 0.45;
+}
+.signin[data-state="limited"] .message .dot {
+  background: var(--ink-muted);
+}
+.signin[data-state="limited"] .message span:last-child {
+  color: var(--ink-muted);
+}
+
+.signin-foot {
+  flex: none;
+  padding: 0 24px 30px 62px;
+  position: relative;
+}
+.signin-foot .rail-end {
+  position: absolute;
+  left: 32px;
+  bottom: 118px;
+  width: 4px;
+  height: 26px;
+  background: var(--line-flip);
+}
+.signin-foot .stop {
+  position: absolute;
+  left: 22px;
+  bottom: 82px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--night);
+  border: 5px solid var(--line-flip);
+  box-sizing: border-box;
+}
+.signin-foot .note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.signin[data-state="limited"] ~ .signin-foot .rail-end,
+.signin[data-state="limited"] ~ .signin-foot .stop {
+  border-color: var(--surface-hi);
+  background: var(--surface-hi);
+}
+
+@media (min-width: 700px) {
+  /* On a tablet there is no one-handed reach to respect, so the column is
+     centred rather than pinned to the bottom. */
+  .signin {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 0;
+  }
+  .signin h1 {
+    font-size: 52px;
+  }
+}
+
+/* ══ 10/15 Practise tab ═══════════════════════════════════════════ */
+
+.practise {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.practise .head {
+  padding: 24px var(--gutter) 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.practise .head h1 {
+  margin: 0;
+  font-family: var(--jp);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+}
+.practise .head p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/* On a normal day this replaces the heading block with a single line. */
+.practise .due-line {
+  padding: 24px var(--gutter) 20px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.practise .next-due {
+  margin: 0 var(--gutter) 22px;
+  background: var(--night-deep);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.practise .next-due .label {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.practise .next-due .value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Offers are cards rather than stations, so they do not compete with the
+   rail below them. */
+.practise .offers {
+  padding: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.practise .offer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: var(--surface);
+  border: 0;
+  border-radius: 14px;
+  padding: 15px 16px;
+  text-align: left;
+  color: inherit;
+}
+.practise .offer .copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.practise .offer .title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.practise .offer .detail {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.practise .rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 26px var(--gutter) 6px;
+}
+.practise .rule .line {
+  flex: 1;
+  height: 1px;
+  background: var(--surface-hi);
+}
+.practise .rule .text {
+  font: 400 12px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.practise .lines {
+  padding: 8px var(--gutter) 20px;
+  position: relative;
+}
+/* The rail runs from the centre of the first station to the centre of the
+   last. Anchoring it to both ends rather than giving it a fixed height keeps
+   it correct when a row grows — the Japanese line is the tallest thing on the
+   screen and its metrics vary by platform font. */
+.practise .lines .rail {
+  position: absolute;
+  left: calc(var(--gutter) + 13px);
+  top: calc(8px + 14px + 15px);
+  bottom: calc(20px + 14px + 15px);
+  width: 4px;
+  background: var(--surface-hi);
+  border-radius: 2px;
+}
+.practise .line-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 0;
+  position: relative;
+  width: 100%;
+  background: none;
+  border: 0;
+  text-align: left;
+  color: inherit;
+}
+.practise .line-row .copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.practise .line-row .jp {
+  font-family: var(--jp);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.practise .line-row .en {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.practise .length {
+  padding: 6px var(--gutter) 24px;
+  display: flex;
+  gap: 8px;
+}
+.practise .length button {
+  flex: 1;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  color: var(--ink-muted);
+  font: 600 15px/1 inherit;
+}
+.practise .length button[aria-pressed="true"] {
+  background: var(--surface-hi);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.practise .sound-note {
+  margin: 0;
+  padding: 0 var(--gutter) 24px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 700px) {
+  .practise .head h1 {
+    font-size: 52px;
+  }
+  .practise .head p {
+    font-size: 17px;
+  }
+  .practise .lines .rail {
+    left: calc(var(--gutter) + 16px);
+    top: calc(8px + 20px + 18px);
+    bottom: calc(20px + 20px + 18px);
+  }
+  .practise .line-row {
+    gap: 22px;
+    padding: 20px 0;
+  }
+  .practise .line-row .jp {
+    font-size: 28px;
+  }
+  .practise .line-row .en {
+    font-size: 15px;
+  }
+}
+
+/* ══ shared: a screen that is still loading ═══════════════════════ */
+.loading {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+  font-size: 14px;
+}

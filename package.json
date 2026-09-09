@@ -10,6 +10,8 @@
     "import": "node import/import-deck.js",
     "verify-import": "node import/verify.js",
     "test:import": "node --test import/test/*.test.js",
-    "tag": "node import/tag-cards.js"
+    "tag": "node import/tag-cards.js",
+    "dev:client": "node client/dev-server.js",
+    "test:client": "node --test client/test/*.test.js"
   }
 }
