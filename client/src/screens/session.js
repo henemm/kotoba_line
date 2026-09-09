@@ -2,6 +2,8 @@ import { api } from "../api.js";
 import { say, stop, unlock } from "../audio.js";
 import { loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
+import { flush, record } from "../outbox.js";
+import { sessionQueue } from "../queue.js";
 import { el, render } from "../ui/dom.js";
 
 /** How long the answer stays on screen before the next card. */
@@ -59,7 +61,7 @@ export function sessionScreen({
     try {
       const [loaded, q, snapshot] = await Promise.all([
         loadDeck(),
-        api.queue({ ...filters, mode, limit }),
+        sessionQueue({ ...filters, mode, limit }),
         api.stats().catch(() => undefined),
       ]);
       deck = loaded;
@@ -68,6 +70,20 @@ export function sessionScreen({
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];
       queue = q.cardIds.map((id) => deck.get(id)).filter(Boolean);
+
+      // Offline and this combination of filters was never fetched while
+      // online. Saying so beats bouncing silently back to the tab, because
+      // "nothing due" and "never asked" are different facts.
+      if (q.never && queue.length === 0) {
+        render(
+          root,
+          el("div.session-error", {},
+            el("p", { text: "Offline, and this hasn't been practised online yet — so there is nothing here to run." }),
+            el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
+          ),
+        );
+        return;
+      }
     } catch {
       render(
         root,
@@ -223,14 +239,19 @@ export function sessionScreen({
   async function finish() {
     stop();
 
+    // §4: durable first, sent second. If the app dies between these two lines
+    // the reviews go up on the next start; if it died before the first, they
+    // never happened at all.
+    await record(events);
+
     let accepted = false;
     let after;
     try {
-      await api.events(events);
-      accepted = true;
-      after = await api.stats();
+      const result = await flush();
+      accepted = result.remaining === 0;
+      if (accepted) after = await api.stats();
     } catch {
-      // Phase 5 gives this an outbox; for now the summary says what happened.
+      // The events are on disk either way; the summary says what happened.
     }
 
     // §8a: the client displays progress and never computes it. The figure on

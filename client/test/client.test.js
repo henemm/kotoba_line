@@ -9,6 +9,7 @@ import { mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { when } from "../src/screens/settings.js";
+import { offlineStatus } from "../src/outbox.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -270,5 +271,34 @@ describe("the diagnostics clock", () => {
     // and 00:10 are ten hours apart in neither direction that matters.
     const now = new Date("2026-09-09T00:10:00");
     assert.match(when(at("2026-09-08T23:50:00"), now), /^\d{2} \w{3,4}$/);
+  });
+});
+
+describe("the offline strip's three states (design 25)", () => {
+  const text = (opts) => offlineStatus(opts)?.text ?? null;
+
+  it("shows nothing at all when online with an empty outbox", () => {
+    assert.equal(offlineStatus({ online: true, waiting: 0, justSent: 0 }), null);
+  });
+
+  it("states the queue depth when offline", () => {
+    assert.equal(text({ online: false, waiting: 14 }), "Offline · 14 reviews waiting");
+    assert.equal(text({ online: false, waiting: 0 }), "Offline");
+  });
+
+  it("counts what was sent, not what is left", () => {
+    // The one arithmetic mistake this strip can make, and the version before
+    // this put the waiting count next to the word "sent".
+    assert.equal(text({ online: true, waiting: 0, justSent: 14 }), "Synced · 14 reviews sent");
+  });
+
+  it("does not claim to be offline when the outbox is merely stuck", () => {
+    assert.equal(text({ online: true, waiting: 3 }), "3 reviews waiting to send");
+    assert.equal(offlineStatus({ online: true, waiting: 3 }).tone, "offline");
+  });
+
+  it("says review, not reviews, for one", () => {
+    assert.equal(text({ online: false, waiting: 1 }), "Offline · 1 review waiting");
+    assert.equal(text({ online: true, justSent: 1 }), "Synced · 1 review sent");
   });
 });

@@ -1,20 +1,46 @@
 import { api } from "./api.js";
+import { allCards, getMeta, putCards, setMeta } from "./store.js";
 
 /**
- * The deck, held in memory for the session.
+ * The deck: IndexedDB on disk, a Map in memory for the session.
  *
- * Phase 5 moves this into IndexedDB with `since=` fetching only the difference;
- * for now it is one fetch per app start, which is what "online only at this
- * stage" means.
+ * `/api/deck?since=` returns only what changed, so after the first sync this
+ * costs almost nothing — which matters because §1 says mobile data in Japan is
+ * metered. The stored `latest` is the watermark.
  */
 let cards = new Map();
 let loadedAt = 0;
 
+const SINCE = "deck.since";
+
+/**
+ * The deck, from whatever is available.
+ *
+ * Cache first, then the difference from the server. A failed refresh is not an
+ * error while the cache holds cards: that is the offline case, and it is the
+ * one this whole phase exists for. It is only an error when there is nothing
+ * to fall back on.
+ */
 export async function loadDeck() {
   if (cards.size > 0) return cards;
-  const { cards: rows } = await api.deck(0);
-  cards = new Map(rows.map((c) => [c.id, c]));
-  loadedAt = Date.now();
+
+  const cached = await allCards();
+  if (cached.length > 0) cards = new Map(cached.map((c) => [c.id, c]));
+
+  try {
+    const since = cards.size > 0 ? ((await getMeta(SINCE)) ?? 0) : 0;
+    const { cards: rows, latest } = await api.deck(since);
+    if (rows.length > 0) {
+      for (const card of rows) cards.set(card.id, card);
+      await putCards(rows);
+    }
+    await setMeta(SINCE, latest ?? since);
+    loadedAt = Date.now();
+  } catch (err) {
+    if (cards.size === 0) throw err;
+    // Offline with a cached deck: exactly what this is for.
+  }
+
   return cards;
 }
 

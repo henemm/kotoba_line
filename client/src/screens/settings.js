@@ -1,5 +1,18 @@
 import { ApiError, OfflineError, api } from "../api.js";
+import { cardCount } from "../store.js";
 import { el, num, render } from "../ui/dom.js";
+
+/** How many audio files the service worker is holding (§7). */
+async function countCachedAudio() {
+  if (typeof caches === "undefined") return undefined;
+  try {
+    if (!(await caches.has("kotoba-media"))) return 0;
+    const cache = await caches.open("kotoba-media");
+    return (await cache.keys()).length;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Design 22 (iPhone) and 26 (iPad). Four groups, no search, no nesting, and no
@@ -44,6 +57,12 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       render(root, header(), problem(err));
       return;
     }
+    draw();
+
+    // The device's own figures come from the browser, not the server, so they
+    // arrive after the screen rather than holding it up.
+    const [cachedCards, cachedAudio] = await Promise.all([cardCount(), countCachedAudio()]);
+    data = { ...data, cachedCards, cachedAudio };
     draw();
   }
 
@@ -250,12 +269,23 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
         "Synced",
         sync.lastEventAt ? `${when(sync.lastEventAt)} · ${num(sync.events)} reviews` : "nothing yet",
       ),
-      // Phase 5 gives this a number; until there is a service worker there is
-      // no cache to report, and inventing one would be the only untrue line on
-      // the screen.
-      diagnostic("Audio cached", "nothing cached yet"),
+      diagnostic("Cards on device", `${num(data.cachedCards ?? 0)} of ${num(deckTotal())}`),
+      diagnostic("Audio cached", audioLine()),
       diagnostic("Version", version),
     );
+  }
+
+  const deckTotal = () => data.decks.reduce((n, d) => n + d.cards, 0);
+
+  /**
+   * How much audio is on the device. §7 caps the cache at ~300 files and
+   * never bulk-fetches, so this number climbing slowly is the system working
+   * — it is not a download that stalled.
+   */
+  function audioLine() {
+    if (data.cachedAudio === undefined) return "not counted";
+    if (data.cachedAudio === 0) return "nothing yet";
+    return `${num(data.cachedAudio)} ${data.cachedAudio === 1 ? "file" : "files"}`;
   }
 
   function diagnostic(label, value) {
