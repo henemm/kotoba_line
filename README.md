@@ -11,8 +11,11 @@ iPad never disagree. Fully usable offline; events reconcile afterwards.
 **Status: phase 4, in progress.** The server is complete — schema,
 authentication, the event log with FSRS scheduling, the deck import (1,500 cards
 with audio, 191 topic-tagged), and the whole API including §5a's filters. The
-client has sign-in, the practise tab and the tab bar; the session itself waits on
-the design round described in `design/next-brief.md`.
+client has sign-in, the practise tab, Stats, and a working session in 選ぶ with
+its summary. The other three modes wait on the design round described in
+`design/next-brief.md`.
+
+Deployable now — `ops/README.md` is the runbook.
 
 ## Repository layout
 
@@ -27,7 +30,7 @@ the design round described in `design/next-brief.md`.
 | `server/` | Node 22 + Fastify + better-sqlite3 — the schema, authentication and sessions. See `server/README.md`. |
 | `import/` | Deck acquisition, conversion and verification. See `import/README.md`. |
 | `client/` | The PWA — vanilla ES modules, no framework. See `client/README.md`. |
-| `ops/` | Dockerfile, compose file, nginx configuration. |
+| `ops/` | Dockerfile, compose file, nginx configuration, and the deployment runbook. See `ops/README.md`. |
 
 ## Where to start
 
