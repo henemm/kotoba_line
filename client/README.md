@@ -28,7 +28,7 @@ in `server/README.md`.
 | Practise tab | 10, 15 | done — normal day and nothing-due, both with the four lines |
 | Tab bar | 11 | done — three tabs, active dot, joker badge |
 | Offline strip | 25 | done — the three states, never during a session |
-| Stats | 02, 12 | placeholder; the API is ready |
+| Stats | 02, 12, 24 | done — level, streak, jokers, maturity, topics with the truncation rule |
 | Settings | 22, 26 | placeholder; the API is partly ready |
 | Session | 16 | not started — 選ぶ is designed, the other three modes are not |
 

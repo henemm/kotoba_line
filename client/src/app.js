@@ -1,6 +1,7 @@
 import { ApiError, OfflineError, api } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
+import { statsScreen } from "./screens/stats.js";
 import { el, render, statusBar } from "./ui/dom.js";
 
 const TABS = [
@@ -97,9 +98,7 @@ function currentScreen() {
       },
     });
   }
-  if (state.tab === "stats") {
-    return placeholder("Stats", "Designed in 02; wiring comes next.");
-  }
+  if (state.tab === "stats") return statsScreen();
   return placeholder("Settings", "Designed in 22; wiring comes next.");
 }
 
