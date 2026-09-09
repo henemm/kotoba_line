@@ -20,7 +20,7 @@ export function el(spec, props, ...children) {
   for (const [key, value] of Object.entries(props ?? {})) {
     if (value === undefined || value === null || value === false) continue;
     if (key === "class") node.className = [node.className, value].filter(Boolean).join(" ");
-    else if (key === "style") Object.assign(node.style, value);
+    else if (key === "style") setStyle(node, value);
     else if (key === "dataset") Object.assign(node.dataset, value);
     else if (key.startsWith("on") && typeof value === "function") {
       node.addEventListener(key.slice(2), value);
@@ -31,6 +31,20 @@ export function el(spec, props, ...children) {
 
   append(node, children);
   return node;
+}
+
+/**
+ * Object.assign does not set CSS custom properties — `style["--rail"] = x` is
+ * silently ignored — so they go through setProperty. Getting this wrong left
+ * --rail undefined for a whole session, which quietly removed the mode's
+ * colour from the station strip, the speaker and the revealed sentence.
+ */
+function setStyle(node, styles) {
+  for (const [prop, value] of Object.entries(styles)) {
+    if (value === undefined || value === null) continue;
+    if (prop.startsWith("--")) node.style.setProperty(prop, String(value));
+    else node.style[prop] = value;
+  }
 }
 
 function append(node, children) {

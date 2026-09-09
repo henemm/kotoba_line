@@ -806,3 +806,396 @@
     font-size: 17px;
   }
 }
+
+/* ══ 16 Session ═══════════════════════════════════════════════════
+   The loop is not up for redesign; these are the prototype's numbers.
+   --rail carries the mode's colour. */
+
+.session,
+.summary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.session-chrome {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  flex: none;
+}
+.session-close {
+  background: none;
+  border: 0;
+  color: var(--ink-muted);
+  font-size: 30px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.session-counter {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  flex: none;
+}
+
+/* The strip of station markers: one per card, the route so far. */
+.stations {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.station {
+  height: 5px;
+  flex: 1;
+  border-radius: 3px;
+  background: var(--surface-hi);
+}
+.station.done {
+  background: var(--rail);
+}
+.station.now {
+  background: var(--ink);
+}
+.station.missed {
+  background: var(--no);
+}
+
+.card-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 0 24px;
+  text-align: center;
+}
+.prompt-label {
+  font-size: 13px;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+}
+.word {
+  font-size: clamp(44px, 15vw, 76px);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0;
+}
+.speaker {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--rail);
+  color: #fff;
+  font-size: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.speaker.ghost {
+  background: var(--surface-hi);
+  color: var(--ink);
+}
+.speaker:active {
+  transform: scale(0.92);
+}
+
+.sentence {
+  font-size: 22px;
+  line-height: 1.6;
+  margin: 0;
+}
+/* Kaishi marks the target word itself, so nothing has to be guessed at. */
+.sentence b {
+  color: var(--rail);
+  font-weight: 800;
+}
+
+.reveal {
+  animation: rise 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}
+
+.options {
+  display: grid;
+  gap: 10px;
+  padding: 0 20px 24px;
+  flex: none;
+}
+.opt {
+  padding: 17px 18px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  line-height: 1.3;
+}
+.opt:disabled {
+  cursor: default;
+}
+.opt.right {
+  background: rgba(61, 220, 132, 0.16);
+  border-color: var(--yes);
+  color: var(--yes);
+}
+.opt.wrong {
+  background: rgba(255, 75, 75, 0.14);
+  border-color: var(--no);
+  color: var(--no);
+}
+.opt.dim {
+  opacity: 0.4;
+}
+
+.session-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 26px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+@media (min-width: 700px) {
+  /* The station strip runs the full width — twenty stations are finally
+     countable — while the answers stay in the column and sit low. */
+  .session-chrome {
+    padding: 16px 40px;
+  }
+  .station {
+    height: 6px;
+  }
+  .stations {
+    gap: 5px;
+  }
+  .options {
+    width: var(--column);
+    margin: 0 auto;
+    padding-bottom: 56px;
+  }
+  .opt {
+    padding: 20px;
+    font-size: 19px;
+  }
+}
+
+/* ══ 09 Session summary ═══════════════════════════════════════════ */
+
+.summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 20px 0;
+  flex: none;
+}
+
+.summary-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 26px;
+  text-align: center;
+}
+
+.summary-jp {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.score {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.score-value {
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 0.85;
+}
+.score-of {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.figures {
+  display: flex;
+  gap: 26px;
+  padding-top: 2px;
+}
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+}
+.figure-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+.figure-label {
+  font: 400 11px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.missed {
+  width: 100%;
+  text-align: left;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+}
+.missed .mono-label {
+  padding-bottom: 10px;
+}
+.missed-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--surface-hi);
+}
+.missed-jp {
+  font-size: 21px;
+  font-weight: 700;
+}
+.missed-en {
+  font-size: 14px;
+  color: var(--ink-muted);
+  text-align: right;
+}
+.missed-more {
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-hi);
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+}
+
+.summary-note {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.summary-foot {
+  flex: none;
+  padding: 0 26px 30px;
+  display: flex;
+  gap: 10px;
+}
+.summary-foot button {
+  flex: 1;
+  height: 56px;
+  border: 0;
+  border-radius: 14px;
+  font: 700 16px/1 inherit;
+}
+.summary-done {
+  background: var(--surface-hi);
+  color: var(--ink);
+}
+.summary-again {
+  background: var(--rail);
+  color: #fff;
+}
+
+/* ══ 03 Level up ══════════════════════════════════════════════════
+   The reward is the number changing, not confetti. */
+
+.levelup {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 16, 23, 0.86);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 26px;
+  padding: 0 40px;
+  text-align: center;
+  animation: fade 0.24s ease-out;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.levelup-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.levelup-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+.levelup-from {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--ink-dim);
+  line-height: 1;
+}
+.levelup-dash {
+  width: 26px;
+  height: 4px;
+  background: var(--ink-dim);
+  display: block;
+  align-self: center;
+}
+.levelup-to {
+  font-size: 132px;
+  font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+}
+.levelup-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.levelup-xp {
+  font-size: 18px;
+  font-weight: 600;
+}
+.levelup-since {
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 700px) {
+  .levelup-to {
+    font-size: 176px;
+  }
+  .summary-body {
+    width: var(--column);
+    margin: 0 auto;
+  }
+}

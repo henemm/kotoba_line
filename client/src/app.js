@@ -2,6 +2,8 @@ import { ApiError, OfflineError, api } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
+import { sessionScreen } from "./screens/session.js";
+import { summaryScreen } from "./screens/summary.js";
 import { el, render, statusBar } from "./ui/dom.js";
 
 const TABS = [
@@ -15,6 +17,10 @@ const app = document.getElementById("app");
 const state = {
   user: undefined,
   tab: "practise",
+  // A session is modal: it replaces the tabs entirely, so a card is never
+  // covered and the tab bar never competes with an answer.
+  session: undefined,
+  summary: undefined,
   sessionLength: 20,
   online: navigator.onLine,
   pendingEvents: 0,
@@ -88,18 +94,23 @@ function currentScreen() {
       onSessionLength: (len) => {
         state.sessionLength = len;
       },
-      onStart: (opts) => {
-        // The session itself lands next; the four modes are designed, the
-        // rating rows for めくる and 話す are not (design/next-brief.md).
-        console.info("start session", opts);
-      },
+      onStart: startSession,
       onDrillTopic: () => {
-        console.info("topic picker");
+        // The topic picker (23) is drawn; wiring it is the next screen.
+        startSession({ only: "new" });
       },
     });
   }
   if (state.tab === "stats") return statsScreen();
   return placeholder("Settings", "Designed in 22; wiring comes next.");
+}
+
+function startSession({ mode = "choose", ...filters } = {}) {
+  // Only 選ぶ is drawn (design 16). The other three lines need their card
+  // states designed before they can be honest — design/next-brief.md.
+  state.session = { mode: mode === "choose" ? mode : "choose", filters, requested: mode };
+  state.summary = undefined;
+  renderApp();
 }
 
 function renderApp() {
@@ -109,6 +120,45 @@ function renderApp() {
       state.tab = "practise";
       renderApp();
     } }));
+    return;
+  }
+
+  if (state.summary) {
+    render(
+      app,
+      statusBar(),
+      summaryScreen(state.summary, {
+        onDone: () => {
+          state.summary = undefined;
+          renderApp();
+        },
+        onAgain: () => startSession({ mode: state.summary.mode }),
+      }),
+    );
+    return;
+  }
+
+  if (state.session) {
+    const { mode, filters } = state.session;
+    render(
+      app,
+      statusBar(),
+      sessionScreen({
+        mode,
+        filters,
+        limit: state.sessionLength === "All" ? 60 : state.sessionLength,
+        onExit: () => {
+          state.session = undefined;
+          renderApp();
+        },
+        onFinish: (result) => {
+          state.session = undefined;
+          state.summary = result.empty ? undefined : result;
+          if (result.levelUp) state.jokerBadge = state.jokerBadge || false;
+          renderApp();
+        },
+      }),
+    );
     return;
   }
 
