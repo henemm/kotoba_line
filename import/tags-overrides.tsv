@@ -1,0 +1,57 @@
+# Topic overrides — the hand-curated half of the tagging.
+#
+#   word<TAB>tag,tag        assign exactly these topics
+#   word<TAB>                assign none (cancels a wrong rule match)
+#
+# An override always wins over the rules in lib/tagging.js. This file is the
+# place for judgement; the rules are the place for patterns. Both are reviewed
+# as diffs — a wrong tag is a one-line fix anyone can check, not a re-run of
+# something stochastic.
+#
+# Valid topics: school konbini food travel small talk family health money time
+
+# ── corrections found by spot-checking every rule match ─────────────
+# The health rules match body-part words inside idioms that have nothing to do
+# with the body. This is ~1 in 5 of the health matches, and it is why the pass
+# is checked by hand rather than trusted.
+勇気	 # "courage, nerve" — nerve
+武器	 # "weapon, arms" — arms
+抱える	 # "to hold in one's arms"
+抱く	 # "to hug, to hold in one's arms"
+渡す	 # "to carry across, to hand over" — hand
+向かう	 # "to face, to head toward" — face, head
+向く	 # "to face, to look"
+振り返る	 # "to turn one's head, to look back on"
+背負う	 # "to carry on one's back"
+足元	 # "step, under foot"
+歩く	 # "to walk, to go on foot"
+取り戻す	 # "to take back, to recover" — the wrong sense of recover
+直す	 # "to repair, to cure, to alter" — mostly repair
+死体	 # "corpse, body" — not a health word
+
+# ── additions the rules cannot see ──────────────────────────────────
+# Everyday shop vocabulary — the topic the deck barely covers, and the one she
+# will use most often in Tokyo.
+店	konbini
+値段	money,konbini
+袋	konbini
+
+# Cooking verbs whose glosses do not name food.
+焼く	food
+茹でる	food
+炊く	food
+
+# School life beyond the obvious nouns.
+宿題	school
+授業	school
+試験	school
+黒板	school
+
+# Life events.
+離婚	family
+
+# Note: nature and geography words the deck carries in quantity — 山, 川, 海,
+# 町, 国, 村 — are deliberately left untagged. Filing them under "travel" would
+# make that topic mean "places", and a session labelled travel should be about
+# getting somewhere. The nine-topic list has no slot for them; see
+# docs/tagging.md.

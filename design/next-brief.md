@@ -142,6 +142,35 @@ Topic picker) should assume nine as the ordinary case — which means the topic
 list on Stats is past its five-entry truncation point by default, and screen 24's
 expanded state is the normal one rather than an edge case.
 
+**Topics cover an eighth of the deck, not all of it — and unevenly.** This is
+the big one, and it changes what two screens can honestly show. Measured against
+the real Kaishi deck (`docs/tagging.md`):
+
+| health | time | family | small talk | food | school | money | travel | konbini |
+|---|---|---|---|---|---|---|---|---|
+| 52 | 43 | 27 | 22 | 18 | 12 | 9 | 6 | 3 |
+
+**191 of 1,500 cards carry any topic at all.** The rest — する, なる, これ, さん,
+ちょっと — have no topic, because a frequency deck is mostly grammar and general
+vocabulary. An ontology would raise this to roughly a quarter of the deck; it
+cannot raise it further, because most of these words genuinely belong to no
+topic.
+
+The designs assume the opposite. Stats draws "school 84 / 120" and the topic
+picker draws "22 / 80 travel", both of which read as *this topic covers a large,
+known slice of the deck*. Two consequences to design for:
+
+- **Stats** should say what topics actually cover — a total, or a share of the
+  deck — so the bars are not read as the whole picture. A card counted in no
+  topic is the normal case, not a gap.
+- **The topic picker (23)** has to work at three cards as well as at eighty.
+  "Start 20 travel cards" is a promise the deck cannot keep for most topics; the
+  button and the counts need to reflect what is really there, and a nearly empty
+  topic should probably still be offerable rather than hidden.
+
+Topics will fill out with the personal deck (§8's second deck), which is topical
+by construction — that is where konbini stops being three cards.
+
 ---
 
 ## Why these nine

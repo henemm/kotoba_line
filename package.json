@@ -9,6 +9,7 @@
   "scripts": {
     "import": "node import/import-deck.js",
     "verify-import": "node import/verify.js",
-    "test:import": "node --test import/test/*.test.js"
+    "test:import": "node --test import/test/*.test.js",
+    "tag": "node import/tag-cards.js"
   }
 }
