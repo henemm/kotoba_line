@@ -4,6 +4,9 @@ import { query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
+import { splitEmphasis } from "../src/screens/session.js";
+import { mmss } from "../src/screens/summary.js";
+import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -128,5 +131,102 @@ describe("which topics the Stats screen draws", () => {
     assert.equal(visibleTopics(topics.slice(0, 3), false).hidden, 0);
     assert.equal(visibleTopics([], false).shown.length, 0);
     assert.equal(visibleTopics(undefined, false).shown.length, 0);
+  });
+});
+
+describe("the sentence's emphasis", () => {
+  it("splits Kaishi's <b> into runs", () => {
+    assert.deepEqual(splitEmphasis("<b>これ</b>は日本語の本です。"), [
+      { text: "これ", bold: true },
+      { text: "は日本語の本です。", bold: false },
+    ]);
+  });
+
+  it("handles a conjugated target in the middle — the case a heuristic misses", () => {
+    // The prototype guessed at this by stripping a trailing kana and substring
+    // matching. The deck already knows: 食べる appears as 食べました.
+    assert.deepEqual(splitEmphasis("昨日タイカレーを<b>食べました</b>。"), [
+      { text: "昨日タイカレーを", bold: false },
+      { text: "食べました", bold: true },
+      { text: "。", bold: false },
+    ]);
+  });
+
+  it("copes with no markup, and with nothing at all", () => {
+    assert.deepEqual(splitEmphasis("ただの文。"), [{ text: "ただの文。", bold: false }]);
+    assert.deepEqual(splitEmphasis(""), []);
+    assert.deepEqual(splitEmphasis(undefined), []);
+  });
+
+  it("never yields an empty run", () => {
+    for (const s of ["<b></b>あ", "あ<b>い</b>", "<b>あ</b>"]) {
+      assert.ok(splitEmphasis(s).every((p) => p.text.length > 0), s);
+    }
+  });
+});
+
+describe("distractors", () => {
+  const card = (id, meaning, rank, tags = []) => ({
+    id,
+    word: `語${id}`,
+    word_meaning: meaning,
+    frequency_rank: rank,
+    tags,
+  });
+
+  const answer = card(1, "to eat", 100, ["food"]);
+  const pool = [
+    answer,
+    card(2, "to drink", 110, ["food"]),      // same tag, near rank
+    card(3, "delicious", 120, ["food"]),     // same tag, near rank
+    card(4, "meal", 900, ["food"]),          // same tag, far rank
+    card(5, "teacher", 130, ["school"]),     // near rank only
+    card(6, "tomorrow", 5000, ["time"]),     // neither
+  ];
+
+  it("prefers cards that share a tag and sit nearby in frequency", () => {
+    const picked = pickDistractors(answer, pool, 2, () => 0);
+    assert.deepEqual(picked.map((c) => c.word_meaning).sort(), ["delicious", "to drink"]);
+  });
+
+  it("never offers the answer itself", () => {
+    for (let i = 0; i < 20; i++) {
+      assert.ok(!pickDistractors(answer, pool, 3).some((c) => c.id === answer.id));
+    }
+  });
+
+  it("never repeats a card", () => {
+    const picked = pickDistractors(answer, pool, 3);
+    assert.equal(new Set(picked.map((c) => c.id)).size, picked.length);
+  });
+
+  it("never offers a card whose gloss reads the same as the answer's", () => {
+    const twin = card(9, "to eat", 105, ["food"]);
+    const picked = pickDistractors(answer, [...pool, twin], 3);
+    assert.ok(!picked.some((c) => c.id === twin.id), "two right answers is not a question");
+  });
+
+  it("falls back rather than returning nothing when the pool is thin", () => {
+    const thin = [answer, card(7, "tomorrow", 9000, ["time"])];
+    assert.equal(pickDistractors(answer, thin, 3).length, 1);
+    assert.equal(pickDistractors(answer, [answer], 3).length, 0);
+  });
+
+  it("fills up from wider tiers when the good ones run out", () => {
+    const picked = pickDistractors(answer, pool, 4, () => 0);
+    assert.equal(picked.length, 4);
+    // The two same-tag near-rank cards must be among them.
+    const meanings = picked.map((c) => c.word_meaning);
+    assert.ok(meanings.includes("to drink"));
+    assert.ok(meanings.includes("delicious"));
+  });
+});
+
+describe("the summary's clock", () => {
+  it("reads as minutes and seconds", () => {
+    assert.equal(mmss(0), "0:00");
+    assert.equal(mmss(26), "0:26");
+    assert.equal(mmss(252), "4:12");
+    assert.equal(mmss(605), "10:05");
   });
 });

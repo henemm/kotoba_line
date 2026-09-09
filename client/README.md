@@ -30,7 +30,9 @@ in `server/README.md`.
 | Offline strip | 25 | done — the three states, never during a session |
 | Stats | 02, 12, 24 | done — level, streak, jokers, maturity, topics with the truncation rule |
 | Settings | 22, 26 | placeholder; the API is partly ready |
-| Session | 16 | not started — 選ぶ is designed, the other three modes are not |
+| Session | 16 | done for 選ぶ — the other three lines need their cards designed |
+| Session summary | 09 | done |
+| Level up | 03 | done — overlays the summary, dismisses itself |
 
 ## Layout
 
@@ -59,3 +61,24 @@ error appears.
 drill the topic she is worst at. konbini holds three cards in the real deck
 (`docs/tagging.md`), so without a floor it would always win and offer a session
 of three. Topics under ten cards are not candidates.
+
+## The session
+
+Only **選ぶ** is built. 聞く shares this shape and is a small change once its
+card is drawn; めくる needs four rating buttons and 話す needs its own states,
+and neither is designed (`design/next-brief.md`).
+
+**Wrong answers are chosen, not sampled.** The prototype picked three cards at
+random, which at 1,482 puts "to eat" against "teacher", "how much" and
+"tomorrow" — answerable without recognising the word, and FSRS then reads the
+guess as recall. `pickDistractors` narrows the pool first: cards sharing a tag
+and sitting nearby in frequency, then either, then anything. (phase-0-plan §1.1)
+
+**The XP figure is the difference between two server answers.** Stats are read
+before the session and after the events are posted, so the number on the summary
+cannot disagree with the Stats screen. Offline it is absent rather than guessed
+at — §8a says the client displays progress and never computes it.
+
+**The emphasis in the example sentence comes from the deck.** Kaishi marks the
+target word itself, including conjugated forms like 食べました. It is rebuilt as
+elements, never handed to `innerHTML`.
