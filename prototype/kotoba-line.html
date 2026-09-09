@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#141824">
+<title>ことばライン</title>
+<style>
+  :root {
+    --night:      #141824;
+    --night-deep: #0D1017;
+    --surface:    #1E2433;
+    --surface-hi: #2A3244;
+    --ink:        #F2F4F8;
+    --ink-muted:  #8A93A8;
+    --line-choose: #F15A22;
+    --line-listen: #00A7DB;
+    --line-speak:  #C7008B;
+    --line-flip:   #80C241;
+    --yes: #3DDC84;
+    --no:  #FF4B4B;
+
+    --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--night);
+    color: var(--ink);
+    font-family: var(--ui);
+    overscroll-behavior: none;
+  }
+
+  body {
+    display: flex; justify-content: center;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+
+  #app {
+    width: 100%; max-width: 560px;
+    display: flex; flex-direction: column;
+    min-height: 100%;
+    position: relative;
+  }
+
+  .screen { display: none; flex-direction: column; flex: 1; }
+  .screen.active { display: flex; }
+
+  /* ---------- Home screen: Streckennetz ---------- */
+
+  .home-head { padding: 32px 24px 20px; }
+  .home-head h1 {
+    font-family: var(--jp);
+    font-size: 40px; font-weight: 800; letter-spacing: 0.04em;
+    margin: 0 0 6px; line-height: 1.1;
+  }
+  .home-head p { margin: 0; color: var(--ink-muted); font-size: 15px; line-height: 1.5; }
+
+  .streak {
+    display: inline-flex; align-items: baseline; gap: 8px;
+    margin-top: 18px; padding: 8px 14px;
+    background: var(--surface); border-radius: 999px;
+  }
+  .streak b { font-size: 22px; font-weight: 800; }
+  .streak span { font-size: 13px; color: var(--ink-muted); }
+
+  .lines { padding: 8px 24px 24px; position: relative; }
+
+  .line-row {
+    display: flex; align-items: center; gap: 18px;
+    padding: 16px 0; position: relative;
+    background: none; border: 0; width: 100%;
+    text-align: left; color: inherit; cursor: pointer;
+    font-family: inherit;
+  }
+  .line-row::before {
+    content: ""; position: absolute;
+    left: 13px; top: 0; bottom: 0; width: 4px;
+    background: var(--rail, var(--surface-hi));
+  }
+  .line-row:first-child::before { top: 50%; }
+  .line-row:last-child::before  { bottom: 50%; }
+
+  .dot {
+    width: 30px; height: 30px; flex: none;
+    border-radius: 50%;
+    background: var(--night);
+    border: 5px solid var(--rail);
+    position: relative; z-index: 1;
+  }
+  .line-label { flex: 1; }
+  .line-label .jp {
+    font-family: var(--jp); font-size: 23px; font-weight: 700;
+    display: block; line-height: 1.2;
+  }
+  .line-label .de {
+    font-size: 14px; color: var(--ink-muted); display: block; margin-top: 3px;
+  }
+  .line-row:active .dot { transform: scale(0.88); }
+  .dot { transition: transform .12s ease; }
+
+  .home-foot { padding: 4px 24px 28px; margin-top: auto; }
+
+  .len-picker {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .len-picker button {
+    flex: 1; padding: 12px 0;
+    background: var(--surface); border: 2px solid transparent;
+    color: var(--ink-muted); border-radius: 12px;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    cursor: pointer;
+  }
+  .len-picker button[aria-pressed="true"] {
+    border-color: var(--ink); color: var(--ink); background: var(--surface-hi);
+  }
+  .hint { font-size: 13px; color: var(--ink-muted); line-height: 1.5; margin: 0; }
+
+  /* ---------- Session ---------- */
+
+  .top {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px;
+  }
+  .close {
+    background: none; border: 0; color: var(--ink-muted);
+    font-size: 26px; line-height: 1; padding: 4px 8px; cursor: pointer;
+  }
+  .stations { flex: 1; display: flex; align-items: center; gap: 4px; }
+  .station {
+    height: 5px; flex: 1; border-radius: 3px;
+    background: var(--surface-hi);
+  }
+  .station.done { background: var(--rail); }
+  .station.now  { background: var(--ink); }
+  .counter { font-size: 14px; font-weight: 700; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+  .card-area {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 12px 24px; text-align: center;
+    gap: 14px;
+  }
+
+  .prompt-label {
+    font-size: 13px; color: var(--ink-muted); letter-spacing: .02em;
+  }
+  .word {
+    font-family: var(--jp);
+    font-size: clamp(44px, 15vw, 76px); font-weight: 800;
+    line-height: 1.15; margin: 0;
+  }
+  .reading {
+    font-family: var(--jp); font-size: 22px; color: var(--rail); font-weight: 600;
+  }
+  .meaning { font-size: 24px; font-weight: 600; line-height: 1.3; }
+  .sentence {
+    font-family: var(--jp); font-size: 22px; line-height: 1.6;
+    color: var(--ink); margin: 0;
+  }
+  .sentence b { color: var(--rail); font-weight: 800; }
+  .sentence-de { font-size: 15px; color: var(--ink-muted); line-height: 1.45; }
+
+  .speaker {
+    width: 62px; height: 62px; border-radius: 50%;
+    border: 0; background: var(--rail); color: #fff;
+    font-size: 26px; cursor: pointer; flex: none;
+    display: grid; place-items: center;
+  }
+  .speaker:active { transform: scale(0.92); }
+  .speaker.big { width: 108px; height: 108px; font-size: 44px; }
+  .speaker.ghost { background: var(--surface-hi); color: var(--ink); }
+
+  .reveal { animation: rise .28s cubic-bezier(.2,.8,.3,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Answer surfaces ---------- */
+
+  .options { display: grid; gap: 10px; padding: 0 20px 20px; }
+  .opt {
+    padding: 17px 18px; border-radius: 14px;
+    background: var(--surface); border: 2px solid transparent;
+    color: var(--ink); font-family: inherit; font-size: 17px; font-weight: 600;
+    text-align: left; cursor: pointer; line-height: 1.3;
+  }
+  .opt.jp { font-family: var(--jp); font-size: 21px; }
+  .opt:disabled { cursor: default; }
+  .opt.right { background: rgba(61,220,132,.16); border-color: var(--yes); color: var(--yes); }
+  .opt.wrong { background: rgba(255,75,75,.14); border-color: var(--no); color: var(--no); }
+  .opt.dim { opacity: .4; }
+
+  .actions { display: flex; gap: 10px; padding: 0 20px 24px; }
+  .btn {
+    flex: 1; padding: 18px 0; border-radius: 14px; border: 0;
+    font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer;
+    background: var(--surface-hi); color: var(--ink);
+  }
+  .btn.primary { background: var(--rail); color: #fff; }
+  .btn.no  { background: rgba(255,75,75,.16);  color: var(--no); }
+  .btn.yes { background: rgba(61,220,132,.16); color: var(--yes); }
+  .btn:active { transform: translateY(1px); }
+
+  .mic-state {
+    font-family: var(--jp); font-size: 20px; min-height: 28px;
+    color: var(--ink-muted);
+  }
+  .mic-state.hit { color: var(--yes); }
+  .mic-state.miss { color: var(--no); }
+
+  /* ---------- Finished ---------- */
+
+  .done-screen {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 10px;
+    padding: 24px; text-align: center;
+  }
+  .score { font-size: 84px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .score small { font-size: 26px; color: var(--ink-muted); font-weight: 600; }
+  .done-jp { font-family: var(--jp); font-size: 30px; font-weight: 700; }
+
+  .missed { width: 100%; max-width: 380px; margin-top: 8px; text-align: left; }
+  .missed h3 { font-size: 13px; color: var(--ink-muted); font-weight: 600; margin: 0 0 8px; }
+  .missed li {
+    list-style: none; padding: 10px 0;
+    border-top: 1px solid var(--surface-hi);
+    display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+  }
+  .missed ul { margin: 0; padding: 0; }
+  .missed .m-jp { font-family: var(--jp); font-size: 20px; font-weight: 700; }
+  .missed .m-de { font-size: 14px; color: var(--ink-muted); text-align: right; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ START ══════════ -->
+  <section class="screen active" id="home">
+    <div class="home-head">
+      <h1>ことばライン</h1>
+      <p>Four lines, one vocabulary. Pick how you want to practise today.</p>
+      <div class="streak"><b id="streakNum">0</b><span>cards today</span></div>
+    </div>
+
+    <div class="lines" id="lineList"></div>
+
+    <div class="home-foot">
+      <div class="len-picker" id="lenPicker">
+        <button data-len="10" aria-pressed="true">10 cards</button>
+        <button data-len="20" aria-pressed="false">20 cards</button>
+        <button data-len="0"  aria-pressed="false">All</button>
+      </div>
+      <p class="hint">Sound on — every card is read aloud in Japanese.</p>
+    </div>
+  </section>
+
+  <!-- ══════════ SESSION ══════════ -->
+  <section class="screen" id="play">
+    <div class="top">
+      <button class="close" id="btnClose" aria-label="End session">&times;</button>
+      <div class="stations" id="stations"></div>
+      <div class="counter" id="counter"></div>
+    </div>
+    <div class="card-area" id="cardArea"></div>
+    <div id="answerArea"></div>
+  </section>
+
+  <!-- ══════════ ENDE ══════════ -->
+  <section class="screen" id="done">
+    <div class="done-screen">
+      <div class="done-jp" id="doneJp">おつかれさま！</div>
+      <div class="score"><span id="scoreNum">0</span><small id="scoreOf">/0</small></div>
+      <div class="missed" id="missedBox"></div>
+      <div style="display:flex; gap:10px; width:100%; max-width:380px; margin-top:20px;">
+        <button class="btn" id="btnHome">Back to lines</button>
+        <button class="btn primary" id="btnAgain">Again</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   DECK DATA
+   Field names mirror the Kaishi 1.5k note type so that a later
+   import is nothing more than a column mapping:
+     word · wordFurigana · wordMeaning · sentence
+     sentenceFurigana · sentenceMeaning
+   Still missing: wordAudio / sentenceAudio (the real recordings
+   from the deck). Until then, speech synthesis fills in.
+   ═══════════════════════════════════════════════════════════ */
+
+const DECK = [
+  { word:"これ", wordFurigana:"これ", wordMeaning:"this one",
+    sentence:"これはいくらですか。", sentenceFurigana:"これはいくらですか。", sentenceMeaning:"How much is this?" },
+  { word:"すみません", wordFurigana:"すみません", wordMeaning:"excuse me; sorry",
+    sentence:"すみません、ちょっといいですか。", sentenceFurigana:"すみません、ちょっといいですか。", sentenceMeaning:"Excuse me, do you have a second?" },
+  { word:"大丈夫", wordFurigana:"だいじょうぶ", wordMeaning:"all right; fine",
+    sentence:"大丈夫、心配しないで。", sentenceFurigana:"だいじょうぶ、しんぱいしないで。", sentenceMeaning:"It's fine, don't worry." },
+  { word:"わかりました", wordFurigana:"わかりました", wordMeaning:"understood; got it",
+    sentence:"はい、わかりました。", sentenceFurigana:"はい、わかりました。", sentenceMeaning:"Yes, understood." },
+  { word:"お願いします", wordFurigana:"おねがいします", wordMeaning:"please; I ask of you",
+    sentence:"よろしくお願いします。", sentenceFurigana:"よろしくおねがいします。", sentenceMeaning:"Pleased to meet you." },
+  { word:"どこ", wordFurigana:"どこ", wordMeaning:"where",
+    sentence:"駅はどこですか。", sentenceFurigana:"えきはどこですか。", sentenceMeaning:"Where is the station?" },
+  { word:"いくら", wordFurigana:"いくら", wordMeaning:"how much",
+    sentence:"全部でいくらですか。", sentenceFurigana:"ぜんぶでいくらですか。", sentenceMeaning:"How much is it altogether?" },
+  { word:"学校", wordFurigana:"がっこう", wordMeaning:"school",
+    sentence:"学校まで歩いて行きます。", sentenceFurigana:"がっこうまであるいていきます。", sentenceMeaning:"I walk to school." },
+  { word:"先生", wordFurigana:"せんせい", wordMeaning:"teacher",
+    sentence:"先生に質問しました。", sentenceFurigana:"せんせいにしつもんしました。", sentenceMeaning:"I asked the teacher a question." },
+  { word:"友達", wordFurigana:"ともだち", wordMeaning:"friend",
+    sentence:"友達と映画を見ました。", sentenceFurigana:"ともだちとえいがをみました。", sentenceMeaning:"I watched a movie with a friend." },
+  { word:"今日", wordFurigana:"きょう", wordMeaning:"today",
+    sentence:"今日は暑いですね。", sentenceFurigana:"きょうはあついですね。", sentenceMeaning:"It's hot today, isn't it." },
+  { word:"明日", wordFurigana:"あした", wordMeaning:"tomorrow",
+    sentence:"明日また会いましょう。", sentenceFurigana:"あしたまたあいましょう。", sentenceMeaning:"Let's meet again tomorrow." },
+  { word:"食べる", wordFurigana:"たべる", wordMeaning:"to eat",
+    sentence:"昼ご飯を食べましたか。", sentenceFurigana:"ひるごはんをたべましたか。", sentenceMeaning:"Did you eat lunch?" },
+  { word:"飲む", wordFurigana:"のむ", wordMeaning:"to drink",
+    sentence:"水を飲みたいです。", sentenceFurigana:"みずをのみたいです。", sentenceMeaning:"I want to drink water." },
+  { word:"行く", wordFurigana:"いく", wordMeaning:"to go",
+    sentence:"一緒に行きませんか。", sentenceFurigana:"いっしょにいきませんか。", sentenceMeaning:"Shall we go together?" },
+  { word:"見る", wordFurigana:"みる", wordMeaning:"to look; to watch",
+    sentence:"この写真を見てください。", sentenceFurigana:"このしゃしんをみてください。", sentenceMeaning:"Please look at this photo." },
+  { word:"おいしい", wordFurigana:"おいしい", wordMeaning:"delicious",
+    sentence:"このラーメンはおいしい。", sentenceFurigana:"このラーメンはおいしい。", sentenceMeaning:"This ramen is delicious." },
+  { word:"楽しい", wordFurigana:"たのしい", wordMeaning:"fun; enjoyable",
+    sentence:"今日はとても楽しかった。", sentenceFurigana:"きょうはとてもたのしかった。", sentenceMeaning:"Today was a lot of fun." },
+  { word:"疲れた", wordFurigana:"つかれた", wordMeaning:"tired; worn out",
+    sentence:"ちょっと疲れた。", sentenceFurigana:"ちょっとつかれた。", sentenceMeaning:"I'm a bit tired." },
+  { word:"待って", wordFurigana:"まって", wordMeaning:"wait",
+    sentence:"ちょっと待ってください。", sentenceFurigana:"ちょっとまってください。", sentenceMeaning:"Please wait a moment." }
+];
+
+const MODES = {
+  choose: { jp:"選ぶ",   de:"Pick the meaning",   color:"var(--line-choose)" },
+  listen: { jp:"聞く",   de:"Listen only",          color:"var(--line-listen)" },
+  speak:  { jp:"話す",   de:"Say it yourself",       color:"var(--line-speak)"  },
+  flip:   { jp:"めくる", de:"Flip the card",     color:"var(--line-flip)"   }
+};
+
+/* ═══════════════ Speech output ═══════════════ */
+
+const Voice = {
+  ready: false,
+  jp: null,
+  init() {
+    const pick = () => {
+      const all = speechSynthesis.getVoices();
+      this.jp = all.find(v => v.lang === "ja-JP") || all.find(v => v.lang.startsWith("ja")) || null;
+    };
+    pick();
+    speechSynthesis.onvoiceschanged = pick;
+  },
+  // iOS only unlocks speech output after a user gesture.
+  unlock() {
+    if (this.ready) return;
+    const u = new SpeechSynthesisUtterance("");
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    this.ready = true;
+  },
+  say(text, rate = 0.9) {
+    if (!text) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ja-JP";
+    if (this.jp) u.voice = this.jp;
+    u.rate = rate;
+    speechSynthesis.speak(u);
+  }
+};
+Voice.init();
+
+/* ═══════════════ State ═══════════════ */
+
+const state = {
+  mode: null,
+  queue: [],
+  index: 0,
+  right: 0,
+  missed: [],
+  sessionLen: 10,
+  cardsToday: 0,
+  // Leitner box per card, held in memory only.
+  boxes: new Map(DECK.map((c, i) => [i, 0]))
+};
+
+const $ = sel => document.querySelector(sel);
+const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a,b) => a[0]-b[0]).map(v => v[1]);
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $("#" + id).classList.add("active");
+}
+
+/* ═══════════════ Home screen ═══════════════ */
+
+function renderHome() {
+  const list = $("#lineList");
+  list.innerHTML = "";
+  Object.entries(MODES).forEach(([key, m]) => {
+    const b = document.createElement("button");
+    b.className = "line-row";
+    b.style.setProperty("--rail", m.color);
+    b.innerHTML =
+      `<span class="dot"></span>
+       <span class="line-label">
+         <span class="jp">${m.jp}</span>
+         <span class="de">${m.de}</span>
+       </span>`;
+    b.addEventListener("click", () => { Voice.unlock(); startSession(key); });
+    list.appendChild(b);
+  });
+  $("#streakNum").textContent = state.cardsToday;
+}
+
+$("#lenPicker").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  [...$("#lenPicker").children].forEach(b => b.setAttribute("aria-pressed", b === btn));
+  state.sessionLen = Number(btn.dataset.len);
+});
+
+/* ═══════════════ Session control ═══════════════ */
+
+function startSession(mode) {
+  state.mode = mode;
+  state.index = 0;
+  state.right = 0;
+  state.missed = [];
+
+  // Cards in low Leitner boxes first, then shuffled.
+  const byBox = [...state.boxes.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(e => e[0]);
+  const pool = shuffle(byBox.slice(0, Math.max(12, byBox.length)));
+  const len = state.sessionLen || DECK.length;
+  state.queue = pool.slice(0, Math.min(len, DECK.length));
+
+  document.documentElement.style.setProperty("--rail", MODES[mode].color);
+  $("#play").style.setProperty("--rail", MODES[mode].color);
+  show("play");
+  renderStations();
+  renderCard();
+}
+
+function renderStations() {
+  const box = $("#stations");
+  box.innerHTML = "";
+  state.queue.forEach((_, i) => {
+    const s = document.createElement("span");
+    s.className = "station" + (i < state.index ? " done" : i === state.index ? " now" : "");
+    box.appendChild(s);
+  });
+  $("#counter").textContent = `${Math.min(state.index + 1, state.queue.length)}/${state.queue.length}`;
+}
+
+function grade(cardIdx, correct) {
+  const box = state.boxes.get(cardIdx);
+  state.boxes.set(cardIdx, correct ? Math.min(box + 1, 4) : 0);
+  state.cardsToday++;
+  if (correct) state.right++;
+  else if (!state.missed.includes(cardIdx)) state.missed.push(cardIdx);
+}
+
+function next() {
+  state.index++;
+  if (state.index >= state.queue.length) return finish();
+  renderStations();
+  renderCard();
+}
+
+function finish() {
+  $("#scoreNum").textContent = state.right;
+  $("#scoreOf").textContent = "/" + state.queue.length;
+  const pct = state.right / state.queue.length;
+  $("#doneJp").textContent = pct === 1 ? "完璧！" : pct >= 0.7 ? "おつかれさま！" : "また明日！";
+
+  const box = $("#missedBox");
+  if (state.missed.length) {
+    box.innerHTML = `<h3>Worth another look</h3><ul>` + state.missed.map(i => {
+      const c = DECK[i];
+      return `<li><span class="m-jp">${c.word}</span><span class="m-de">${c.wordMeaning}</span></li>`;
+    }).join("") + `</ul>`;
+  } else {
+    box.innerHTML = "";
+  }
+  show("done");
+}
+
+/* ═══════════════ Card rendering ═══════════════ */
+
+function distractors(idx, n = 3) {
+  return shuffle(DECK.map((_, i) => i).filter(i => i !== idx)).slice(0, n);
+}
+
+function highlight(sentence, word) {
+  const stem = word.replace(/(る|う|い|た)$/, "");
+  if (stem && sentence.includes(stem)) {
+    return sentence.replace(stem, `<b>${stem}</b>`);
+  }
+  return sentence;
+}
+
+function renderCard() {
+  const idx = state.queue[state.index];
+  const c = DECK[idx];
+  const area = $("#cardArea");
+  const ans = $("#answerArea");
+  area.innerHTML = "";
+  ans.innerHTML = "";
+
+  if (state.mode === "choose")      modeChoose(c, idx, area, ans);
+  else if (state.mode === "listen") modeListen(c, idx, area, ans);
+  else if (state.mode === "speak")  modeSpeak(c, idx, area, ans);
+  else                              modeFlip(c, idx, area, ans);
+}
+
+/* ---- 選ぶ: see the word, pick the meaning ---- */
+function modeChoose(c, idx, area, ans) {
+  area.innerHTML =
+    `<div class="prompt-label">What does this mean?</div>
+     <h2 class="word">${c.word}</h2>
+     <button class="speaker ghost" id="sp" aria-label="Read aloud">♪</button>`;
+  $("#sp").addEventListener("click", () => Voice.say(c.word));
+  Voice.say(c.word);
+
+  const opts = shuffle([idx, ...distractors(idx)]);
+  const grid = document.createElement("div");
+  grid.className = "options";
+  opts.forEach(i => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = DECK[i].wordMeaning;
+    b.addEventListener("click", () => {
+      const ok = i === idx;
+      [...grid.children].forEach(x => { x.disabled = true; x.classList.add("dim"); });
+      b.classList.remove("dim");
+      b.classList.add(ok ? "right" : "wrong");
+      if (!ok) {
+        const correctBtn = [...grid.children][opts.indexOf(idx)];
+        correctBtn.classList.remove("dim");
+        correctBtn.classList.add("right");
+      }
+      Voice.say(c.sentence);
+      revealSentence(area, c);
+      grade(idx, ok);
+      setTimeout(next, ok ? 900 : 2400);
+    });
+    grid.appendChild(b);
+  });
+  ans.appendChild(grid);
+}
+
+/* ---- 聞く: audio only, then pick the meaning ---- */
+function modeListen(c, idx, area, ans) {
+  area.innerHTML =
+    `<div class="prompt-label">Listen — no text</div>
+     <button class="speaker big" id="sp" aria-label="Replay">♪</button>
+     <div class="prompt-label">Tap to replay</div>`;
+  $("#sp").addEventListener("click", () => Voice.say(c.sentence, 0.85));
+  Voice.say(c.sentence, 0.85);
+
+  const opts = shuffle([idx, ...distractors(idx)]);
+  const grid = document.createElement("div");
+  grid.className = "options";
+  opts.forEach(i => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = DECK[i].sentenceMeaning;
+    b.addEventListener("click", () => {
+      const ok = i === idx;
+      [...grid.children].forEach(x => { x.disabled = true; x.classList.add("dim"); });
+      b.classList.remove("dim");
+      b.classList.add(ok ? "right" : "wrong");
+      if (!ok) {
+        const correctBtn = [...grid.children][opts.indexOf(idx)];
+        correctBtn.classList.remove("dim");
+        correctBtn.classList.add("right");
+      }
+      area.innerHTML =
+        `<p class="sentence reveal">${highlight(c.sentence, c.word)}</p>
+         <div class="sentence-de reveal">${c.sentenceFurigana}</div>`;
+      grade(idx, ok);
+      setTimeout(next, ok ? 1100 : 2600);
+    });
+    grid.appendChild(b);
+  });
+  ans.appendChild(grid);
+}
+
+/* ---- 話す: see the meaning, say it aloud, compare ---- */
+function modeSpeak(c, idx, area, ans) {
+  const canListen = "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
+
+  area.innerHTML =
+    `<div class="prompt-label">Say it in Japanese</div>
+     <div class="meaning">${c.sentenceMeaning}</div>
+     <div class="mic-state" id="mic">${canListen ? "" : "&nbsp;"}</div>`;
+
+  const acts = document.createElement("div");
+  acts.className = "actions";
+
+  if (canListen) {
+    const micBtn = document.createElement("button");
+    micBtn.className = "btn";
+    micBtn.textContent = "Record";
+    micBtn.addEventListener("click", () => listenOnce(c, $("#mic"), micBtn));
+    acts.appendChild(micBtn);
+  }
+
+  const revealBtn = document.createElement("button");
+  revealBtn.className = "btn primary";
+  revealBtn.textContent = "Show answer";
+  revealBtn.addEventListener("click", () => {
+    area.innerHTML =
+      `<div class="prompt-label">${c.sentenceMeaning}</div>
+       <p class="sentence reveal">${highlight(c.sentence, c.word)}</p>
+       <div class="reading reveal">${c.sentenceFurigana}</div>
+       <button class="speaker" id="sp" aria-label="Read aloud">♪</button>`;
+    $("#sp").addEventListener("click", () => Voice.say(c.sentence, 0.85));
+    Voice.say(c.sentence, 0.85);
+    ans.innerHTML = "";
+    const judge = document.createElement("div");
+    judge.className = "actions";
+    judge.innerHTML =
+      `<button class="btn no">Missed it</button>
+       <button class="btn yes">Had it</button>`;
+    judge.children[0].addEventListener("click", () => { grade(idx, false); next(); });
+    judge.children[1].addEventListener("click", () => { grade(idx, true);  next(); });
+    ans.appendChild(judge);
+  });
+  acts.appendChild(revealBtn);
+  ans.appendChild(acts);
+}
+
+function listenOnce(c, out, btn) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = "ja-JP";
+  rec.interimResults = false;
+  rec.maxAlternatives = 3;
+
+  btn.textContent = "Listening…";
+  out.className = "mic-state";
+  out.textContent = "…";
+
+  const strip = s => s.replace(/[。、！？\s]/g, "");
+  const target = strip(c.sentence);
+
+  rec.onresult = e => {
+    const heard = [...e.results[0]].map(r => strip(r.transcript));
+    const hit = heard.some(h => h === target || target.includes(h) || h.includes(strip(c.word)));
+    out.className = "mic-state " + (hit ? "hit" : "miss");
+    out.textContent = e.results[0][0].transcript;
+    btn.textContent = "Again";
+  };
+  rec.onerror = () => {
+    out.className = "mic-state";
+    out.textContent = "Nothing heard";
+    btn.textContent = "Again";
+  };
+  rec.onend = () => { if (btn.textContent === "Listening…") btn.textContent = "Record"; };
+  rec.start();
+}
+
+/* ---- めくる: the classic flashcard ---- */
+function modeFlip(c, idx, area, ans) {
+  area.innerHTML =
+    `<h2 class="word">${c.word}</h2>
+     <button class="speaker ghost" id="sp" aria-label="Read aloud">♪</button>`;
+  $("#sp").addEventListener("click", () => Voice.say(c.word));
+  Voice.say(c.word);
+
+  const acts = document.createElement("div");
+  acts.className = "actions";
+  acts.innerHTML = `<button class="btn primary">Flip</button>`;
+  acts.children[0].addEventListener("click", () => {
+    area.innerHTML =
+      `<h2 class="word reveal">${c.word}</h2>
+       <div class="reading reveal">${c.wordFurigana}</div>
+       <div class="meaning reveal">${c.wordMeaning}</div>
+       <p class="sentence reveal">${highlight(c.sentence, c.word)}</p>
+       <div class="sentence-de reveal">${c.sentenceMeaning}</div>
+       <button class="speaker" id="sp" aria-label="Read sentence aloud">♪</button>`;
+    $("#sp").addEventListener("click", () => Voice.say(c.sentence, 0.85));
+    Voice.say(c.sentence, 0.85);
+    ans.innerHTML = "";
+    const judge = document.createElement("div");
+    judge.className = "actions";
+    judge.innerHTML =
+      `<button class="btn no">Didn't know</button>
+       <button class="btn yes">Knew it</button>`;
+    judge.children[0].addEventListener("click", () => { grade(idx, false); next(); });
+    judge.children[1].addEventListener("click", () => { grade(idx, true);  next(); });
+    ans.appendChild(judge);
+  });
+  ans.appendChild(acts);
+}
+
+function revealSentence(area, c) {
+  const p = document.createElement("p");
+  p.className = "sentence reveal";
+  p.style.fontSize = "19px";
+  p.innerHTML = highlight(c.sentence, c.word);
+  area.appendChild(p);
+}
+
+/* ═══════════════ Navigation ═══════════════ */
+
+$("#btnClose").addEventListener("click", () => { speechSynthesis.cancel(); renderHome(); show("home"); });
+$("#btnHome").addEventListener("click",  () => { renderHome(); show("home"); });
+$("#btnAgain").addEventListener("click", () => startSession(state.mode));
+
+renderHome();
+</script>
+</body>
+</html>
