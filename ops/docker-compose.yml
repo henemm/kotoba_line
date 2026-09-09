@@ -1,0 +1,36 @@
+# Start with:  docker compose -f ops/docker-compose.yml up -d --build
+#
+# Run from the repository root — the build context is the root so the image
+# can copy server/.
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    image: kotoba-line-server
+    restart: unless-stopped
+
+    # §9: bound to loopback only. nginx is the sole entry point; the container
+    # is not reachable from outside the host.
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0          # inside the container; the published port is loopback
+      PORT: "8080"
+      DATA_DIR: /data
+      COOKIE_PATH: /kotoba
+      COOKIE_SECURE: "true"  # nginx terminates TLS in front of this
+      LOG_LEVEL: info
+
+    volumes:
+      # The SQLite file and its WAL sidecars. Survives a container rebuild.
+      - /srv/kotoba/data:/data
+      # Audio. nginx serves it directly (§9) — mounted read-only so the API
+      # can check what exists without being able to damage it.
+      - /srv/kotoba/media:/media:ro
+
+    # An account is created with:
+    #   docker compose -f ops/docker-compose.yml exec api node bin/adduser.js --handle mira

@@ -1,0 +1,14 @@
+node_modules/
+
+# The SQLite file and its WAL sidecars live on a host volume, never in git.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Deck content is fetched and converted by import/; it is third-party data
+# with its own licence and a few hundred megabytes of audio.
+media/
+
+.DS_Store
+*.log
