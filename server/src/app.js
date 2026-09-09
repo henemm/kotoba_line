@@ -5,6 +5,7 @@ import { openDatabase } from "./db.js";
 import { pruneExpiredSessions, userForToken } from "./sessions.js";
 import authRoutes from "./routes/auth.js";
 import eventRoutes from "./routes/events.js";
+import statsRoutes from "./routes/stats.js";
 
 /**
  * Build the server. Takes an already-open database so tests can hand in an
@@ -38,6 +39,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
 
   await app.register(authRoutes);
   await app.register(eventRoutes);
+  await app.register(statsRoutes);
 
   app.addHook("onClose", async () => database.close());
 
