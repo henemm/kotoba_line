@@ -8,8 +8,8 @@ Self-hosted behind nginx under the path `/kotoba/`, with a small Fastify + SQLit
 backend. Progress is derived from an append-only review log, so an iPhone and an
 iPad never disagree. Fully usable offline; events reconcile afterwards.
 
-**Status: phase 1.** The backend skeleton runs — schema, authentication, an
-`adduser` script and a container. No deck, no scheduling, no client yet.
+**Status: phase 2.** The backend runs — schema, authentication, and the
+append-only event log with FSRS scheduling. No deck and no client yet.
 
 ## Repository layout
 
