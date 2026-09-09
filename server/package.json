@@ -1,0 +1,20 @@
+{
+  "name": "kotoba-line-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js",
+    "adduser": "node bin/adduser.js"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "better-sqlite3": "^11.8.1",
+    "fastify": "^5.2.1"
+  }
+}

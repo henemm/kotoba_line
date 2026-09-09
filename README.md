@@ -8,7 +8,8 @@ Self-hosted behind nginx under the path `/kotoba/`, with a small Fastify + SQLit
 backend. Progress is derived from an append-only review log, so an iPhone and an
 iPad never disagree. Fully usable offline; events reconcile afterwards.
 
-**Status: specification and design only. No application code yet.**
+**Status: phase 1.** The backend skeleton runs — schema, authentication, an
+`adduser` script and a container. No deck, no scheduling, no client yet.
 
 ## Repository layout
 
@@ -19,6 +20,8 @@ iPad never disagree. Fully usable offline; events reconcile afterwards.
 | `docs/phase-0-plan.md` | Phase 0 output: what to build differently, the repository layout, and the decisions still open. |
 | `design/` | Screen designs for everything around the practice loop — 26 screens with named states, iPhone and iPad. See `design/README.md`. |
 | `prototype/kotoba-line.html` | Working prototype of the four modes. The agreed visual direction, not a placeholder. |
+| `server/` | Node 22 + Fastify + better-sqlite3 — the schema, authentication and sessions. See `server/README.md`. |
+| `ops/` | Dockerfile, compose file, nginx configuration. |
 
 ## Where to start
 

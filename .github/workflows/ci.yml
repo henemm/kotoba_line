@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Test
+        run: npm test
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The image compiles better-sqlite3 against musl. A build that only ever
+      # succeeds on a workstation is a deploy-day surprise.
+      - name: Build the container image
+        run: docker build -f ops/Dockerfile -t kotoba-line-server .
+
+      - name: Start it and check health
+        run: |
+          docker run -d --name kotoba -p 127.0.0.1:8080:8080 \
+            -e COOKIE_SECURE=false kotoba-line-server
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/api/health; then
+              echo; echo "healthy"; exit 0
+            fi
+            sleep 1
+          done
+          echo "did not become healthy"; docker logs kotoba; exit 1
+
+      - name: Stop
+        if: always()
+        run: docker rm -f kotoba || true
