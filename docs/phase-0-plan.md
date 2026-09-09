@@ -203,30 +203,43 @@ goes to the host volume. Nothing generated from it is committed.
 
 ## 3. Open decisions
 
-### 3.1 Product decisions — these need an answer
+### 3.1 Product decisions — answered
 
-**A. The topic tag vocabulary.** Kaishi ships without topic tags and §5a depends
-entirely on them. The spec proposes an LLM pass over 1,500 entries against a
-short fixed list, then a hundred spot-checked by hand. The list determines what
-she can actually filter by, so it is a product choice, not a technical one. The
-spec suggests: school, konbini, food, travel, small talk, family, health, money,
-time. The designs assume five. Which list ships?
+Settled by the product owner on 2026-09-09.
 
-**B. What 聞く tests.** Word or sentence — see §1.2. If it stays at sentence
-level, does it feed the same scheduler row as the other three modes, or its own?
+**A. The topic tag vocabulary — the nine from the specification.** school,
+konbini, food, travel, small talk, family, health, money, time. The designs
+assume five; the extra four cost nothing to carry and *family* is obviously
+useful for someone living with a host family. The import's tagging pass targets
+this list and nothing else.
 
-**C. Does 話す ship in the first version she tests?** §7 says
-`webkitSpeechRecognition` is unreliable in standalone mode on iOS, and the
-prototype already treats the result as feedback rather than a grade. The mode
-works without recognition — she self-grades — but one of its four states is
-"this device cannot listen". Ship it with the fallback, or hold the mode back?
+**B. 聞く tests words, not sentences.** The specification's table wins over the
+prototype's behaviour. Audio plays the word; the four options are word glosses,
+drawn from the same near pool as 選ぶ (§1.1). This keeps all four modes grading
+the same skill, which is what makes one shared `card_state` row defensible under
+§6. A sentence-level listening mode would be a fifth mode, not a variant of this
+one — out of scope for v1.
 
-**D. Session length ceiling.** What does "All" mean when 300 cards are due
-(§1.6)?
+**C. 話す ships, with self-grading as the normal path.** Speech recognition is a
+bonus, never a condition: the mode is built so that it works identically when
+recognition is unavailable, refused, or returns nothing. Per §7 the result is
+feedback and never a grade.
 
-**E. Daily new-card limit at zero.** Settings (screen 22) allows 0–40 and its
-note calls 0 legitimate — reviews only. Confirm that is intended, because it
-means the app can be put into a state where no new material ever appears.
+**D. "All" is capped at 60**, and the picker says so rather than silently
+truncating. A session nobody finishes is worse than a short one.
+
+**E. The daily new-card limit has a floor — it may not be set to zero.**
+This *reverses* the annotation on screen 22, which reads "range 0-40, and 0 is
+legitimate (reviews only)". The product owner's reasoning: some new material
+must always keep arriving.
+
+**Range is therefore 5–40, default 15.** Five is the tech lead's pick for the
+floor — low enough for an exam week, high enough to still be progress. The
+number is a one-line change if it turns out wrong in use.
+
+> **Consequence for the designs.** Screen 22's stepper and its annotation both
+> need updating, and the stepper must stop at 5 rather than 0. Recorded in
+> `design/next-brief.md`.
 
 ### 3.2 Technical decisions — I will decide these unless told otherwise
 
