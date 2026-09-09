@@ -29,6 +29,7 @@ const args = parseArgs(process.argv.slice(2));
 const port = Number(args.port ?? 5173);
 const prefix = args.prefix ?? "/kotoba";
 const apiTarget = new URL(args.api ?? "http://127.0.0.1:8080");
+const mediaRoot = resolve(args.media ?? join(root, "..", "media"));
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -73,6 +74,20 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify({ error: "api_unreachable", detail: err.message }));
     });
     req.pipe(proxied);
+    return;
+  }
+
+  // /kotoba/media/ → the audio directory, as nginx serves it (§9).
+  if (path.startsWith("/media/")) {
+    const name = decodeURIComponent(path.slice("/media/".length));
+    const file = join(mediaRoot, normalize(name).replace(/^(\.\.[/\\])+/, ""));
+    if (!existsSync(file)) {
+      res.writeHead(404, { "content-type": "text/plain" });
+      res.end("not found");
+      return;
+    }
+    res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "public, max-age=31536000" });
+    createReadStream(file).pipe(res);
     return;
   }
 

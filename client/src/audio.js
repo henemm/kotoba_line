@@ -5,11 +5,20 @@
  * what the Settings screen promises and what the personal deck will need, since
  * her own words come with no recordings (§8).
  */
-// Guarded so the module can be imported by a test runner with no DOM.
-const MEDIA = new URL(
-  "../media/",
-  typeof document !== "undefined" ? document.baseURI : "http://localhost/kotoba/",
-).pathname;
+/**
+ * Where nginx serves the deck's audio (§9: `location /kotoba/media/`).
+ *
+ * Relative to the app, not above it. `../media/` resolves to `/media/` when the
+ * app is served from `/kotoba/`, which 404s every file — and because a card
+ * without audio is a normal thing, the fallback to speech synthesis would have
+ * hidden it completely. Exported so the resolution is asserted rather than
+ * assumed.
+ */
+export function mediaUrl(file, base) {
+  const docBase =
+    base ?? (typeof document !== "undefined" ? document.baseURI : "http://localhost/kotoba/");
+  return new URL(`media/${encodeURIComponent(file)}`, docBase).pathname;
+}
 
 let unlocked = false;
 let japaneseVoice = null;
@@ -52,12 +61,14 @@ export async function say(text, file, { rate = 0.9 } = {}) {
 
   if (file) {
     try {
-      const audio = new Audio(MEDIA + encodeURIComponent(file));
+      const audio = new Audio(mediaUrl(file));
       current = audio;
       await audio.play();
       return;
-    } catch {
-      // The file is missing or the browser refused it; speech still works.
+    } catch (err) {
+      // A card with no audio is ordinary; a card that *names* a file we cannot
+      // play is not, and speech would otherwise hide it forever.
+      console.warn(`could not play ${file}, falling back to speech`, err);
     }
   }
 

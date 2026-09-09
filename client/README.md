@@ -13,9 +13,13 @@ cookie is `Path=/kotoba` (§10). `dev-server.js` stands in for the nginx block i
 
 ```sh
 cd server && DATA_DIR=../data COOKIE_SECURE=false npm start   # terminal 1
-npm run dev:client                                            # terminal 2
+npm run dev:client -- --media ../media                        # terminal 2
 # → http://127.0.0.1:5173/kotoba/
 ```
+
+`--media` points at the directory the import wrote to. The dev server serves it
+at `/kotoba/media/`, which is where nginx serves it in production (§9) — without
+that the audio silently falls back to speech and a broken path goes unnoticed.
 
 Serve it anywhere else and the cookie silently stops being sent — see the note
 in `server/README.md`.
