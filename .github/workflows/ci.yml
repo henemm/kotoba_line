@@ -28,6 +28,26 @@ jobs:
       - name: Test
         run: npm test
 
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # The import scripts have no dependencies of their own; they borrow
+      # better-sqlite3 from the server, which is why this installs there.
+      - run: npm ci
+        working-directory: server
+
+      # Runs against a synthetic .apkg built in the test, so CI never
+      # downloads the 110 MB deck.
+      - run: npm run test:import
+
   image:
     runs-on: ubuntu-latest
     steps:
