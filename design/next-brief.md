@@ -142,6 +142,14 @@ Topic picker) should assume nine as the ordinary case — which means the topic
 list on Stats is past its five-entry truncation point by default, and screen 24's
 expanded state is the normal one rather than an edge case.
 
+**Screen 02, day one — "100 XP to level 2" is off by one threshold.** The
+spec's level-up thresholds are 100, 300, 600, 1000, 1500, and the other two
+Stats variants match them exactly ("level 7 · 2,800" with 3,140 XP; "level 23 ·
+27,600" with 28,940). Under the same formula a beginner reaches level 2 at 300
+XP, not 100. The server implements the spec, with level 1 absorbing everything
+below 300 so no one is ever shown a level 0. The day-one frame's copy needs the
+corrected number.
+
 **Topics cover an eighth of the deck, not all of it — and unevenly.** This is
 the big one, and it changes what two screens can honestly show. Measured against
 the real Kaishi deck (`docs/tagging.md`):

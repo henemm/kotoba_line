@@ -35,6 +35,7 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/me` | the current user, or 401 |
 | `POST` | `/api/events` | `{ events: [...] }` → `{ accepted, rejected, states }` |
+| `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts |
 | `GET` | `/api/health` | liveness, no auth |
 
 ## The event log
@@ -116,8 +117,10 @@ src/users.js        PIN hashing and verification
 src/scheduler.js    ts-fsrs; folds a card's events into its state
 src/events.js       idempotent ingest and card_state recomputation
 src/replay.js       rebuild card_state from the log
+src/stats.js        XP, levels, streak and jokers — all derived (§8a)
 src/routes/auth.js  login, logout, /api/me
 src/routes/events.js  POST /api/events
+src/routes/stats.js   GET /api/stats
 src/app.js          assembly; takes a database so tests can pass one in
 migrations/         numbered SQL, applied once, in filename order
 ```
@@ -138,3 +141,29 @@ an argon2 verification, which it cannot do from inside the application.
 **Sessions expire server-side.** A client can keep sending a cookie past its
 `Max-Age`, so the same lifetime is enforced against `created_at`, and an expired
 row is deleted rather than merely refused.
+
+## Progress is derived, never counted
+
+`GET /api/stats` computes XP, level, streak, joker balance, maturity bands and
+per-topic counts from `review_events` on every request (§8a). Nothing is stored
+as a counter, so two devices cannot disagree and a wrong number is fixed by
+replaying the log.
+
+Three decisions the spec leaves open, settled in `src/stats.js`:
+
+**The day boundary is Asia/Tokyo, server-side.** Not the device's timezone and
+not UTC — a streak that resets because a phone changed zones is the kind of bug
+that ends the habit.
+
+**Today never breaks the streak.** The day is not over. A streak that collapsed
+at midnight Tokyo time because she had not practised *yet* would be wrong every
+morning.
+
+**The streak counts days practised, not days elapsed.** A joker keeps the run
+alive across a gap; it does not invent a day of study. Five days practised, one
+covered by a joker, one practised is a streak of six.
+
+Levels follow §8a literally — level *n* starts at `100·n·(n+1)/2`, so level 7
+begins at 2,800 XP, which is what the Stats design draws. The one adjustment is
+that level 1 absorbs everything below level 2's threshold, because the formula
+would otherwise put a beginner on level 0 and no screen draws one.
