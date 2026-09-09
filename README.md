@@ -9,8 +9,8 @@ backend. Progress is derived from an append-only review log, so an iPhone and an
 iPad never disagree. Fully usable offline; events reconcile afterwards.
 
 **Status: phase 3.** The backend runs — schema, authentication, the append-only
-event log with FSRS scheduling, and the deck import: 1,500 cards with audio.
-Cards carry no topic tags yet, and there is no client.
+event log with FSRS scheduling, and the deck import: 1,500 cards with audio and
+191 of them topic-tagged. No client yet.
 
 ## Repository layout
 
@@ -19,6 +19,7 @@ Cards carry no topic tags yet, and there is no client.
 | `docs/kotoba-line-spec.md` | Build specification — the source of truth. Architecture, data model, sync, API, scheduling, PWA behaviour, deck import, XP/streak/jokers, nginx, milestones. |
 | `docs/claude-code-brief.md` | Task brief: phases 0–5, ground rules, working agreement. |
 | `docs/phase-0-plan.md` | Phase 0 output: what to build differently, the repository layout, and the decisions still open. |
+| `docs/tagging.md` | What topic tagging the deck can actually support, and why it is an eighth of it. |
 | `design/` | Screen designs for everything around the practice loop — 26 screens with named states, iPhone and iPad. See `design/README.md`. |
 | `prototype/kotoba-line.html` | Working prototype of the four modes. The agreed visual direction, not a placeholder. |
 | `server/` | Node 22 + Fastify + better-sqlite3 — the schema, authentication and sessions. See `server/README.md`. |
