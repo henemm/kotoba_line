@@ -16,14 +16,15 @@ iPad never disagree. Fully usable offline; events reconcile afterwards.
 |---|---|
 | `docs/kotoba-line-spec.md` | Build specification — the source of truth. Architecture, data model, sync, API, scheduling, PWA behaviour, deck import, XP/streak/jokers, nginx, milestones. |
 | `docs/claude-code-brief.md` | Task brief: phases 0–5, ground rules, working agreement. |
+| `docs/phase-0-plan.md` | Phase 0 output: what to build differently, the repository layout, and the decisions still open. |
 | `design/` | Screen designs for everything around the practice loop — 26 screens with named states, iPhone and iPad. See `design/README.md`. |
 | `prototype/kotoba-line.html` | Working prototype of the four modes. The agreed visual direction, not a placeholder. |
 
 ## Where to start
 
-Read `docs/kotoba-line-spec.md` first, then `docs/claude-code-brief.md`. The brief
-opens with a plan-only phase: propose the repository layout and list the open
-decisions before writing code.
+Read `docs/kotoba-line-spec.md` first, then `docs/claude-code-brief.md`, then
+`docs/phase-0-plan.md` — the plan-only phase the brief opens with, already done.
+It carries the proposed layout and the questions still waiting on an answer.
 
 The practice loop is already designed and prototyped. The designs in `design/`
 cover the screens around it — sign in, stats, settings, session summary, and the
