@@ -7,6 +7,7 @@ import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats
 import { splitEmphasis } from "../src/screens/session.js";
 import { mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
+import { mediaUrl } from "../src/audio.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -228,5 +229,28 @@ describe("the summary's clock", () => {
     assert.equal(mmss(26), "0:26");
     assert.equal(mmss(252), "4:12");
     assert.equal(mmss(605), "10:05");
+  });
+});
+
+describe("where the audio lives", () => {
+  it("sits under the app's own prefix, not above it", () => {
+    // §9 serves it at /kotoba/media/. "../media/" would resolve to /media/ and
+    // 404 every file — invisibly, because speech synthesis would cover for it.
+    assert.equal(
+      mediaUrl("JLPT_Tango_N5_0001.mp3", "https://host/kotoba/"),
+      "/kotoba/media/JLPT_Tango_N5_0001.mp3",
+    );
+  });
+
+  it("works when the app is served from the root too", () => {
+    assert.equal(mediaUrl("a.mp3", "https://host/"), "/media/a.mp3");
+  });
+
+  it("escapes a filename with Japanese in it", () => {
+    // Two thirds of the deck's audio is named after the word it reads.
+    const url = mediaUrl("私_ワタシ━_0_NHK-2016.mp3", "https://host/kotoba/");
+    assert.ok(url.startsWith("/kotoba/media/"));
+    assert.ok(!url.includes(" "));
+    assert.equal(decodeURIComponent(url), "/kotoba/media/私_ワタシ━_0_NHK-2016.mp3");
   });
 });
