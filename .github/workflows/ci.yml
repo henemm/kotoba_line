@@ -1,8 +1,10 @@
 name: CI
 
+# Branches are checked through their pull request; main is checked on push.
+# Listening to both for every branch runs each job twice for no extra signal.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
 
 jobs:
