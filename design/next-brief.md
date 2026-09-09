@@ -122,6 +122,28 @@ Where a new screen supersedes an existing one, say which number.
 
 ---
 
+## Changes to screens that already exist
+
+Not new screens — corrections to drawn ones, settled in `docs/phase-0-plan.md`.
+
+**Screen 22, Settings — the new-card stepper may not reach zero.** Its annotation
+currently reads "range 0-40, and 0 is legitimate (reviews only)". The product
+owner reversed that: some new material must always keep arriving. The range is
+**5–40, default 15**, and the stepper's minus control goes inert at 5.
+
+**Screen 22 and 23 — the session-length picker needs a stated ceiling.** "All"
+is capped at 60 cards. The picker should say so rather than appear to offer an
+unbounded session; after a week away the backlog can be several hundred, and the
+station strip is drawn for twenty.
+
+**The topic vocabulary is nine, not five.** school, konbini, food, travel, small
+talk, family, health, money, time. Screens showing five topics (02 Stats, 23
+Topic picker) should assume nine as the ordinary case — which means the topic
+list on Stats is past its five-entry truncation point by default, and screen 24's
+expanded state is the normal one rather than an edge case.
+
+---
+
 ## Why these nine
 
 Derived by reading the canvas against the current specification.
