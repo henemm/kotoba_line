@@ -1,0 +1,225 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--ui);
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+}
+
+/* The app is one column on a dark field. On iPad the field shows around it. */
+#app {
+  width: 100%;
+  max-width: var(--column);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  position: relative;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Buttons and links show a ring; text fields show it as a border, because a
+   ring around a filled field fights the surface it sits on. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+input:focus,
+input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--surface-hi);
+}
+
+.jp {
+  font-family: var(--jp);
+}
+
+.mono-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── status bar ─────────────────────────────────────────────────── */
+.statusbar {
+  height: 46px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.statusbar .battery {
+  width: 22px;
+  height: 11px;
+  border: 1px solid var(--ink-muted);
+  border-radius: 3px;
+  display: block;
+}
+
+/* ── primary action ─────────────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
+  height: 58px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--night);
+  font: 700 17px/1 inherit;
+}
+
+.btn-primary[disabled] {
+  background: var(--surface-hi);
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.btn-secondary {
+  width: 100%;
+  height: 52px;
+  border: 2px solid var(--surface-hi);
+  border-radius: 14px;
+  background: none;
+  color: var(--ink);
+  font: 600 16px/1 inherit;
+}
+
+/* ── the offline strip (design 25) ──────────────────────────────── */
+/* Never shown during a session: the strip belongs to the tab screens only,
+   so a card is never covered. */
+.offline-bar {
+  background: var(--surface);
+  padding: 9px var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.offline-bar .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  flex: none;
+}
+
+.offline-bar.synced .dot {
+  background: var(--yes);
+}
+
+.offline-bar span:last-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.offline-bar.synced span:last-child {
+  color: var(--ink);
+}
+
+/* ── tab bar (design 11) ────────────────────────────────────────── */
+/* No icons: three words and a station dot for the active tab, the same dot
+   used everywhere else. Hidden during a session and behind sign-in. */
+.tabbar {
+  height: 72px;
+  flex: none;
+  background: var(--night-deep);
+  border-top: 1px solid var(--surface-hi);
+  display: flex;
+  align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  padding: 0;
+  position: relative;
+}
+
+.tabbar .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface-hi);
+  display: block;
+}
+
+.tabbar .label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.tabbar [aria-current="page"] .dot {
+  background: var(--ink);
+}
+
+.tabbar [aria-current="page"] .label {
+  color: var(--ink);
+}
+
+/* The joker badge: a diamond on Stats the first time one is earned, cleared
+   once the tab is opened. A diamond is the only diamond in the app. */
+.tabbar .joker-badge {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  margin-left: 12px;
+  width: 26px;
+  height: 26px;
+  background: var(--ink);
+  transform: rotate(45deg);
+  border-radius: 5px;
+  display: block;
+}
+
+@media (min-width: 700px) {
+  .tabbar {
+    height: 80px;
+    padding-left: 25%;
+    padding-right: 25%;
+  }
+  .tabbar .label {
+    font-size: 13px;
+  }
+}

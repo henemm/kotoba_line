@@ -1,0 +1,40 @@
+/*
+ * The design system, unchanged from the brief. These are the only colours in
+ * the app; a value that is not here does not belong on a screen.
+ */
+:root {
+  --night:      #141824;  /* page background          */
+  --night-deep: #0D1017;  /* recessed areas           */
+  --surface:    #1E2433;  /* cards, inactive controls */
+  --surface-hi: #2A3244;  /* raised controls, rails   */
+  --ink:        #F2F4F8;  /* primary text             */
+  --ink-muted:  #8A93A8;  /* secondary text           */
+  --ink-dim:    #3D465C;  /* empty slots, disabled    */
+
+  --line-choose: #F15A22;  /* 選ぶ   pick the meaning */
+  --line-listen: #00A7DB;  /* 聞く   listen only      */
+  --line-speak:  #C7008B;  /* 話す   say it aloud     */
+  --line-flip:   #80C241;  /* めくる flip the card    */
+
+  --yes: #3DDC84;
+  --no:  #FF4B4B;
+
+  /* Japanese is always noticeably larger than the Latin text beside it. */
+  --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+        "Yu Gothic", sans-serif;
+  --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+        Helvetica, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* The phone column. iPad widens this to 560 and centres it; the session and
+     the moments keep the phone layout whatever the screen. */
+  --column: 390px;
+  --gutter: 26px;
+}
+
+@media (min-width: 700px) {
+  :root {
+    --column: 560px;
+    --gutter: 40px;
+  }
+}

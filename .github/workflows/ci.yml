@@ -48,6 +48,10 @@ jobs:
       # downloads the 110 MB deck.
       - run: npm run test:import
 
+      # The client has no dependencies at all; only its pure logic is tested
+      # here, the screens are checked by looking at them.
+      - run: npm run test:client
+
   image:
     runs-on: ubuntu-latest
     steps:
