@@ -127,11 +127,11 @@ const upsert = db.prepare(
   `INSERT INTO cards
      (id, word, word_furigana, word_meaning, word_audio,
       sentence, sentence_furigana, sentence_meaning, sentence_audio,
-      frequency_rank, deck)
+      frequency_rank, deck, updated_at)
    VALUES
      (@id, @word, @word_furigana, @word_meaning, @word_audio,
       @sentence, @sentence_furigana, @sentence_meaning, @sentence_audio,
-      @frequency_rank, @deck)
+      @frequency_rank, @deck, @updated_at)
    ON CONFLICT (id) DO UPDATE SET
      word = excluded.word,
      word_furigana = excluded.word_furigana,
@@ -142,11 +142,14 @@ const upsert = db.prepare(
      sentence_meaning = excluded.sentence_meaning,
      sentence_audio = excluded.sentence_audio,
      frequency_rank = excluded.frequency_rank,
-     deck = excluded.deck`,
+     deck = excluded.deck,
+     updated_at = excluded.updated_at`,
 );
 
+// §5: the client fetches `/api/deck?since=` and needs to know what moved.
+const importedAt = Math.floor(Date.now() / 1000);
 db.transaction(() => {
-  for (const card of cards) upsert.run(card);
+  for (const card of cards) upsert.run({ ...card, updated_at: importedAt });
 })();
 
 process.stdout.write(`Wrote ${cards.length} cards to ${dbFile}\n`);

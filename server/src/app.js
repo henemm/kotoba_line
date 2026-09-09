@@ -5,6 +5,7 @@ import { openDatabase } from "./db.js";
 import { pruneExpiredSessions, userForToken } from "./sessions.js";
 import authRoutes from "./routes/auth.js";
 import eventRoutes from "./routes/events.js";
+import deckRoutes from "./routes/deck.js";
 import statsRoutes from "./routes/stats.js";
 
 /**
@@ -40,6 +41,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   await app.register(authRoutes);
   await app.register(eventRoutes);
   await app.register(statsRoutes);
+  await app.register(deckRoutes);
 
   app.addHook("onClose", async () => database.close());
 
