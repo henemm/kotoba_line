@@ -4,6 +4,7 @@ import { readCookie } from "./cookies.js";
 import { openDatabase } from "./db.js";
 import { pruneExpiredSessions, userForToken } from "./sessions.js";
 import authRoutes from "./routes/auth.js";
+import eventRoutes from "./routes/events.js";
 
 /**
  * Build the server. Takes an already-open database so tests can hand in an
@@ -36,6 +37,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   app.get("/api/health", async () => ({ ok: true }));
 
   await app.register(authRoutes);
+  await app.register(eventRoutes);
 
   app.addHook("onClose", async () => database.close());
 

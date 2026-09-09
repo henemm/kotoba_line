@@ -34,7 +34,42 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `POST` | `/api/auth/login` | `{ handle, pin }` → sets the session cookie, returns the user |
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/me` | the current user, or 401 |
+| `POST` | `/api/events` | `{ events: [...] }` → `{ accepted, rejected, states }` |
 | `GET` | `/api/health` | liveness, no auth |
+
+## The event log
+
+`review_events` is append-only and is the whole synchronisation mechanism (§4).
+`card_state` is a cache of what the scheduler derived from it, and can be thrown
+away at any time:
+
+```js
+import { replayCardState } from "./src/replay.js";
+replayCardState(db);                 // everyone
+replayCardState(db, { userId: 1 });  // one user
+```
+
+Three properties hold, and each has a test:
+
+**Posting the same batch twice changes nothing.** `INSERT OR IGNORE` on the
+client's UUID, so the outbox can retry blindly without tracking what succeeded.
+Every post acknowledges every event it accepted, new or not — the ack means "you
+may drop this", not "this was new".
+
+**Arrival order does not matter.** A card's state is folded from its entire
+history every time, never patched incrementally. Two devices append to one log
+and an event can turn up after a later one has been processed; folding from the
+start makes the result depend only on the set of events.
+
+**A replay lands on the same answer.** Which is why `enable_fuzz` is off in
+`src/scheduler.js`. Fuzz randomises each interval by a few percent so cards do
+not clump — good for a scheduler, fatal for a rebuild, because §3's "delete
+card_state and replay" promise is worthless if the rebuild moves every due date.
+
+An event the server will never accept — a card that no longer exists, a
+timestamp a day in the future — comes back in `rejected` with a reason rather
+than failing the batch. A blindly retrying outbox would otherwise wedge on it
+forever.
 
 ## The cookie path will surprise you
 
@@ -78,7 +113,11 @@ src/db.js           connection and the migration runner
 src/cookies.js      read/write one cookie — no dependency for this
 src/sessions.js     token creation, lookup, expiry
 src/users.js        PIN hashing and verification
+src/scheduler.js    ts-fsrs; folds a card's events into its state
+src/events.js       idempotent ingest and card_state recomputation
+src/replay.js       rebuild card_state from the log
 src/routes/auth.js  login, logout, /api/me
+src/routes/events.js  POST /api/events
 src/app.js          assembly; takes a database so tests can pass one in
 migrations/         numbered SQL, applied once, in filename order
 ```

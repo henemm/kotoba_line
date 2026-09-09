@@ -20,6 +20,27 @@ export async function seedUser(db, { handle = "mira", pin = "483920", display = 
   return createUser(db, { handle, display, pin });
 }
 
+/** A handful of cards to hang events on. */
+export function seedCards(db, count = 5) {
+  const insert = db.prepare(
+    `INSERT INTO cards (id, word, word_meaning, frequency_rank)
+     VALUES (?, ?, ?, ?)`,
+  );
+  for (let i = 1; i <= count; i++) insert.run(i, `語${i}`, `word ${i}`, i);
+  return count;
+}
+
+/** Sign in and return a cookie header usable with app.inject. */
+export async function signIn(app, config, { handle = "mira", pin = "483920" } = {}) {
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/auth/login",
+    payload: { handle, pin },
+  });
+  const token = cookieValue(res.headers["set-cookie"], config.cookieName);
+  return `${config.cookieName}=${token}`;
+}
+
 /** Pull one cookie's value out of a set-cookie header. */
 export function cookieValue(setCookie, name) {
   const headers = [setCookie].flat().filter(Boolean);
