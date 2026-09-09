@@ -35,6 +35,10 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/me` | the current user, or 401 |
 | `POST` | `/api/events` | `{ events: [...] }` → `{ accepted, rejected, states }` |
+| `GET` | `/api/deck` | `?since=` → cards changed since then, with their tags |
+| `GET` | `/api/queue` | `?mode=&limit=&deck=&tag=&only=` → card ids in scheduler order |
+| `GET` | `/api/browse` | `?q=&deck=&tag=&starred=&page=` → searchable card list |
+| `POST` | `/api/stars` | `{ cardId, starred }` → pin or unpin a card |
 | `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts |
 | `GET` | `/api/health` | liveness, no auth |
 
@@ -118,9 +122,11 @@ src/scheduler.js    ts-fsrs; folds a card's events into its state
 src/events.js       idempotent ingest and card_state recomputation
 src/replay.js       rebuild card_state from the log
 src/stats.js        XP, levels, streak and jokers — all derived (§8a)
+src/queue.js        session composition, browse and stars (§5, §5a)
 src/routes/auth.js  login, logout, /api/me
 src/routes/events.js  POST /api/events
 src/routes/stats.js   GET /api/stats
+src/routes/deck.js    deck, queue, browse, stars
 src/app.js          assembly; takes a database so tests can pass one in
 migrations/         numbered SQL, applied once, in filename order
 ```
@@ -167,3 +173,31 @@ Levels follow §8a literally — level *n* starts at `100·n·(n+1)/2`, so level
 begins at 2,800 XP, which is what the Stats design draws. The one adjustment is
 that level 1 absorbs everything below level 2's threshold, because the formula
 would otherwise put a beginner on level 0 and no screen draws one.
+
+## Choosing what to study (§5a)
+
+`/api/queue` mixes three groups in order — due today oldest first, anything
+lapsed in the last three days, then new cards by frequency — then shuffles
+within the session so the same cards do not always arrive in the same order.
+It returns **ids only**: the client already holds the deck, and re-sending card
+content on every session start would waste the bandwidth §1 is trying to save.
+
+`deck=`, `tag=` and `only=` (`starred`, `lapsed`, `new`) narrow it. When any of
+them is set the session counts as one she chose, and §5a's rule applies: the
+daily new-card limit is for unfiltered sessions only, so a deliberately picked
+session is never capped.
+
+"All" is capped at 60 cards (phase-0-plan §3.1 D). After a week away the backlog
+can be several hundred, and a session nobody finishes is worse than a short one.
+
+### Search anchors to word starts
+
+`/api/browse?q=eat` returned eighteen cards before this was fixed, among them
+"to **cr**eat**e**", "gr**eat**" and "w**eat**her". A plain substring match on an
+English gloss is mostly noise.
+
+The Japanese word and its reading still match as substrings — Japanese has no
+word boundaries. The English gloss is padded, its punctuation flattened to
+spaces, and matched from the start of a word, so "eat" finds *to eat*, *let's
+eat!* and *eating* but none of the three above. There is no stemming: "ate" will
+not find "eat".
