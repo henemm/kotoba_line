@@ -447,3 +447,362 @@
   color: var(--ink-muted);
   font-size: 14px;
 }
+
+/* ══ 02/12 Stats ══════════════════════════════════════════════════
+   The order is deliberate: one number at 96px, then two at 38px, then
+   everything else at text size. */
+
+.stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.stats-head {
+  padding: 6px 22px 18px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.stats-offline {
+  margin: 0;
+  padding: 0 22px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.stats-body {
+  padding: 0 22px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* ── level ─────────────────────────────────────────────────────── */
+.stats .level {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.stats .level-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.stats .level-numeral {
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.03em;
+}
+.stats .level-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 6px;
+}
+.stats .level-xp {
+  font-size: 22px;
+  font-weight: 700;
+}
+.stats .segments {
+  display: flex;
+  gap: 5px;
+}
+.stats .segment {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-hi);
+}
+.stats .segment.on {
+  background: var(--ink);
+}
+.stats .level-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+}
+
+/* ── streak tiles ──────────────────────────────────────────────── */
+.stats .tiles {
+  display: flex;
+  gap: 10px;
+}
+.stats .tile {
+  flex: 1;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stats .tile-value {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+}
+.stats .tile-label {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* ── jokers ────────────────────────────────────────────────────── */
+.stats .jokers {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stats .jokers-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.stats .jokers-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.stats .jokers-count {
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+}
+.stats .joker-slots {
+  display: flex;
+  gap: 12px;
+}
+.stats .slot {
+  flex: 1;
+  height: 52px;
+  border-radius: 12px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+}
+.stats .slot.filled {
+  border: 2px solid var(--surface-hi);
+}
+.stats .slot.empty {
+  border: 2px dashed var(--ink-dim);
+}
+.stats .diamond {
+  width: 24px;
+  height: 24px;
+  background: var(--ink);
+  transform: rotate(45deg);
+  border-radius: 4px;
+  display: block;
+}
+.stats .jokers-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+
+/* ── shared section furniture ──────────────────────────────────── */
+.stats .section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stats .section-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.stats .section-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+.stats .section-count {
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+}
+.stats .section-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/* ── maturity ──────────────────────────────────────────────────── */
+.stats .maturity {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stats .maturity-bar {
+  display: flex;
+  gap: 3px;
+  height: 16px;
+}
+.stats .maturity-empty {
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface);
+}
+.stats .maturity-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+.stats .legend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.stats .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+.stats .legend-label {
+  font-size: 13px;
+  color: var(--ink-muted);
+  flex: 1;
+}
+.stats .legend-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── topics ────────────────────────────────────────────────────── */
+.stats .topics {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* Past five entries the rows tighten, so twelve stay readable (design 24). */
+.stats .topics.expanded {
+  gap: 12px;
+}
+.stats .topic {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stats .topic-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stats .topic-name {
+  font-size: 14px;
+  font-weight: 600;
+  /* A long label takes the row and ellipses; the count never wraps. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stats .topic-count {
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+  flex: none;
+}
+.stats .topic-bar {
+  position: relative;
+  height: 14px;
+  display: flex;
+  align-items: center;
+}
+.stats .topic-bar .track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--surface-hi);
+  border-radius: 2px;
+}
+.stats .topic-bar .fill {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+.stats .topic-bar .end-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--night);
+  border: 3px solid var(--ink);
+  box-sizing: border-box;
+}
+
+.stats .topics-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 0;
+  background: none;
+  border: 0;
+  width: 100%;
+}
+.stats .topics-toggle .line {
+  flex: 1;
+  height: 1px;
+  background: var(--surface-hi);
+}
+.stats .topics-toggle .text {
+  font: 400 12px/1 var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 700px) {
+  /* Two columns, reading order preserved: level and the deck on the left,
+     streak and topics on the right. Type goes up about 15%, not 100% —
+     this is held at arm's length, not projected. */
+  .stats-head {
+    padding: 26px 48px 8px;
+    font-size: 22px;
+  }
+  .stats-body {
+    padding: 22px 48px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+    align-content: start;
+  }
+  .stats .level {
+    grid-column: 1;
+  }
+  .stats .maturity {
+    grid-column: 1;
+  }
+  .stats .tiles {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .stats .jokers {
+    grid-column: 2;
+  }
+  .stats .topics {
+    grid-column: 2;
+  }
+  .stats .level-numeral {
+    font-size: 132px;
+  }
+  .stats .level-xp {
+    font-size: 26px;
+  }
+  .stats .tile-value {
+    font-size: 46px;
+  }
+  .stats .section-title,
+  .stats .jokers-title {
+    font-size: 17px;
+  }
+}
