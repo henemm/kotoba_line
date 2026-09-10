@@ -133,10 +133,16 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord }) {
 
   /** Redraw the chrome without touching the list or the input's focus. */
   function drawChrome() {
+    // Reading this after chrome() would always be false: building the fresh
+    // tree reparents `search` into a still-detached subtree, and a focused
+    // element blurs the moment it is detached -- before replaceChild ever
+    // reattaches it. Capture the pre-redraw focus state first instead.
+    const hadFocus = document.activeElement === search;
     const fresh = chrome();
     root.replaceChild(fresh, root.firstChild);
-    // The input node is reused, so focus and the caret survive the redraw.
-    if (document.activeElement === search) search.focus();
+    // The input node is reused, so its value and caret survive the redraw;
+    // only focus itself needs restoring, since detaching it blurred it.
+    if (hadFocus) search.focus();
     root.replaceChild(footer(), root.lastChild);
   }
 
