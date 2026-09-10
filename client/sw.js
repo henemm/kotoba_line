@@ -15,7 +15,7 @@
  * automatically (phase-0-plan §1.5), so it is a line in a diff like everything
  * else, and `ops/deploy.sh` is where it would be forgotten.
  */
-const VERSION = "v13";
+const VERSION = "v14";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -24,6 +24,21 @@ const MEDIA_MAX = 300;
 
 const scope = new URL("./", self.location).pathname;
 
+/**
+ * Every file under client/src, and the list has to stay that way — see the
+ * test in client/test/shell-files.test.js, which fails if one is missing.
+ *
+ * This is not a "nice to have offline" list. `app.js` imports all of them
+ * statically, so a module that is absent stops the whole app from evaluating,
+ * not just the screen it belongs to. And the gap does not show up in ordinary
+ * use: the *first* page load happens before the worker controls the page, so
+ * those requests never reach the fetch handler and are never cached by the
+ * fallback in `shell()`. Install the app and open it with no network and it
+ * came up blank — measured, #app had 0 children, with `browse.js`,
+ * `card-topics.js`, `own-deck.js` and four more failing to load (#53). Any
+ * later online launch quietly filled the cache in, which is why six features
+ * were added here without anyone noticing the list had stopped keeping up.
+ */
 const SHELL_FILES = [
   "",
   "index.html",
@@ -34,8 +49,15 @@ const SHELL_FILES = [
   "src/deck.js",
   "src/modes.js",
   "src/outbox.js",
+  "src/pitch.js",
   "src/queue.js",
+  "src/resume.js",
   "src/store.js",
+  "src/screens/browse.js",
+  "src/screens/card-topics.js",
+  "src/screens/choose-set.js",
+  "src/screens/first-run.js",
+  "src/screens/own-deck.js",
   "src/screens/practise.js",
   "src/screens/session.js",
   "src/screens/settings.js",
