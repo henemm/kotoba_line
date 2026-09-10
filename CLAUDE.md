@@ -127,6 +127,12 @@ every card she writes herself: never invent a contour for those.
 
 ## Deploying
 
+**`ops/status.sh` answers "what does this need?" by measuring.** Run it on the
+server before anything else: it reports pending migrations, the deployed shell
+version, import columns that are empty, audio nginx cannot read, and prints the
+remaining commands in order. It changes nothing. Prefer it over any instruction
+in prose — including one of mine in a chat message.
+
 Three places, and they are not the same place:
 
 ```
