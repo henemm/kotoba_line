@@ -303,3 +303,82 @@ describe("GET /api/stats", () => {
     await app.close();
   });
 });
+
+describe("the topic list behind the picker (#35)", () => {
+  async function fixture() {
+    const { app, db, config } = await testApp();
+    await seedUser(db);
+    seedCards(db, 6);
+    const tag = db.prepare("INSERT INTO tags (card_id, tag) VALUES (?, ?)");
+    tag.run(1, "food");
+    tag.run(2, "food");
+    tag.run(3, "places");
+    return { app, db, config };
+  }
+
+  it("carries the deck's topics and hers in one list, marked", async () => {
+    // One list because it drives two screens that both want every topic: the
+    // picker she filters a session with, and the per-topic progress bars.
+    const { app, db, config } = await fixture();
+    const cookie = await signIn(app, config);
+    db.prepare("INSERT INTO card_user_tags (user_id, card_id, tag, added_at) VALUES (1, 5, ?, 0)")
+      .run("my exam");
+
+    const { topics } = (
+      await app.inject({ method: "GET", url: "/api/stats", headers: { cookie } })
+    ).json();
+
+    const byTag = Object.fromEntries(topics.map((t) => [t.tag, t]));
+    assert.deepEqual(byTag.food, { tag: "food", total: 2, seen: 0, own: false });
+    assert.deepEqual(byTag["my exam"], { tag: "my exam", total: 1, seen: 0, own: true });
+    await app.close();
+  });
+
+  it("counts a name used by both sides once, as the union", async () => {
+    // She puts a third card into `food`. That is one topic with three cards,
+    // not two rows called food — and `own` is true, because the fact worth
+    // surfacing is that she has touched it.
+    const { app, db, config } = await fixture();
+    const cookie = await signIn(app, config);
+    db.prepare("INSERT INTO card_user_tags (user_id, card_id, tag, added_at) VALUES (1, 4, ?, 0)")
+      .run("food");
+
+    const { topics } = (
+      await app.inject({ method: "GET", url: "/api/stats", headers: { cookie } })
+    ).json();
+
+    const food = topics.filter((t) => t.tag === "food");
+    assert.equal(food.length, 1, "one row, not two");
+    assert.equal(food[0].total, 3);
+    assert.equal(food[0].own, true);
+    await app.close();
+  });
+
+  it("shows her nothing of another user's topics", async () => {
+    const { app, db, config } = await fixture();
+    await seedUser(db, { handle: "someone", pin: "111111", display: "Someone" });
+    db.prepare("INSERT INTO card_user_tags (user_id, card_id, tag, added_at) VALUES (2, 6, ?, 0)")
+      .run("his topic");
+
+    const cookie = await signIn(app, config);
+    const { topics } = (
+      await app.inject({ method: "GET", url: "/api/stats", headers: { cookie } })
+    ).json();
+    assert.equal(topics.some((t) => t.tag === "his topic"), false);
+    await app.close();
+  });
+
+  it("drops a topic whose only card was deleted", async () => {
+    const { app, db, config } = await fixture();
+    const cookie = await signIn(app, config);
+    db.prepare("INSERT INTO card_user_tags (user_id, card_id, tag, added_at) VALUES (1, 6, ?, 0)")
+      .run("gone");
+    db.prepare("UPDATE cards SET deleted_at = 1 WHERE id = 6").run();
+
+    const { topics } = (
+      await app.inject({ method: "GET", url: "/api/stats", headers: { cookie } })
+    ).json();
+    assert.equal(topics.some((t) => t.tag === "gone"), false);
+    await app.close();
+  });
+});

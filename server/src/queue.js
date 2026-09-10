@@ -1,3 +1,5 @@
+import { userTagsFor } from "./cards.js";
+
 /**
  * Building a session's queue (§5, §5a).
  *
@@ -59,15 +61,29 @@ export function isFiltered({ deck, tag, only }) {
   return Boolean(deck || tag || only);
 }
 
-function filterClause({ deck, tag }, params) {
+/**
+ * The deck's topics and hers are one namespace to a filter (#35).
+ *
+ * A topic is a topic: when she picks one she means "cards under this", and
+ * whether the name was written by the import or by her own hand is a fact
+ * about where it lives, not about what she asked for. So a tag matches if it
+ * is on the card in `tags` *or* in her `card_user_tags`.
+ *
+ * That also means she can put a card into a topic the deck already has, rather
+ * than being locked out of `food` because the import owns the name.
+ */
+function filterClause({ deck, tag }, params, userId) {
   let sql = "";
   if (deck) {
     sql += " AND c.deck = ?";
     params.push(deck);
   }
   if (tag) {
-    sql += " AND EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)";
-    params.push(tag);
+    sql +=
+      " AND (EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)" +
+      " OR EXISTS (SELECT 1 FROM card_user_tags ut" +
+      " WHERE ut.card_id = c.id AND ut.user_id = ? AND ut.tag = ?))";
+    params.push(tag, userId, tag);
   }
   return sql;
 }
@@ -102,7 +118,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?" : ""}
-      WHERE c.deleted_at IS NULL ${filterClause({ deck, tag }, params)} ${extra}`;
+      WHERE c.deleted_at IS NULL ${filterClause({ deck, tag }, params, userId)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
@@ -205,8 +221,12 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     whereParams.push(deck);
   }
   if (tag) {
-    where += " AND EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)";
-    whereParams.push(tag);
+    // Hers count too — see filterClause above.
+    where +=
+      " AND (EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)" +
+      " OR EXISTS (SELECT 1 FROM card_user_tags ut" +
+      " WHERE ut.card_id = c.id AND ut.user_id = ? AND ut.tag = ?))";
+    whereParams.push(tag, userId, tag);
   }
   if (starred) {
     where += " AND EXISTS (SELECT 1 FROM card_stars s2 WHERE s2.card_id = c.id AND s2.user_id = ?)";
@@ -231,6 +251,34 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     )
     .all(userId, userId, ...whereParams, size, offset)
     .map((r) => ({ ...r, starred: Boolean(r.starred) }));
+
+  // Both halves of a card's topics, per row (#35): the deck's, which she
+  // cannot change, and hers, which she can. One query each for the whole page
+  // rather than joins, because a card carries several of each and two joins
+  // would multiply the rows out.
+  //
+  // The deck's are sent even though the client has them on the cached card:
+  // browse rows are built from this response alone, and a sheet that showed
+  // only her topics would make an already-tagged card look untagged — which
+  // is an invitation to coin a duplicate of a name that is already there.
+  const ids = cards.map((c) => c.id);
+  const mine = userTagsFor(db, userId, ids);
+  const deckTags = new Map();
+  if (ids.length > 0) {
+    for (const { card_id, tag } of db
+      .prepare(
+        `SELECT card_id, tag FROM tags
+          WHERE card_id IN (${ids.map(() => "?").join(",")}) ORDER BY tag ASC`,
+      )
+      .all(...ids)) {
+      if (!deckTags.has(card_id)) deckTags.set(card_id, []);
+      deckTags.get(card_id).push(tag);
+    }
+  }
+  for (const card of cards) {
+    card.tags = deckTags.get(card.id) ?? [];
+    card.myTags = mine.get(card.id) ?? [];
+  }
 
   const { n: total } = db
     .prepare(`SELECT count(*) n FROM cards c ${where}`)

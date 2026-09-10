@@ -31,7 +31,7 @@ export function maturityBand(card) {
   return "mature";
 }
 
-export function browseScreen({ onBack, onPractiseStarred, onAddWord }) {
+export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics }) {
   const root = el("div.browse");
 
   const state = {
@@ -214,11 +214,32 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord }) {
       "div.row",
       {},
       el("span.band", { class: maturityBand(card) }),
+      // #35: the word and its gloss open her topics for this card. The star is
+      // a sibling, not inside — one tap must not mean two things, and the star
+      // is the one gesture on this screen that has to stay a single tap.
       el(
-        "span.row-copy",
-        {},
+        onTopics ? "button.row-copy" : "span.row-copy",
+        onTopics
+          ? {
+              type: "button",
+              "aria-label": `Topics for ${card.word}`,
+              // The redraw is handed over rather than left to the caller:
+              // the row is drawn from this card object, and app.js has no
+              // way to repaint one row of a list it does not own.
+              onclick: () => onTopics(card, drawList),
+            }
+          : {},
         el("span.row-word.jp", { text: card.word }),
         el("span.row-gloss", { text: card.word_meaning }),
+        // Her topics, on the row that carries them, so the list shows what she
+        // has organised without her opening anything.
+        card.myTags?.length
+          ? el(
+              "span.row-mine",
+              {},
+              card.myTags.map((t) => el("span.row-tag", { text: t })),
+            )
+          : null,
       ),
       star,
     );

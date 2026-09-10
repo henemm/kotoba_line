@@ -1,4 +1,12 @@
-import { MAX_TAGS, allTags, createCard, deleteCard, personalCards } from "../cards.js";
+import {
+  MAX_TAGS,
+  allTags,
+  createCard,
+  deleteCard,
+  personalCards,
+  setUserTags,
+  userTags,
+} from "../cards.js";
 import {
   MAX_SESSION_LENGTH,
   ONLY_MODES,
@@ -177,6 +185,44 @@ export default async function deckRoutes(app) {
     async (req) => browseCards(db, req.user.id, req.query),
   );
 
+  /**
+   * Put any card into her own topics (#35).
+   *
+   * PUT rather than POST: the body is the card's whole set of her topics, not
+   * an addition. The screen is a row of chips she toggles, so what it knows is
+   * the final set — asking the client to work out an add/remove difference is
+   * asking it to get that right on a flaky connection.
+   *
+   * Only her topics. The deck's own tags are not editable from here: they are
+   * global, and `npm run tag` rebuilds them from scratch on every deck update.
+   */
+  app.put(
+    "/api/cards/:id/tags",
+    {
+      schema: {
+        params: { type: "object", properties: { id: { type: "integer" } } },
+        body: {
+          type: "object",
+          required: ["tags"],
+          additionalProperties: false,
+          properties: {
+            tags: {
+              type: "array",
+              maxItems: MAX_TAGS,
+              items: { type: "string", minLength: 1, maxLength: 32 },
+            },
+          },
+        },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const result = setUserTags(db, req.user.id, req.params.id, req.body.tags);
+      if (!result.ok) return reply.code(404).send({ error: result.reason });
+      return result;
+    },
+  );
+
   /** §5a: pin a card so a session can be built from exactly those. */
   app.post(
     "/api/stars",
@@ -216,6 +262,10 @@ export async function personalDeckRoutes(app) {
   app.get("/api/cards", { preHandler: app.requireUser }, async (req) => ({
     cards: personalCards(db, req.user.id),
     tags: allTags(db),
+    // Hers, separately, so the picker can show them apart from the deck's
+    // (#35). Merging the two lists here would lose which is which, and "my
+    // topics" is exactly the distinction she is looking for.
+    myTags: userTags(db, req.user.id),
   }));
 
   app.post(
