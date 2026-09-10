@@ -109,6 +109,26 @@ It exits non-zero if anything is wrong, so it is worth reading. It does not,
 however, check that nginx can read the files it just wrote — that needs a
 real HTTP request, e.g. `curl -I https://HOST/kotoba/media/FILENAME.mp3`.
 
+## What does this deployment need?
+
+```sh
+cd ~/kotoba_line && ops/status.sh
+```
+
+**Start here, every time.** It reads the database and the filesystem and prints
+what is actually true — which migrations are applied, which shell is on disk,
+whether the columns the import fills are empty, whether nginx can read the
+audio — and ends with the commands still to run, in order. It changes nothing.
+
+It exists because these instructions used to arrive as prose: "this one needs
+the full deploy", "this one needs a re-import". Prose is exactly the thing an
+operator is right to be unsure about, and every one of those facts is readable.
+If `status.sh` and a message disagree, believe `status.sh`.
+
+It also prints her reviews, stars, own cards and own topics under a heading
+saying nothing here touches them — so "import the deck again" can be weighed
+against what it would actually do, rather than taken on trust.
+
 ## Updating
 
 From the repository directory (`cd ~/kotoba_line`, or wherever you cloned it):
