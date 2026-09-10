@@ -61,11 +61,6 @@ export function render(container, ...children) {
   return container;
 }
 
-/** The status bar every framed screen carries. */
-export function statusBar(time = "9:41") {
-  return el("div.statusbar", {}, el("span", { text: time }), el("span.battery"));
-}
-
 /** A station dot — the circle used for lines, offers and the active tab. */
 export function station(colour, size = 30, border = 5) {
   return el("span.station", {

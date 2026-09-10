@@ -28,6 +28,7 @@ body {
   flex-direction: column;
   min-height: 100%;
   position: relative;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 button {
@@ -67,26 +68,6 @@ input:focus-visible {
 
 .tabular {
   font-variant-numeric: tabular-nums;
-}
-
-/* ── status bar ─────────────────────────────────────────────────── */
-.statusbar {
-  height: 46px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.statusbar .battery {
-  width: 22px;
-  height: 11px;
-  border: 1px solid var(--ink-muted);
-  border-radius: 3px;
-  display: block;
 }
 
 /* ── primary action ─────────────────────────────────────────────── */

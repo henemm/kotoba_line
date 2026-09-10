@@ -2,7 +2,7 @@ import { api } from "../api.js";
 import { MODES, modeByKey } from "../modes.js";
 import { describe } from "../resume.js";
 import { isDefault, summaryLine } from "./choose-set.js";
-import { el, render, station, statusBar } from "../ui/dom.js";
+import { el, render, station } from "../ui/dom.js";
 
 /**
  * The same three the Settings screen offers, and the same values: 60 is
@@ -286,5 +286,3 @@ export function weakestTopic(stats, minimumCards = 10) {
     t.seen / t.total < worst.seen / worst.total ? t : worst,
   );
 }
-
-export { statusBar };
