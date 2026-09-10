@@ -12,3 +12,8 @@ media/
 
 .DS_Store
 *.log
+
+# Claude Code's per-machine settings and its scratch worktrees. Nothing in
+# here describes the project, only whoever is working on it right now.
+.claude/settings.local.json
+.claude/worktrees/
