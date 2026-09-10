@@ -1,11 +1,17 @@
 # Screen designs
 
-Exported from Claude Design. `Kotoba Line - Screens.dc.html` is one canvas holding
-26 numbered screens with their states named above each frame, and notes underneath
-flagging where a layout depends on data that can grow or vanish.
+Exported from Claude Design. `Kotoba Line - Screens.html` is one canvas holding
+**52 numbered screens** with their states named above each frame, and notes
+underneath flagging where a layout depends on data that can grow or vanish.
 
-Open it in a browser; `support.js` is the canvas runtime it loads. The screens are
-prototypes — recreate the visual output, not the internal markup.
+Open it in a browser — it is self-contained, so there is no longer a separate
+runtime file beside it. The screens are prototypes: recreate the visual output,
+not the internal markup.
+
+The second round (screens 27–52) also corrected three annotations that
+contradicted the build: the new-card range now reads 5–40 with the minus going
+inert at 5, the topic list is described as nine Kaishi topics rather than a
+partition of the deck, and the day-one frame's threshold for level 2 is 300 XP.
 
 `chats/chat1.md` is the conversation the designs came out of. It records why things
 are the way they are and which decisions were made deliberately.
@@ -16,6 +22,8 @@ Five blocks, newest first on the canvas.
 
 | Block | Screens |
 |---|---|
+| **7a** §5a — letting her choose | 31 Browse idle, 32 results, 33 nothing matches, 34 starred only, 35 Browse iPad, 36–38 Choose a set, 39 a chosen session running, 40 its summary, 41 めくる's four ratings, 42 話す for comparison, 43–46 話す's four states, 47 聞く with no recording, 48 選ぶ with no sound, 49 first run, 50 leaving, 51 resuming, 52 session expired |
+| **6a** Adding her own words | 27 entry point, 28 add a word, 29 filled with the example open, 30 your own deck |
 | **5a** The gaps closed | 22 Settings (iPhone), 23 Topic picker, 24 Topics expanded (12 entries), 25 Offline indicator (3 states), 26 Settings (iPad) |
 | **4a** iPad — remaining screens | 14 Sign in, 15 Practise tab portrait, 16 Session, 17 Session summary, 18 Level up, 19 Joker spent, 20 Streak reset, 21 Add to home screen (iPad Safari) |
 | **3a** iPad — the two that re-flow | 12 Stats portrait (two columns, no scroll), 13 Practise tab landscape |
@@ -46,67 +54,53 @@ Frame sizes: 390 × 844 (iPhone), 834 × 1194 (iPad portrait), 1194 × 834 (land
 the safe circle), and a 180 for iOS. Square, no rounding, no transparency; iOS
 masks them itself.
 
-## Where the built screens depart from the canvas
+## Where the build now disagrees with the canvas
 
-Three, all on **22/26 Settings**, and all because the drawing promises something
-the data does not yet support. Each is a row that would have been a dead
-control.
+The practice loop was built from the prototype while the second round was in
+flight, and several states were decided in code. The drawings now overrule some
+of them. Recorded here as work, not as history.
 
-- **The deck rows have no toggles.** `user_settings` has no per-deck column, and
-  with one deck imported a switch could only turn the whole app off. The rows
-  are a name and a count. The personal deck stays at zero cards exactly as the
-  design intends, so the second import has somewhere to land.
-- **"Topics in a session" is not there.** It leads to the topic picker (23),
-  which is drawn but not wired, and a chevron that goes nowhere is worse than a
-  row that is not yet offered.
-- **Pitch accent is not there.** Kaishi *does* carry it — 1,500 of its 1,501
-  notes have a Pitch Accent field — but it arrives as katakana wrapped in
-  inline-styled spans that draw the overline and the drop, the import does not
-  map it, and no card row holds it. Rendering it means parsing that markup into
-  moras rather than handing it to `innerHTML`, which this client never does.
-  Until then the switch would write a value nothing reads. See `next-brief.md`:
-  "pitch accent switched on" is also an undesigned state.
+**Corrections owed to what is already built:**
 
-### The practice loop: built from the prototype, not from the canvas
+- **話す's recognition must not be scored.** 44 is explicit — "quoted, never
+  scored: no tick, no colour, no yes/no", with a sentence underneath because a
+  transcript on a practice screen reads as a verdict unless something says
+  otherwise. The build tints the transcript green or red. That is the opposite.
+- **Nothing heard** is the same box with "— nothing heard —" in muted type,
+  not a different message in place of the transcript.
+- **45 and 46 are the same layout with different copy** — refused and
+  unsupported look identical to her, and both carry a sentence saying what to
+  do instead. The build omits the sentence in the unsupported case.
+- **47: synthesis must be captioned.** The build falls back silently, and the
+  note gives the reason not to: "a synthetic voice she mistakes for a recording
+  teaches her the wrong pronunciation." Dropping the card is right only when
+  synthesis is unavailable too — which is what the build does, and 47 confirms
+  it, strip and all.
+- **48: in 選ぶ the speaker is simply gone** when there is no sound. The build
+  always draws it. An inert button invites a tap that does nothing.
+- **41: めくる's four ratings carry the interval FSRS would give** — `<1m`,
+  `8m`, `2d`, `6d` — and "that number is why four buttons are worth the extra
+  width". The build has four buttons and no intervals. The tints run one way
+  (red tint, plain, green tint, solid green) rather than the build's outlines,
+  and the buttons are 62pt.
+- **The reading under the word takes the mode colour**, not grey. 41 shows
+  だいじょうぶ in the line's green at 20px.
+- **50: the × asks once.** "Keep going" is the primary, and before the first
+  answer there is no sheet at all. The build leaves immediately, which is right
+  only for that first case.
 
-All four modes are built. The canvas draws only 選ぶ (16), but
-`prototype/kotoba-line.html` works out all four and the repository calls it
-the agreed visual direction — so waiting for a canvas frame per mode would
-have been waiting for a second drawing of a decided thing. §6 settles the
-ratings: **めくる is the only mode with four** (again, hard, good, easy);
-話す and the two multiple-choice modes give again and good.
+**Still standing, now confirmed by a drawing:** the new-card floor of 5, the
+personal deck row at zero cards, and dropping an unlistenable card from 聞く.
 
-What the canvas genuinely leaves open is a handful of states inside those
-modes. Decided here, and worth a look if they are ever drawn:
-
-- **聞く with a card it cannot play.** The audio *is* the prompt, so a card
-  with no sentence, no sentence gloss, or nothing that could produce sound is
-  dropped before the session starts rather than shown as a question with no
-  question on it. If that empties the queue, the screen says the due cards
-  cannot be listened to — which is a different fact from "nothing due".
-- **話す with no speech recognition.** The Record button is absent, not
-  disabled: a control that can never work is worse than no control. The two
-  self-grade buttons are unchanged, so the mode is never blocked by the
-  microphone.
-- **話す with the microphone refused.** Says so once and does not ask again
-  for the rest of the session — repeating the request every card would be
-  nagging about something only Settings can undo.
-- **話す hearing nothing.** Offers another go. It never marks the card: §7 is
-  explicit that recognition is feedback, never grading.
-- **A reading with no reading.** A kana-only word like いい has a "furigana"
-  identical to itself; printing it again in grey says only that the app did
-  not notice, so it is dropped. Readings are set as `<ruby>`, since the deck
-  stores Anki's `事[こと]` notation and showing it raw reads as brackets.
-
-Two annotations on 22 are wrong rather than unimplemented, and were already
-recorded in `next-brief.md`: the new-card range is **5–40, and zero is not
-legitimate** (the product owner's ruling), and the diagnostics line for the
-audio cache reads "nothing cached yet" until phase 5 gives it a cache to count.
+**Two rows in Settings are still not built** and now have designs behind them:
+the per-deck toggles and "Topics in a session". Pitch accent remains unbuilt —
+the deck carries it on 1,500 of 1,501 notes as inline-styled spans, and nothing
+in this round changes that.
 
 ## Known gaps
 
-The canvas predates §5a of the specification, so none of the selection features
-are designed. Several states inside the practice loop are also missing.
+None outstanding. The second round closed §5a, the practice-loop states and the
+lifecycle screens, and added the personal deck, which no brief had asked for.
 
 `next-brief.md` holds the full analysis and a ready-to-paste brief for the next
 design round. In short:
