@@ -77,3 +77,44 @@ jobs:
       - name: Stop
         if: always()
         run: docker rm -f kotoba || true
+
+  shell-version:
+    # A shell change that keeps the old VERSION never reaches a device that
+    # already installed the app: the precache is keyed by that name, so the
+    # phone goes on serving what it already has. Two branches picking the same
+    # next number merge without a conflict and produce exactly that — which is
+    # how "v8" came to mean two different shells here.
+    #
+    # This compares the merge result against the base branch, so it catches the
+    # collision that only exists once merged. It cannot catch a base branch
+    # that moves after the last run; requiring branches to be up to date before
+    # merging would close that gap.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: The shell's VERSION must move when the shell does
+        run: |
+          base="origin/${{ github.base_ref }}"
+          git fetch -q origin "${{ github.base_ref }}"
+
+          if git diff --quiet "$base"...HEAD -- client/; then
+            echo "client/ is unchanged; nothing to check."
+            exit 0
+          fi
+
+          version_of() { git show "$1:client/sw.js" | sed -n 's/^const VERSION = "\(.*\)";$/\1/p'; }
+          here=$(version_of HEAD)
+          there=$(version_of "$base")
+          echo "VERSION here: ${here:-?}, on $base: ${there:-?}"
+
+          if [ -z "$here" ] || [ "$here" = "$there" ]; then
+            echo
+            echo "client/ changed but sw.js VERSION is still '$here'."
+            echo "Every device that already installed '$here' keeps serving the"
+            echo "old shell and never sees this change. Bump VERSION."
+            exit 1
+          fi
