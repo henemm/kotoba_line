@@ -15,8 +15,10 @@ nginx  ── /kotoba/        → /srv/kotoba/app     the static shell
 ## First time
 
 The host needs nginx with TLS already serving, Docker with the compose plugin,
-and Node 22 for the import scripts. Nothing else: the import has no dependencies
-and the client has no build step, so there is no `npm install` anywhere below.
+and Node 22 with a C++ toolchain (`python3 make g++`) for the import scripts.
+The client has no build step, so there is no `npm install` for it — but the
+import scripts load `better-sqlite3` from `server/node_modules`, which does
+not exist until it is built once for the host (§5, before the deck import).
 
 **0. The code.** Every command below is run *inside the clone* — `ops/deploy.sh`,
 `ops/nginx/kotoba.conf` and `ops/docker-compose.yml` are all paths relative to
@@ -68,7 +70,7 @@ ops/deploy.sh
 **4. An account.** There is no registration (§10).
 
 ```sh
-docker compose -f ops/docker-compose.yml exec api node bin/adduser.js --handle mira
+docker compose -f ops/docker-compose.yml exec api node bin/adduser.js --handle HANDLE
 ```
 
 It prompts for the PIN twice, with echo off. Six digits minimum.
@@ -81,14 +83,31 @@ hidden prompt is the point of the step, not an obstacle to it.
 **5. The deck.** This is the long step — about 110 MB downloaded and 75 MB of
 audio written.
 
+The import script imports `better-sqlite3` straight out of `server/`, so that
+needs building for the host once, first:
+
 ```sh
+(cd server && npm ci)
+```
+
+Run the import itself under `umask 022`. The audio files it writes must be
+world-readable, since nginx (`www-data`) serves them directly — a restrictive
+umask on the operator's shell otherwise leaves them unreadable to nginx, and
+the app falls back to speech synthesis without complaining (§"Checking a
+deploy actually worked" below is what would eventually catch it, if you did
+not know to look here first):
+
+```sh
+umask 022
 npm run import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run tag   -- --db /srv/kotoba/data/kotoba.sqlite
 npm run verify-import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 ```
 
 `verify-import` samples twenty cards and checks their audio is really audio.
-It exits non-zero if anything is wrong, so it is worth reading.
+It exits non-zero if anything is wrong, so it is worth reading. It does not,
+however, check that nginx can read the files it just wrote — that needs a
+real HTTP request, e.g. `curl -I https://HOST/kotoba/media/FILENAME.mp3`.
 
 ## Updating
 
@@ -115,7 +134,11 @@ Re-running the import is safe. Cards are keyed on Anki's note ids, so rows are
 updated in place and every `review_events` row keeps pointing at the card it was
 recorded against.
 
+Under `umask 022`, as in the first-time import above — new audio files need to
+stay readable by nginx.
+
 ```sh
+umask 022
 npm run import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run tag   -- --db /srv/kotoba/data/kotoba.sqlite
 ```
