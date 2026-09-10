@@ -46,6 +46,63 @@ Frame sizes: 390 × 844 (iPhone), 834 × 1194 (iPad portrait), 1194 × 834 (land
 the safe circle), and a 180 for iOS. Square, no rounding, no transparency; iOS
 masks them itself.
 
+## Where the built screens depart from the canvas
+
+Three, all on **22/26 Settings**, and all because the drawing promises something
+the data does not yet support. Each is a row that would have been a dead
+control.
+
+- **The deck rows have no toggles.** `user_settings` has no per-deck column, and
+  with one deck imported a switch could only turn the whole app off. The rows
+  are a name and a count. The personal deck stays at zero cards exactly as the
+  design intends, so the second import has somewhere to land.
+- **"Topics in a session" is not there.** It leads to the topic picker (23),
+  which is drawn but not wired, and a chevron that goes nowhere is worse than a
+  row that is not yet offered.
+- **Pitch accent is not there.** Kaishi *does* carry it — 1,500 of its 1,501
+  notes have a Pitch Accent field — but it arrives as katakana wrapped in
+  inline-styled spans that draw the overline and the drop, the import does not
+  map it, and no card row holds it. Rendering it means parsing that markup into
+  moras rather than handing it to `innerHTML`, which this client never does.
+  Until then the switch would write a value nothing reads. See `next-brief.md`:
+  "pitch accent switched on" is also an undesigned state.
+
+### The practice loop: built from the prototype, not from the canvas
+
+All four modes are built. The canvas draws only 選ぶ (16), but
+`prototype/kotoba-line.html` works out all four and the repository calls it
+the agreed visual direction — so waiting for a canvas frame per mode would
+have been waiting for a second drawing of a decided thing. §6 settles the
+ratings: **めくる is the only mode with four** (again, hard, good, easy);
+話す and the two multiple-choice modes give again and good.
+
+What the canvas genuinely leaves open is a handful of states inside those
+modes. Decided here, and worth a look if they are ever drawn:
+
+- **聞く with a card it cannot play.** The audio *is* the prompt, so a card
+  with no sentence, no sentence gloss, or nothing that could produce sound is
+  dropped before the session starts rather than shown as a question with no
+  question on it. If that empties the queue, the screen says the due cards
+  cannot be listened to — which is a different fact from "nothing due".
+- **話す with no speech recognition.** The Record button is absent, not
+  disabled: a control that can never work is worse than no control. The two
+  self-grade buttons are unchanged, so the mode is never blocked by the
+  microphone.
+- **話す with the microphone refused.** Says so once and does not ask again
+  for the rest of the session — repeating the request every card would be
+  nagging about something only Settings can undo.
+- **話す hearing nothing.** Offers another go. It never marks the card: §7 is
+  explicit that recognition is feedback, never grading.
+- **A reading with no reading.** A kana-only word like いい has a "furigana"
+  identical to itself; printing it again in grey says only that the app did
+  not notice, so it is dropped. Readings are set as `<ruby>`, since the deck
+  stores Anki's `事[こと]` notation and showing it raw reads as brackets.
+
+Two annotations on 22 are wrong rather than unimplemented, and were already
+recorded in `next-brief.md`: the new-card range is **5–40, and zero is not
+legitimate** (the product owner's ruling), and the diagnostics line for the
+audio cache reads "nothing cached yet" until phase 5 gives it a cache to count.
+
 ## Known gaps
 
 The canvas predates §5a of the specification, so none of the selection features

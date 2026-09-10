@@ -2,7 +2,16 @@ import { api } from "../api.js";
 import { MODES } from "../modes.js";
 import { el, render, station, statusBar } from "../ui/dom.js";
 
-const SESSION_LENGTHS = [10, 20, "All"];
+/**
+ * The same three the Settings screen offers, and the same values: 60 is
+ * MAX_SESSION_LENGTH on the server, and the screen calls it "All". Both
+ * places write the one stored setting, so picking 10 here shows 10 there.
+ */
+const SESSION_LENGTHS = [
+  { value: 10, label: "10" },
+  { value: 20, label: "20" },
+  { value: 60, label: "All" },
+];
 
 /**
  * Designs 10 and 15. One tab, two moods.
@@ -12,7 +21,13 @@ const SESSION_LENGTHS = [10, 20, "All"];
  * the four lines stay one tap away, so a session is never more than one tap
  * from here.
  */
-export function practiseScreen({ onStart, onDrillTopic, sessionLength, onSessionLength }) {
+export function practiseScreen({
+  onStart,
+  onDrillTopic,
+  sessionLength,
+  onSessionLength,
+  readAloud = true,
+}) {
   const root = el("div.practise");
   render(root, el("div.loading", { text: "…" }));
 
@@ -126,14 +141,14 @@ export function practiseScreen({ onStart, onDrillTopic, sessionLength, onSession
     const picker = el("div.length");
     render(
       picker,
-      SESSION_LENGTHS.map((len) =>
+      SESSION_LENGTHS.map(({ value, label }) =>
         el("button", {
           type: "button",
-          text: typeof len === "number" ? String(len) : len,
-          "aria-pressed": String(len === sessionLength),
+          text: label,
+          "aria-pressed": String(value === sessionLength),
           onclick: () => {
-            sessionLength = len;
-            onSessionLength?.(len);
+            sessionLength = value;
+            onSessionLength?.(value);
             render(picker, ...lengthPicker().children);
           },
         }),
@@ -143,7 +158,13 @@ export function practiseScreen({ onStart, onDrillTopic, sessionLength, onSession
   }
 
   function soundNote() {
-    return el("p.sound-note", { text: "Sound on — every card is read aloud in Japanese." });
+    // The line has to follow the setting: promising sound that Settings has
+    // switched off is the kind of small lie that makes the rest look unreliable.
+    return el("p.sound-note", {
+      text: readAloud
+        ? "Sound on — every card is read aloud in Japanese."
+        : "Sound off — tap ♪ on a card to hear it.",
+    });
   }
 
   return root;

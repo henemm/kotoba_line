@@ -117,8 +117,17 @@ sqlite3 /srv/kotoba/data/kotoba.sqlite ".backup '/somewhere/kotoba-$(date +%F).s
 Copying the file while the server is running is not safe — WAL mode means the
 recent writes live in a sidecar. `.backup` handles that.
 
+## Deploying a change to the app shell
+
+`client/sw.js` precaches the shell under a versioned cache name. **Bump
+`VERSION` in that file whenever a shell file changes**, or a device that
+already has the app keeps serving the old one from its cache. There is no build
+step to do it automatically (phase-0-plan §1.5), so it is a line in the diff.
+
+nginx already sends `Cache-Control: no-cache` for the shell, so the new worker
+is picked up on the next load and the old cache is deleted on activation.
+
 ## What is not here yet
 
-No service worker and no manifest caching (phase 5), so the app needs a
-connection. The outbox that makes a session survive being offline is the same
-phase.
+The three practice modes other than 選ぶ, which wait on designs. Everything
+else in the brief is built.

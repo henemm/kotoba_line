@@ -975,6 +975,116 @@
   text-align: center;
 }
 
+/* ── 聞く, 話す, めくる ────────────────────────────────────────────
+   The three modes the canvas never drew, following the prototype. The
+   shared pieces above — card area, speaker, reveal, options — carry most
+   of it; these are the parts each mode adds. */
+
+/* 聞く: the speaker is the prompt, so it is large and takes the line
+   colour rather than sitting quietly beside the word. */
+.speaker.big {
+  width: 108px;
+  height: 108px;
+  font-size: 44px;
+}
+
+/* 話す: the English she is being asked to produce, and what was heard. */
+.meaning {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+  text-wrap: balance;
+}
+.mic-state {
+  min-height: 26px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+/* Feedback, never a grade (§7) — which is why this is a tint of the word
+   she said and not a mark on the card. */
+.mic-state.hit {
+  color: var(--yes);
+}
+.mic-state.miss {
+  color: var(--no);
+}
+
+/* めくる: the back of the card. */
+.reading {
+  font-size: 19px;
+  color: var(--ink-muted);
+}
+.sentence-en {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/* The row under a self-graded card. */
+.actions {
+  display: flex;
+  gap: 10px;
+}
+.actions .btn {
+  flex: 1;
+  min-height: 56px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 2px solid var(--surface-hi);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+}
+.actions .btn.primary {
+  background: var(--rail);
+  border-color: var(--rail);
+  color: #fff;
+}
+.actions .btn.yes {
+  border-color: var(--yes);
+  color: var(--yes);
+}
+.actions .btn.no {
+  border-color: var(--no);
+  color: var(--no);
+}
+.actions .btn:active {
+  transform: scale(0.98);
+}
+
+/* めくる is the only mode with four (§6). They stay one row: four is
+   readable at this width, and wrapping would put "Easy" under "Again"
+   where a thumb expects it least. */
+.ratings {
+  display: flex;
+  gap: 8px;
+}
+.ratings .btn {
+  flex: 1;
+  min-height: 56px;
+  padding: 0 6px;
+  border-radius: 14px;
+  border: 2px solid var(--surface-hi);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+.ratings .btn.no {
+  border-color: var(--no);
+  color: var(--no);
+}
+.ratings .btn.yes {
+  border-color: var(--yes);
+  color: var(--yes);
+}
+.ratings .btn:active {
+  transform: scale(0.98);
+}
+
 @media (min-width: 700px) {
   /* The station strip runs the full width — twenty stations are finally
      countable — while the answers stay in the column and sit low. */
@@ -995,6 +1105,14 @@
   .opt {
     padding: 20px;
     font-size: 19px;
+  }
+  .meaning {
+    font-size: 28px;
+  }
+  .ratings .btn,
+  .actions .btn {
+    min-height: 62px;
+    font-size: 17px;
   }
 }
 
@@ -1198,4 +1316,222 @@
     width: var(--column);
     margin: 0 auto;
   }
+}
+
+/* ══ 22/26 Settings ═══════════════════════════════════════════════
+   Four groups, no nesting, no Save. The iPad version is the same
+   column widened by --column, which is why nothing here is sized in
+   absolute pixels except the controls themselves. */
+
+.settings {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: 30px;
+}
+.settings-head {
+  padding: 6px var(--gutter) 22px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.settings .group {
+  padding: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+.settings .group-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.settings .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.settings .row-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.settings .row-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.settings .row-detail {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+.settings .row-aside {
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+
+/* The stepper. Minus recessed, plus raised — the design's way of saying
+   which direction the screen expects. */
+.settings .stepper {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.settings .step {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--surface-hi);
+  color: var(--ink);
+  font: 700 20px/1 var(--ui);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.settings .step:disabled {
+  background: var(--surface);
+  color: var(--ink-dim);
+  cursor: default;
+}
+.settings .stepper .value {
+  min-width: 34px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.settings .field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings .field-label {
+  font-size: 16px;
+  font-weight: 600;
+}
+.settings .choice {
+  display: flex;
+  gap: 8px;
+}
+.settings .choice button {
+  flex: 1;
+  height: 46px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font: 600 15px/1 var(--ui);
+  cursor: pointer;
+}
+.settings .choice button[aria-pressed="true"] {
+  background: var(--surface-hi);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.settings .toggle {
+  flex: none;
+  width: 52px;
+  height: 32px;
+  padding: 3px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-hi);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+.settings .toggle .knob {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  display: block;
+}
+.settings .toggle[aria-checked="true"] {
+  background: var(--ink);
+  justify-content: flex-end;
+}
+.settings .toggle[aria-checked="true"] .knob {
+  background: var(--night);
+}
+
+.settings .signout {
+  width: 100%;
+  height: 52px;
+  border: 2px solid var(--surface-hi);
+  border-radius: 14px;
+  background: none;
+  color: var(--ink);
+  font: 600 16px/1 var(--ui);
+  cursor: pointer;
+}
+.settings-note,
+.settings-problem {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.settings-problem {
+  padding: 0 var(--gutter);
+  color: var(--no);
+}
+
+/* Diagnostics, not settings. */
+.settings .diagnostics {
+  margin: 0 var(--gutter);
+  border-top: 1px solid var(--surface-hi);
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font: 400 12px/1.6 var(--mono);
+  color: var(--ink-muted);
+}
+.settings .diagnostic {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* iPad (26): the same column, centred, type up about 15%. */
+@media (min-width: 700px) {
+  .settings-head {
+    padding: 26px var(--gutter) 8px;
+    font-size: 22px;
+  }
+  .settings .group,
+  .settings .diagnostics,
+  .settings-head {
+    width: var(--column);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+  .settings .row-title,
+  .settings .field-label {
+    font-size: 18px;
+  }
+  .settings .row-detail {
+    font-size: 14px;
+  }
+}
+
+/* Readings are set as ruby (めくる, 話す). The deck stores them in Anki's
+   bracket notation; shown raw they read as brackets. */
+.reading ruby {
+  ruby-position: over;
+}
+.reading rt {
+  font-size: 0.55em;
+  color: var(--ink-muted);
 }

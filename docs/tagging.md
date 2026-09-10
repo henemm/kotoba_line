@@ -69,7 +69,8 @@ untagged remainder by hand, the words a hypernym walk would newly catch are:
 友達, 結婚, 大人 (social and kinship). Perhaps another 150–200 cards. That
 would take coverage from ~13% to roughly 25%.
 
-**What it would not buy us.** No ontology assigns a topic to する, なる, これ,
+**What it would not buy us** — written before the measurement below, and too
+optimistic. No ontology assigns a topic to する, なる, これ,
 さん, 強い, ちょっと or それぞれ, because they do not have one. The shape of the
 answer does not change: most of a frequency deck is topicless, and a semantic
 hierarchy cannot invent a topic where none exists.
@@ -79,11 +80,76 @@ pragmatics — the same word is small talk or not depending on how it is used.
 "Konbini" is a *situation*, not a class of meaning; no thesaurus has a node for
 it. Both stay hand-curated whatever else changes.
 
-**Practical note.** `edrdg.org` and the Japanese WordNet download host are both
-unreachable from the sandbox this was built in, so the ontology path could not
-be tried against real data here. It is reachable from an ordinary workstation,
-which is where imports run. It is a worthwhile improvement, not a rewrite: the
-override file is exactly where an ontology's output would land.
+### It was tried, against the real deck, and it does not work
+
+The product owner asked the better question: the glosses are English and the
+tagger already runs over them, so why reach for a *Japanese* ontology at all?
+Princeton WordNet is the direct fit, and — unlike `edrdg.org`, still blocked — it
+installs from npm (`wordnet-db`). The earlier note here, that the ontology path
+could not be tried in this sandbox, was wrong.
+
+So it was tried: look each gloss up, walk the hypernyms, and tag when the chain
+passes through an anchor synset (`body_part`, `relative`, `educational_institution`,
+`medium_of_exchange`, …). Part of speech taken from the gloss itself, so "to go"
+is only ever looked up as a verb. First sense only.
+
+| | Cards tagged |
+|---|---|
+| Rules and overrides today | 191 (12.7%) |
+| WordNet | 269 (17.9%) |
+| Both together | 342 (22.8%) |
+
+Coverage roughly as predicted. **Precision is the problem: of forty-five tags
+sampled from those WordNet added, four were right.** Around 10%.
+
+The failures are not noise, they are structural, and both would survive any
+amount of tuning:
+
+**A gloss is a translation, not a sense.** "to return" glosses both 帰る (go
+home) and 返す (give something back); "back" glosses 後ろ (behind), 背中 (the
+body part) and ただいま ("I'm back"). WordNet is asked which sense is meant and
+has nothing to answer with. It reproduced the exact false positive this file
+already records from the rule-based tagger: 勇気 "courage, nerve" → *nerve* →
+body part → health.
+
+**WordNet's own nodes do not mean what our topics mean.** Its `travel` synset is
+the root of the entire locomotion hierarchy — "travel, go, move, locomote" — so
+every motion verb in the deck lands under travel: 流れる (to flow), 漂う (to
+drift), 追う (to chase), 落ちる (to fall). Likewise `study` swallows 比べる (to
+compare) and 見上げる (to look up), and *course* in "of course" arrives as
+education.
+
+What the ontology cannot see is the one thing the deck does have: **the example
+sentence.** Disambiguating a sense from word + gloss + sentence is what §8
+proposed in the first place — an LLM pass, run once at import, its output landing
+in `tags-overrides.tsv` where it is reviewed as a diff like everything else. A
+hierarchy is the wrong instrument for a job that is entirely about context.
+
+The experiment is not in the repository; it proved a negative and its value is
+this section. Roughly 150 lines against `wordnet-db@3.1.14`.
+
+
+## Where the audio comes from
+
+Not synthesised. Kaishi ships native recordings and the import writes them all:
+
+| | |
+|---|---|
+| Cards with word audio | 1,499 of 1,500 |
+| Cards with sentence audio | 1,500 of 1,500 |
+
+254 of the word files are named `私_ワタシ━_0_NHK-2016.mp3` — NHK's 2016
+pronunciation dictionary, with the reading and the pitch-accent number in the
+filename. 144 sentence files are named `JLPT_Tango_N5_0001.mp3`. **The rest are
+content-hashed**, so their source cannot be read off the file; they are whatever
+the deck's maintainers assembled.
+
+That 17% is worth knowing for a different reason: the accent number in those
+filenames is *not* a shortcut to the pitch-accent feature. It covers 254 cards.
+The deck's own Pitch Accent field covers 1,500 — see `design/README.md`.
+
+Speech synthesis is the fallback, not the plan: one card without audio, the
+whole personal deck, and any preview that does not ship the deck.
 
 ## What this means for the designs
 

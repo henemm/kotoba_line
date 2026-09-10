@@ -40,6 +40,8 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `GET` | `/api/browse` | `?q=&deck=&tag=&starred=&page=` → searchable card list |
 | `POST` | `/api/stars` | `{ cardId, starred }` → pin or unpin a card |
 | `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts |
+| `GET` | `/api/settings` | the four settings, the deck rows, the sync state, the version |
+| `PATCH` | `/api/settings` | a partial update — writes one control at a time |
 | `GET` | `/api/health` | liveness, no auth |
 
 ## The event log
@@ -126,6 +128,7 @@ src/queue.js        session composition, browse and stars (§5, §5a)
 src/routes/auth.js  login, logout, /api/me
 src/routes/events.js  POST /api/events
 src/routes/stats.js   GET /api/stats
+src/routes/settings.js  GET and PATCH /api/settings
 src/routes/deck.js    deck, queue, browse, stars
 src/app.js          assembly; takes a database so tests can pass one in
 migrations/         numbered SQL, applied once, in filename order
