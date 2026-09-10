@@ -14,6 +14,25 @@ nginx  ── /kotoba/        → /srv/kotoba/app     the static shell
 
 ## First time
 
+The host needs nginx with TLS already serving, Docker with the compose plugin,
+and Node 22 for the import scripts. Nothing else: the import has no dependencies
+and the client has no build step, so there is no `npm install` anywhere below.
+
+**0. The code.** Every command below is run *inside the clone* — `ops/deploy.sh`,
+`ops/nginx/kotoba.conf` and `ops/docker-compose.yml` are all paths relative to
+it, and `deploy.sh` refuses to run from anywhere else. Where the clone lives is
+up to you; it holds no data, so it can be replaced at any time.
+
+```sh
+sudo mkdir -p /opt && cd /opt
+git clone https://github.com/henemm/kotoba_line.git
+cd kotoba_line
+```
+
+That directory — `/opt/kotoba_line` here — is what the rest of this file means
+by "the repository directory". It is not the same thing as `/srv/kotoba`, which
+is where her data lives and which nothing here ever overwrites.
+
 **1. Directories.** They are host volumes, so a container rebuild never touches
 her data.
 
@@ -61,13 +80,22 @@ It exits non-zero if anything is wrong, so it is worth reading.
 
 ## Updating
 
+From the repository directory (`cd /opt/kotoba_line`, or wherever you cloned it):
+
 ```sh
 git pull
 ops/deploy.sh --client     # the usual case: no container rebuild needed
 ops/deploy.sh              # when server/ changed
 ```
 
-The client has no build step, so deploying it is a copy.
+The client has no build step, so deploying it is a copy. Database migrations run
+by themselves when the container starts, so `ops/deploy.sh` is enough for those.
+
+**One update needs the deck re-imported as well.** Migration 003 added the plain
+kana reading, which the import fills and which browse searches — without it a
+search for たべ finds nothing, silently. If you are coming from a version before
+it, run the two commands under *Updating the deck* below once. They are safe to
+run at any time.
 
 ## Updating the deck
 
