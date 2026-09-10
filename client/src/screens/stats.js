@@ -58,7 +58,7 @@ export function visibleTopics(topics, expanded, limit = TOPICS_BEFORE_TRUNCATION
  * The maturity bands and the topic bars are a grey-to-white ramp on purpose —
  * the four saturated colours belong to the modes and are not reused.
  */
-export function statsScreen() {
+export function statsScreen({ onBrowse } = {}) {
   const root = el("div.stats");
   render(root, el("div.loading", { text: "…" }));
 
@@ -190,11 +190,15 @@ export function statsScreen() {
     const counts = data.maturity;
     const total = MATURITY.reduce((n, b) => n + (counts[b.key] ?? 0), 0);
 
+    // 31's note names this as one of browse's two entry points. The whole row
+    // is the target rather than a separate control: "Cards seen" and the
+    // number are already the thing she would tap to go and look at them.
     const head = el(
-      "div.section-head",
-      {},
+      onBrowse ? "button.section-head.tappable" : "div.section-head",
+      onBrowse ? { type: "button", onclick: onBrowse } : {},
       el("span.section-title", { text: "Cards seen" }),
       el("span.section-value.tabular", { text: num(data.cardsSeen) }),
+      onBrowse ? el("span.section-chevron", { text: "›" }) : null,
     );
 
     // Day one: the shape of the screen should not change between day one and

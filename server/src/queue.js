@@ -185,10 +185,13 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     //
     // The gloss is padded and its punctuation flattened to spaces first, so a
     // word at the very start, or after a comma or a bracket, still counts.
+    // The reading is searched through `word_reading`, the plain kana, and not
+    // through `word_furigana`: that one is Anki's `食[た]べる`, where たべ is
+    // split around the bracket and can never match (migration 003).
     where +=
-      " AND (c.word LIKE ? OR c.word_furigana LIKE ? OR " +
+      " AND (c.word LIKE ? OR c.word_reading LIKE ? OR c.word_furigana LIKE ? OR " +
       `${normalisedGloss("c.word_meaning")} LIKE ?)`;
-    whereParams.push(`%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`);
+    whereParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`);
   }
   if (deck) {
     where += " AND c.deck = ?";
@@ -208,7 +211,8 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
 
   const cards = db
     .prepare(
-      `SELECT c.id, c.word, c.word_furigana, c.word_meaning, c.deck, c.frequency_rank,
+      `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning,
+              c.deck, c.frequency_rank,
               st.card_id IS NOT NULL AS starred,
               s.due_at, s.reps, s.last_review
          FROM cards c

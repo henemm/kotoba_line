@@ -74,6 +74,9 @@ export function noteToCard(noteId, flds, byName, deck = "kaishi") {
     id: noteId,
     word,
     word_furigana: keepEmphasis(at("Word Furigana")) || null,
+    // The plain kana, kept apart from the furigana field: that one is Anki's
+    // `食[た]べる` notation, which no search for たべ can match (migration 003).
+    word_reading: plainText(at("Word Reading")) || null,
     word_meaning: wordMeaning,
     word_audio: soundFilename(at("Word Audio")) ?? null,
     sentence: keepEmphasis(at("Sentence")) || null,

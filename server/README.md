@@ -38,6 +38,7 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `GET` | `/api/deck` | `?since=` → cards changed since then, with their tags |
 | `GET` | `/api/queue` | `?mode=&limit=&deck=&tag=&only=` → card ids in scheduler order |
 | `GET` | `/api/browse` | `?q=&deck=&tag=&starred=&page=` → searchable card list |
+| `GET` | `/api/queue` | …and, for `mode=flip`, the four intervals per card |
 | `POST` | `/api/stars` | `{ cardId, starred }` → pin or unpin a card |
 | `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts |
 | `GET` | `/api/settings` | the four settings, the deck rows, the sync state, the version |

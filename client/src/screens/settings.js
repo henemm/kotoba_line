@@ -42,7 +42,7 @@ const SESSION_LENGTHS = [
   { value: 60, label: "All" },
 ];
 
-export function settingsScreen({ user, onSignOut, onSettings }) {
+export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
   const root = el("div.settings");
   render(root, el("div.loading", { text: "…" }));
 
@@ -184,14 +184,24 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
   function deckGroup() {
     return group(
       "Deck",
-      ...data.decks.map((deck) =>
-        row(
-          deck.label,
-          deck.cards === 0
-            ? "0 cards, nothing imported yet"
-            : `${num(deck.cards)} cards`,
-        ),
-      ),
+      ...data.decks.map((deck) => {
+        const detail =
+          deck.cards === 0 ? "0 cards, nothing imported yet" : `${num(deck.cards)} cards`;
+        // 31: browse is reached from Stats → Cards seen and from here. A deck
+        // with nothing in it has nothing to browse.
+        if (!onBrowse || deck.cards === 0) return row(deck.label, detail);
+        return el(
+          "button.row.tappable",
+          { type: "button", onclick: onBrowse },
+          el(
+            "span.row-copy",
+            {},
+            el("span.row-title", { text: deck.label }),
+            el("span.row-detail", { text: detail }),
+          ),
+          el("span.row-chevron", { text: "›" }),
+        );
+      }),
     );
   }
 

@@ -2,6 +2,7 @@ import { ApiError, OfflineError, api } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
+import { browseScreen } from "./screens/browse.js";
 import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
@@ -24,6 +25,12 @@ const state = {
   // covered and the tab bar never competes with an answer.
   session: undefined,
   summary: undefined,
+  // Browse (31) is not a tab — it is reached from Stats and from Settings, and
+  // it replaces the tab screens while it is open. Held as a node rather than a
+  // flag for the same reason the session is: rebuilding it on an unrelated
+  // redraw would throw away her search, her scroll position and the page of
+  // results underneath it.
+  browse: undefined,
   // The server's copy of the settings, so the session length and the sound
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
@@ -70,6 +77,7 @@ function tabBar() {
           onclick: () => {
             if (tab.key === "stats") state.jokerBadge = false;
             state.tab = tab.key;
+            state.browse = undefined;
             renderApp();
           },
         },
@@ -99,9 +107,10 @@ function currentScreen() {
       },
     });
   }
-  if (state.tab === "stats") return statsScreen();
+  if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
   return settingsScreen({
     user: state.user,
+    onBrowse: openBrowse,
     onSettings: (settings) => {
       state.settings = settings;
     },
@@ -118,6 +127,22 @@ function currentScreen() {
       renderApp();
     },
   });
+}
+
+function openBrowse() {
+  state.browse = browseScreen({
+    onBack: closeBrowse,
+    onPractiseStarred: () => {
+      closeBrowse();
+      startSession({ only: "starred" });
+    },
+  });
+  renderApp();
+}
+
+function closeBrowse() {
+  state.browse = undefined;
+  renderApp();
 }
 
 function startSession({ mode = "choose", ...filters } = {}) {
@@ -178,6 +203,14 @@ function renderApp() {
       },
     });
     render(app, statusBar(), state.session.node);
+    return;
+  }
+
+  // Browse (31) has its own back arrow and its own footer button, and the
+  // drawn frame carries no tab bar — it takes the screen the way a session
+  // does rather than sitting inside a tab.
+  if (state.browse) {
+    render(app, statusBar(), state.browse);
     return;
   }
 

@@ -50,7 +50,7 @@ export default async function deckRoutes(app) {
       const since = req.query.since ?? 0;
       const cards = db
         .prepare(
-          `SELECT id, word, word_furigana, word_meaning, word_audio,
+          `SELECT id, word, word_furigana, word_reading, word_meaning, word_audio,
                   sentence, sentence_furigana, sentence_meaning, sentence_audio,
                   frequency_rank, deck, updated_at
              FROM cards

@@ -125,16 +125,17 @@ const db = openDatabase(dbFile);
 
 const upsert = db.prepare(
   `INSERT INTO cards
-     (id, word, word_furigana, word_meaning, word_audio,
+     (id, word, word_furigana, word_reading, word_meaning, word_audio,
       sentence, sentence_furigana, sentence_meaning, sentence_audio,
       frequency_rank, deck, updated_at)
    VALUES
-     (@id, @word, @word_furigana, @word_meaning, @word_audio,
+     (@id, @word, @word_furigana, @word_reading, @word_meaning, @word_audio,
       @sentence, @sentence_furigana, @sentence_meaning, @sentence_audio,
       @frequency_rank, @deck, @updated_at)
    ON CONFLICT (id) DO UPDATE SET
      word = excluded.word,
      word_furigana = excluded.word_furigana,
+     word_reading = excluded.word_reading,
      word_meaning = excluded.word_meaning,
      word_audio = excluded.word_audio,
      sentence = excluded.sentence,

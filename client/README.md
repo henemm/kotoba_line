@@ -37,6 +37,7 @@ in `server/README.md`.
 | Session | 16 + prototype | done — all four modes, with めくる's four ratings (§6) |
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
+| Browse | 31–34 | done — search, star, the starred list, practise the set |
 
 ## Layout
 
@@ -70,6 +71,27 @@ error appears.
 drill the topic she is worst at. konbini holds three cards in the real deck
 (`docs/tagging.md`), so without a floor it would always win and offer a session
 of three. Topics under ten cards are not candidates.
+
+## Browse (31–34)
+
+The point of the screen is the starred set, not the search: starring is how she
+builds a session out of exactly the cards she wants. So idle is not empty — it
+opens on what she has already starred, with the practise button live, and
+everything else is there to help her find one more.
+
+**The star writes on the tap and the footer count changes under her hand.**
+That is the whole confirmation the design allows, so a failed write has to put
+the star back rather than leave one the server does not have.
+
+**The starred chip is a filter, not a second screen.** The same view serves as
+the starred list; at zero starred the button goes inert rather than
+disappearing.
+
+**Not built yet:** the deck and topic chips beside it. They belong to the
+filter sheet (36), which offers all three dimensions at once, and a chip here
+that opened a different picker would be a second way to do the same thing.
+The "add it as your own word" route out of an empty search (33) waits on the
+personal deck.
 
 ## Offline
 

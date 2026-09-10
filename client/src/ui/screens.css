@@ -1673,3 +1673,256 @@
     font-size: 14px;
   }
 }
+
+/* ══ 31–34 Browse ═════════════════════════════════════════════════
+   §5a's browse and star. The point of the screen is the starred set,
+   not the search, so idle opens on it and the button is already live. */
+
+.browse {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.browse-chrome {
+  flex: none;
+}
+.browse-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px var(--gutter) 16px;
+}
+.browse-back {
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font-size: 24px;
+  line-height: 1;
+  padding: 0;
+}
+.browse-title {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 700;
+}
+.browse-count {
+  font: 400 13px/1 var(--mono);
+  color: var(--ink-muted);
+}
+
+.browse-search {
+  margin: 0 var(--gutter) 14px;
+  height: 50px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 12px;
+}
+.browse-search.filled {
+  border-color: var(--ink);
+}
+.browse-search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: 600 16px/1 var(--ui);
+}
+/* The Japanese she types is larger than the Latin beside it, as everywhere. */
+.browse-search-input:lang(ja) {
+  font-family: var(--jp);
+  font-size: 18px;
+}
+.browse-search-input::placeholder {
+  color: var(--ink-muted);
+  font-weight: 400;
+}
+.browse-search-input:focus {
+  outline: none;
+}
+.browse-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.browse-clear {
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.chips {
+  padding: 0 var(--gutter) 18px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font: 600 13px/1 var(--ui);
+}
+.chip[aria-pressed="true"] {
+  background: var(--surface-hi);
+  color: var(--ink);
+}
+
+.browse-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.browse-section {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.browse-list .rows {
+  display: flex;
+  flex-direction: column;
+}
+.browse-list .row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border-top: 1px solid var(--surface-hi);
+}
+.browse-list .row-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.browse-list .row-word {
+  font-size: 20px;
+  font-weight: 700;
+}
+/* "Long glosses stay on one line and ellipsis — a browse row is scanned." */
+.browse-list .row-gloss {
+  font-size: 13px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The maturity band, a step lighter than on Stats and the darkest one ringed:
+   isolated on a dark row the darkest ramp value would disappear. */
+.band {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: none;
+  box-sizing: border-box;
+}
+.band.new {
+  background: #5e6884;
+  border: 1px solid #97a0b8;
+}
+.band.learning {
+  background: var(--ink-muted);
+}
+.band.young {
+  background: #b9c0d0;
+}
+.band.mature {
+  background: var(--ink);
+}
+
+/* 32: 44pt of tappable area around a 21px glyph. */
+.star {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-right: -11px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 21px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.star[aria-pressed="false"] {
+  color: var(--ink-dim);
+}
+
+.browse-empty-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.browse-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.browse-foot {
+  flex: none;
+  padding: 16px var(--gutter) 30px;
+}
+.browse-foot .btn-primary {
+  width: 100%;
+  height: 56px;
+}
+
+/* 35: a list of one-line rows is the one thing in 7a that wants the width. */
+@media (min-width: 700px) {
+  .browse-head,
+  .browse-search,
+  .chips,
+  .browse-foot {
+    width: var(--column);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+  .browse-search {
+    margin-bottom: 14px;
+  }
+  .browse-list .rows {
+    columns: 2;
+    column-gap: 40px;
+  }
+  .browse-list .row {
+    break-inside: avoid;
+  }
+}
+
+/* Rows that lead somewhere (Stats → Cards seen, Settings → Deck → Browse). */
+.section-head.tappable,
+.settings .row.tappable {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.section-chevron,
+.row-chevron {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-muted);
+  flex: none;
+}
