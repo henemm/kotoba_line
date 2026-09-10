@@ -15,7 +15,7 @@
  * automatically (phase-0-plan §1.5), so it is a line in a diff like everything
  * else, and `ops/deploy.sh` is where it would be forgotten.
  */
-const VERSION = "v9";
+const VERSION = "v10";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -39,6 +39,7 @@ const SHELL_FILES = [
   "src/screens/practise.js",
   "src/screens/session.js",
   "src/screens/settings.js",
+  "src/screens/signed-out.js",
   "src/screens/signin.js",
   "src/screens/stats.js",
   "src/screens/summary.js",
