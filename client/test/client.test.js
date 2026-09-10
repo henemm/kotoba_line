@@ -4,7 +4,7 @@ import { query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
-import { parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
+import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
 import { mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
@@ -370,5 +370,55 @@ describe("Anki's bracket readings", () => {
     assert.deepEqual(parseFurigana("ひらがなだけ"), [{ text: "ひらがなだけ" }]);
     assert.deepEqual(parseFurigana(""), []);
     assert.deepEqual(parseFurigana(null), []);
+  });
+});
+
+describe("the interval under a rating button (41)", () => {
+  it("is coarse on purpose", () => {
+    // The number exists to be compared with the three beside it. "2.4d" would
+    // claim a precision the scheduler does not.
+    assert.equal(formatInterval(30), "<1m");
+    assert.equal(formatInterval(360), "6m");
+    assert.equal(formatInterval(5400), "2h");
+    assert.equal(formatInterval(691200), "8d");
+    assert.equal(formatInterval(5184000), "2mo");
+    assert.equal(formatInterval(40000000), "1y");
+  });
+
+  it("is absent rather than invented when the scheduler said nothing", () => {
+    assert.equal(formatInterval(undefined), undefined);
+    assert.equal(formatInterval(null), undefined);
+  });
+
+  it("never rounds a real wait down to zero", () => {
+    // 59 seconds is still a wait; "0m" under a button would read as "now".
+    assert.equal(formatInterval(59), "<1m");
+    assert.equal(formatInterval(60), "1m");
+  });
+});
+
+describe("what the leaving sheet says (50)", () => {
+  it("counts in words that agree with the number", () => {
+    assert.equal(
+      leavingCopy(1),
+      "The card you answered is already saved. The rest go back in the queue.",
+    );
+    assert.equal(
+      leavingCopy(4),
+      "The 4 cards you answered are already saved. The rest go back in the queue.",
+    );
+  });
+});
+
+describe("the reading line under めくる's word (41)", () => {
+  it("is the whole word in kana, not the bracket notation", () => {
+    assert.equal(kanaReading("見[み]る"), "みる");
+    assert.equal(kanaReading("大丈夫[だいじょうぶ]"), "だいじょうぶ");
+    assert.equal(kanaReading(" 兄[あに]は 毎日[まいにち]"), "あには まいにち".replace(" ", ""));
+  });
+
+  it("reads a kana-only word back as itself, so the line can be dropped", () => {
+    assert.equal(kanaReading("いい"), "いい");
+    assert.equal(kanaReading(null), undefined);
   });
 });

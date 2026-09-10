@@ -1,5 +1,31 @@
 import { MAX_SESSION_LENGTH, ONLY_MODES, browseCards, queueForUser, setStar } from "../queue.js";
-import { VALID_MODES } from "../scheduler.js";
+import { VALID_MODES, previewIntervals } from "../scheduler.js";
+
+/**
+ * The four intervals for each card, folded from its own history.
+ *
+ * One query for every card's events rather than one per card: a sixty-card
+ * めくる session would otherwise be sixty round trips through SQLite for a
+ * number printed under a button.
+ */
+function intervalsForCards(db, userId, cardIds) {
+  const placeholders = cardIds.map(() => "?").join(",");
+  const rows = db
+    .prepare(
+      `SELECT id, card_id, rating, reviewed_at
+         FROM review_events
+        WHERE user_id = ? AND card_id IN (${placeholders})`,
+    )
+    .all(userId, ...cardIds);
+
+  const byCard = new Map(cardIds.map((id) => [id, []]));
+  for (const row of rows) byCard.get(row.card_id)?.push(row);
+
+  const now = new Date();
+  const out = {};
+  for (const id of cardIds) out[id] = previewIntervals(byCard.get(id), now);
+  return out;
+}
 
 export default async function deckRoutes(app) {
   const { db } = app;
@@ -75,7 +101,18 @@ export default async function deckRoutes(app) {
       },
       preHandler: app.requireUser,
     },
-    async (req) => queueForUser(db, req.user.id, req.query),
+    async (req) => {
+      const answer = queueForUser(db, req.user.id, req.query);
+
+      // Screen 41 prints, under each of めくる's four buttons, the interval
+      // that button would give. It rides along with the queue rather than
+      // getting its own request: it is needed for exactly these cards, and
+      // the queue is what the client caches for offline (client/src/queue.js).
+      if (req.query.mode === "flip" && answer.cardIds.length > 0) {
+        answer.intervals = intervalsForCards(db, req.user.id, answer.cardIds);
+      }
+      return answer;
+    },
   );
 
   /** §5a: the browse screen — search, filter, and see what is starred. */

@@ -67,3 +67,33 @@ export function stateFromEvents(events) {
       : null,
   };
 }
+
+/**
+ * What each of the four buttons would do to this card, without doing it.
+ *
+ * Design screen 41 prints the interval under every rating in めくる, and its
+ * note says that number is the reason four buttons are worth the width. So it
+ * has to come from the scheduler: a rule of thumb printed under a button is
+ * worse than no number at all, because she would learn to trust it.
+ *
+ * Returned as seconds from `now`; the client formats. Deliberately not offered
+ * for the other three modes — they have no rating row to label.
+ */
+export function previewIntervals(events, now = new Date()) {
+  const ordered = orderEvents(events ?? []);
+
+  let card = createEmptyCard(ordered.length ? new Date(ordered[0].reviewed_at * 1000) : now);
+  for (const e of ordered) {
+    card = engine.next(card, new Date(e.reviewed_at * 1000), RATINGS[e.rating]).card;
+  }
+
+  const scheduled = engine.repeat(card, now);
+  const out = {};
+  for (const [value, rating] of Object.entries(RATINGS)) {
+    out[value] = Math.max(
+      0,
+      Math.round((scheduled[rating].card.due.getTime() - now.getTime()) / 1000),
+    );
+  }
+  return out;
+}

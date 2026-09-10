@@ -54,48 +54,31 @@ Frame sizes: 390 × 844 (iPhone), 834 × 1194 (iPad portrait), 1194 × 834 (land
 the safe circle), and a 180 for iOS. Square, no rounding, no transparency; iOS
 masks them itself.
 
-## Where the build now disagrees with the canvas
+## Where the build departs from the canvas
 
 The practice loop was built from the prototype while the second round was in
-flight, and several states were decided in code. The drawings now overrule some
-of them. Recorded here as work, not as history.
+flight, and the drawings overruled several states decided in code. Those are
+now corrected — 話す no longer scores what it heard, めくる prints the interval
+under each rating, the two sound-absent cards behave as 47 and 48 draw them,
+and the × asks once. What remains is deliberate, and short.
 
-**Corrections owed to what is already built:**
+- **The six bars in 43 do not follow the microphone's level.** They are a loop
+  that says "listening" rather than "this loud". `SpeechRecognition` hands over
+  no audio stream, and opening a second one with `getUserMedia` to measure it
+  is unreliable alongside recognition on iOS — the risk is breaking the feature
+  to animate it honestly. Worth revisiting if the API ever exposes a level.
+- **Two rows in Settings are still not built**, and now have designs behind
+  them: the per-deck toggles and "Topics in a session".
+- **Pitch accent is still not built.** The deck carries it on 1,500 of its
+  1,501 notes as inline-styled spans, and nothing in this round changes that.
 
-- **話す's recognition must not be scored.** 44 is explicit — "quoted, never
-  scored: no tick, no colour, no yes/no", with a sentence underneath because a
-  transcript on a practice screen reads as a verdict unless something says
-  otherwise. The build tints the transcript green or red. That is the opposite.
-- **Nothing heard** is the same box with "— nothing heard —" in muted type,
-  not a different message in place of the transcript.
-- **45 and 46 are the same layout with different copy** — refused and
-  unsupported look identical to her, and both carry a sentence saying what to
-  do instead. The build omits the sentence in the unsupported case.
-- **47: synthesis must be captioned.** The build falls back silently, and the
-  note gives the reason not to: "a synthetic voice she mistakes for a recording
-  teaches her the wrong pronunciation." Dropping the card is right only when
-  synthesis is unavailable too — which is what the build does, and 47 confirms
-  it, strip and all.
-- **48: in 選ぶ the speaker is simply gone** when there is no sound. The build
-  always draws it. An inert button invites a tap that does nothing.
-- **41: めくる's four ratings carry the interval FSRS would give** — `<1m`,
-  `8m`, `2d`, `6d` — and "that number is why four buttons are worth the extra
-  width". The build has four buttons and no intervals. The tints run one way
-  (red tint, plain, green tint, solid green) rather than the build's outlines,
-  and the buttons are 62pt.
-- **The reading under the word takes the mode colour**, not grey. 41 shows
-  だいじょうぶ in the line's green at 20px.
-- **50: the × asks once.** "Keep going" is the primary, and before the first
-  answer there is no sheet at all. The build leaves immediately, which is right
-  only for that first case.
+**Not yet built, all newly drawn:** browse and starring (31–35), the filter
+sheet and the chosen session (36–40), first run (49), the resume row (51), the
+expired cookie (52), and the personal deck (27–30).
 
-**Still standing, now confirmed by a drawing:** the new-card floor of 5, the
-personal deck row at zero cards, and dropping an unlistenable card from 聞く.
-
-**Two rows in Settings are still not built** and now have designs behind them:
-the per-deck toggles and "Topics in a session". Pitch accent remains unbuilt —
-the deck carries it on 1,500 of 1,501 notes as inline-styled spans, and nothing
-in this round changes that.
+**Confirmed by a drawing, having first been guessed:** the new-card floor of 5,
+the personal deck row at zero cards, and dropping an unlistenable card from 聞く
+— 47 draws exactly that, strip and all.
 
 ## Known gaps
 
