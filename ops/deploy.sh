@@ -54,6 +54,11 @@ if $do_client; then
   # Not part of the shell: the test suite, the nginx stand-in, and the notes.
   rm -rf "$staging/test" "$staging/dev-server.js" "$staging/README.md"
 
+  # nginx (www-data) reads these files as a different user than whoever runs
+  # this script. A restrictive umask on the operator's shell otherwise leaves
+  # the shell unreadable to nginx — a silent 403/500, not a build failure.
+  chmod -R a+rX "$staging"
+
   if [[ -d "$APP_DIR" ]]; then
     mv "$APP_DIR" "$previous"
   fi

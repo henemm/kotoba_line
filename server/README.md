@@ -14,7 +14,7 @@ npm start                      # 127.0.0.1:8080
 Create an account — there is no public registration (§10):
 
 ```sh
-npm run adduser -- --handle mira --display Mira
+npm run adduser -- --handle HANDLE --display "Display Name"
 # prompts for the PIN twice, with echo off
 ```
 
@@ -24,7 +24,7 @@ are stored as argon2id hashes.
 In the container:
 
 ```sh
-docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handle mira
+docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handle HANDLE
 ```
 
 ## Endpoints
