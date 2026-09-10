@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { query } from "../src/api.js";
+import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
@@ -13,6 +13,7 @@ import { offlineStatus } from "../src/outbox.js";
 import { unwrap } from "../src/store.js";
 import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
 import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
+import { signedOutCopy } from "../src/screens/signed-out.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -303,6 +304,83 @@ describe("the offline strip's three states (design 25)", () => {
   it("says review, not reviews, for one", () => {
     assert.equal(text({ online: false, waiting: 1 }), "Offline · 1 review waiting");
     assert.equal(text({ online: true, justSent: 1 }), "Synced · 1 review sent");
+  });
+});
+
+describe("signed out by the server (design 52)", () => {
+  const text = (opts) => offlineStatus(opts)?.text ?? null;
+
+  it("says signed out, not offline — the server is reachable", () => {
+    assert.equal(
+      text({ online: true, waiting: 14, signedOut: true }),
+      "Signed out · 14 reviews waiting",
+    );
+  });
+
+  it("states what is waiting, never what was last sent", () => {
+    // Both places 52 prints a number print this one. The bar's own history
+    // (the "Synced · N sent" case above) is why this is worth a test.
+    assert.equal(
+      text({ online: true, waiting: 3, justSent: 14, signedOut: true }),
+      "Signed out · 3 reviews waiting",
+    );
+  });
+
+  it("drops the count when there is nothing waiting", () => {
+    assert.equal(text({ online: true, waiting: 0, signedOut: true }), "Signed out");
+  });
+
+  it("says review, not reviews, for one", () => {
+    assert.equal(text({ online: true, waiting: 1, signedOut: true }), "Signed out · 1 review waiting");
+  });
+
+  it("prefers offline, because she cannot sign in without a connection", () => {
+    assert.equal(
+      text({ online: false, waiting: 14, signedOut: true }),
+      "Offline · 14 reviews waiting",
+    );
+  });
+
+  it("puts the same waiting count in the paragraph as in the bar", () => {
+    const { title, body } = signedOutCopy(14);
+    assert.equal(title, "Sign in again to keep syncing");
+    assert.match(body, /^Your session on the server ran out\./);
+    assert.match(body, /The 14 answers waiting here are safe on this device/);
+    assert.match(body, /will send as soon as you are back in\.$/);
+  });
+
+  it("reads as English for a single answer", () => {
+    assert.match(signedOutCopy(1).body, /The one answer waiting here is safe/);
+  });
+
+  it("promises nothing it cannot keep when the outbox is empty", () => {
+    const { body } = signedOutCopy(0);
+    assert.equal(body, "Your session on the server ran out. Nothing is waiting to send.");
+    // No count, and nothing about answers being safe: there are none.
+    assert.doesNotMatch(body, /answer/);
+  });
+
+  it("does not claim to know when she practised", () => {
+    // The drawing says "the 14 answers from this morning"; the screen has no
+    // idea what time it is, and at night that would be a small lie inside a
+    // reassurance.
+    assert.doesNotMatch(signedOutCopy(14).body, /morning|afternoon|evening|today/i);
+  });
+});
+
+describe("the two kinds of 401", () => {
+  it("tells an expired cookie from a wrong PIN", () => {
+    // Same status; only the body separates them. Getting this wrong would make
+    // a wrong PIN typed into 52 re-fire the screen it was typed into, clearing
+    // the cells and the rate-limit countdown with it.
+    assert.equal(isSessionExpired(new ApiError(401, { error: "unauthenticated" })), true);
+    assert.equal(isSessionExpired(new ApiError(401, { error: "invalid_credentials" })), false);
+  });
+
+  it("is not fooled by another status or a bodyless response", () => {
+    assert.equal(isSessionExpired(new ApiError(429, { error: "unauthenticated" })), false);
+    assert.equal(isSessionExpired(new ApiError(401, undefined)), false);
+    assert.equal(isSessionExpired(new Error("nope")), false);
   });
 });
 

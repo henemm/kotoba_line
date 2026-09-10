@@ -86,11 +86,20 @@
   top: 26px;
   border: 5px solid var(--line-speak);
 }
-.signin .pin .cells {
+
+/* ── the PIN control (01, 52) ─────────────────────────────────────
+   Shared by sign-in and the expired-session screen, so it is keyed to its
+   own class rather than nested under .signin. The three states are read
+   from data-state on whichever screen's root is above it. */
+.pin-entry {
+  /* The hidden capture field is positioned against this. */
+  position: relative;
+}
+.pin-entry .cells {
   display: flex;
   gap: 8px;
 }
-.signin .pin .cell {
+.pin-entry .cell {
   flex: 1;
   height: 58px;
   background: var(--surface);
@@ -99,17 +108,17 @@
   display: grid;
   place-items: center;
 }
-.signin .pin .cell .filled {
+.pin-entry .cell .filled {
   width: 11px;
   height: 11px;
   border-radius: 50%;
   background: var(--ink);
   display: block;
 }
-.signin .pin .cell.focus {
+.pin-entry .cell.focus {
   border-color: var(--ink);
 }
-.signin .pin .cell.focus .caret {
+.pin-entry .cell.focus .caret {
   width: 2px;
   height: 24px;
   background: var(--ink);
@@ -117,7 +126,7 @@
 }
 /* A hidden field carries the real input, so the OS keyboard and password
    managers behave while the cells stay a drawing. */
-.signin .pin .capture {
+.pin-entry .capture {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -126,36 +135,47 @@
 }
 
 /* The message slot is always present, so nothing reflows when it fills. */
-.signin .message {
+.pin-entry .message {
   min-height: 22px;
   margin-top: 12px;
   display: flex;
   align-items: center;
   gap: 9px;
 }
-.signin .message .dot {
+.pin-entry .message .dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   display: block;
   flex: none;
 }
-.signin .message span:last-child {
+.pin-entry .message span:last-child {
   font-size: 14px;
   font-weight: 600;
 }
 
-.signin[data-state="error"] .pin .stop {
+[data-state="error"] .pin-entry .cell {
   border-color: var(--no);
 }
-.signin[data-state="error"] .pin .cell {
-  border-color: var(--no);
-}
-.signin[data-state="error"] .message .dot {
+[data-state="error"] .pin-entry .message .dot {
   background: var(--no);
 }
-.signin[data-state="error"] .message span:last-child {
+[data-state="error"] .pin-entry .message span:last-child {
   color: var(--no);
+}
+
+[data-state="limited"] .pin-entry .cells {
+  opacity: 0.45;
+}
+[data-state="limited"] .pin-entry .message .dot {
+  background: var(--ink-muted);
+}
+[data-state="limited"] .pin-entry .message span:last-child {
+  color: var(--ink-muted);
+}
+
+.signin[data-state="error"] .pin .stop {
+  border-color: var(--no);
 }
 
 /* Rate limited: the whole form goes inert and the rail loses its colour. */
@@ -170,15 +190,6 @@
 }
 .signin[data-state="limited"] .pin .stop {
   border-color: var(--surface-hi);
-}
-.signin[data-state="limited"] .pin .cells {
-  opacity: 0.45;
-}
-.signin[data-state="limited"] .message .dot {
-  background: var(--ink-muted);
-}
-.signin[data-state="limited"] .message span:last-child {
-  color: var(--ink-muted);
 }
 
 .signin-foot {
@@ -228,6 +239,84 @@
   }
   .signin h1 {
     font-size: 52px;
+  }
+}
+
+/* ══ 52 Signed out by the server ══════════════════════════════════
+   The bar above states the count in fewer words; this is the part she can
+   act on. No tab bar and no rail: it is neither a tab nor the start of a
+   line, it is one thing to do. The × dismisses it — practising must not
+   stop because the server forgot her. */
+
+.signed-out {
+  overflow-y: auto;
+}
+
+.signed-out-head {
+  flex: none;
+  padding: 4px var(--gutter) 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.signed-out-body {
+  flex: 1;
+  padding: 6px var(--gutter) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.signed-out-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.signed-out-text h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.signed-out-text p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.signed-out .pin-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* The slot carries its own top margin for 01's layout; here the column gap
+   has already provided it. */
+.signed-out .pin-entry .message {
+  margin-top: 0;
+}
+
+.signed-out-foot {
+  flex: none;
+  padding: 0 var(--gutter) 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.signed-out-foot .note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 700px) {
+  /* iPad is a centred 560pt column, like every screen that does not re-flow. */
+  .signed-out-body,
+  .signed-out-foot,
+  .signed-out-head {
+    width: min(560px, 100%);
+    margin: 0 auto;
   }
 }
 

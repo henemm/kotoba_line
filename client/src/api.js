@@ -28,6 +28,27 @@ export class OfflineError extends Error {
   }
 }
 
+/**
+ * The server saying the cookie is gone (design 52) rather than saying a PIN is
+ * wrong. Both are 401 and only the body separates them: `unauthenticated` comes
+ * from the session guard, `invalid_credentials` from the login route.
+ *
+ * Told apart by the body rather than by the path deliberately — a wrong PIN
+ * typed *into* 52 must not re-fire the screen it was typed into, which would
+ * clear the cells and the rate-limit countdown along with them.
+ */
+export function isSessionExpired(err) {
+  return err instanceof ApiError && err.status === 401 && err.body?.error === "unauthenticated";
+}
+
+const expiredListeners = new Set();
+
+/** Called whenever a request comes back with an expired session cookie. */
+export function onSessionExpired(fn) {
+  expiredListeners.add(fn);
+  return () => expiredListeners.delete(fn);
+}
+
 async function request(path, { method = "GET", body, signal } = {}) {
   let res;
   try {
@@ -45,7 +66,14 @@ async function request(path, { method = "GET", body, signal } = {}) {
   const text = await res.text();
   const parsed = text ? safeJson(text) : undefined;
 
-  if (!res.ok) throw new ApiError(res.status, parsed);
+  if (!res.ok) {
+    const err = new ApiError(res.status, parsed);
+    // Announced here rather than at each call site: every request can be the
+    // one that discovers the cookie has gone, and the shell needs to know
+    // whichever one it was.
+    if (isSessionExpired(err)) for (const fn of expiredListeners) fn();
+    throw err;
+  }
   return parsed;
 }
 

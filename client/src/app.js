@@ -1,5 +1,6 @@
-import { ApiError, OfflineError, api } from "./api.js";
+import { OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
+import { signedOutScreen } from "./screens/signed-out.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
@@ -9,7 +10,7 @@ import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault } from "./scre
 import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
-import { offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
+import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { forget, openSession } from "./resume.js";
 import { el, render } from "./ui/dom.js";
@@ -57,6 +58,13 @@ const state = {
   // Settings tab has ever been opened.
   settings: { newPerDay: 15, sessionLength: 20, readAloud: true, pitchAccent: false },
   online: navigator.onLine,
+  // 52: the server is reachable and the cookie is not. Two flags, because the
+  // state and the screen have different lifetimes — she can put the screen
+  // away and go on practising while still being signed out, and the bar has
+  // to keep saying so.
+  signedOut: false,
+  signedOutDismissed: false,
+  signedOutNode: undefined,
   pendingEvents: 0,
   // How many went up in the last flush — the green bar's number, which is not
   // the same as the number still waiting.
@@ -74,6 +82,7 @@ function offlineBar() {
     online: state.online,
     waiting: state.pendingEvents,
     justSent: state.justSent,
+    signedOut: state.signedOut,
   });
   if (!status) return null;
   return el(
@@ -146,6 +155,8 @@ function currentScreen() {
       state.tab = "practise";
       state.session = undefined;
       state.summary = undefined;
+      // Leaving on purpose settles the question 52 was asking.
+      clearSignedOut();
       renderApp();
       // "Signing out clears this device" (design 22). The deck cache stays —
       // it is public, it is large, and re-downloading it costs metered data.
@@ -287,11 +298,91 @@ function resumeSession(saved) {
   renderApp();
 }
 
+/**
+ * Any request can be the one that discovers the cookie is gone; from then on
+ * the bar says so, and 52 takes the screen unless she has put it away.
+ *
+ * It deliberately does not throw the screen away: while she is looking at 52
+ * a background request can still 401, and rebuilding it under her would clear
+ * the digits she has typed.
+ *
+ * 25's rule, which 52 inherits: nothing covers a card. Her answers reach the
+ * outbox regardless, so waiting for the session to end costs her nothing —
+ * and the session's own exit redraws, which is when this surfaces.
+ */
+function noteSignedOut() {
+  // Only the first one redraws. The practise tab reads /api/queue and
+  // /api/stats as it is built, so redrawing on every 401 built a tab that
+  // fired two more of them — a render loop that hammered the server for as
+  // long as the cookie stayed dead.
+  if (state.signedOut) return;
+  state.signedOut = true;
+  if (!state.session) renderApp();
+}
+
+/**
+ * The flush found the cookie gone.
+ *
+ * This is the one thing that undoes a dismissal, because it is the one the
+ * design names: "she can dismiss it and keep practising; it returns when the
+ * outbox next tries to flush." Any other 401 must not — the practise tab reads
+ * /api/stats and /api/queue behind her, and letting those revive the screen
+ * made the × do nothing at all.
+ */
+function reviveSignedOut() {
+  const changed = !state.signedOut || state.signedOutDismissed;
+  state.signedOut = true;
+  if (state.signedOutDismissed) {
+    // Built fresh, so the count in the paragraph is the count as it is now:
+    // she has been practising since she put it away.
+    state.signedOutDismissed = false;
+    dropSignedOutNode();
+  }
+  if (changed && !state.session) renderApp();
+}
+
+function dropSignedOutNode() {
+  state.signedOutNode?.destroy?.();
+  state.signedOutNode = undefined;
+}
+
+/** Back in. Only the shell state — the caller decides what to reload. */
+function clearSignedOut() {
+  state.signedOut = false;
+  state.signedOutDismissed = false;
+  dropSignedOutNode();
+}
+
+/**
+ * Signing in again from 52.
+ *
+ * Deliberately not the sign-in screen's handler: that one runs `checkDeck()`,
+ * which on a device mid-practice would be a no-op but on a freshly evicted
+ * cache would replace the tab she was on with the first-run download. She was
+ * already in; this restores a cookie, it does not set the app up.
+ *
+ * Errors are left to propagate — the PIN control turns a rejection into 01's
+ * wrong-PIN state and a 429 into its countdown, which is what 52's note asks
+ * for.
+ */
+async function signInAgain(pin) {
+  const user = await api.login(state.user?.handle, pin);
+  state.user = user;
+  await setMeta("user", user);
+  clearSignedOut();
+  renderApp();
+  loadSettings();
+  loadOwnDeck();
+  // The whole reason the screen exists: the answers go up now.
+  flush().catch(() => {});
+}
+
 function renderApp() {
   if (!state.user) {
     render(app, signInScreen({ onSignedIn: (user) => {
       state.user = user;
       state.tab = "practise";
+      clearSignedOut();
       setMeta("user", user);
       checkDeck();
       loadSettings();
@@ -299,6 +390,28 @@ function renderApp() {
       startFlushing();
       renderApp();
     } }));
+    return;
+  }
+
+  // 52, before the first-run download: a deck cannot be fetched with a cookie
+  // the server has forgotten, and before the tabs, because it takes the screen.
+  // Never over a running session or its summary — a card is never covered, and
+  // the number she just earned is not something to interrupt.
+  if (state.signedOut && !state.signedOutDismissed && !state.session && !state.summary) {
+    // Built once and kept, like the session: rebuilding it on an unrelated
+    // redraw would throw away the digits she has typed and the rate-limit
+    // countdown with them.
+    state.signedOutNode ??= signedOutScreen({
+      handle: state.user?.handle,
+      waiting: state.pendingEvents,
+      onSignIn: signInAgain,
+      onDismiss: () => {
+        state.signedOutDismissed = true;
+        dropSignedOutNode();
+        renderApp();
+      },
+    });
+    render(app, offlineBar(), state.signedOutNode);
     return;
   }
 
@@ -407,8 +520,15 @@ window.addEventListener("offline", () => {
  * the outbox sees all three.
  */
 let clearBarTimer;
-subscribe(({ waiting, sent }) => {
+subscribe(({ waiting, sent, status }) => {
   state.pendingEvents = waiting;
+  // 52: a flush the server turned away for want of a cookie. This is the only
+  // signal allowed to bring the screen back after she has dismissed it, and it
+  // renders on its own account.
+  if (status === 401) {
+    reviveSignedOut();
+    return;
+  }
   // Design 25: "Synced · N reviews sent" is a confirmation, not a state — it
   // shows what just went up and then removes itself after two seconds.
   if (sent > 0) {
@@ -475,14 +595,30 @@ try {
   if (err instanceof OfflineError) {
     state.online = false;
     state.user = await getMeta("user");
-  } else if (err instanceof ApiError && err.status === 401) {
-    await clearPersonal();
+  } else if (isSessionExpired(err)) {
+    // The same state as a cookie that expires mid-practice, so it takes the
+    // same screen: the remembered handle stands in until she signs in again.
+    //
+    // This used to call clearPersonal(), which clears the outbox — so opening
+    // the app after the cookie had lapsed destroyed every answer that had not
+    // been sent yet, which is precisely what 52 promises is safe, and took the
+    // remembered handle with it. Only signing out on purpose clears this
+    // device.
+    state.user = await getMeta("user");
+    state.signedOut = true;
   } else {
     throw err;
   }
 }
 
 state.pendingEvents = await pending();
+
+/**
+ * Registered after the boot check above, which handles its own 401 — otherwise
+ * that one 401 would arm the screen before there is a count to put in it.
+ * From here on any request can be the one that finds the cookie gone.
+ */
+onSessionExpired(noteSignedOut);
 
 renderApp();
 

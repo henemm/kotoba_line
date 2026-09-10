@@ -12,7 +12,7 @@
  * because the first answer has not reached the server yet — so anything
  * already sitting in the outbox is removed.
  */
-import { OfflineError, api, query } from "./api.js";
+import { OfflineError, api, isSessionExpired, query } from "./api.js";
 import { getMeta, setMeta } from "./store.js";
 import { outbox } from "./store.js";
 
@@ -37,7 +37,12 @@ export async function sessionQueue(opts) {
     });
     return { cardIds: answer.cardIds, intervals: answer.intervals, stale: false };
   } catch (err) {
-    if (!(err instanceof OfflineError)) throw err;
+    // An expired cookie (52) falls back the same way no connection does: the
+    // server cannot answer either way, and the screen that asks her to sign in
+    // again promises "practising works offline in the meantime". Without this
+    // that sentence was untrue — tapping a line went nowhere until she signed
+    // in, which is the one thing she should not have to do on a train.
+    if (!(err instanceof OfflineError) && !isSessionExpired(err)) throw err;
 
     const cached = await getMeta(key(opts));
     if (!cached) return { cardIds: [], stale: true, never: true };

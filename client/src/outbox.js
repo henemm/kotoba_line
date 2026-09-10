@@ -22,15 +22,18 @@ const listeners = new Set();
  * design 25's green bar states — "Synced · 14 reviews sent". It is not the
  * same number as `waiting`, and showing one where the other belongs is the
  * obvious way to get this wrong.
+ *
+ * `status` is present only when a flush was refused, and carries the HTTP
+ * status that refused it — 401 is design 52.
  */
 export function subscribe(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
-async function announce(sent = 0) {
+async function announce(sent = 0, extra = {}) {
   const waiting = await outboxCount();
-  for (const fn of listeners) fn({ waiting, sent });
+  for (const fn of listeners) fn({ waiting, sent, ...extra });
   return waiting;
 }
 
@@ -85,6 +88,10 @@ async function doFlush() {
     // next sign-in. Anything else is the server refusing, and dropping the
     // events on that would lose them for good.
     if (err instanceof ApiError) {
+      // Announced, not just returned: design 52's screen comes back "when the
+      // outbox next tries to flush", and most flushes are the background ones
+      // startFlushing() fires — nobody is looking at their return value.
+      await announce(0, { status: err.status });
       return { sent: 0, remaining: events.length, status: err.status };
     }
     throw err;
@@ -109,11 +116,21 @@ async function doFlush() {
  * Returns null for the state she is in almost always: online, nothing queued,
  * no bar.
  */
-export function offlineStatus({ online, waiting = 0, justSent = 0 }) {
+export function offlineStatus({ online, waiting = 0, justSent = 0, signedOut = false }) {
   const reviews = (n) => `${n} review${n === 1 ? "" : "s"}`;
 
   if (!online) {
     return { tone: "offline", text: waiting > 0 ? `Offline · ${reviews(waiting)} waiting` : "Offline" };
+  }
+  // 52, and it is checked after `online` on purpose: with no connection she
+  // cannot sign in either, and "Offline" is the state she can act on. The
+  // number here is what is *waiting*, never what was last sent — the whole
+  // point of the bar at this moment is that nothing has gone up.
+  if (signedOut) {
+    return {
+      tone: "offline",
+      text: waiting > 0 ? `Signed out · ${reviews(waiting)} waiting` : "Signed out",
+    };
   }
   if (justSent > 0) {
     return { tone: "synced", text: `Synced · ${reviews(justSent)} sent` };

@@ -4,21 +4,25 @@ import { el, render } from "../ui/dom.js";
 const PIN_LENGTH = 6;
 
 /**
- * Design 01. Three states: default, wrong PIN, and rate limited.
+ * The PIN control, shared by 01 and 52.
  *
- * There is no sign-up and no reset — accounts are made on the server (§10) —
- * so the screen's whole job is two fields and one action.
+ * Six drawn cells over one hidden input — the cells are a drawing so they can
+ * be styled, the real field is an `input` so the OS keyboard, autofill and
+ * paste all behave. The message slot below is always present, so nothing
+ * reflows when an error appears.
+ *
+ * It owns the three states and the rate-limit countdown, because both screens
+ * that ask for a PIN need all of it and the countdown is the fiddly part.
+ * The caller supplies the container, the button's word and what submitting
+ * actually does; `onState` is how the screen's own root gets `data-state`,
+ * which is what the CSS colours the cells from.
  */
-export function signInScreen({ onSignedIn }) {
+export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState }) {
   let pin = "";
   let state = "default"; // default | error | limited
   let message = "";
   let retryAt = 0;
   let countdownTimer;
-
-  const root = el("div.screen.signin-screen", {
-    style: { flex: "1", display: "flex", flexDirection: "column" },
-  });
 
   const capture = el("input.capture", {
     type: "tel",
@@ -28,20 +32,9 @@ export function signInScreen({ onSignedIn }) {
     "aria-label": "PIN, six digits",
   });
 
-  const nameInput = el("input", {
-    type: "text",
-    autocomplete: "username",
-    autocapitalize: "none",
-    autocorrect: "off",
-    spellcheck: "false",
-    maxlength: "22",
-    placeholder: "your name",
-    "aria-label": "Name",
-  });
-
   const cells = el("div.cells");
   const messageSlot = el("div.message");
-  const startButton = el("button.btn-primary", { type: "button" }, "Start");
+  const button = el("button.btn-primary", { type: "button" }, buttonText);
 
   function drawCells() {
     render(
@@ -69,7 +62,7 @@ export function signInScreen({ onSignedIn }) {
   function setState(next, text = "") {
     state = next;
     message = text;
-    form.dataset.state = state;
+    onState?.(state);
     drawCells();
     drawMessage();
     updateButton();
@@ -80,15 +73,14 @@ export function signInScreen({ onSignedIn }) {
       const left = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
       const mm = Math.floor(left / 60);
       const ss = String(left % 60).padStart(2, "0");
-      startButton.textContent = `Try again in ${mm}:${ss}`;
-      startButton.disabled = true;
-      startButton.classList.add("tabular");
+      button.textContent = `Try again in ${mm}:${ss}`;
+      button.disabled = true;
+      button.classList.add("tabular");
       return;
     }
-    startButton.classList.remove("tabular");
-    startButton.textContent = "Start";
-    startButton.disabled =
-      pin.length !== PIN_LENGTH || nameInput.value.trim().length === 0;
+    button.classList.remove("tabular");
+    button.textContent = buttonText;
+    button.disabled = pin.length !== PIN_LENGTH || !canSubmit();
   }
 
   /** Re-enables on zero without a reload, as the design note requires. */
@@ -116,17 +108,15 @@ export function signInScreen({ onSignedIn }) {
     }
   });
 
-  nameInput.addEventListener("input", updateButton);
   cells.addEventListener("click", () => capture.focus());
 
   async function submit() {
-    if (startButton.disabled) return;
-    startButton.disabled = true;
+    if (button.disabled) return;
+    button.disabled = true;
 
     try {
-      const user = await api.login(nameInput.value.trim(), pin);
+      await onSubmit(pin);
       clearInterval(countdownTimer);
-      onSignedIn(user);
     } catch (err) {
       // The PIN clears, the name is kept, focus returns to cell one.
       pin = "";
@@ -146,14 +136,66 @@ export function signInScreen({ onSignedIn }) {
     }
   }
 
-  startButton.addEventListener("click", submit);
+  button.addEventListener("click", submit);
   capture.addEventListener("keydown", (e) => {
     if (e.key === "Enter") submit();
   });
 
+  drawCells();
+  drawMessage();
+  updateButton();
+
+  return {
+    cells,
+    capture,
+    messageSlot,
+    button,
+    /** Call when something *outside* the PIN changes whether it can be sent. */
+    refresh: updateButton,
+    focus: () => capture.focus(),
+    destroy: () => clearInterval(countdownTimer),
+  };
+}
+
+/**
+ * Design 01. Three states: default, wrong PIN, and rate limited.
+ *
+ * There is no sign-up and no reset — accounts are made on the server (§10) —
+ * so the screen's whole job is two fields and one action.
+ */
+export function signInScreen({ onSignedIn }) {
+  const root = el("div.screen.signin-screen", {
+    style: { flex: "1", display: "flex", flexDirection: "column" },
+  });
+
+  const nameInput = el("input", {
+    type: "text",
+    autocomplete: "username",
+    autocapitalize: "none",
+    autocorrect: "off",
+    spellcheck: "false",
+    maxlength: "22",
+    placeholder: "your name",
+    "aria-label": "Name",
+  });
+
+  const pin = pinEntry({
+    buttonText: "Start",
+    canSubmit: () => nameInput.value.trim().length > 0,
+    onState: (state) => {
+      form.dataset.state = state;
+    },
+    onSubmit: async (value) => {
+      const user = await api.login(nameInput.value.trim(), value);
+      onSignedIn(user);
+    },
+  });
+
+  nameInput.addEventListener("input", pin.refresh);
+
   const form = el(
     "div.signin",
-    { dataset: { state } },
+    { dataset: { state: "default" } },
     el("div.rail"),
     el(
       "div.block.title",
@@ -170,13 +212,13 @@ export function signInScreen({ onSignedIn }) {
       nameInput,
     ),
     el(
-      "div.block.pin",
+      "div.block.pin.pin-entry",
       {},
       el("span.stop"),
       el("div.mono-label", { text: "PIN · six digits" }),
-      cells,
-      capture,
-      messageSlot,
+      pin.cells,
+      pin.capture,
+      pin.messageSlot,
     ),
   );
 
@@ -185,17 +227,14 @@ export function signInScreen({ onSignedIn }) {
     {},
     el("span.rail-end"),
     el("span.stop"),
-    startButton,
+    pin.button,
     el("p.note", { text: "No sign-up and no reset. Accounts are created on the server." }),
   );
 
   render(root, form, foot);
-  drawCells();
-  drawMessage();
-  updateButton();
 
   queueMicrotask(() => nameInput.focus());
 
-  root.destroy = () => clearInterval(countdownTimer);
+  root.destroy = pin.destroy;
   return root;
 }

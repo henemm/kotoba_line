@@ -42,6 +42,7 @@ in `server/README.md`.
 | Her own words | 27–30 | done — the dashed station, add a word, the list |
 | First run | 49 | done — paged download, pause, carry on |
 | Coming back | 51 | done — the resume row, four hours or the Tokyo day |
+| Signed out by the server | 52 | done — the bar, the PIN-only screen, dismissible |
 
 ## Layout
 
@@ -213,6 +214,31 @@ says *that* instead of silently showing nothing.
 connection used to land on a sign-in screen she could not complete, because
 checking the cookie needs the server and having one does not. The last
 signed-in user is remembered on the device; only a real 401 ends the session.
+
+**And being signed out is not being signed off** (52). When the cookie lapses
+the server is still reachable, so this is its own screen rather than the
+offline strip with different words: her handle is remembered, only the PIN is
+asked, and the outbox count is stated twice — in the bar and in the paragraph —
+because "sign in again" is the moment she would fear losing work.
+
+Three rules hold it together, and each of them was a bug first:
+
+- **Only signing out on purpose clears the device.** A 401 at startup used to
+  call `clearPersonal()`, which clears the outbox — so opening the app after
+  the cookie had lapsed destroyed every answer that had not been sent, which is
+  exactly what the screen promises is safe.
+- **Only the outbox's own flush brings the screen back** once she has dismissed
+  it. The practise tab reads `/api/queue` and `/api/stats` as it is built, so
+  letting any 401 revive it meant the × did nothing — and redrawing on every
+  401 was a render loop, because the redraw fired two more of them.
+- **An expired cookie falls back the way no connection does.** `sessionQueue`
+  replays the cached queue for a 401 as well as for an unreachable server,
+  which is what makes "practising works offline in the meantime" true. It is
+  the one sentence on the screen the app could have got wrong silently.
+
+The two 401s are told apart by their body, not their path: `unauthenticated`
+from the session guard, `invalid_credentials` from the login route. A wrong PIN
+typed *into* 52 must not re-fire the screen it was typed into.
 
 **The service worker, three strategies (§7).** Shell precached and served
 cache-first under a versioned name; `/api/*` network-only, because a cached

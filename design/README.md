@@ -78,8 +78,18 @@ and the × asks once. What remains is deliberate, and short.
   no swipe.
 - **Pitch accent is still not built.** The deck carries it on 1,500 of its
   1,501 notes as inline-styled spans, and nothing in this round changes that.
+- **52's paragraph does not say "from this morning".** The drawing reads "the
+  14 answers from this morning are safe on this device"; the screen has no idea
+  when she practised, and at nine in the evening that would be a small lie in
+  the middle of a reassurance. It says "the 14 answers waiting here" instead,
+  which keeps the count — the part of the sentence that is doing the work.
+- **52's dismissal is the session's ×.** The drawn frame is cropped, so the
+  control the note calls for ("she can dismiss it") is not in it. The app
+  already has one word for leaving a screen, and a second one here would teach
+  her two.
 
-**Not yet built:** the expired cookie (52). §5a is complete — browse (31–34) and choose-a-set (36–40)
+**Not yet built:** nothing from this round. The expired cookie (52) closed the
+last of it. §5a is complete — browse (31–34) and choose-a-set (36–40)
 — and so is the personal deck (27–30); its deck and topic chips are
 deliberately left to 36, where all three dimensions are offered together, and
 the route out of an empty search into "add it as your own word" waits on the
