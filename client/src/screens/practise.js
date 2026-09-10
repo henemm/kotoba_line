@@ -29,6 +29,7 @@ export function practiseScreen({
   onChooseSet,
   onAddWord,
   onOwnDeck,
+  onBrowse,
   onResume,
   resumable,
   ownWords,
@@ -64,7 +65,41 @@ export function practiseScreen({
       linesBlock(),
       lengthPicker(),
       soundNote(),
+      browseRow(),
       addWordRow(),
+    );
+  }
+
+  /**
+   * The way into Browse from the tab she is actually on (#35).
+   *
+   * Browse is where a card gets starred, and it was reachable only from Stats
+   * and from Settings — two tabs that are about looking back and about
+   * configuration, neither of which is where anyone goes to find a word. So
+   * "star some cards, then practise exactly those" had a first step nobody
+   * would find.
+   *
+   * Beside "Add a word" and sharing its class rather than getting one of its
+   * own, because they are the same kind of thing and should not look like two:
+   * both are what to do when the word she wants is not the one the scheduler
+   * is offering. Looking one up comes first; adding one is what happens when
+   * looking it up fails (33), which is the order they sit in.
+   */
+  function browseRow() {
+    if (!onBrowse) return null;
+    return el(
+      // Deliberately `.add-word-row` — see above. A second class carrying the
+      // same rules would be two things to keep in step.
+      "button.add-word-row",
+      { type: "button", onclick: () => onBrowse() },
+      el("span.dashed-station", { text: "★" }),
+      el(
+        "span.copy",
+        {},
+        el("span.title", { text: "Find and star words" }),
+        el("span.detail", { text: "Search the deck, then practise just the ones you picked" }),
+      ),
+      el("span.chevron", { "aria-hidden": "true", text: "›" }),
     );
   }
 
@@ -144,10 +179,19 @@ export function practiseScreen({
     if (!onChooseSet) return null;
     const chosen = !isDefault(filters);
     return el(
-      "button.set-line",
-      { type: "button", onclick: onChooseSet },
-      el("span", { class: chosen ? "chosen" : undefined, text: summaryLine(filters) }),
-      el("span", { text: "Change" }),
+      "div.set-block",
+      {},
+      // #34: the summary alone reads as a fact about the session — "Both decks
+      // · any topic · due today" is a sentence, not an offer. The label is
+      // what says there is a choice here at all, and it is needed precisely
+      // when nothing has been chosen, which is every first look.
+      el("span.set-label", { text: "What to practise" }),
+      el(
+        "button.set-line",
+        { type: "button", onclick: onChooseSet },
+        el("span", { class: chosen ? "chosen" : undefined, text: summaryLine(filters) }),
+        el("span.chevron", { "aria-hidden": "true", text: "›" }),
+      ),
     );
   }
 

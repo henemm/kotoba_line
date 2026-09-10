@@ -149,6 +149,9 @@ export function sessionScreen({
   // left anonymous so a replay can push it back (#32) and so leaving the
   // session cancels it — an orphaned timer redraws a screen that is gone.
   let advanceTimer;
+  // Card ids she has starred, for the ★ in the chrome (#35). Comes down with
+  // the queue, because the cached deck is public and cannot carry it.
+  let starred = new Set();
 
   /**
    * 45 and 46 look identical to her — "the distinction between refused and
@@ -180,6 +183,7 @@ export function sessionScreen({
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];
       intervals = q.intervals ?? {};
+      starred = new Set(q.starred ?? []);
       const ids = resuming?.cardIds ?? q.cardIds;
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
@@ -272,10 +276,64 @@ export function sessionScreen({
             )
           : null,
       ),
+      starButton(),
       el("span.session-counter.tabular", {
         text: `${Math.min(index + 1, queue.length)}/${queue.length}`,
       }),
     );
+  }
+
+  /**
+   * Star the card she is looking at (#35).
+   *
+   * Reported as "ich möchte in jedem Bereich selbst Favoriten anlegen können".
+   * Before this the ★ existed only in Browse, and Browse was reachable only
+   * from Stats and Settings — so the one moment she wants to mark a word, the
+   * moment she meets it, was the one place she could not.
+   *
+   * In the chrome rather than on the card, and drawn on every mode: the card
+   * area is redrawn on every reveal and belongs to the question, while this
+   * belongs to the card and must not move or vanish under her thumb.
+   */
+  function starButton() {
+    const card = queue[index];
+    if (!card) return null;
+    const on = starred.has(card.id);
+
+    const button = el("button.session-star", {
+      type: "button",
+      class: on ? "on" : undefined,
+      "aria-label": on ? `Unstar ${card.word}` : `Star ${card.word}`,
+      "aria-pressed": String(on),
+      text: on ? "★" : "☆",
+    });
+
+    button.addEventListener("click", async () => {
+      const wanted = !starred.has(card.id);
+      // 32's rule, the same here: the tap writes and the mark changes under
+      // her hand — that is the whole confirmation.
+      paint(wanted);
+      try {
+        await api.star(card.id, wanted);
+      } catch {
+        // Put it back rather than leave a star the server does not have.
+        // Offline this is what happens, and it is the honest outcome: the
+        // outbox carries answers, not stars, and a star that silently failed
+        // would be worse than one that visibly did not take.
+        paint(!wanted);
+      }
+    });
+
+    function paint(on) {
+      if (on) starred.add(card.id);
+      else starred.delete(card.id);
+      button.textContent = on ? "★" : "☆";
+      button.classList.toggle("on", on);
+      button.setAttribute("aria-pressed", String(on));
+      button.setAttribute("aria-label", `${on ? "Unstar" : "Star"} ${card.word}`);
+    }
+
+    return button;
   }
 
   /**

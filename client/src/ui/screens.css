@@ -927,6 +927,29 @@
   line-height: 1;
   padding: 0 4px;
 }
+/* Star this card (#35). Sits between the strip and the counter, at the far
+   reach of a thumb rather than under it — starring is deliberate, and a
+   control this close to the rating row would get caught by accident. Muted
+   until it is on, so an unstarred session's chrome stays quiet. */
+.session-star {
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  flex: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-dim);
+}
+/* `--ink` rather than a colour of its own: this is the same star as the one in
+   Browse (.star above), and two different-looking stars would read as two
+   different things. */
+.session-star.on {
+  color: var(--ink);
+}
+.session-star:active {
+  transform: scale(0.88);
+}
+
 .session-counter {
   font-size: 15px;
   font-weight: 700;
@@ -2183,24 +2206,57 @@
   color: var(--ink);
 }
 
-/* The line above the four lines that opens the sheet. */
+/* The control above the four lines that opens the sheet (#34).
+ *
+ * It used to have `border: 0; background: none;` and `--ink-muted` at 400
+ * weight — the styling of a caption, two centimetres above four large coloured
+ * rows that unmistakably invite a tap. Reported as "wo wähle ich aus, was ich
+ * lernen will?": everything the sheet offers was one tap away and read as a
+ * status line about the session rather than the way to change it.
+ *
+ * So it is a control now: its own surface, ink-coloured text, a chevron, and a
+ * label above it saying what the row is for. The label is what makes it
+ * findable when it is at its default and the summary reads like a fact. */
+.practise .set-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0 var(--gutter);
+  margin: 0 0 4px;
+}
+.practise .set-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
 .practise .set-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   width: 100%;
-  margin: 0 0 4px;
-  padding: 0 var(--gutter);
+  padding: 13px 14px 13px 16px;
   border: 0;
-  background: none;
-  color: var(--ink-muted);
-  font: 400 14px/1.5 var(--ui);
+  border-radius: 13px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 15px/1.35 var(--ui);
   text-align: left;
 }
+.practise .set-line:active {
+  background: var(--surface-hi);
+}
+/* A chosen set is the exception, so it takes the accent; the default summary
+   stays plain and lets the label carry the invitation. */
 .practise .set-line .chosen {
-  color: var(--ink);
-  font-weight: 600;
+  color: var(--rail-any, var(--ink));
+}
+.practise .set-line .chevron {
+  flex: none;
+  color: var(--ink-muted);
+  font-size: 19px;
+  line-height: 1;
 }
 
 /* 39: a chosen queue says so under the station strip, and an ordinary one

@@ -33,9 +33,18 @@ export async function sessionQueue(opts) {
     await setMeta(key(opts), {
       cardIds: answer.cardIds,
       intervals: answer.intervals,
+      // Cached for the same reason as the intervals: the session draws a star
+      // on every card (#35), and a session on a train would otherwise draw all
+      // of them empty — which reads as "nothing is starred", not as "unknown".
+      starred: answer.starred,
       at: Date.now(),
     });
-    return { cardIds: answer.cardIds, intervals: answer.intervals, stale: false };
+    return {
+      cardIds: answer.cardIds,
+      intervals: answer.intervals,
+      starred: answer.starred ?? [],
+      stale: false,
+    };
   } catch (err) {
     // An expired cookie (52) falls back the same way no connection does: the
     // server cannot answer either way, and the screen that asks her to sign in
@@ -51,6 +60,7 @@ export async function sessionQueue(opts) {
     return {
       cardIds: cached.cardIds.filter((id) => !answered.has(id)),
       intervals: cached.intervals,
+      starred: cached.starred ?? [],
       stale: true,
       at: cached.at,
     };
