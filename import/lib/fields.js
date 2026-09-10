@@ -14,6 +14,8 @@
  *  - Note 1 of the deck is a welcome card, not vocabulary.
  */
 
+import { pitchColumn } from "./pitch.js";
+
 /** Anki separates a note's fields with 0x1f. */
 export const FIELD_SEPARATOR = "\x1f";
 
@@ -77,6 +79,8 @@ export function noteToCard(noteId, flds, byName, deck = "kaishi") {
     // The plain kana, kept apart from the furigana field: that one is Anki's
     // `食[た]べる` notation, which no search for たべ can match (migration 003).
     word_reading: plainText(at("Word Reading")) || null,
+    // The accent as a number, not as the deck's drawing of it (#21).
+    word_pitch: pitchColumn(at("Pitch Accent")),
     word_meaning: wordMeaning,
     word_audio: soundFilename(at("Word Audio")) ?? null,
     sentence: keepEmphasis(at("Sentence")) || null,

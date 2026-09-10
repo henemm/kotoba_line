@@ -103,6 +103,14 @@ word-keyed file gives both cards the same topics and silently loses one.
 past the others, something with an actual subject matter is being filed there —
 that is exactly how the previous taxonomy went wrong twice (see #24).
 
+## Pitch accent
+
+`word_pitch` is the mora the pitch drops after, or 0 for a word that never
+drops — not the deck's drawing of it. `import/lib/pitch.js` reduces one to the
+other; the client draws the contour from the number and the reading. NULL
+means "the deck said nothing", which is true of ten single-mora words and of
+every card she writes herself: never invent a contour for those.
+
 ## Deploying
 
 Three places, and they are not the same place:

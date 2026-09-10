@@ -2849,3 +2849,49 @@
   background: none;
   border: 2px dashed var(--ink-dim);
 }
+
+/* ══ Pitch accent on a revealed card (#21) ════════════════════════
+   Takes the reading's place, not a line of its own — they are the same
+   information, and two copies of かたい stacked up is a puzzle. So it
+   keeps the reading's size and line colour. */
+
+.pitch {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--rail);
+}
+.pitch-moras {
+  display: inline-flex;
+  /* The overline is drawn per mora and must meet its neighbour's exactly:
+     any gap here would break the line into dashes and read as four accents
+     instead of one. */
+  gap: 0;
+}
+.mora {
+  /* Room above the glyph for the line, so it never touches the kana. */
+  padding: 3px 0 0;
+  border-top: 2px solid transparent;
+}
+.mora.high {
+  border-top-color: currentColor;
+}
+/* The fall: a high mora followed by a low one gets a stroke down its right
+   edge. That corner is the accent — it is what "[2]" names. */
+.mora.high + .mora:not(.high) {
+  box-shadow: -2px 0 0 0 currentColor;
+}
+/* The particle after the word, drawn as a ghost. 花 [2] and 鼻 [0] are both
+   はな and both low-high; the only thing that separates them is what this
+   does, so showing it is the entire reason the feature is worth having. */
+.mora.particle {
+  opacity: 0.45;
+  margin-left: 1px;
+}
+.pitch-number {
+  font: 600 12px/1 var(--mono);
+  color: var(--ink-muted);
+}

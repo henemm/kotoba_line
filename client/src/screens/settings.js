@@ -173,13 +173,25 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
   // ── Deck ────────────────────────────────────────────────────────
 
   /**
-   * Names and counts, no toggles.
+   * Names and counts, no toggles — decided, not deferred (#20).
    *
-   * Design 22 draws a switch beside each deck. There is nothing behind one
-   * yet: `user_settings` has no per-deck column, and with a single deck
-   * imported the switch could only ever turn the whole app off. The row for
-   * the personal deck stays, at zero cards, exactly as the design intends —
-   * so the second import has somewhere to land.
+   * Design 22 draws a switch beside each deck. The original reason for leaving
+   * it out was that there was only one deck, so the switch could only turn the
+   * app off. That reason is gone: her own deck exists. The row stays out
+   * anyway, for a better one.
+   *
+   * "Which decks does this session use" is already a question the choose-set
+   * sheet answers — Both / Kaishi / Mine, per session, right where she starts
+   * one. A standing switch here would be a second way to ask the same thing,
+   * and the two would disagree the first time she used both.
+   *
+   * It is also the more dangerous of the two. A per-session filter is visible
+   * in the summary line above the four lines; a setting turned off weeks ago
+   * is not. She would add a word, never be shown it, and have nothing on the
+   * screen to explain why.
+   *
+   * The row for the personal deck stays at zero cards, exactly as the design
+   * intends — so the second import has somewhere to land.
    */
   function deckGroup() {
     return group(
@@ -213,10 +225,11 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
    * a setting about what happens on its own should not disable a control the
    * user just pressed.
    *
-   * Pitch accent is not here. Kaishi does carry it — 1,500 of its 1,501 notes
-   * have the field — but the import does not yet map it and no card row holds
-   * it, so the switch would write a value nothing reads. It comes back with
-   * the pitch data. See design/README.md.
+   * Pitch accent used to be missing from this group. The deck carries it on
+   * 1,500 of its 1,501 notes, but as a drawing, and nothing mapped it — so the
+   * switch would have written a value nothing read. The import now reduces
+   * that drawing to the mora the pitch drops after (#21) and the reveal draws
+   * the contour, so the switch has something to govern.
    */
   function sound() {
     return group(
@@ -226,6 +239,16 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
         "Recorded audio where the deck has it, speech otherwise.",
         toggle(data.settings.readAloud, "Read cards aloud", (on) =>
           write({ readAloud: on }),
+        ),
+      ),
+      row(
+        "Show pitch accent",
+        // Says what it is for rather than what it is: 花 and 鼻 are both はな
+        // and both low-high, and the only thing telling them apart is what the
+        // particle after them does.
+        "A line over the high part when a card is revealed. 花 and 鼻 are both はな, and sound different.",
+        toggle(data.settings.pitchAccent, "Show pitch accent", (on) =>
+          write({ pitchAccent: on }),
         ),
       ),
     );

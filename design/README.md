@@ -67,17 +67,25 @@ and the × asks once. What remains is deliberate, and short.
   no audio stream, and opening a second one with `getUserMedia` to measure it
   is unreliable alongside recognition on iOS — the risk is breaking the feature
   to animate it honestly. Worth revisiting if the API ever exposes a level.
-- **Two rows in Settings are still not built**, and now have designs behind
-  them: the per-deck toggles and "Topics in a session". The deck toggles are
-  worth building now that there are two decks to toggle.
+- **Two rows in Settings are deliberately not built** (#20). The per-deck
+  switches would be a second way to ask what the choose-set sheet already asks
+  per session — Both / Kaishi / Mine — and the more dangerous of the two, since
+  a filter shows in the summary above the four lines while a setting turned off
+  weeks ago does not. "Topics in a session" led to the topic picker (23), which
+  the filter sheet (36) supersedes for anything beyond one topic. The reasoning
+  is on `deckGroup()` in `client/src/screens/settings.js`.
 - **29's topic field is inline, not a native prompt.** The design does not say
   which; a browser dialog in a standalone PWA looks like the browser's, so it
   is a field.
 - **30's rows do not swipe to edit or delete.** The delete endpoint is built
   and tested; the gesture is not, and a swipe that only deletes is worse than
   no swipe.
-- **Pitch accent is still not built.** The deck carries it on 1,500 of its
-  1,501 notes as inline-styled spans, and nothing in this round changes that.
+- **Pitch accent is built** (#21). The deck carries it on 1,500 of its 1,501
+  notes as inline-styled spans; the import reduces that drawing to the mora the
+  pitch drops after, and the reveal draws the contour itself — including the
+  particle after the word, which is the only thing separating 花 [2] from
+  鼻 [0]. Ten single-mora words carry no line in the deck at all and so get no
+  accent here: a contour invented for those would be a guess shown as a fact.
 - **52's paragraph does not say "from this morning".** The drawing reads "the
   14 answers from this morning are safe on this device"; the screen has no idea
   when she practised, and at nine in the evening that would be a small lie in
