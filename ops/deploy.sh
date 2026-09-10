@@ -5,6 +5,7 @@
 #   ops/deploy.sh              # client + API
 #   ops/deploy.sh --client     # just the static shell (the common case)
 #   ops/deploy.sh --api        # just the container
+#   ops/deploy.sh --force      # deploy even from a checkout that is behind
 #
 # The deck and its audio are NOT deployed by this: they are host data, not
 # build output. See ops/README.md.
@@ -16,14 +17,39 @@ DATA_DIR=${DATA_DIR:-/srv/kotoba/data}
 MEDIA_DIR=${MEDIA_DIR:-/srv/kotoba/media}
 COMPOSE=${COMPOSE:-docker compose -f ops/docker-compose.yml}
 
+force=false
+args=()
+for arg in "$@"; do
+  if [[ $arg == --force ]]; then force=true; else args+=("$arg"); fi
+done
+set -- ${args[@]+"${args[@]}"}
+
 do_client=true
 do_api=true
 case "${1:-}" in
   --client) do_api=false ;;
   --api) do_client=false ;;
   "") ;;
-  *) echo "usage: $0 [--client|--api]" >&2; exit 2 ;;
+  *) echo "usage: $0 [--client|--api] [--force]" >&2; exit 2 ;;
 esac
+
+# A checkout that is behind deploys the older client over the newer one and
+# says nothing about it — the failure looks exactly like a deploy that worked.
+# Only *behind* is refused: deploying a feature branch to try it on the phone
+# is deliberate and stays allowed, as does deploying with no network.
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  git fetch -q origin main 2>/dev/null || true
+  if git merge-base --is-ancestor HEAD origin/main 2>/dev/null &&
+     ! git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
+    behind=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
+    echo "This checkout is $behind commit(s) behind origin/main." >&2
+    echo "Deploying it would put the older client back on the server." >&2
+    echo "  git pull        and try again" >&2
+    echo "  --force         deploy this state anyway" >&2
+    $force || exit 1
+    echo "Deploying a stale checkout because --force was given." >&2
+  fi
+fi
 
 if [[ ! -f client/index.html ]]; then
   echo "Run this from the repository root." >&2
