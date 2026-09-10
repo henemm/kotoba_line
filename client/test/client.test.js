@@ -10,6 +10,7 @@ import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { when } from "../src/screens/settings.js";
 import { offlineStatus } from "../src/outbox.js";
+import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -420,5 +421,37 @@ describe("the reading line under めくる's word (41)", () => {
   it("reads a kana-only word back as itself, so the line can be dropped", () => {
     assert.equal(kanaReading("いい"), "いい");
     assert.equal(kanaReading(null), undefined);
+  });
+});
+
+describe("what a chosen set is called (36, 39)", () => {
+  it("names every dimension on the practise tab, defaults included", () => {
+    // The line above the four lines is how she learns the sheet exists, so it
+    // states what the scheduler chose rather than going blank.
+    assert.equal(summaryLine({}), "Both decks · any topic · due today");
+    assert.equal(
+      summaryLine({ deck: "personal", tag: "konbini", only: "starred" }),
+      "my deck · konbini · starred",
+    );
+  });
+
+  it("truncates from the left, because the last-set filter is the live one", () => {
+    assert.equal(
+      summaryLine({ deck: "kaishi", tag: "konbini", only: "starred" }, { max: 2 }),
+      "… · konbini · starred",
+    );
+  });
+
+  it("carries only what she changed onto the session's dashed rule", () => {
+    // 39 reads "Your set · konbini". Naming the untouched defaults there would
+    // make a one-filter session look like an elaborate one.
+    assert.equal(activeLabel({ tag: "konbini" }), "konbini");
+    assert.equal(activeLabel({ tag: "konbini", only: "starred" }), "konbini · Starred");
+    assert.equal(activeLabel({}), "");
+  });
+
+  it("knows when nothing was chosen at all", () => {
+    assert.equal(isDefault({}), true);
+    assert.equal(isDefault({ tag: "food" }), false);
   });
 });

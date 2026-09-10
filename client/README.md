@@ -38,6 +38,7 @@ in `server/README.md`.
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
 | Browse | 31–34 | done — search, star, the starred list, practise the set |
+| Choose a set | 36–39 | done — three filter dimensions, the live count, the dashed rule |
 
 ## Layout
 
@@ -92,6 +93,33 @@ filter sheet (36), which offers all three dimensions at once, and a chip here
 that opened a different picker would be a second way to do the same thing.
 The "add it as your own word" route out of an empty search (33) waits on the
 personal deck.
+
+## Choose a set (36–39)
+
+A sheet over the practise tab, never a screen of its own. It opens from one
+line above the four lines and is never in the way of them, so tapping a line
+still starts a session with whatever the sheet last held — the two-tap path
+survives.
+
+**The count above the button recomputes on every tap**, and that is what keeps
+it from being a settings screen: she is watching a number, not filling a form.
+It comes from `/api/queue`'s `available`, which counts what the filters match
+*before* the session cap — the button reads "Start 20 of 40", and returning
+only the capped list would make both numbers the same.
+
+**A thin topic is not hidden.** Topics under five cards are dimmed but
+selectable, and the button says "Start 3" plainly: three cards is a legitimate
+session, and hiding it would hide the shape of the deck.
+
+**An empty set marks its cause.** The chips that produced it are outlined in
+red — the only use of red outside a wrong answer — and the button goes inert
+rather than disappearing.
+
+**A chosen session says so while it runs** (39): a dashed rule under the
+station strip carrying only what she changed, "Your set · konbini". Dashed
+because the route is provisional — the scheduler did not lay it. It occupies a
+fixed 18px and is absent entirely on an ordinary session, so the card never
+moves.
 
 ## Offline
 

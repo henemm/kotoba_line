@@ -145,10 +145,15 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   const queue = composeQueue(groups, limit);
 
+  // How many cards these filters match, before the session cap. Design 36
+  // watches this number change on every tap — "she is watching a number, not
+  // filling a form" — and its button reads "Start 20 of 34", which needs both.
+  const available = groups.due.length + groups.lapsed.length + groups.fresh.length;
+
   // §5: shuffle within the session so the same cards do not always come in the
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
-  return { mode: mode ?? null, filtered, cardIds: shuffle(queue, random) };
+  return { mode: mode ?? null, filtered, available, cardIds: shuffle(queue, random) };
 }
 
 /**

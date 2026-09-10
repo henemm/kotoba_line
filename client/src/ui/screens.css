@@ -1926,3 +1926,183 @@
   color: var(--ink-muted);
   flex: none;
 }
+
+/* ══ 36–38 Choose a set ═══════════════════════════════════════════
+   A sheet over the practise tab, never a screen of its own: it opens
+   from the summary line above the four lines and is never in the way
+   of them, so tapping a line still starts a session. */
+
+.set-scrim {
+  position: fixed;
+  z-index: 20;
+}
+.set-sheet {
+  max-height: 88dvh;
+  overflow-y: auto;
+  gap: 22px;
+  padding: 22px 24px calc(30px + env(safe-area-inset-bottom));
+}
+.set-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.set-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+.set-reset {
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 600 15px/1 var(--ui);
+  padding: 0;
+}
+.set-reset:disabled {
+  color: var(--ink-dim);
+}
+
+.set-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.set-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.segmented {
+  display: flex;
+  gap: 8px;
+}
+.segmented button {
+  flex: 1;
+  height: 44px;
+  border: 2px solid transparent;
+  border-radius: 11px;
+  background: var(--night);
+  color: var(--ink-muted);
+  font: 600 14px/1 var(--ui);
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--surface-hi);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Inside the sheet the chips sit on the sheet's own ground, so their
+   unselected state is the page colour rather than the surface. */
+.set-chips {
+  padding: 0;
+}
+.set-chips .chip {
+  background: var(--night);
+}
+.set-chips .chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--night);
+  font-weight: 700;
+}
+/* Thin topics are dimmed but selectable — three cards is a real session. */
+.set-chips .chip.thin {
+  color: var(--ink-dim);
+}
+.set-chips .chip.thin[aria-pressed="true"] {
+  color: var(--night);
+}
+
+.set-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--surface-hi);
+  padding-top: 18px;
+}
+.set-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.set-count {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.set-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.set-foot .btn-primary {
+  width: 100%;
+  height: 56px;
+}
+
+/* 38: the chips that produced the empty set are outlined in red — the only
+   use of red outside a wrong answer, marking the cause rather than shouting. */
+.set-sheet.empty .chip[aria-pressed="true"],
+.set-sheet.empty .segmented button[aria-pressed="true"] {
+  border: 2px solid var(--no);
+}
+.set-sheet.empty .set-reset {
+  color: var(--ink);
+}
+
+/* The line above the four lines that opens the sheet. */
+.practise .set-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 0 var(--gutter);
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 400 14px/1.5 var(--ui);
+  text-align: left;
+}
+.practise .set-line .chosen {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* 39: a chosen queue says so under the station strip, and an ordinary one
+   draws nothing at all. Fixed height so the card below never moves. */
+.strip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.chosen-rule {
+  height: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chosen-rule .dash {
+  width: 14px;
+  border-top: 1px dashed var(--ink-muted);
+  display: block;
+}
+.chosen-rule .dash.long {
+  flex: 1;
+  width: auto;
+  border-top-color: var(--surface-hi);
+}
+.chosen-text {
+  font: 400 11px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}

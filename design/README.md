@@ -72,9 +72,9 @@ and the × asks once. What remains is deliberate, and short.
 - **Pitch accent is still not built.** The deck carries it on 1,500 of its
   1,501 notes as inline-styled spans, and nothing in this round changes that.
 
-**Not yet built, all newly drawn:** the filter sheet and the chosen session
-(36–40), first run (49), the resume row (51), the expired cookie (52), and the
-personal deck (27–30). Browse (31–34) is built; its deck and topic chips are
+**Not yet built, all newly drawn:** the chosen session's summary (40), first
+run (49), the resume row (51), the expired cookie (52), and the personal deck
+(27–30). Browse (31–34) and the filter sheet (36–39) are built; its deck and topic chips are
 deliberately left to 36, where all three dimensions are offered together, and
 the route out of an empty search into "add it as your own word" waits on the
 personal deck.

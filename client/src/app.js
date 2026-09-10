@@ -3,6 +3,7 @@ import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
+import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault } from "./screens/choose-set.js";
 import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
@@ -31,6 +32,12 @@ const state = {
   // redraw would throw away her search, her scroll position and the page of
   // results underneath it.
   browse: undefined,
+  // What the "Choose a set" sheet last held (36). Kept here rather than in the
+  // practise tab because it outlives it: tapping a line starts a session with
+  // these, and the session that runs says so (39).
+  filters: { ...DEFAULT_FILTERS },
+  topics: [],
+  sheet: undefined,
   // The server's copy of the settings, so the session length and the sound
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
@@ -100,11 +107,12 @@ function currentScreen() {
         // and a session started offline should not be blocked by it.
         api.updateSettings({ sessionLength: len }).catch(() => {});
       },
-      onStart: startSession,
-      onDrillTopic: () => {
-        // The topic picker (23) is drawn; wiring it is the next screen.
-        startSession({ only: "new" });
-      },
+      // 36: "tapping a line still starts a session with whatever the sheet
+      // last held, so the two-tap path survives."
+      onStart: ({ mode } = {}) => startSession({ mode, ...state.filters }),
+      filters: state.filters,
+      onChooseSet: openSheet,
+      onDrillTopic: openSheet,
     });
   }
   if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
@@ -127,6 +135,46 @@ function currentScreen() {
       renderApp();
     },
   });
+}
+
+/**
+ * 36. The sheet sits over the practise tab rather than replacing it, so the
+ * tab underneath is rendered first and this is appended on top.
+ */
+function openSheet() {
+  state.sheet = chooseSetScreen({
+    filters: state.filters,
+    topics: state.topics,
+    sessionLength: state.settings.sessionLength,
+    onClose: closeSheet,
+    onApply: (filters) => {
+      state.filters = filters;
+      closeSheet();
+      startSession({ ...filters });
+    },
+  });
+  renderApp();
+  loadTopics();
+}
+
+function closeSheet() {
+  state.sheet = undefined;
+  renderApp();
+}
+
+/** The topic counts the sheet shows come from the same place Stats gets them. */
+async function loadTopics() {
+  if (state.topics.length > 0) return;
+  try {
+    const stats = await api.stats();
+    state.topics = stats.topics ?? [];
+    if (state.sheet) {
+      // Redraw the sheet now that the chips have something to show.
+      openSheet();
+    }
+  } catch {
+    /* the sheet works without them; the topic row is just "Any" */
+  }
 }
 
 function openBrowse() {
@@ -189,6 +237,10 @@ function renderApp() {
     state.session.node ??= sessionScreen({
       mode: state.session.mode,
       filters: state.session.filters,
+      // 39 only labels a session she chose, not one the scheduler laid.
+      chosenLabel: isDefault(state.session.filters)
+        ? undefined
+        : activeLabel(state.session.filters),
       limit: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
       onExit: () => {
@@ -214,7 +266,7 @@ function renderApp() {
     return;
   }
 
-  render(app, statusBar(), offlineBar(), currentScreen(), tabBar());
+  render(app, statusBar(), offlineBar(), currentScreen(), tabBar(), state.sheet);
 }
 
 window.addEventListener("online", () => {

@@ -105,6 +105,7 @@ const uuid = () =>
 export function sessionScreen({
   mode = "choose",
   filters = {},
+  chosenLabel,
   limit = 20,
   readAloud = true,
   onFinish,
@@ -211,20 +212,36 @@ export function sessionScreen({
         onclick: askToLeave,
       }),
       el(
-        "div.stations",
+        "div.strip",
         {},
-        queue.map((_, i) =>
-          el("span.station", {
-            class:
-              results[i] === false
-                ? "missed"
-                : results[i] === true
-                  ? "done"
-                  : i === index
-                    ? "now"
-                    : undefined,
-          }),
+        el(
+          "div.stations",
+          {},
+          queue.map((_, i) =>
+            el("span.station", {
+              class:
+                results[i] === false
+                  ? "missed"
+                  : results[i] === true
+                    ? "done"
+                    : i === index
+                      ? "now"
+                      : undefined,
+            }),
+          ),
         ),
+        // 39: the lightest thing that says "this queue is yours". Dashed
+        // because the route is provisional — the scheduler did not lay it.
+        // It disappears entirely on an ordinary session.
+        chosenLabel
+          ? el(
+              "div.chosen-rule",
+              {},
+              el("span.dash"),
+              el("span.chosen-text", { text: `Your set · ${chosenLabel}` }),
+              el("span.dash.long"),
+            )
+          : null,
       ),
       el("span.session-counter.tabular", {
         text: `${Math.min(index + 1, queue.length)}/${queue.length}`,

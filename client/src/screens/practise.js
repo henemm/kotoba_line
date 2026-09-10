@@ -1,5 +1,6 @@
 import { api } from "../api.js";
 import { MODES } from "../modes.js";
+import { isDefault, summaryLine } from "./choose-set.js";
 import { el, render, station, statusBar } from "../ui/dom.js";
 
 /**
@@ -24,6 +25,8 @@ const SESSION_LENGTHS = [
 export function practiseScreen({
   onStart,
   onDrillTopic,
+  onChooseSet,
+  filters = {},
   sessionLength,
   onSessionLength,
   readAloud = true,
@@ -47,7 +50,14 @@ export function practiseScreen({
       due = 0;
     }
 
-    render(root, ...(due > 0 ? normalDay(due) : nothingDue(nextDue, stats)), linesBlock(), lengthPicker(), soundNote());
+    render(
+      root,
+      ...(due > 0 ? normalDay(due) : nothingDue(nextDue, stats)),
+      setLine(),
+      linesBlock(),
+      lengthPicker(),
+      soundNote(),
+    );
   }
 
   function normalDay(due) {
@@ -113,6 +123,23 @@ export function practiseScreen({
       { type: "button", onclick: onClick },
       station("var(--ink)", 22, 4),
       el("span.copy", {}, el("span.title", { text: title }), el("span.detail", { text: detail })),
+    );
+  }
+
+  /**
+   * 36 opens from here, "never in the way of them": one line above the four,
+   * so tapping a line still starts a session with whatever the sheet last
+   * held. On an ordinary day it says what the scheduler chose, which is also
+   * how she learns the sheet exists.
+   */
+  function setLine() {
+    if (!onChooseSet) return null;
+    const chosen = !isDefault(filters);
+    return el(
+      "button.set-line",
+      { type: "button", onclick: onChooseSet },
+      el("span", { class: chosen ? "chosen" : undefined, text: summaryLine(filters) }),
+      el("span", { text: "Change" }),
     );
   }
 
