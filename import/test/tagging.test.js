@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   TOPICS,
+  axisOf,
   glossForMatching,
+  parseModelPass,
   parseOverrides,
   tagsForCard,
   tagsFromRules,
@@ -25,7 +27,9 @@ describe("rules", () => {
     assert.deepEqual(tagsFromRules("to eat"), ["food"]);
     assert.deepEqual(tagsFromRules("arm"), ["health"]);
     assert.deepEqual(tagsFromRules("to sleep"), ["health"]);
-    assert.deepEqual(tagsFromRules("train station"), ["travel"]);
+    // `travel` became `places` with the two axes (#24). The rule matches the
+    // same glosses; a station is a place rather than an activity.
+    assert.deepEqual(tagsFromRules("train station"), ["places"]);
   });
 
   it("can give a card more than one topic", () => {
@@ -118,5 +122,70 @@ describe("rules and overrides together", () => {
     const card = { word: "毎日", word_meaning: "every day" };
     const first = tagsForCard(card, overrides);
     for (let i = 0; i < 10; i++) assert.deepEqual(tagsForCard(card, overrides), first);
+  });
+});
+
+describe("the model pass (#24)", () => {
+  const pass = parseModelPass(
+    [
+      "# a comment line",
+      "1708637439919\t聞く\tsenses\t",
+      "1708637439920\t聞く\tspeaking\t",
+      "1708637440944\t酒\tfood\trestaurant",
+      "1708637440082\tただ\tmoney\t",
+    ].join("\n"),
+  );
+
+  it("keys on the card id, so two senses of one word can differ", () => {
+    // The reason it is not keyed on the word like the override file: 24 words
+    // appear twice in the deck with different meanings, and a word-keyed file
+    // gives both cards the same topics — silently losing one of the senses.
+    const hear = { id: 1708637439919, word: "聞く", word_meaning: "to hear" };
+    const ask = { id: 1708637439920, word: "聞く", word_meaning: "to ask" };
+    assert.deepEqual(tagsForCard(hear, new Map(), pass), ["senses"]);
+    assert.deepEqual(tagsForCard(ask, new Map(), pass), ["speaking"]);
+  });
+
+  it("reads both axes off one line", () => {
+    const card = { id: 1708637440944, word: "酒", word_meaning: "alcoholic drink" };
+    assert.deepEqual(tagsForCard(card, new Map(), pass), ["food", "restaurant"]);
+  });
+
+  it("refuses a topic that is not on either axis", () => {
+    assert.throws(() => parseModelPass("1\t語\tnot-a-field\t"), /unknown topic/);
+    assert.throws(() => parseModelPass("1\t語\t\tnot-a-situation"), /unknown topic/);
+  });
+
+  it("beats the rules but loses to the override file", () => {
+    // ただ is "free (of charge)" in one card and "simply" in the other. The
+    // rules see neither; the pass calls the first one money. An override still
+    // has the last word, which is what makes a wrong topic a one-line fix.
+    const card = { id: 1708637440082, word: "ただ", word_meaning: "free" };
+    assert.deepEqual(tagsFromRules(card.word_meaning), [], "no rule fires");
+    assert.deepEqual(tagsForCard(card, new Map(), pass), ["money"]);
+
+    const overrides = parseOverrides("ただ\tamount");
+    assert.deepEqual(tagsForCard(card, overrides, pass), ["amount"]);
+    assert.deepEqual(tagsForCard(card, parseOverrides("ただ\t"), pass), [], "including to clear");
+  });
+
+  it("falls back to the rules for a card the pass has never seen", () => {
+    // An updated Kaishi release brings cards no pass has covered. A keyword
+    // rule is a better answer for those than nothing until it is re-run.
+    const card = { id: 999, word: "先生", word_meaning: "teacher" };
+    assert.deepEqual(tagsForCard(card, new Map(), pass), ["school"]);
+  });
+});
+
+describe("the two axes", () => {
+  it("keeps fields and situations apart", () => {
+    assert.equal(axisOf("feelings"), "field");
+    assert.equal(axisOf("konbini"), "situation");
+    assert.equal(axisOf("small talk"), undefined, "a retired topic is not a topic");
+  });
+
+  it("names every topic on exactly one axis", () => {
+    assert.equal(new Set(TOPICS).size, TOPICS.length, "no topic appears twice");
+    for (const t of TOPICS) assert.ok(axisOf(t), `${t} belongs to no axis`);
   });
 });

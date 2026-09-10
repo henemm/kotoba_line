@@ -1,57 +1,36 @@
-# Topic overrides — the hand-curated half of the tagging.
+# Topic overrides — the hand-written half of the tagging, and the last word.
 #
 #   word<TAB>tag,tag        assign exactly these topics
-#   word<TAB>                assign none (cancels a wrong rule match)
+#   word<TAB>               assign none (cancels a wrong assignment)
 #
-# An override always wins over the rules in lib/tagging.js. This file is the
-# place for judgement; the rules are the place for patterns. Both are reviewed
-# as diffs — a wrong tag is a one-line fix anyone can check, not a re-run of
-# something stochastic.
+# Precedence: this file, then tags-llm.tsv (the pass over the whole deck),
+# then the keyword rules in lib/tagging.js. An entry here wins over both,
+# including the empty one — that is how a wrong topic gets removed without
+# arguing with whatever produced it.
 #
-# Valid topics: school konbini food travel small talk family health money time
-
-# ── corrections found by spot-checking every rule match ─────────────
-# The health rules match body-part words inside idioms that have nothing to do
-# with the body. This is ~1 in 5 of the health matches, and it is why the pass
-# is checked by hand rather than trusted.
-勇気	 # "courage, nerve" — nerve
-武器	 # "weapon, arms" — arms
-抱える	 # "to hold in one's arms"
-抱く	 # "to hug, to hold in one's arms"
-渡す	 # "to carry across, to hand over" — hand
-向かう	 # "to face, to head toward" — face, head
-向く	 # "to face, to look"
-振り返る	 # "to turn one's head, to look back on"
-背負う	 # "to carry on one's back"
-足元	 # "step, under foot"
-歩く	 # "to walk, to go on foot"
-取り戻す	 # "to take back, to recover" — the wrong sense of recover
-直す	 # "to repair, to cure, to alter" — mostly repair
-死体	 # "corpse, body" — not a health word
-
-# ── additions the rules cannot see ──────────────────────────────────
-# Everyday shop vocabulary — the topic the deck barely covers, and the one she
-# will use most often in Tokyo.
-店	konbini
-値段	money,konbini
-袋	konbini
-
-# Cooking verbs whose glosses do not name food.
-焼く	food
-茹でる	food
-炊く	food
-
-# School life beyond the obvious nouns.
-宿題	school
-授業	school
-試験	school
-黒板	school
-
-# Life events.
-離婚	family
-
-# Note: nature and geography words the deck carries in quantity — 山, 川, 海,
-# 町, 国, 村 — are deliberately left untagged. Filing them under "travel" would
-# make that topic mean "places", and a session labelled travel should be about
-# getting somewhere. The nine-topic list has no slot for them; see
-# docs/tagging.md.
+# Valid topics: see FIELDS and SITUATIONS in lib/tagging.js.
+#
+# ── Why this file is empty (#24) ────────────────────────────────────
+#
+# It held 25 entries. Every one has been retired, and the reason is worth
+# keeping, because it is one mistake in three shapes.
+#
+#  - 14 were cancellations. 勇気 "courage, nerve" and 武器 "weapon, arms"
+#    matched the `health` rule on "nerve" and "arms"; 歩く "to go on foot" on
+#    "foot". They existed to blank a wrong tag, and blanking was all they could
+#    do, because the nine-topic list had nothing right to offer instead. The
+#    pass now gives those three feelings, home and movement — so the
+#    cancellations had turned into deletions of correct answers, which is
+#    exactly how they surfaced on the first run after the pass landed: fourteen
+#    cards with no topic at all, every one of them from this file.
+#
+#  - 5 were additions the pass covers better. An override replaces rather than
+#    merges, so 袋 `konbini` was losing the `home` the pass gives it, and
+#    焼く `food` was losing `actions`.
+#
+#  - 6 named words the deck does not contain: 値段, 茹でる, 炊く, 宿題, 試験,
+#    黒板, 離婚. They were written from an idea of what a beginner deck holds
+#    rather than from the deck, and never applied to anything.
+#
+# The mechanism stays. It is the right place for a judgement that should not
+# have to be re-derived, and a wrong topic on the phone is one line here.
