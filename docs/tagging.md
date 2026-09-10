@@ -1,5 +1,23 @@
 # Topic tagging — what the deck can and cannot support
 
+> **This document reached the wrong conclusion, and the rest of it is kept for
+> the record.** It argued that most of Kaishi has no topic. It does not. What
+> it had no topic in was *the nine topics being measured*, which are situations
+> — konbini, school, travel, small talk — and a frequency deck maps badly onto
+> situations. Measured against semantic fields instead, coverage went from
+> **12.7% to 100%**.
+>
+> The correction, the two-axis vocabulary and the pass over the whole deck are
+> in `import/lib/tagging.js` and `import/tags-llm.tsv`; the reasoning is in
+> issue #24. Everything below stands as it was written, including the
+> WordNet measurement, which is still sound and still the reason an ontology
+> is not the instrument here.
+>
+> The lesson worth keeping: a low number was read as a fact about the data
+> when it was a fact about the question. The giveaway was there to be seen —
+> `health` had 52 cards and `konbini` had 3, and 眠る "to sleep" had been filed
+> under health because there was nowhere else to put it.
+
 §5a makes topic filtering a first-class feature: filter a session by topic, a
 topic picker behind "Drill a topic", per-topic progress on the Stats screen.
 §8 says Kaishi ships without tags and proposes an LLM pass to add them.

@@ -13,7 +13,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "../server/node_modules/better-sqlite3/lib/index.js";
-import { TOPICS, parseOverrides, tagsForCard, tagsFromRules } from "./lib/tagging.js";
+import {
+  FIELDS,
+  SITUATIONS,
+  TOPICS,
+  parseModelPass,
+  parseOverrides,
+  tagsForCard,
+  tagsFromRules,
+} from "./lib/tagging.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -34,6 +42,7 @@ const args = parseArgs(process.argv.slice(2));
 const dataDir = args["data-dir"] ?? process.env.DATA_DIR ?? "./data";
 const dbFile = args.db ?? join(dataDir, "kotoba.sqlite");
 const overridePath = args.overrides ?? join(here, "tags-overrides.tsv");
+const modelPath = args["model-pass"] ?? join(here, "tags-llm.tsv");
 
 if (!existsSync(dbFile)) {
   console.error(`No database at ${dbFile}. Run the import first.`);
@@ -44,14 +53,20 @@ const overrides = existsSync(overridePath)
   ? parseOverrides(readFileSync(overridePath, "utf8"))
   : new Map();
 
+const modelPass = existsSync(modelPath)
+  ? parseModelPass(readFileSync(modelPath, "utf8"))
+  : new Map();
+
 const db = new Database(dbFile);
 const cards = db.prepare("SELECT id, word, word_meaning FROM cards").all();
 
 const assignments = [];
 let fromOverride = 0;
+let fromModel = 0;
 for (const card of cards) {
-  const tags = tagsForCard(card, overrides);
+  const tags = tagsForCard(card, overrides, modelPass);
   if (overrides.has(card.word)) fromOverride += 1;
+  else if (modelPass.has(String(card.id))) fromModel += 1;
   for (const tag of tags) assignments.push({ card_id: card.id, tag });
 }
 
@@ -68,13 +83,21 @@ if (!args["dry-run"]) {
 const pct = (n) => `${((n / cards.length) * 100).toFixed(1)}%`;
 
 console.log(`${cards.length} cards, ${taggedCards.size} carry at least one tag (${pct(taggedCards.size)})`);
-console.log(`${assignments.length} tag assignments, ${fromOverride} cards decided by the override file`);
+console.log(
+  `${assignments.length} tag assignments — ` +
+    `${fromModel} cards from the model pass, ${fromOverride} from the override file`,
+);
 console.log("");
 
-for (const topic of TOPICS) {
-  const n = assignments.filter((a) => a.tag === topic).length;
-  const bar = "#".repeat(Math.round(n / 3));
-  console.log(`  ${topic.padEnd(11)} ${String(n).padStart(4)}  ${bar}`);
+// Printed as two blocks, because they answer different questions: a field
+// says what a card is about, a situation says where she would need it.
+for (const [axis, topics] of [["FIELD", FIELDS], ["SITUATION", SITUATIONS]]) {
+  console.log(`  ${axis}`);
+  for (const topic of topics) {
+    const n = assignments.filter((a) => a.tag === topic).length;
+    console.log(`    ${topic.padEnd(12)} ${String(n).padStart(4)}  ${"#".repeat(Math.round(n / 8))}`);
+  }
+  console.log("");
 }
 
 if (args.report) {

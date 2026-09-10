@@ -19,19 +19,84 @@
  *
  * The nine topics are the product owner's list, settled in
  * docs/phase-0-plan.md §3.1 A.
+ *
+ * ── What changed, and why the reasoning above was wrong (#24) ──────────
+ *
+ * The rules reach 191 of 1,500 cards. That was recorded as a fact about the
+ * deck — "most of this deck has no topic to be tagged with" — and it is not.
+ * 木, 闇, 忙しい, 叩く, 空, 愛, 手紙 all have obvious topics. What they do not
+ * have is one of *these nine*.
+ *
+ * The nine are situations: konbini, school, travel, small talk. A frequency
+ * deck maps badly onto situations and well onto semantic fields, so the low
+ * number measured the taxonomy, not the vocabulary. The forced fits are
+ * visible in the output — 迎える "to go out to meet" tagged `small talk`,
+ * ください "please give" tagged `small talk`, 眠る "to sleep" tagged `health`.
+ *
+ * So there are now two axes, and a card may carry both:
+ *
+ *  - FIELDS — what the word is *about*. Every content word has one, which is
+ *    what lifts coverage from an eighth of the deck to most of it.
+ *  - SITUATIONS — where in Tokyo she would actually need it. Sparse on
+ *    purpose: a situation that matches half the deck is not a situation.
+ *
+ * `grammar` is a field like the others rather than an absence. する, ますます
+ * and あくまで have no subject matter, and a taxonomy that pretended otherwise
+ * would put them somewhere wrong. Named, they stay filterable.
  */
 
-export const TOPICS = [
-  "school",
-  "konbini",
-  "food",
-  "travel",
-  "small talk",
+/** What the word is about. Every content word gets at least one. */
+export const FIELDS = [
+  "people",
   "family",
+  "feelings",
+  "body",
   "health",
+  "food",
+  "home",
+  "nature",
+  "school",
+  "work",
   "money",
+  "places",
   "time",
+  "movement",
+  "actions",
+  "senses",
+  "speaking",
+  "describing",
+  "amount",
+  // Cause, result, proof, plan, mistake, chance. Split out of `grammar` after
+  // the first full pass, where it was the largest field by a wide margin —
+  // the same shape of number that gave the nine topics away. Two unrelated
+  // things were sitting in it: function words with no subject matter (する,
+  // もし, むしろ) and abstract nouns that have one (原因, 証拠, 事実, 例).
+  // Filing 証拠 "evidence" under grammar is the same mistake as filing
+  // ください under small talk, one taxonomy later.
+  "ideas",
+  "grammar",
 ];
+
+/** Where she would need it. Sparse by design. */
+export const SITUATIONS = [
+  "konbini",
+  "restaurant",
+  "train",
+  "doctor",
+  "classroom",
+  "shopping",
+  "host family",
+  "greetings",
+];
+
+export const TOPICS = [...FIELDS, ...SITUATIONS];
+
+/** Which axis a topic belongs to — the picker and Stats group by this. */
+export function axisOf(topic) {
+  if (FIELDS.includes(topic)) return "field";
+  if (SITUATIONS.includes(topic)) return "situation";
+  return undefined;
+}
 
 /**
  * Parenthesised text in a Kaishi gloss is a usage note, not the meaning:
@@ -93,7 +158,7 @@ const RULES = {
     "moment", "instant", "century", "weekend", "daily", "weekly", "monthly",
     "annual", "duration", "period",
   ],
-  travel: [
+  places: [
     "travel", "trip", "journey", "station", "train", "bus", "taxi", "subway",
     "bicycle", "airport", "airplane", "plane", "flight", "ticket", "road",
     "street", "map", "hotel", "inn", "luggage", "baggage", "passport",
@@ -119,7 +184,7 @@ const RULES = {
     "shelf", "customer", "goods", "merchandise", "stock", "checkout",
     "supermarket", "grocery",
   ],
-  "small talk": [
+  greetings: [
     "greeting", "greet", "hello", "goodbye", "farewell", "thank", "thanks",
     "gratitude", "sorry", "apology", "apologize", "apologise", "excuse me",
     "please", "congratulations", "welcome", "introduce", "introduction",
@@ -145,7 +210,10 @@ function escapeRegExp(s) {
 export function tagsFromRules(meaning) {
   const gloss = glossForMatching(meaning);
   if (!gloss) return [];
-  return TOPICS.filter((topic) => PATTERNS[topic].test(gloss));
+  // Only the topics the rules actually cover. Since #24 the vocabulary is
+  // much larger than the rule set: the model pass supplies the rest, and a
+  // topic with no pattern must be absent here rather than a crash.
+  return Object.keys(PATTERNS).filter((topic) => PATTERNS[topic].test(gloss));
 }
 
 /**
@@ -179,8 +247,57 @@ export function parseOverrides(text) {
   return map;
 }
 
-/** Rules, then overrides. An override always wins, including to clear tags. */
-export function tagsForCard(card, overrides = new Map()) {
+/**
+ * Parse the model pass: `id<TAB>word<TAB>fields<TAB>situations` per line.
+ *
+ * Keyed by card id, not by word, unlike the override file — and that is not
+ * tidiness. 24 words appear twice in the deck with different senses: もう is
+ * "already" and "another, again"; 聞く is "to hear" and "to ask"; 早い is
+ * "early" and "fast". A word-keyed file gives both cards the same topics and
+ * silently loses one of the two senses. The id is Anki's note id, which is
+ * what cards are keyed on, so it survives a re-import.
+ *
+ * The word is carried in column 2 for the reader's sake only — a diff of
+ * bare ids is not reviewable, and this file is meant to be reviewed.
+ */
+export function parseModelPass(text) {
+  const map = new Map();
+  for (const [n, raw] of text.split("\n").entries()) {
+    const line = raw.replace(/(^|\s)#.*$/, "$1").trim();
+    if (!line) continue;
+
+    const [id, , fieldField = "", situationField = ""] = line.split("\t");
+    if (!id) continue;
+
+    const tags = [...fieldField.split(","), ...situationField.split(",")]
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    for (const tag of tags) {
+      if (!TOPICS.includes(tag)) {
+        throw new Error(`unknown topic "${tag}" on line ${n + 1} of the model pass`);
+      }
+    }
+    map.set(String(id).trim(), tags);
+  }
+  return map;
+}
+
+/**
+ * Topics for one card. Three sources, most specific first.
+ *
+ * The hand-written override file wins over everything, including over the
+ * model, and including the empty list that means "no topics at all" — that is
+ * how a wrong assignment is cancelled without arguing with the source of it.
+ *
+ * The model pass covers the deck as it stands. The rules stay underneath it
+ * rather than being deleted: an updated Kaishi release brings cards the pass
+ * has never seen, and a keyword rule is a better answer for those than
+ * nothing at all until the pass is re-run.
+ */
+export function tagsForCard(card, overrides = new Map(), modelPass = new Map()) {
   if (overrides.has(card.word)) return overrides.get(card.word);
+  const fromModel = modelPass.get(String(card.id));
+  if (fromModel) return fromModel;
   return tagsFromRules(card.word_meaning);
 }
