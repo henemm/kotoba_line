@@ -1,0 +1,21 @@
+# Dieses Projekt arbeitet ohne den agent-os-openspec-Workflow.
+#
+# Nicht aus Bequemlichkeit: der Workflow wurde hier ausprobiert, und die
+# Ceremony — Kontext-Dokument, Spec, Validator, TDD-RED-Artefakte, Developer
+# Agent, Adversary-Dialog, QA-Gate — kostete fuer eine Handvoll Screens, die
+# eine Person pflegt, mehr als sie fing. Gearbeitet wird direkt:
+# reproduzieren, fixen, testen, PR, merge, deployen, pruefen.
+#
+# Diese Datei statt `enabledPlugins: false` in .claude/settings.local.json,
+# weil jene Datei pro VERZEICHNIS gelesen wird und untracked ist: ein
+# git-Worktree bekommt eine leere, und dann feuern alle Gates wieder. Genau
+# das passierte am 2026-09-10 — eine Worktree-Sitzung lief der Reihe nach in
+# "No active workflow", zwei bash_gate-Fehlalarme, das LoC-Limit und das
+# Freigabe-Gate. Diese Datei liegt im Repo und wird ueber den Hauptrepo-Root
+# aufgeloest, gilt also fuer Haupt-Checkout, jeden Worktree und jeden Klon.
+#
+# Siehe henemm/agent-os-openspec#132. Der Schalter nimmt nur den
+# Workflow-Zwang raus; Secret-Schutz, CLAUDE.md-Schutz und der
+# Worktree-Schutz laufen weiter.
+framework:
+  enabled: false
