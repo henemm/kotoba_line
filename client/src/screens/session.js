@@ -4,6 +4,7 @@ import { loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { sessionQueue } from "../queue.js";
+import { forget, remember } from "../resume.js";
 import { el, render } from "../ui/dom.js";
 
 /** How long the answer stays on screen before the next card. */
@@ -29,6 +30,59 @@ const RATING_EASY = 4;
  */
 export const recalled = (rating) => rating > RATING_AGAIN;
 
+/**
+ * 45 and 46 — the same layout, different copy. The situation is identical from
+ * her side, which is why neither reads like an error and neither offers a link
+ * into iOS Settings: iOS cannot deep-link there reliably, and a dead link is
+ * worse than a sentence.
+ */
+/**
+ * Screen 50's sentence, which answers the only real question — whether the
+ * work counts. The count is exact because a vague "your answers are saved"
+ * is exactly the reassurance nobody believes.
+ */
+export function leavingCopy(answered) {
+  const subject =
+    answered === 1 ? "The card you answered is" : `The ${answered} cards you answered are`;
+  return `${subject} already saved. The rest go back in the queue.`;
+}
+
+/** Whether this device can read anything aloud at all (47's last sentence). */
+export const canSpeak = () =>
+  typeof speechSynthesis !== "undefined" && typeof SpeechSynthesisUtterance !== "undefined";
+
+/** 47: said plainly, because a synthetic voice mistaken for a recording
+ *  teaches the wrong pronunciation. */
+const SYNTH_CAPTION = "No recording for this card — read by the phone's Japanese voice";
+
+const MIC_COPY = {
+  refused:
+    "The microphone is off, so say it out loud and grade yourself. You can turn it on in iOS Settings.",
+  unsupported:
+    "This device can't listen. Say it out loud anyway — the mode works the same, you just grade yourself unaided.",
+};
+
+/**
+ * An interval the way screen 41 prints it: `<1m`, `8m`, `2d`, `6d`, `3mo`.
+ *
+ * Coarse on purpose. The number is there to be compared with the three beside
+ * it, not to be relied on to the minute, and a button that reads "2.4d" invites
+ * a precision the scheduler does not claim.
+ */
+export function formatInterval(seconds) {
+  if (seconds == null) return undefined;
+  if (seconds < 60) return "<1m";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(seconds / 3600);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(seconds / 86400);
+  if (days < 30) return `${days}d`;
+  const months = Math.round(days / 30);
+  if (months < 12) return `${months}mo`;
+  return `${Math.round(days / 365)}y`;
+}
+
 const uuid = () =>
   crypto.randomUUID?.() ??
   `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-4000-8000-${Math.random()
@@ -52,8 +106,12 @@ const uuid = () =>
 export function sessionScreen({
   mode = "choose",
   filters = {},
+  chosenLabel,
   limit = 20,
   readAloud = true,
+  // 51: a session she left. The queue and the position are restored; the
+  // answers she already gave are in the outbox and never came from here.
+  resuming,
   onFinish,
   onExit,
 }) {
@@ -71,6 +129,18 @@ export function sessionScreen({
   const results = []; // one entry per card, for the station strip afterwards
   let answered = 0;
   let before;
+  let intervals = {};   // card id → { 1..4: seconds }, for めくる's rating row
+
+  /**
+   * 45 and 46 look identical to her — "the distinction between refused and
+   * unsupported matters to the developer, not to her" — but the copy differs,
+   * so the state does too. Feature-detected once, at session start.
+   */
+  let micState =
+    "SpeechRecognition" in globalThis || "webkitSpeechRecognition" in globalThis
+      ? "ready"
+      : "unsupported";
+  let micNoticeShown = false;
 
   begin();
 
@@ -78,6 +148,10 @@ export function sessionScreen({
     try {
       const [loaded, q, snapshot] = await Promise.all([
         loadDeck(),
+        // Resuming still asks, for めくる's intervals — but the card ids it
+        // returns are ignored in favour of the ones she was already working
+        // through. Re-composing the queue would silently swap her session for
+        // a different one under the same name.
         sessionQueue({ ...filters, mode, limit }),
         api.stats().catch(() => undefined),
       ]);
@@ -86,8 +160,11 @@ export function sessionScreen({
       // Wrong answers are drawn from the whole deck, not from the session —
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];
-      const due = q.cardIds.map((id) => deck.get(id)).filter(Boolean);
+      intervals = q.intervals ?? {};
+      const ids = resuming?.cardIds ?? q.cardIds;
+      const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
+      if (resuming) index = Math.min(resuming.index ?? 0, Math.max(queue.length - 1, 0));
 
       // 聞く dropped everything it was given: the cards are due, they just
       // cannot be listened to. That is a different message from "nothing due".
@@ -142,35 +219,87 @@ export function sessionScreen({
         type: "button",
         "aria-label": "Leave the session",
         text: "×",
-        onclick: () => {
-          stop();
-          stopRecognition();
-          // The answers so far are already in the outbox; this only asks for
-          // them to go up now rather than at the next flush.
-          if (answered > 0) flush().catch(() => {});
-          onExit?.();
-        },
+        onclick: askToLeave,
       }),
       el(
-        "div.stations",
+        "div.strip",
         {},
-        queue.map((_, i) =>
-          el("span.station", {
-            class:
-              results[i] === false
-                ? "missed"
-                : results[i] === true
-                  ? "done"
-                  : i === index
-                    ? "now"
-                    : undefined,
-          }),
+        el(
+          "div.stations",
+          {},
+          queue.map((_, i) =>
+            el("span.station", {
+              class:
+                results[i] === false
+                  ? "missed"
+                  : results[i] === true
+                    ? "done"
+                    : i === index
+                      ? "now"
+                      : undefined,
+            }),
+          ),
         ),
+        // 39: the lightest thing that says "this queue is yours". Dashed
+        // because the route is provisional — the scheduler did not lay it.
+        // It disappears entirely on an ordinary session.
+        chosenLabel
+          ? el(
+              "div.chosen-rule",
+              {},
+              el("span.dash"),
+              el("span.chosen-text", { text: `Your set · ${chosenLabel}` }),
+              el("span.dash.long"),
+            )
+          : null,
       ),
       el("span.session-counter.tabular", {
         text: `${Math.min(index + 1, queue.length)}/${queue.length}`,
       }),
     );
+  }
+
+  /**
+   * Screen 50. The × asks once — and only once there is something to lose.
+   *
+   * "Before the first answer there is no sheet at all: leaving costs nothing,
+   * so it just leaves." Keep going is the primary, because the tap that opened
+   * this was often a mistake.
+   */
+  function askToLeave() {
+    stop();
+    stopRecognition();
+
+    if (answered === 0) return leave();
+
+    const sheet = el(
+      "div.sheet-scrim",
+      { onclick: (e) => e.target === e.currentTarget && sheet.remove() },
+      el(
+        "div.sheet",
+        {},
+        el("h2.sheet-title", { text: "Leave this session?" }),
+        el("p.sheet-body", { text: leavingCopy(answered) }),
+        el(
+          "div.sheet-actions",
+          {},
+          el("button.btn", { type: "button", text: "Leave", onclick: leave }),
+          el("button.btn.solid", {
+            type: "button",
+            text: "Keep going",
+            onclick: () => sheet.remove(),
+          }),
+        ),
+      ),
+    );
+    root.append(sheet);
+  }
+
+  function leave() {
+    // The answers are already in the outbox (§4); this only asks for them to
+    // go up now rather than at the next flush.
+    if (answered > 0) flush().catch(() => {});
+    onExit?.();
   }
 
   // ── one card ────────────────────────────────────────────────────
@@ -218,26 +347,36 @@ export function sessionScreen({
     // the write is fast and the next card must not wait on a disk.
     record([event]).catch(() => {});
 
+    // 51: where she is, kept for the next start. Written after the answer is
+    // recorded, so a session note can never claim progress the outbox has not.
+    remember({
+      mode,
+      filters,
+      chosenLabel,
+      cardIds: queue.map((c) => c.id),
+      index: index + 1,
+    }).catch(() => {});
+
     // Redraw the strip so the marker just answered takes its colour.
     root.replaceChild(chrome(), root.firstChild);
     setTimeout(next, pause);
   }
 
   /**
-   * A reading line, set as ruby rather than as Anki's bracket notation.
+   * The reading, as one kana line in the mode colour.
    *
-   * Dropped when it carries nothing: a kana-only word like いい has a
-   * "reading" identical to itself, and printing it again in grey says only
-   * that the app did not notice.
+   * Screen 41 draws it that way — 大丈夫 with だいじょうぶ under it — rather
+   * than as ruby over the kanji. Ruby was the first build's idea and it is
+   * not what was drawn: at 56px the word is already the largest thing on the
+   * card, and a second annotated copy of it competes with the meaning.
+   *
+   * Dropped when it carries nothing: a kana-only word like いい reads back as
+   * itself, and repeating it says only that the app did not notice.
    */
   function reading(furigana, word) {
-    if (!furigana) return null;
-    const parts = parseFurigana(furigana);
-    if (!parts.some((p) => p.reading)) {
-      const plain = parts.map((p) => p.text).join("");
-      if (!plain || plain === word) return null;
-    }
-    return el("div.reading.reveal", {}, ...furiganaNodes(furigana));
+    const kana = kanaReading(furigana);
+    if (!kana || kana === word) return null;
+    return el("div.reading.reveal", { text: kana });
   }
 
   function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false } = {}) {
@@ -248,6 +387,17 @@ export function sessionScreen({
       onclick: () => say(text, file, rate ? { rate } : undefined),
     });
   }
+
+  /**
+   * Where synthesis is allowed to stand in for a missing recording.
+   *
+   * Only where the sound is the question. In 聞く it is, so synthesis speaks
+   * and 47 captions it. In 選ぶ the sound is a bonus, so a card without a
+   * recording simply has no speaker (48) — the synthetic voice is not offered
+   * where she is not listening for the pronunciation, which is the same
+   * reasoning as 47's caption seen from the other side.
+   */
+
 
   /** The two multiple-choice modes differ only in which gloss they read. */
   function chooseFrom(card, field, prompt, area, answers, promptNodes) {
@@ -297,7 +447,12 @@ export function sessionScreen({
     chooseFrom(card, "word_meaning", null, area, answers, [
       el("span.prompt-label", { text: "What does this mean?" }),
       el("h2.word.jp", { text: card.word }),
-      speaker(card.word, card.word_audio),
+      // 48: in 選ぶ the sound is a bonus, so with no recording the control is
+      // absent rather than inert — "an inert button would invite a tap that
+      // does nothing". No caption either, because nothing was promised, and no
+      // synthesis: the synthetic voice belongs where she is listening for the
+      // pronunciation, which in 選ぶ she is not.
+      card.word_audio ? speaker(card.word, card.word_audio) : null,
     ]);
   }
 
@@ -320,39 +475,107 @@ export function sessionScreen({
         big: true,
         label: "Play it again",
       }),
-      el("span.prompt-label", { text: "Tap to hear it again" }),
+      // 47: here synthesis does stand in, because the audio is the whole
+      // question — and it says so, since "a synthetic voice she mistakes for a
+      // recording teaches her the wrong pronunciation". Her own cards always
+      // land in this state.
+      card.sentence_audio
+        ? el("span.prompt-label", { text: "Tap to hear it again" })
+        : el("p.synth-note", { text: SYNTH_CAPTION }),
     ]);
   }
 
   /**
-   * 話す — see the meaning, say it aloud, then judge yourself.
+   * 話す — see the meaning, say it aloud, then judge yourself. Screens 42–46.
    *
-   * §7: `webkitSpeechRecognition` exists in Safari but is unreliable in
-   * standalone mode, so it is feature-detected and its result is *feedback,
-   * never grading*. She marks the card herself either way — which also means
-   * the mode works unchanged on a device that cannot listen at all.
+   * §7 and screen 44 agree and the first build did not: recognition is
+   * *quoted, never scored*. No tick, no colour, no yes/no — and a sentence
+   * under the transcript, because "a transcript on a practice screen looks
+   * like a verdict unless something says otherwise". She marks the card
+   * either way, which is also why the mode is unchanged on a device that
+   * cannot listen at all.
    */
   function drawSpeak(card, area, answers) {
-    const target = card.sentence ? card.sentence_meaning : card.word_meaning;
-    const heard = el("div.mic-state");
+    const prompt = card.sentence ? card.sentence_meaning : card.word_meaning;
 
-    render(
-      area,
-      el("span.prompt-label", { text: "Say it in Japanese" }),
-      el("p.meaning", { text: target ?? "" }),
-      heard,
-    );
+    /**
+     * `phase` is what the card is doing, not what the microphone can do:
+     *   idle | listening | heard
+     * 45 and 46 are not phases — they are the absence of the record control,
+     * plus one sentence, and they look identical to her (46's note).
+     */
+    const draw = (phase, transcript) => {
+      const cannotListen = micState !== "ready";
+      const dimmed = phase === "heard";
 
-    const actions = el("div.actions");
-    if (recognitionAvailable()) actions.append(recordButton(card, heard));
-    actions.append(
-      el("button.btn.primary", {
-        type: "button",
-        text: "Show answer",
-        onclick: () => revealSpeak(card, area, answers),
-      }),
+      render(
+        area,
+        el("span.prompt-label", { text: "Say it in Japanese" }),
+        el(`p.meaning${dimmed ? ".dim" : ""}`, { text: prompt ?? "" }),
+        phase === "listening" ? levelBars() : null,
+        phase === "listening"
+          ? el("span.mic-label", { text: "Listening" })
+          : null,
+        phase === "heard"
+          ? el(
+              "div.heard",
+              {},
+              el("span.heard-label", { text: "Heard" }),
+              el("p.heard-text.jp", {
+                class: transcript ? undefined : "empty",
+                text: transcript || "— nothing heard —",
+              }),
+            )
+          : null,
+        phase === "heard"
+          ? el("p.mic-note", {
+              text: "What the phone heard, not a mark. You decide whether you had it.",
+            })
+          : null,
+        // 45/46: one sentence, once per session — not once per card.
+        cannotListen && !micNoticeShown ? el("p.mic-note", { text: MIC_COPY[micState] }) : null,
+      );
+      if (cannotListen) micNoticeShown = true;
+
+      const row = el("div.actions");
+      if (!cannotListen) {
+        if (phase === "listening") {
+          row.append(el("button.btn", { type: "button", text: "Stop", onclick: () => stopRecognition() }));
+        } else {
+          row.append(
+            el("button.btn", {
+              type: "button",
+              text: phase === "heard" ? "Again" : "Record",
+              onclick: () => listenOnce(card, draw),
+            }),
+          );
+        }
+      }
+      // 43: "Show answer stays available throughout."
+      row.append(
+        el("button.btn.primary", {
+          type: "button",
+          text: "Show answer",
+          onclick: () => revealSpeak(card, area, answers),
+        }),
+      );
+      render(answers, row);
+    };
+
+    draw("idle");
+  }
+
+  /** 43: six bars in the mode colour, the only animation here. */
+  function levelBars() {
+    return el(
+      "div.level-bars",
+      {},
+      // Their heights are a loop rather than the microphone's real level:
+      // SpeechRecognition hands over no audio stream, and opening a second
+      // one with getUserMedia to measure it is unreliable next to
+      // recognition on iOS. Recorded in design/README.md.
+      [0, 1, 2, 3, 4, 5].map((i) => el("span", { style: { animationDelay: `${i * 90}ms` } })),
     );
-    render(answers, actions);
   }
 
   function revealSpeak(card, area, answers) {
@@ -362,26 +585,51 @@ export function sessionScreen({
 
     render(
       area,
-      el("span.prompt-label", { text: card.sentence ? card.sentence_meaning : card.word_meaning }),
       card.sentence ? revealedSentence(card) : el("h2.word.jp.reveal", { text: card.word }),
-      reading(
-        card.sentence ? card.sentence_furigana : card.word_furigana,
-        card.sentence ? undefined : card.word,
-      ),
-      speaker(text, audio, { rate: card.sentence ? 0.85 : undefined, ghost: false }),
+      el("p.sentence-en.reveal", {
+        text: (card.sentence ? card.sentence_meaning : card.word_meaning) ?? "",
+      }),
     );
     if (readAloud) say(text, audio, card.sentence ? { rate: 0.85 } : undefined);
 
-    // §6: the self-graded modes give *again* and *good*. Hard and easy belong
-    // to めくる only.
+    // 42: same height and tints as めくる's row, half the count and no
+    // intervals — 話す asks whether she could produce it, a yes-or-no question.
     render(
       answers,
       el(
-        "div.actions",
+        "div.ratings.two",
         {},
-        el("button.btn.no", { type: "button", text: "Missed it", onclick: () => grade(card, RATING_AGAIN) }),
-        el("button.btn.yes", { type: "button", text: "Had it", onclick: () => grade(card, RATING_GOOD) }),
+        ratingButton("Missed it", RATING_AGAIN, () => grade(card, RATING_AGAIN)),
+        ratingButton("Had it", RATING_GOOD, () => grade(card, RATING_GOOD)),
       ),
+    );
+  }
+
+  /** The four intervals for this card, already formatted. Empty when unknown. */
+  function intervalsFor(card) {
+    const seconds = intervals[card.id];
+    if (!seconds) return {};
+    return Object.fromEntries(
+      Object.entries(seconds).map(([rating, s]) => [rating, formatInterval(s)]),
+    );
+  }
+
+  /**
+   * One rating button (41, 42).
+   *
+   * The tint carries the meaning and runs one way — red tint, plain, green
+   * tint, solid green — "so the row reads left to right as worse to better
+   * without a legend". The interval underneath is what makes four buttons
+   * worth the width; 話す passes none, because a yes-or-no question has no
+   * interval to compare.
+   */
+  function ratingButton(label, rating, onClick, interval) {
+    const tone = { 1: "again", 2: "hard", 3: "good", 4: "easy" }[rating];
+    return el(
+      "div.rating",
+      {},
+      el(`button.btn.rating-${tone}`, { type: "button", text: label, onclick: onClick }),
+      interval ? el("span.rating-interval", { text: interval }) : null,
     );
   }
 
@@ -416,46 +664,30 @@ export function sessionScreen({
       el("div.meaning.reveal", { text: card.word_meaning }),
       card.sentence ? revealedSentence(card) : null,
       card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
-      speaker(card.sentence ?? card.word, card.sentence ? card.sentence_audio : card.word_audio, {
-        rate: card.sentence ? 0.85 : undefined,
-        ghost: false,
-      }),
     );
     if (readAloud && card.sentence) say(card.sentence, card.sentence_audio, { rate: 0.85 });
 
-    // §6: hard and easy are offered here and nowhere else, because this is the
-    // one mode where she is already making a judgement.
+    // §6 and screen 41: hard and easy are offered here and nowhere else,
+    // because this is the one mode where she is already making a judgement —
+    // and the interval each button would give is the reason four are worth
+    // the width.
+    const intervals = intervalsFor(card);
     render(
       answers,
       el(
         "div.ratings",
         {},
-        el("button.btn.rating.no", { type: "button", text: "Again", onclick: () => grade(card, RATING_AGAIN) }),
-        el("button.btn.rating", { type: "button", text: "Hard", onclick: () => grade(card, RATING_HARD) }),
-        el("button.btn.rating", { type: "button", text: "Good", onclick: () => grade(card, RATING_GOOD) }),
-        el("button.btn.rating.yes", { type: "button", text: "Easy", onclick: () => grade(card, RATING_EASY) }),
+        ratingButton("Again", RATING_AGAIN, () => grade(card, RATING_AGAIN), intervals[RATING_AGAIN]),
+        ratingButton("Hard", RATING_HARD, () => grade(card, RATING_HARD), intervals[RATING_HARD]),
+        ratingButton("Good", RATING_GOOD, () => grade(card, RATING_GOOD), intervals[RATING_GOOD]),
+        ratingButton("Easy", RATING_EASY, () => grade(card, RATING_EASY), intervals[RATING_EASY]),
       ),
     );
   }
 
-  // ── 話す's microphone ───────────────────────────────────────────
-  //
-  // Undesigned states, decided here (design/README.md records them):
-  //
-  //   no recognition   the Record button is absent, not disabled — a control
-  //                    that cannot ever work is worse than no control
-  //   permission gone  says so once and does not ask again this session
-  //   nothing heard    offers another go; never marks the card
-  //
-  // In every one of them the two self-grade buttons behave identically, so
-  // the mode is never blocked by the microphone.
+  // ── 話す's microphone (43–46) ────────────────────────────────────
 
   let recogniser;
-  let micRefused = false;
-
-  function recognitionAvailable() {
-    return !micRefused && ("SpeechRecognition" in globalThis || "webkitSpeechRecognition" in globalThis);
-  }
 
   function stopRecognition() {
     try {
@@ -466,13 +698,15 @@ export function sessionScreen({
     recogniser = undefined;
   }
 
-  function recordButton(card, out) {
-    const button = el("button.btn", { type: "button", text: "Record" });
-    button.addEventListener("click", () => listenOnce(card, out, button));
-    return button;
-  }
-
-  function listenOnce(card, out, button) {
+  /**
+   * Listen once and hand the transcript back to the card, unjudged.
+   *
+   * Nothing here decides anything: `redraw` is given the words and the phase,
+   * and screen 44 is explicit that the words are quoted rather than scored.
+   * The earlier build compared them against the sentence and tinted the
+   * result, which is the thing the design rules out.
+   */
+  function listenOnce(card, redraw) {
     const SR = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition;
     stopRecognition();
 
@@ -480,51 +714,37 @@ export function sessionScreen({
     recogniser = rec;
     rec.lang = "ja-JP";
     rec.interimResults = false;
-    rec.maxAlternatives = 3;
+    rec.maxAlternatives = 1;
 
-    button.textContent = "Listening…";
-    out.className = "mic-state";
-    out.textContent = "…";
-
-    const strip = (s) => (s ?? "").replace(/[。、！？\s]/g, "");
-    const target = strip(plainSentence(card.sentence) ?? card.word);
-    const word = strip(card.word);
-
+    let got;
     rec.onresult = (e) => {
-      const alternatives = [...e.results[0]].map((r) => strip(r.transcript));
-      const hit = alternatives.some(
-        (h) => h === target || (h.length > 1 && (target.includes(h) || h.includes(word))),
-      );
-      // Feedback, not grading (§7): this colours the line she said and nothing
-      // else. The card is still hers to mark.
-      out.className = `mic-state ${hit ? "hit" : "miss"}`;
-      out.textContent = e.results[0][0].transcript;
-      button.textContent = "Again";
+      got = e.results[0][0].transcript;
     };
 
     rec.onerror = (e) => {
-      out.className = "mic-state";
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-        // Refused for the session. Asking again on every card would be nagging
-        // about something only Settings can undo.
-        micRefused = true;
-        out.textContent = "No microphone — mark it yourself below.";
-        button.remove();
+        // 45: for the rest of the session, not for this card. Asking again on
+        // every card would nag about something only iOS Settings can undo.
+        micState = "refused";
+        micNoticeShown = false;
+        redraw("idle");
         return;
       }
-      out.textContent = e.error === "no-speech" ? "Nothing heard" : "Could not listen";
-      button.textContent = "Again";
+      // Anything else — including "no-speech" — is the empty transcript, which
+      // 44 draws as the same box reading "— nothing heard —".
+      got = "";
     };
 
     rec.onend = () => {
-      if (button.isConnected && button.textContent === "Listening…") button.textContent = "Record";
+      recogniser = undefined;
+      redraw("heard", got ?? "");
     };
 
     try {
       rec.start();
+      redraw("listening");
     } catch {
-      out.textContent = "Could not listen";
-      button.textContent = "Record";
+      redraw("heard", "");
     }
   }
 
@@ -547,6 +767,8 @@ export function sessionScreen({
 
   async function finish() {
     stop();
+    // Finished sessions are not resumable, whatever the four-hour window says.
+    forget().catch(() => {});
 
     // Every answer was written to the outbox as it happened, so there is
     // nothing to record here — only to send.
@@ -575,8 +797,21 @@ export function sessionScreen({
           }
         : undefined;
 
+    // 40 needs both: which set this was, and what the real queue still holds.
+    // The second is only knowable online, and its absence is what collapses
+    // the two buttons into one.
+    let stillDue;
+    if (chosenLabel && accepted) {
+      stillDue = await api
+        .queue({ limit: 60 })
+        .then((q) => q.available ?? q.cardIds.length)
+        .catch(() => undefined);
+    }
+
     onFinish?.({
       mode,
+      chosenLabel,
+      stillDue,
       total: queue.length,
       right,
       missed,
@@ -631,13 +866,12 @@ export function parseFurigana(text) {
   return parts;
 }
 
-/** The same, as DOM — text and elements, never innerHTML. */
-export function furiganaNodes(text, make = el) {
-  return parseFurigana(text).map((part) =>
-    part.reading
-      ? make("ruby", {}, document.createTextNode(part.base), make("rt", { text: part.reading }))
-      : document.createTextNode(part.text),
-  );
+/** The whole thing as kana: `見[み]る` → `みる`. */
+export function kanaReading(text) {
+  if (!text) return undefined;
+  return parseFurigana(text)
+    .map((p) => p.reading ?? p.text)
+    .join("");
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */
@@ -657,10 +891,10 @@ export function plainSentence(sentence) {
  * missing — one card in the current deck has no word audio, and the whole
  * personal deck will have none.
  */
-export function playableIn(mode, cards, canSpeak = typeof speechSynthesis !== "undefined") {
+export function playableIn(mode, cards, speaks = canSpeak()) {
   if (mode !== "listen") return cards;
   return cards.filter(
-    (c) => c.sentence && c.sentence_meaning && (c.sentence_audio || canSpeak),
+    (c) => c.sentence && c.sentence_meaning && (c.sentence_audio || speaks),
   );
 }
 

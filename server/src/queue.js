@@ -102,7 +102,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?" : ""}
-      WHERE 1=1 ${filterClause({ deck, tag }, params)} ${extra}`;
+      WHERE c.deleted_at IS NULL ${filterClause({ deck, tag }, params)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
@@ -145,10 +145,15 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   const queue = composeQueue(groups, limit);
 
+  // How many cards these filters match, before the session cap. Design 36
+  // watches this number change on every tap — "she is watching a number, not
+  // filling a form" — and its button reads "Start 20 of 34", which needs both.
+  const available = groups.due.length + groups.lapsed.length + groups.fresh.length;
+
   // §5: shuffle within the session so the same cards do not always come in the
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
-  return { mode: mode ?? null, filtered, cardIds: shuffle(queue, random) };
+  return { mode: mode ?? null, filtered, available, cardIds: shuffle(queue, random) };
 }
 
 /**
@@ -174,7 +179,9 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   // Join parameters and filter parameters are kept apart deliberately: mixing
   // them is how a query ends up reading a user id as a search term.
   const whereParams = [];
-  let where = "WHERE 1=1";
+  // A card she deleted leaves every list, but its row stays for the event log
+  // to point at (migration 004).
+  let where = "WHERE c.deleted_at IS NULL";
 
   if (q) {
     // Japanese has no word boundaries, so a substring match is right for the
@@ -185,10 +192,13 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     //
     // The gloss is padded and its punctuation flattened to spaces first, so a
     // word at the very start, or after a comma or a bracket, still counts.
+    // The reading is searched through `word_reading`, the plain kana, and not
+    // through `word_furigana`: that one is Anki's `食[た]べる`, where たべ is
+    // split around the bracket and can never match (migration 003).
     where +=
-      " AND (c.word LIKE ? OR c.word_furigana LIKE ? OR " +
+      " AND (c.word LIKE ? OR c.word_reading LIKE ? OR c.word_furigana LIKE ? OR " +
       `${normalisedGloss("c.word_meaning")} LIKE ?)`;
-    whereParams.push(`%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`);
+    whereParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`);
   }
   if (deck) {
     where += " AND c.deck = ?";
@@ -208,7 +218,8 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
 
   const cards = db
     .prepare(
-      `SELECT c.id, c.word, c.word_furigana, c.word_meaning, c.deck, c.frequency_rank,
+      `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning,
+              c.deck, c.frequency_rank,
               st.card_id IS NOT NULL AS starred,
               s.due_at, s.reps, s.last_review
          FROM cards c

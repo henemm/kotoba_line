@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { allCards, getMeta, putCards, setMeta } from "./store.js";
+import { allCards, dropCards, getMeta, putCards, setMeta } from "./store.js";
 
 /**
  * The deck: IndexedDB on disk, a Map in memory for the session.
@@ -31,8 +31,15 @@ export async function loadDeck() {
     const since = cards.size > 0 ? ((await getMeta(SINCE)) ?? 0) : 0;
     const { cards: rows, latest } = await api.deck(since);
     if (rows.length > 0) {
-      for (const card of rows) cards.set(card.id, card);
-      await putCards(rows);
+      // A card she deleted arrives here marked rather than missing — the row
+      // stays on the server for the event log to point at (migration 004) —
+      // so the difference has to be applied, not just merged.
+      const live = rows.filter((c) => !c.deleted_at);
+      const gone = rows.filter((c) => c.deleted_at).map((c) => c.id);
+      for (const card of live) cards.set(card.id, card);
+      for (const id of gone) cards.delete(id);
+      await putCards(live);
+      if (gone.length > 0) await dropCards(gone);
     }
     await setMeta(SINCE, latest ?? since);
     loadedAt = Date.now();

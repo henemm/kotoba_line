@@ -27,8 +27,15 @@ const key = (opts) => `queue${query(opts)}`;
 export async function sessionQueue(opts) {
   try {
     const answer = await api.queue(opts);
-    await setMeta(key(opts), { cardIds: answer.cardIds, at: Date.now() });
-    return { cardIds: answer.cardIds, stale: false };
+    // The intervals are cached with the queue on purpose: めくる prints them
+    // under every button, and a session on a train would otherwise show four
+    // blanks where the reason for four buttons should be.
+    await setMeta(key(opts), {
+      cardIds: answer.cardIds,
+      intervals: answer.intervals,
+      at: Date.now(),
+    });
+    return { cardIds: answer.cardIds, intervals: answer.intervals, stale: false };
   } catch (err) {
     if (!(err instanceof OfflineError)) throw err;
 
@@ -38,6 +45,7 @@ export async function sessionQueue(opts) {
     const answered = new Set((await outbox()).map((e) => e.card_id));
     return {
       cardIds: cached.cardIds.filter((id) => !answered.has(id)),
+      intervals: cached.intervals,
       stale: true,
       at: cached.at,
     };

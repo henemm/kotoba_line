@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { orderEvents, stateFromEvents } from "../src/scheduler.js";
+import { orderEvents, previewIntervals, stateFromEvents } from "../src/scheduler.js";
 
 const DAY = 86400;
 const T0 = 1_760_000_000;
@@ -80,5 +80,41 @@ describe("fuzz is off", () => {
     ];
     const runs = Array.from({ length: 20 }, () => stateFromEvents(events).due_at);
     assert.equal(new Set(runs).size, 1, `expected one due date, got ${new Set(runs).size}`);
+  });
+});
+
+describe("previewing what each button would do (design 41)", () => {
+  it("gives four intervals, worse to better", () => {
+    const now = new Date("2026-09-10T00:00:00Z");
+    const p = previewIntervals([], now);
+    assert.deepEqual(Object.keys(p).sort(), ["1", "2", "3", "4"]);
+    // The row on screen reads left to right as worse to better, so the
+    // numbers under it have to as well — otherwise the tint and the figure
+    // would disagree.
+    assert.ok(p[1] < p[2] && p[2] < p[3] && p[3] < p[4], JSON.stringify(p));
+  });
+
+  it("takes the card's own history into account", () => {
+    const now = new Date("2026-09-10T00:00:00Z");
+    const at = (days) => Math.floor(now.getTime() / 1000) - days * 86400;
+    const known = previewIntervals(
+      [
+        { id: "a", card_id: 1, rating: 3, reviewed_at: at(9) },
+        { id: "b", card_id: 1, rating: 3, reviewed_at: at(4) },
+        { id: "c", card_id: 1, rating: 4, reviewed_at: at(1) },
+      ],
+      now,
+    );
+    // A card answered well three times must not be offered the same "good"
+    // interval as one seen for the first time.
+    assert.ok(known[3] > previewIntervals([], now)[3]);
+  });
+
+  it("does not move the card it is previewing", () => {
+    const now = new Date("2026-09-10T00:00:00Z");
+    const events = [{ id: "a", card_id: 1, rating: 3, reviewed_at: Math.floor(now / 1000) - 86400 }];
+    const before = stateFromEvents(events);
+    previewIntervals(events, now);
+    assert.deepEqual(stateFromEvents(events), before);
   });
 });

@@ -1,16 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  MAX_SESSION_LENGTH,
-  browseCards,
-  composeQueue,
-  isFiltered,
-  queueForUser,
-  setStar,
-  shuffle,
-} from "../src/queue.js";
+import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, queueForUser, setStar, shuffle } from "../src/queue.js";
 import { ingestEvents } from "../src/events.js";
-import { seedUser, signIn, testApp } from "./helpers.js";
+import { openDatabase } from "../src/db.js";
+import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
 
 const DAY = 86400;
 const NOW = 1_760_000_000;
@@ -399,5 +392,33 @@ describe("the endpoints", () => {
     });
     assert.equal(missing.statusCode, 404);
     await app.close();
+  });
+});
+
+describe("how many cards the filters match (design 36)", () => {
+  it("counts past the session cap", async () => {
+    // The sheet's button reads "Start 20 of 34": the cap is what she will
+    // practise, `available` is what there is. Returning only the capped list
+    // would make the two numbers the same and the sentence pointless.
+    const db = openDatabase(":memory:");
+    const user = await seedUser(db);
+    seedCards(db, 40);
+
+    const answer = queueForUser(db, user.id, { limit: 10 });
+    assert.equal(answer.cardIds.length, 10);
+    assert.ok(answer.available > 10, `available was ${answer.available}`);
+    db.close();
+  });
+
+  it("counts what the filter matches, not the whole deck", async () => {
+    const db = openDatabase(":memory:");
+    const user = await seedUser(db);
+    seedCards(db, 40);
+    db.prepare("INSERT INTO tags (card_id, tag) VALUES (1, 'food'), (2, 'food')").run();
+
+    // A filtered session is never capped by the daily new-card limit (§5a),
+    // so both of these are reachable.
+    assert.equal(queueForUser(db, user.id, { tag: "food", limit: 60 }).available, 2);
+    db.close();
   });
 });

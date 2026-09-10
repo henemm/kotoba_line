@@ -66,11 +66,29 @@ function run(storeName, mode, work) {
         } catch {
           return resolve(undefined);
         }
-        tx.oncomplete = () => resolve(result?.result ?? result);
+        tx.oncomplete = () => resolve(unwrap(result));
         tx.onerror = () => resolve(undefined);
         tx.onabort = () => resolve(undefined);
       }),
   );
+}
+
+/**
+ * What a completed transaction actually returned.
+ *
+ * This was `result?.result ?? result`, which is wrong and quietly so: when a
+ * stored value is genuinely `undefined` — a key that was never set — the `??`
+ * falls through and hands back the IDBRequest itself, which is truthy.
+ * `getMeta("deck.paused")` then reported a paused download on a device that
+ * had never started one, and every `?? default` on a missing key was dead.
+ *
+ * Duck-typed rather than `instanceof IDBRequest`, so it can be tested in Node
+ * — which has no IndexedDB at all.
+ */
+export function unwrap(result) {
+  return result && typeof result === "object" && "readyState" in result && "result" in result
+    ? result.result
+    : result;
 }
 
 /** Whether IndexedDB is usable at all — the offline promise depends on it. */
@@ -89,6 +107,13 @@ export async function putCards(cards) {
 export async function allCards() {
   const rows = await run("deck", "readonly", (store) => store.getAll());
   return rows ?? [];
+}
+
+/** Cards she deleted; they arrive from `/api/deck` marked, not missing. */
+export async function dropCards(ids) {
+  return run("deck", "readwrite", (store) => {
+    for (const id of ids) store.delete(id);
+  });
 }
 
 export async function cardCount() {

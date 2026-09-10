@@ -2,11 +2,16 @@ import { ApiError, OfflineError, api } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
+import { browseScreen } from "./screens/browse.js";
+import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
+import { firstRunScreen } from "./screens/first-run.js";
+import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault } from "./screens/choose-set.js";
 import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
 import { offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
-import { clearPersonal, getMeta, setMeta } from "./store.js";
+import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
+import { forget, openSession } from "./resume.js";
 import { el, render, statusBar } from "./ui/dom.js";
 
 const TABS = [
@@ -24,6 +29,28 @@ const state = {
   // covered and the tab bar never competes with an answer.
   session: undefined,
   summary: undefined,
+  // Browse (31) is not a tab — it is reached from Stats and from Settings, and
+  // it replaces the tab screens while it is open. Held as a node rather than a
+  // flag for the same reason the session is: rebuilding it on an unrelated
+  // redraw would throw away her search, her scroll position and the page of
+  // results underneath it.
+  browse: undefined,
+  // What the "Choose a set" sheet last held (36). Kept here rather than in the
+  // practise tab because it outlives it: tapping a line starts a session with
+  // these, and the session that runs says so (39).
+  filters: { ...DEFAULT_FILTERS },
+  topics: [],
+  sheet: undefined,
+  // Her own deck (27–30). `ownWords` is the count on the practise tab's
+  // dashed station; `overlay` is the add screen or the list, which take the
+  // screen the way browse does.
+  ownWords: 0,
+  overlay: undefined,
+  // 51: an unfinished session, if there is one worth offering.
+  resumable: undefined,
+  // 49: this device has no deck yet, so the first thing after signing in is
+  // getting one.
+  firstRun: false,
   // The server's copy of the settings, so the session length and the sound
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
@@ -70,6 +97,8 @@ function tabBar() {
           onclick: () => {
             if (tab.key === "stats") state.jokerBadge = false;
             state.tab = tab.key;
+            state.browse = undefined;
+            state.overlay = undefined;
             renderApp();
           },
         },
@@ -92,16 +121,23 @@ function currentScreen() {
         // and a session started offline should not be blocked by it.
         api.updateSettings({ sessionLength: len }).catch(() => {});
       },
-      onStart: startSession,
-      onDrillTopic: () => {
-        // The topic picker (23) is drawn; wiring it is the next screen.
-        startSession({ only: "new" });
-      },
+      // 36: "tapping a line still starts a session with whatever the sheet
+      // last held, so the two-tap path survives."
+      onStart: ({ mode } = {}) => startSession({ mode, ...state.filters }),
+      filters: state.filters,
+      onChooseSet: openSheet,
+      onDrillTopic: openSheet,
+      ownWords: state.ownWords,
+      onAddWord: openAddWord,
+      onOwnDeck: openOwnDeck,
+      resumable: state.resumable,
+      onResume: resumeSession,
     });
   }
-  if (state.tab === "stats") return statsScreen();
+  if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
   return settingsScreen({
     user: state.user,
+    onBrowse: openBrowse,
     onSettings: (settings) => {
       state.settings = settings;
     },
@@ -120,9 +156,134 @@ function currentScreen() {
   });
 }
 
+/**
+ * 36. The sheet sits over the practise tab rather than replacing it, so the
+ * tab underneath is rendered first and this is appended on top.
+ */
+function openSheet() {
+  state.sheet = chooseSetScreen({
+    filters: state.filters,
+    topics: state.topics,
+    sessionLength: state.settings.sessionLength,
+    onClose: closeSheet,
+    onApply: (filters) => {
+      state.filters = filters;
+      closeSheet();
+      startSession({ ...filters });
+    },
+  });
+  renderApp();
+  loadTopics();
+}
+
+function closeSheet() {
+  state.sheet = undefined;
+  renderApp();
+}
+
+/** The topic counts the sheet shows come from the same place Stats gets them. */
+async function loadTopics() {
+  if (state.topics.length > 0) return;
+  try {
+    const stats = await api.stats();
+    state.topics = stats.topics ?? [];
+    if (state.sheet) {
+      // Redraw the sheet now that the chips have something to show.
+      openSheet();
+    }
+  } catch {
+    /* the sheet works without them; the topic row is just "Any" */
+  }
+}
+
+/** 28/29. Takes the screen: it is a form, and a tab bar under a keyboard is noise. */
+function openAddWord(initialWord = "") {
+  state.overlay = addWordScreen({
+    tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
+    initialWord,
+    onCancel: closeOverlay,
+    onSaved: () => {
+      // 29: "saving returns to the practise tab with the count incremented,
+      // no confirmation screen."
+      state.overlay = undefined;
+      state.tab = "practise";
+      loadOwnDeck();
+      renderApp();
+    },
+  });
+  loadTopics();
+  renderApp();
+}
+
+/** 30. */
+function openOwnDeck() {
+  state.overlay = ownDeckScreen({ onBack: closeOverlay, onAdd: () => openAddWord() });
+  renderApp();
+}
+
+function closeOverlay() {
+  state.overlay = undefined;
+  renderApp();
+}
+
+/** The count on 27's dashed station. */
+async function loadOwnDeck() {
+  try {
+    const { cards } = await api.cards();
+    state.ownWords = cards.length;
+    renderApp();
+  } catch {
+    /* the row still offers to add one */
+  }
+}
+
+function openBrowse() {
+  state.browse = browseScreen({
+    onBack: closeBrowse,
+    onPractiseStarred: () => {
+      closeBrowse();
+      startSession({ only: "starred" });
+    },
+    // 33: "a word she cannot find is usually a word she should add, so the
+    // empty result leads straight into 28 with the query carried over."
+    onAddWord: (query) => {
+      closeBrowse();
+      openAddWord(query);
+    },
+  });
+  renderApp();
+}
+
+function closeBrowse() {
+  state.browse = undefined;
+  renderApp();
+}
+
 function startSession({ mode = "choose", ...filters } = {}) {
   state.session = { mode, filters };
   state.summary = undefined;
+  state.resumable = undefined;
+  // Starting fresh abandons the saved one: 51 offers a choice, and taking the
+  // other branch is an answer.
+  forget().catch(() => {});
+  renderApp();
+}
+
+/** Re-read the saved session and offer it if it is still worth offering. */
+async function offerResume() {
+  const saved = await openSession();
+  if (saved) {
+    state.resumable = saved;
+    renderApp();
+  }
+}
+
+/** 51. A chosen set resumes with its filter intact, dashed rule and all. */
+function resumeSession(saved) {
+  state.filters = saved.filters ?? { ...DEFAULT_FILTERS };
+  state.session = { mode: saved.mode, filters: state.filters, resuming: saved };
+  state.summary = undefined;
+  state.resumable = undefined;
   renderApp();
 }
 
@@ -132,10 +293,25 @@ function renderApp() {
       state.user = user;
       state.tab = "practise";
       setMeta("user", user);
+      checkDeck();
       loadSettings();
+      loadOwnDeck();
       startFlushing();
       renderApp();
     } }));
+    return;
+  }
+
+  // 49: before anything else, because without a deck there is nothing to do.
+  if (state.firstRun) {
+    state.firstRunNode ??= firstRunScreen({
+      onReady: () => {
+        state.firstRun = false;
+        state.firstRunNode = undefined;
+        renderApp();
+      },
+    });
+    render(app, statusBar(), state.firstRunNode);
     return;
   }
 
@@ -149,6 +325,14 @@ function renderApp() {
           renderApp();
         },
         onAgain: () => startSession({ mode: state.summary.mode }),
+        // 40: back to the day's real queue, which means clearing the filters
+        // as well as starting a session — otherwise "carry on" would run the
+        // chosen set again.
+        onCarryOn: () => {
+          const mode = state.summary.mode;
+          state.filters = { ...DEFAULT_FILTERS };
+          startSession({ mode });
+        },
       }),
     );
     return;
@@ -164,14 +348,23 @@ function renderApp() {
     state.session.node ??= sessionScreen({
       mode: state.session.mode,
       filters: state.session.filters,
+      resuming: state.session.resuming,
+      // 39 only labels a session she chose, not one the scheduler laid.
+      chosenLabel: isDefault(state.session.filters)
+        ? undefined
+        : activeLabel(state.session.filters),
       limit: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
       onExit: () => {
         state.session = undefined;
         renderApp();
+        // 51 is not only for coming back tomorrow: she taps × and the offer
+        // should be there when the tab redraws, not after a restart.
+        offerResume();
       },
       onFinish: (result) => {
         state.session = undefined;
+        state.resumable = undefined;
         state.summary = result.empty ? undefined : result;
         if (result.levelUp) state.jokerBadge = state.jokerBadge || false;
         renderApp();
@@ -181,7 +374,22 @@ function renderApp() {
     return;
   }
 
-  render(app, statusBar(), offlineBar(), currentScreen(), tabBar());
+  // Browse (31) has its own back arrow and its own footer button, and the
+  // drawn frame carries no tab bar — it takes the screen the way a session
+  // does rather than sitting inside a tab.
+  // Her own deck's screens take the whole screen, like browse: 28 is a form,
+  // and a tab bar under a keyboard is noise.
+  if (state.overlay) {
+    render(app, statusBar(), state.overlay);
+    return;
+  }
+
+  if (state.browse) {
+    render(app, statusBar(), state.browse);
+    return;
+  }
+
+  render(app, statusBar(), offlineBar(), currentScreen(), tabBar(), state.sheet);
 }
 
 window.addEventListener("online", () => {
@@ -235,6 +443,12 @@ if ("serviceWorker" in navigator) {
  * on the practice tab: the defaults above match the schema's, so the worst an
  * offline start costs is a session length she can change on the next screen.
  */
+/** 49: a device with no cards has to get them before it can offer a session. */
+async function checkDeck() {
+  state.firstRun = (await cardCount()) === 0;
+  if (state.firstRun) renderApp();
+}
+
 async function loadSettings() {
   try {
     const { settings } = await api.settings();
@@ -274,7 +488,10 @@ state.pendingEvents = await pending();
 renderApp();
 
 if (state.user) {
+  await checkDeck();
   loadSettings();
+  loadOwnDeck();
+  offerResume();
   // §7: flush eagerly rather than batching for hours — iOS evicts storage
   // under pressure, and an event that never left the device is the one thing
   // here that cannot be reconstructed.

@@ -37,6 +37,11 @@ in `server/README.md`.
 | Session | 16 + prototype | done — all four modes, with めくる's four ratings (§6) |
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
+| Browse | 31–34 | done — search, star, the starred list, practise the set |
+| Choose a set | 36–40 | done — three filter dimensions, the live count, the dashed rule, its own summary |
+| Her own words | 27–30 | done — the dashed station, add a word, the list |
+| First run | 49 | done — paged download, pause, carry on |
+| Coming back | 51 | done — the resume row, four hours or the Tokyo day |
 
 ## Layout
 
@@ -70,6 +75,113 @@ error appears.
 drill the topic she is worst at. konbini holds three cards in the real deck
 (`docs/tagging.md`), so without a floor it would always win and offer a session
 of three. Topics under ten cards are not candidates.
+
+## Browse (31–34)
+
+The point of the screen is the starred set, not the search: starring is how she
+builds a session out of exactly the cards she wants. So idle is not empty — it
+opens on what she has already starred, with the practise button live, and
+everything else is there to help her find one more.
+
+**The star writes on the tap and the footer count changes under her hand.**
+That is the whole confirmation the design allows, so a failed write has to put
+the star back rather than leave one the server does not have.
+
+**The starred chip is a filter, not a second screen.** The same view serves as
+the starred list; at zero starred the button goes inert rather than
+disappearing.
+
+**Not built yet:** the deck and topic chips beside it. They belong to the
+filter sheet (36), which offers all three dimensions at once, and a chip here
+that opened a different picker would be a second way to do the same thing.
+The "add it as your own word" route out of an empty search (33) waits on the
+personal deck.
+
+## Choose a set (36–39)
+
+A sheet over the practise tab, never a screen of its own. It opens from one
+line above the four lines and is never in the way of them, so tapping a line
+still starts a session with whatever the sheet last held — the two-tap path
+survives.
+
+**The count above the button recomputes on every tap**, and that is what keeps
+it from being a settings screen: she is watching a number, not filling a form.
+It comes from `/api/queue`'s `available`, which counts what the filters match
+*before* the session cap — the button reads "Start 20 of 40", and returning
+only the capped list would make both numbers the same.
+
+**A thin topic is not hidden.** Topics under five cards are dimmed but
+selectable, and the button says "Start 3" plainly: three cards is a legitimate
+session, and hiding it would hide the shape of the deck.
+
+**An empty set marks its cause.** The chips that produced it are outlined in
+red — the only use of red outside a wrong answer — and the button goes inert
+rather than disappearing.
+
+**A chosen session says so while it runs** (39): a dashed rule under the
+station strip carrying only what she changed, "Your set · konbini". Dashed
+because the route is provisional — the scheduler did not lay it. It occupies a
+fixed 18px and is absent entirely on an ordinary session, so the card never
+moves.
+
+**And its summary says finishing a set is not finishing the day** (40). The
+rule carries over, one sentence names the set and what the real queue still
+holds, and the way back to that queue is the loudest thing on the screen.
+"Carry on" clears the filters as well as starting a session — otherwise it
+would run the same set again. Offline the outstanding count is unknowable, so
+the sentence stops short rather than guessing, and the two buttons collapse
+into one when nothing else is due.
+
+## Her own words (27–30)
+
+The word she just heard at the dinner table. Everything here is shaped by where
+she is when she types it: on a train, one-handed, with the conversation still
+going on.
+
+**The way in is a dashed station below the last stop** — on the network, not
+part of it. Under the four lines rather than in a header, because it is used far
+less than starting a session and must never be what a thumb hits by accident.
+Its count doubles as the way into the list.
+
+**Two fields make a card savable**, not three: the word and the meaning. The
+reading and the example sentence are what make it *good*. The sentence sits
+behind a disclosure, because on a train she will not write one and an empty
+field would only reproach her.
+
+**A topic can be coined on the spot**, in an inline field rather than a native
+`prompt()` — in a standalone PWA that dialog belongs to the browser, not to the
+app, and looks like it. Enter and blur are both ways of finishing and on a phone
+Enter causes a blur, so the commit runs once whichever arrives first.
+
+**The speaker reads the card back** once the word has content, which is the only
+honest way to check the synthesis got the reading right; if it did not, the
+reading field is what fixes it. Her cards never have a recording, so they always
+meet 47's synthesis state — and the note under the form says so before she
+commits rather than after.
+
+## First run and coming back (49, 51)
+
+**The deck arrives visibly, in pages.** It used to arrive silently on the first
+session, which on a slow connection looks exactly like an app that has hung. The
+screen states the size before the progress and offers "Pause until Wi-Fi",
+because §1 says mobile data in Japan is metered — and the card in the middle
+says what §7 requires anyway: audio is never bulk-fetched. Paging is what makes
+"you can start practising as soon as the first cards arrive" true rather than
+hopeful: each page is written to IndexedDB before the next is asked for, so a
+pause or a failure keeps everything already received.
+
+**An unfinished session comes back as one row** above the four lines, in its
+mode colour, with the lines exactly where they were. Her *answers* always
+survived an interruption — they go into the outbox as she gives them — but the
+session did not, so being interrupted meant starting over, which is the normal
+way a session on a train ends.
+
+It expires after four hours **or** at the Tokyo day boundary, whichever comes
+first: past either edge the remaining cards are simply due again, and a queue
+built yesterday is one the scheduler has since revised. The day boundary is the
+same one §8a counts streaks by, so a session and the day it counts towards
+cannot disagree. A chosen set resumes with its filter intact, dashed rule and
+all.
 
 ## Offline
 
@@ -126,9 +238,25 @@ above *again* counts as a recall for the strip and the tally, which is what
 FSRS means by it: counting *hard* as wrong would put a card she knew into
 "worth another look".
 
-**話す's microphone is feedback, never grading** (§7). It is feature-detected,
-its result only tints the line she said, and she marks the card herself — so
-the mode is identical on a device that cannot listen.
+**話す quotes what it heard; it never scores it** (§7 and screen 44). No tick,
+no colour, no yes/no — and a sentence under the transcript, because a
+transcript on a practice screen reads as a verdict unless something says
+otherwise. The first build tinted it green or red, which is the thing the
+design rules out. A refused or missing microphone is not an error state: the
+record button is simply absent and one sentence says what to do instead, once
+per session.
+
+**Only めくる shows intervals** (screen 41). Each of its four buttons carries
+the interval FSRS would give — that number is the reason four buttons are worth
+the width — and they come from the scheduler, over `/api/queue`, cached with
+the queue so a session on a train still has them. A rule of thumb printed under
+a button would be worse than no number, because she would learn to trust it.
+
+**Sound follows the mode.** In 聞く the audio is the question, so synthesis
+stands in for a missing recording and says so. In 選ぶ it is a bonus, so a card
+without a recording simply has no speaker — no inert control, no explanation,
+and no synthetic voice where she is not listening for the pronunciation. The
+revealed side of a card carries no speaker at all: it has already been read.
 
 **Each answer goes into the outbox as it happens**, not at the end of the
 session (§4: *immediately*). Being interrupted is the normal way a session on

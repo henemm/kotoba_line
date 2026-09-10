@@ -4,12 +4,15 @@ import { query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
-import { parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
-import { mmss } from "../src/screens/summary.js";
+import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
+import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { when } from "../src/screens/settings.js";
 import { offlineStatus } from "../src/outbox.js";
+import { unwrap } from "../src/store.js";
+import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
+import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -370,5 +373,184 @@ describe("Anki's bracket readings", () => {
     assert.deepEqual(parseFurigana("ひらがなだけ"), [{ text: "ひらがなだけ" }]);
     assert.deepEqual(parseFurigana(""), []);
     assert.deepEqual(parseFurigana(null), []);
+  });
+});
+
+describe("the interval under a rating button (41)", () => {
+  it("is coarse on purpose", () => {
+    // The number exists to be compared with the three beside it. "2.4d" would
+    // claim a precision the scheduler does not.
+    assert.equal(formatInterval(30), "<1m");
+    assert.equal(formatInterval(360), "6m");
+    assert.equal(formatInterval(5400), "2h");
+    assert.equal(formatInterval(691200), "8d");
+    assert.equal(formatInterval(5184000), "2mo");
+    assert.equal(formatInterval(40000000), "1y");
+  });
+
+  it("is absent rather than invented when the scheduler said nothing", () => {
+    assert.equal(formatInterval(undefined), undefined);
+    assert.equal(formatInterval(null), undefined);
+  });
+
+  it("never rounds a real wait down to zero", () => {
+    // 59 seconds is still a wait; "0m" under a button would read as "now".
+    assert.equal(formatInterval(59), "<1m");
+    assert.equal(formatInterval(60), "1m");
+  });
+});
+
+describe("what the leaving sheet says (50)", () => {
+  it("counts in words that agree with the number", () => {
+    assert.equal(
+      leavingCopy(1),
+      "The card you answered is already saved. The rest go back in the queue.",
+    );
+    assert.equal(
+      leavingCopy(4),
+      "The 4 cards you answered are already saved. The rest go back in the queue.",
+    );
+  });
+});
+
+describe("the reading line under めくる's word (41)", () => {
+  it("is the whole word in kana, not the bracket notation", () => {
+    assert.equal(kanaReading("見[み]る"), "みる");
+    assert.equal(kanaReading("大丈夫[だいじょうぶ]"), "だいじょうぶ");
+    assert.equal(kanaReading(" 兄[あに]は 毎日[まいにち]"), "あには まいにち".replace(" ", ""));
+  });
+
+  it("reads a kana-only word back as itself, so the line can be dropped", () => {
+    assert.equal(kanaReading("いい"), "いい");
+    assert.equal(kanaReading(null), undefined);
+  });
+});
+
+describe("what a chosen set is called (36, 39)", () => {
+  it("names every dimension on the practise tab, defaults included", () => {
+    // The line above the four lines is how she learns the sheet exists, so it
+    // states what the scheduler chose rather than going blank.
+    assert.equal(summaryLine({}), "Both decks · any topic · due today");
+    assert.equal(
+      summaryLine({ deck: "personal", tag: "konbini", only: "starred" }),
+      "my deck · konbini · starred",
+    );
+  });
+
+  it("truncates from the left, because the last-set filter is the live one", () => {
+    assert.equal(
+      summaryLine({ deck: "kaishi", tag: "konbini", only: "starred" }, { max: 2 }),
+      "… · konbini · starred",
+    );
+  });
+
+  it("carries only what she changed onto the session's dashed rule", () => {
+    // 39 reads "Your set · konbini". Naming the untouched defaults there would
+    // make a one-filter session look like an elaborate one.
+    assert.equal(activeLabel({ tag: "konbini" }), "konbini");
+    assert.equal(activeLabel({ tag: "konbini", only: "starred" }), "konbini · Starred");
+    assert.equal(activeLabel({}), "");
+  });
+
+  it("knows when nothing was chosen at all", () => {
+    assert.equal(isDefault({}), true);
+    assert.equal(isDefault({ tag: "food" }), false);
+  });
+});
+
+describe("a chosen set's summary (40)", () => {
+  it("says which it was, and what is still waiting", () => {
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini", stillDue: 22 }),
+      "Your konbini set, not today's reviews. 22 cards are still due.",
+    );
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini", stillDue: 1 }),
+      "Your konbini set, not today's reviews. 1 card is still due.",
+    );
+  });
+
+  it("becomes 'nothing else is due' at zero", () => {
+    // At which point the two buttons collapse into one, because there is
+    // nothing to carry on to.
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini", stillDue: 0 }),
+      "Your konbini set, not today's reviews. Nothing else is due today.",
+    );
+  });
+
+  it("says nothing about the queue when it could not be asked", () => {
+    // Offline the count is unknowable, and inventing one would be worse than
+    // leaving the sentence short.
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini" }),
+      "Your konbini set, not today's reviews.",
+    );
+  });
+});
+
+describe("an unfinished session (51)", () => {
+  const DAY = "2026-09-10";
+  const at = (iso) => Date.parse(iso);
+  const saved = (over = {}) => ({
+    mode: "choose",
+    cardIds: [1, 2, 3, 4],
+    index: 1,
+    at: at(`${DAY}T09:00:00+09:00`),
+    ...over,
+  });
+
+  it("is offered inside four hours, on the same Tokyo day", () => {
+    assert.equal(isResumable(saved(), at(`${DAY}T12:00:00+09:00`)), true);
+  });
+
+  it("expires after four hours", () => {
+    assert.equal(isResumable(saved(), at(`${DAY}T13:30:00+09:00`)), false);
+  });
+
+  it("expires at the Tokyo day boundary even when four hours have not passed", () => {
+    // Started at 23:00 Tokyo, reopened at 01:00: two hours later, but the
+    // streak has already turned over and the queue with it.
+    const late = saved({ at: at(`${DAY}T23:00:00+09:00`) });
+    assert.equal(isResumable(late, at("2026-09-11T01:00:00+09:00")), false);
+  });
+
+  it("is not offered when there is nothing left of it", () => {
+    assert.equal(isResumable(saved({ index: 4 }), at(`${DAY}T09:30:00+09:00`)), false);
+    assert.equal(isResumable(saved({ cardIds: [] }), at(`${DAY}T09:30:00+09:00`)), false);
+    assert.equal(isResumable(undefined), false);
+  });
+
+  it("says how far she got and how long ago", () => {
+    assert.equal(describeResume(saved(), at(`${DAY}T09:20:00+09:00`)), "1 of 4 done, 20 minutes ago");
+    assert.equal(describeResume(saved(), at(`${DAY}T09:00:30+09:00`)), "1 of 4 done, just now");
+    assert.equal(describeResume(saved(), at(`${DAY}T11:00:00+09:00`)), "1 of 4 done, 2 hours ago");
+  });
+
+  it("uses the same day boundary as the streak", () => {
+    // §8a counts days in Asia/Tokyo. A session and the day it counts towards
+    // must not disagree about when the day ended.
+    assert.equal(tokyoDay(at("2026-09-10T14:59:00Z")), "2026-09-10");
+    assert.equal(tokyoDay(at("2026-09-10T15:00:00Z")), "2026-09-11");
+  });
+});
+
+describe("what the store hands back for a key that was never set", () => {
+  // Regression: `result?.result ?? result` returned the IDBRequest itself when
+  // the stored value was undefined, because ?? only falls through on undefined
+  // — and an IDBRequest is truthy. A device that had never paused a download
+  // was told it had.
+  const request = (value) => ({ readyState: "done", result: value });
+
+  it("unwraps a request whose result is undefined, rather than returning the request", () => {
+    assert.equal(unwrap(request(undefined)), undefined);
+    assert.equal(unwrap(request(0)), 0);
+    assert.equal(unwrap(request(false)), false);
+    assert.equal(unwrap(request({ handle: "mira" })).handle, "mira");
+  });
+
+  it("passes a plain value through, which is what a write returns", () => {
+    assert.equal(unwrap(undefined), undefined);
+    assert.deepEqual(unwrap({ handle: "mira" }), { handle: "mira" });
   });
 });

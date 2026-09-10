@@ -1,5 +1,7 @@
 import { api } from "../api.js";
-import { MODES } from "../modes.js";
+import { MODES, modeByKey } from "../modes.js";
+import { describe } from "../resume.js";
+import { isDefault, summaryLine } from "./choose-set.js";
 import { el, render, station, statusBar } from "../ui/dom.js";
 
 /**
@@ -24,6 +26,13 @@ const SESSION_LENGTHS = [
 export function practiseScreen({
   onStart,
   onDrillTopic,
+  onChooseSet,
+  onAddWord,
+  onOwnDeck,
+  onResume,
+  resumable,
+  ownWords,
+  filters = {},
   sessionLength,
   onSessionLength,
   readAloud = true,
@@ -47,7 +56,16 @@ export function practiseScreen({
       due = 0;
     }
 
-    render(root, ...(due > 0 ? normalDay(due) : nothingDue(nextDue, stats)), linesBlock(), lengthPicker(), soundNote());
+    render(
+      root,
+      ...(due > 0 ? normalDay(due) : nothingDue(nextDue, stats)),
+      resumeRow(),
+      setLine(),
+      linesBlock(),
+      lengthPicker(),
+      soundNote(),
+      addWordRow(),
+    );
   }
 
   function normalDay(due) {
@@ -116,6 +134,56 @@ export function practiseScreen({
     );
   }
 
+  /**
+   * 36 opens from here, "never in the way of them": one line above the four,
+   * so tapping a line still starts a session with whatever the sheet last
+   * held. On an ordinary day it says what the scheduler chose, which is also
+   * how she learns the sheet exists.
+   */
+  function setLine() {
+    if (!onChooseSet) return null;
+    const chosen = !isDefault(filters);
+    return el(
+      "button.set-line",
+      { type: "button", onclick: onChooseSet },
+      el("span", { class: chosen ? "chosen" : undefined, text: summaryLine(filters) }),
+      el("span", { text: "Change" }),
+    );
+  }
+
+  /**
+   * 51 — the unfinished session as one card above the four lines, carrying the
+   * mode colour it belongs to. The lines stay exactly where they were: this is
+   * an offer, not a detour.
+   */
+  function resumeRow() {
+    if (!resumable || !onResume) return null;
+    const mode = modeByKey(resumable.mode) ?? modeByKey("choose");
+    return el(
+      "div.resume-block",
+      {},
+      el(
+        "button.resume-row",
+        { type: "button", onclick: () => onResume(resumable) },
+        station(mode.colour, 26, 5),
+        el(
+          "span.copy",
+          {},
+          el("span.title", { text: `Carry on with ${mode.jp}` }),
+          el("span.detail", { text: describe(resumable) }),
+        ),
+        el("span.chevron", { text: "›" }),
+      ),
+      el(
+        "div.rule",
+        {},
+        el("span.line"),
+        el("span.text", { text: "Or start fresh" }),
+        el("span.line"),
+      ),
+    );
+  }
+
   function linesBlock() {
     return el(
       "div.lines",
@@ -155,6 +223,42 @@ export function practiseScreen({
       ),
     );
     return picker;
+  }
+
+  /**
+   * 27 — "a dashed station below the last stop: on the network, not part of
+   * it". Under the four lines rather than in a header, because it is used far
+   * less than starting a session and must never be what a thumb hits by
+   * accident. Not a floating button; nothing in this design floats.
+   */
+  function addWordRow() {
+    if (!onAddWord) return null;
+    return el(
+      "button.add-word-row",
+      // Called with no argument: `onclick: onAddWord` would hand the click
+      // event to it as the word to prefill, which is where 33 passes the
+      // search query.
+      { type: "button", onclick: () => onAddWord() },
+      el("span.dashed-station", { text: "+" }),
+      el(
+        "span.copy",
+        {},
+        el("span.title", { text: "Add a word" }),
+        el("span.detail", {
+          text: ownWords ? `${ownWords} in your own deck` : "nothing in your own deck yet",
+        }),
+      ),
+      // The count doubles as the way into the list (27's note).
+      ownWords && onOwnDeck
+        ? el("span.chevron", {
+            text: "›",
+            onclick: (e) => {
+              e.stopPropagation();
+              onOwnDeck();
+            },
+          })
+        : null,
+    );
   }
 
   function soundNote() {

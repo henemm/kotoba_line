@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openApkg } from "../lib/apkg.js";
-import { keepEmphasis, noteToCard, plainText, soundFilename } from "../lib/fields.js";
+import { FIELD_SEPARATOR, keepEmphasis, noteToCard, plainText, soundFilename } from "../lib/fields.js";
 import { parseMediaEntries } from "../lib/protobuf.js";
 import { readCentralDirectory, readEntry } from "../lib/zip.js";
 import { DEFLATE, buildApkg, buildMediaIndex, buildZip, fakeMp3 } from "./build-apkg.js";
@@ -114,6 +114,9 @@ describe("field mapping", () => {
       id: 1234,
       word: "私",
       word_furigana: "私[わたし]",
+      // The plain kana, kept apart from the furigana above: a search for わた
+      // cannot match `私[わたし]`, where the brackets split it (migration 003).
+      word_reading: "わたし",
       word_meaning: "I (polite, general)",
       word_audio: "私_ワタシ━_0_NHK-2016.mp3",
       sentence: "<b>私</b>はアンです。",
@@ -216,5 +219,27 @@ describe("opening an .apkg", () => {
     const { path, cleanup } = tempFile(buildZip([{ name: "meta", data: Buffer.from("x") }]));
     assert.throws(() => openApkg(path), /no collection found/);
     cleanup();
+  });
+});
+
+describe("the reading a search can actually match", () => {
+  it("is the plain kana, not the bracket notation", () => {
+    // 食べる is stored as 食[た]べる, where たべ is split around the bracket —
+    // so browse's promise to "match Japanese, reading and gloss" needs the
+    // separate field the deck already carries.
+    const fields = new Map([
+      ["Word", 0], ["Word Reading", 1], ["Word Meaning", 2], ["Word Furigana", 3],
+    ]);
+    const card = noteToCard(1, ["食べる", "たべる", "to eat", "食[た]べる"].join(FIELD_SEPARATOR), fields);
+    assert.equal(card.word_reading, "たべる");
+    assert.equal(card.word_furigana, "食[た]べる");
+    assert.ok(card.word_reading.includes("たべ"));
+    assert.ok(!card.word_furigana.includes("たべ"));
+  });
+
+  it("is null on a deck that has no such field, rather than a guess", () => {
+    const fields = new Map([["Word", 0], ["Word Meaning", 1]]);
+    const card = noteToCard(2, ["犬", "dog"].join(FIELD_SEPARATOR), fields);
+    assert.equal(card.word_reading, null);
   });
 });
