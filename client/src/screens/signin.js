@@ -1,5 +1,5 @@
 import { ApiError, OfflineError, api } from "../api.js";
-import { el, render, statusBar } from "../ui/dom.js";
+import { el, render } from "../ui/dom.js";
 
 const PIN_LENGTH = 6;
 
@@ -189,7 +189,7 @@ export function signInScreen({ onSignedIn }) {
     el("p.note", { text: "No sign-up and no reset. Accounts are created on the server." }),
   );
 
-  render(root, statusBar(), form, foot);
+  render(root, form, foot);
   drawCells();
   drawMessage();
   updateButton();

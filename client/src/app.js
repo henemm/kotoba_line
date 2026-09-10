@@ -12,7 +12,7 @@ import { summaryScreen } from "./screens/summary.js";
 import { offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { forget, openSession } from "./resume.js";
-import { el, render, statusBar } from "./ui/dom.js";
+import { el, render } from "./ui/dom.js";
 
 const TABS = [
   { key: "practise", label: "Practise" },
@@ -311,14 +311,13 @@ function renderApp() {
         renderApp();
       },
     });
-    render(app, statusBar(), state.firstRunNode);
+    render(app, state.firstRunNode);
     return;
   }
 
   if (state.summary) {
     render(
       app,
-      statusBar(),
       summaryScreen(state.summary, {
         onDone: () => {
           state.summary = undefined;
@@ -370,7 +369,7 @@ function renderApp() {
         renderApp();
       },
     });
-    render(app, statusBar(), state.session.node);
+    render(app, state.session.node);
     return;
   }
 
@@ -380,16 +379,16 @@ function renderApp() {
   // Her own deck's screens take the whole screen, like browse: 28 is a form,
   // and a tab bar under a keyboard is noise.
   if (state.overlay) {
-    render(app, statusBar(), state.overlay);
+    render(app, state.overlay);
     return;
   }
 
   if (state.browse) {
-    render(app, statusBar(), state.browse);
+    render(app, state.browse);
     return;
   }
 
-  render(app, statusBar(), offlineBar(), currentScreen(), tabBar(), state.sheet);
+  render(app, offlineBar(), currentScreen(), tabBar(), state.sheet);
 }
 
 window.addEventListener("online", () => {
