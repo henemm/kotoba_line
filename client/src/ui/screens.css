@@ -975,6 +975,116 @@
   text-align: center;
 }
 
+/* ── 聞く, 話す, めくる ────────────────────────────────────────────
+   The three modes the canvas never drew, following the prototype. The
+   shared pieces above — card area, speaker, reveal, options — carry most
+   of it; these are the parts each mode adds. */
+
+/* 聞く: the speaker is the prompt, so it is large and takes the line
+   colour rather than sitting quietly beside the word. */
+.speaker.big {
+  width: 108px;
+  height: 108px;
+  font-size: 44px;
+}
+
+/* 話す: the English she is being asked to produce, and what was heard. */
+.meaning {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+  text-wrap: balance;
+}
+.mic-state {
+  min-height: 26px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+/* Feedback, never a grade (§7) — which is why this is a tint of the word
+   she said and not a mark on the card. */
+.mic-state.hit {
+  color: var(--yes);
+}
+.mic-state.miss {
+  color: var(--no);
+}
+
+/* めくる: the back of the card. */
+.reading {
+  font-size: 19px;
+  color: var(--ink-muted);
+}
+.sentence-en {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/* The row under a self-graded card. */
+.actions {
+  display: flex;
+  gap: 10px;
+}
+.actions .btn {
+  flex: 1;
+  min-height: 56px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 2px solid var(--surface-hi);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+}
+.actions .btn.primary {
+  background: var(--rail);
+  border-color: var(--rail);
+  color: #fff;
+}
+.actions .btn.yes {
+  border-color: var(--yes);
+  color: var(--yes);
+}
+.actions .btn.no {
+  border-color: var(--no);
+  color: var(--no);
+}
+.actions .btn:active {
+  transform: scale(0.98);
+}
+
+/* めくる is the only mode with four (§6). They stay one row: four is
+   readable at this width, and wrapping would put "Easy" under "Again"
+   where a thumb expects it least. */
+.ratings {
+  display: flex;
+  gap: 8px;
+}
+.ratings .btn {
+  flex: 1;
+  min-height: 56px;
+  padding: 0 6px;
+  border-radius: 14px;
+  border: 2px solid var(--surface-hi);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+.ratings .btn.no {
+  border-color: var(--no);
+  color: var(--no);
+}
+.ratings .btn.yes {
+  border-color: var(--yes);
+  color: var(--yes);
+}
+.ratings .btn:active {
+  transform: scale(0.98);
+}
+
 @media (min-width: 700px) {
   /* The station strip runs the full width — twenty stations are finally
      countable — while the answers stay in the column and sit low. */
@@ -995,6 +1105,14 @@
   .opt {
     padding: 20px;
     font-size: 19px;
+  }
+  .meaning {
+    font-size: 28px;
+  }
+  .ratings .btn,
+  .actions .btn {
+    min-height: 62px;
+    font-size: 17px;
   }
 }
 
@@ -1406,4 +1524,14 @@
   .settings .row-detail {
     font-size: 14px;
   }
+}
+
+/* Readings are set as ruby (めくる, 話す). The deck stores them in Anki's
+   bracket notation; shown raw they read as brackets. */
+.reading ruby {
+  ruby-position: over;
+}
+.reading rt {
+  font-size: 0.55em;
+  color: var(--ink-muted);
 }

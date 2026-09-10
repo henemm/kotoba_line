@@ -67,9 +67,19 @@ export function resetDeck(seed) {
  * cards from a neighbouring frequency band, and only then anything at all.
  * `random` is injectable so the choice can be pinned in a test.
  */
-export function pickDistractors(answer, pool, count = 3, random = Math.random) {
+export function pickDistractors(
+  answer,
+  pool,
+  count = 3,
+  random = Math.random,
+  // 聞く asks what the *sentence* means, so its wrong answers have to differ
+  // in the sentence gloss. The tiering is the same either way: a distractor
+  // is plausible because it shares a topic or a frequency band, not because
+  // of which field is being read out.
+  field = "word_meaning",
+) {
   const others = pool.filter(
-    (c) => c.id !== answer.id && c.word_meaning && c.word_meaning !== answer.word_meaning,
+    (c) => c.id !== answer.id && c[field] && c[field] !== answer[field],
   );
 
   const answerTags = new Set(answer.tags ?? []);

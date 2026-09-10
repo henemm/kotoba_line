@@ -121,9 +121,7 @@ function currentScreen() {
 }
 
 function startSession({ mode = "choose", ...filters } = {}) {
-  // Only 選ぶ is drawn (design 16). The other three lines need their card
-  // states designed before they can be honest — design/next-brief.md.
-  state.session = { mode: mode === "choose" ? mode : "choose", filters, requested: mode };
+  state.session = { mode, filters };
   state.summary = undefined;
   renderApp();
 }

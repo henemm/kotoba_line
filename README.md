@@ -11,15 +11,15 @@ iPad never disagree. Fully usable offline; events reconcile afterwards.
 **Status: phase 5.** The server is complete — schema, authentication, the event
 log with FSRS scheduling, the deck import (1,500 cards with audio, 191
 topic-tagged), and the whole API including §5a's filters and the settings. The
-client has sign-in, the practise tab, Stats, Settings, and a working session in
-選ぶ with its summary.
+client has sign-in, the practise tab, Stats, Settings, and **all four practice
+modes** with their summary.
 
 **It works offline.** The deck lives in IndexedDB, answers go into an outbox
 before they are sent, and the service worker holds the shell and the audio she
 has actually heard. A whole session runs on a train and reconciles afterwards.
 
-The other three practice modes wait on the design round described in
-`design/next-brief.md`.
+What is still undrawn — browse-and-star, the filters at session start, resuming
+an interrupted session — is listed in `design/next-brief.md`.
 
 Deployable now — `ops/README.md` is the runbook.
 

@@ -1,5 +1,14 @@
 # Next design brief — the screens §5a needs
 
+> **Since this was written, the practice loop was built from the prototype.**
+> めくる's four ratings, all of 話す, and 聞く's unplayable-card state are
+> decided and shipped — `design/README.md` records each decision. They are
+> still worth drawing, but nothing waits on them. What does still wait: the
+> browse-and-star screen, the deck and `only=` dimensions at session start,
+> any indication that a filtered session is running, first-run deck download,
+> resuming an interrupted session, and an expired session cookie.
+
+
 The build specification gained §5a *Letting her choose* after the canvas in
 `Kotoba Line - Screens.dc.html` was drawn. None of the 26 existing screens cover
 it, and the task brief moves it into the same phase as the four practice modes.

@@ -67,6 +67,37 @@ control.
   Until then the switch would write a value nothing reads. See `next-brief.md`:
   "pitch accent switched on" is also an undesigned state.
 
+### The practice loop: built from the prototype, not from the canvas
+
+All four modes are built. The canvas draws only 選ぶ (16), but
+`prototype/kotoba-line.html` works out all four and the repository calls it
+the agreed visual direction — so waiting for a canvas frame per mode would
+have been waiting for a second drawing of a decided thing. §6 settles the
+ratings: **めくる is the only mode with four** (again, hard, good, easy);
+話す and the two multiple-choice modes give again and good.
+
+What the canvas genuinely leaves open is a handful of states inside those
+modes. Decided here, and worth a look if they are ever drawn:
+
+- **聞く with a card it cannot play.** The audio *is* the prompt, so a card
+  with no sentence, no sentence gloss, or nothing that could produce sound is
+  dropped before the session starts rather than shown as a question with no
+  question on it. If that empties the queue, the screen says the due cards
+  cannot be listened to — which is a different fact from "nothing due".
+- **話す with no speech recognition.** The Record button is absent, not
+  disabled: a control that can never work is worse than no control. The two
+  self-grade buttons are unchanged, so the mode is never blocked by the
+  microphone.
+- **話す with the microphone refused.** Says so once and does not ask again
+  for the rest of the session — repeating the request every card would be
+  nagging about something only Settings can undo.
+- **話す hearing nothing.** Offers another go. It never marks the card: §7 is
+  explicit that recognition is feedback, never grading.
+- **A reading with no reading.** A kana-only word like いい has a "furigana"
+  identical to itself; printing it again in grey says only that the app did
+  not notice, so it is dropped. Readings are set as `<ruby>`, since the deck
+  stores Anki's `事[こと]` notation and showing it raw reads as brackets.
+
 Two annotations on 22 are wrong rather than unimplemented, and were already
 recorded in `next-brief.md`: the new-card range is **5–40, and zero is not
 legitimate** (the product owner's ruling), and the diagnostics line for the

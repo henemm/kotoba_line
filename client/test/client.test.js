@@ -4,7 +4,7 @@ import { query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
-import { splitEmphasis } from "../src/screens/session.js";
+import { parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
 import { mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
@@ -300,5 +300,75 @@ describe("the offline strip's three states (design 25)", () => {
   it("says review, not reviews, for one", () => {
     assert.equal(text({ online: false, waiting: 1 }), "Offline · 1 review waiting");
     assert.equal(text({ online: true, justSent: 1 }), "Synced · 1 review sent");
+  });
+});
+
+describe("which cards a mode can actually ask about", () => {
+  const card = (over = {}) => ({
+    id: 1, word: "水", word_meaning: "water",
+    sentence: "<b>水</b>をください。", sentence_meaning: "Water, please.",
+    sentence_audio: "s.mp3", ...over,
+  });
+
+  it("leaves the other three modes alone", () => {
+    const cards = [card(), card({ id: 2, sentence: null, sentence_meaning: null })];
+    for (const mode of ["choose", "speak", "flip"]) {
+      assert.equal(playableIn(mode, cards).length, 2, mode);
+    }
+  });
+
+  it("drops a 聞く card with nothing to listen to", () => {
+    // The audio *is* the question here, so these are unanswerable rather
+    // than merely thin.
+    assert.deepEqual(playableIn("listen", [card({ sentence: null })]), []);
+    assert.deepEqual(playableIn("listen", [card({ sentence_meaning: null })]), []);
+  });
+
+  it("keeps a card with no recording when speech can stand in", () => {
+    const noAudio = [card({ sentence_audio: null })];
+    assert.equal(playableIn("listen", noAudio, true).length, 1);
+    // …and drops it on a device that cannot speak either.
+    assert.equal(playableIn("listen", noAudio, false).length, 0);
+  });
+});
+
+describe("comparing what she said", () => {
+  it("compares against the sentence without the deck's markup", () => {
+    // <b> marks the target word; leaving it in would never match anything.
+    assert.equal(plainSentence("<b>水</b>をください。"), "水をください。");
+    assert.equal(plainSentence(null), undefined);
+  });
+});
+
+describe("what counts as recalled", () => {
+  it("treats hard as a recall, not a miss", () => {
+    // FSRS does: only *again* is a lapse. Counting hard as wrong would put a
+    // card she knew into "worth another look".
+    assert.deepEqual([1, 2, 3, 4].map(recalled), [false, true, true, true]);
+  });
+});
+
+describe("Anki's bracket readings", () => {
+  it("splits a word into base and reading", () => {
+    assert.deepEqual(parseFurigana("事[こと]"), [{ base: "事", reading: "こと" }]);
+  });
+
+  it("keeps the plain text between annotated runs", () => {
+    // The space before an annotated run is Anki's separator, not a space in
+    // the sentence — leaving it in puts a gap before every kanji.
+    assert.deepEqual(parseFurigana(" 兄[あに]は 毎日[まいにち]テレビを 見[み]ます。"), [
+      { base: "兄", reading: "あに" },
+      { text: "は" },
+      { base: "毎日", reading: "まいにち" },
+      { text: "テレビを" },
+      { base: "見", reading: "み" },
+      { text: "ます。" },
+    ]);
+  });
+
+  it("passes through text with no readings at all", () => {
+    assert.deepEqual(parseFurigana("ひらがなだけ"), [{ text: "ひらがなだけ" }]);
+    assert.deepEqual(parseFurigana(""), []);
+    assert.deepEqual(parseFurigana(null), []);
   });
 });
