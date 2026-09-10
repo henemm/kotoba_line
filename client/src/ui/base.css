@@ -143,7 +143,12 @@ input:focus-visible {
 /* No icons: three words and a station dot for the active tab, the same dot
    used everywhere else. Hidden during a session and behind sign-in. */
 .tabbar {
-  height: 72px;
+  /* 72px is the design's content height, and the home-indicator clearance goes
+     below it rather than out of it. With border-box a plain `height: 72px`
+     plus the padding below leaves only 38px to centre the dot and label in,
+     which on a phone put the dots 5px from the top edge where the design has
+     them at 22px. */
+  height: calc(72px + env(safe-area-inset-bottom, 0px));
   flex: none;
   background: var(--night-deep);
   border-top: 1px solid var(--surface-hi);
