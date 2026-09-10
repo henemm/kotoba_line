@@ -103,6 +103,10 @@ export const api = {
   queue: (opts) => request(`/queue${query(opts)}`),
   browse: (opts) => request(`/browse${query(opts)}`),
   star: (cardId, starred) => request("/stars", { method: "POST", body: { cardId, starred } }),
+  // #35: the whole set of her topics for one card, not an addition — see the
+  // route's comment for why the client is not asked to compute a difference.
+  setCardTags: (cardId, tags) =>
+    request(`/cards/${cardId}/tags`, { method: "PUT", body: { tags } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
   stats: () => request("/stats"),
 

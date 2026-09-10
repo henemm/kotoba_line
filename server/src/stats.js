@@ -214,19 +214,38 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     (id) => !states.some((s) => s.card_id === id),
   ).length;
 
+  // The deck's topics and hers, in one list (#35).
+  //
+  // Unioned rather than kept apart, because this list drives two things that
+  // both want every topic: the picker she filters a session with, and the
+  // per-topic progress bars. A topic she invented is one she wants to practise
+  // and to see progress on.
+  //
+  // `own` marks which side a name came from, so a screen that wants to group
+  // them still can. A name on both sides — she puts a card into `food` — is one
+  // row whose cards are the union, and `own` is true, because the fact worth
+  // surfacing is that she has touched it.
   const topics = db
     .prepare(
-      `SELECT t.tag                                       AS tag,
-              count(DISTINCT t.card_id)                   AS total,
+      `WITH all_tags AS (
+         SELECT tag, card_id, 0 AS own FROM tags
+         UNION
+         SELECT tag, card_id, 1 AS own FROM card_user_tags WHERE user_id = ?
+       )
+       SELECT a.tag                                       AS tag,
+              count(DISTINCT a.card_id)                   AS total,
               count(DISTINCT CASE WHEN e.card_id IS NOT NULL
-                                  THEN t.card_id END)     AS seen
-         FROM tags t
+                                  THEN a.card_id END)     AS seen,
+              max(a.own)                                  AS own
+         FROM all_tags a
+         JOIN cards c ON c.id = a.card_id AND c.deleted_at IS NULL
          LEFT JOIN review_events e
-                ON e.card_id = t.card_id AND e.user_id = ?
-        GROUP BY t.tag
-        ORDER BY t.tag`,
+                ON e.card_id = a.card_id AND e.user_id = ?
+        GROUP BY a.tag
+        ORDER BY a.tag`,
     )
-    .all(userId);
+    .all(userId, userId)
+    .map((t) => ({ ...t, own: Boolean(t.own) }));
 
   return {
     xp,

@@ -297,3 +297,153 @@ describe("every topic in use", () => {
     db.close();
   });
 });
+
+describe("her own topics on any card (#35)", () => {
+  async function fixture() {
+    const { app, db, config } = await testApp();
+    await seedUser(db);
+    seedCards(db, 6);
+    return { app, db, config };
+  }
+
+  it("puts a Kaishi card into a topic she invented", async () => {
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/cards/3/tags",
+      headers: { cookie },
+      payload: { tags: ["My Exam", "school"] },
+    });
+    assert.equal(res.statusCode, 200);
+    // Normalised the same way the personal deck normalises its own.
+    assert.deepEqual(res.json().tags, ["my exam", "school"]);
+
+    const browse = (
+      await app.inject({ method: "GET", url: "/api/browse", headers: { cookie } })
+    ).json();
+    assert.deepEqual(browse.cards.find((c) => c.id === 3).myTags, ["my exam", "school"]);
+    await app.close();
+  });
+
+  it("builds a session out of a topic she invented", async () => {
+    // The point of the feature: coining a topic is worth nothing if she cannot
+    // then practise it.
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+
+    for (const id of [2, 5]) {
+      await app.inject({
+        method: "PUT",
+        url: `/api/cards/${id}/tags`,
+        headers: { cookie },
+        payload: { tags: ["my exam"] },
+      });
+    }
+
+    const queue = (
+      await app.inject({ method: "GET", url: "/api/queue?tag=my%20exam", headers: { cookie } })
+    ).json();
+    assert.deepEqual(queue.cardIds.sort(), [2, 5]);
+    assert.equal(queue.filtered, true, "a chosen topic is a chosen session");
+    await app.close();
+  });
+
+  it("survives the deck being re-tagged", async () => {
+    // The reason card_user_tags is its own table: `npm run tag` begins with
+    // DELETE FROM tags, so anything of hers stored there would be destroyed by
+    // the next deck update — silently, and completely.
+    const { app, db, config } = await fixture();
+    const cookie = await signIn(app, config);
+    await app.inject({
+      method: "PUT",
+      url: "/api/cards/4/tags",
+      headers: { cookie },
+      payload: { tags: ["konbini run"] },
+    });
+
+    db.prepare("DELETE FROM tags").run();
+
+    const queue = (
+      await app.inject({ method: "GET", url: "/api/queue?tag=konbini%20run", headers: { cookie } })
+    ).json();
+    assert.deepEqual(queue.cardIds, [4], "still hers after the deck's tags were wiped");
+    await app.close();
+  });
+
+  it("replaces the set rather than adding to it, and can clear it", async () => {
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+    const put = (tags) =>
+      app.inject({
+        method: "PUT",
+        url: "/api/cards/1/tags",
+        headers: { cookie },
+        payload: { tags },
+      });
+
+    await put(["a", "b"]);
+    assert.deepEqual((await put(["b", "c"])).json().tags, ["b", "c"], "replaced, not merged");
+    assert.deepEqual((await put([])).json().tags, [], "an empty list clears them");
+
+    const { myTags } = (
+      await app.inject({ method: "GET", url: "/api/cards", headers: { cookie } })
+    ).json();
+    assert.deepEqual(myTags, [], "and the catalogue forgets the topic with its last card");
+    await app.close();
+  });
+
+  it("keeps one user's topics out of another's", async () => {
+    const { app, db, config } = await fixture();
+    await seedUser(db, { handle: "someone", pin: "111111", display: "Someone" });
+    const mine = await signIn(app, config);
+    const theirs = await signIn(app, config, { handle: "someone", pin: "111111" });
+
+    await app.inject({
+      method: "PUT",
+      url: "/api/cards/2/tags",
+      headers: { cookie: theirs },
+      payload: { tags: ["private"] },
+    });
+
+    const queue = (
+      await app.inject({ method: "GET", url: "/api/queue?tag=private", headers: { cookie: mine } })
+    ).json();
+    assert.deepEqual(queue.cardIds, [], "his topic does not select cards for her");
+
+    const browse = (
+      await app.inject({ method: "GET", url: "/api/browse", headers: { cookie: mine } })
+    ).json();
+    assert.deepEqual(browse.cards.find((c) => c.id === 2).myTags, []);
+    await app.close();
+  });
+
+  it("404s a card that does not exist, and refuses more than five topics", async () => {
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+    assert.equal(
+      (
+        await app.inject({
+          method: "PUT",
+          url: "/api/cards/9999/tags",
+          headers: { cookie },
+          payload: { tags: ["x"] },
+        })
+      ).statusCode,
+      404,
+    );
+    assert.equal(
+      (
+        await app.inject({
+          method: "PUT",
+          url: "/api/cards/1/tags",
+          headers: { cookie },
+          payload: { tags: ["a", "b", "c", "d", "e", "f"] },
+        })
+      ).statusCode,
+      400,
+    );
+    await app.close();
+  });
+});

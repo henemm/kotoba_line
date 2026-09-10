@@ -1954,12 +1954,38 @@
   padding: 13px 0;
   border-top: 1px solid var(--surface-hi);
 }
+/* Also a <button> since #35 — tapping it opens her topics for the card. The
+   reset is explicit because a button brings its own background, border,
+   alignment and font, none of which belong on a list row. */
 .browse-list .row-copy {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+/* Her topics, on the row that carries them (#35). Small and quiet: the row is
+   scanned for the word, and these are an annotation on it, not a second
+   subject. They wrap rather than scroll — at most five, all short. */
+.browse-list .row-mine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+.browse-list .row-tag {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--surface-hi);
+  color: var(--ink-muted);
+  font: 600 11px/1.5 var(--ui);
 }
 .browse-list .row-word {
   font-size: 20px;
@@ -2742,4 +2768,84 @@
 .first-foot .btn-secondary {
   width: 100%;
   height: 56px;
+}
+
+/* ══ Her topics on one card (#35) ═════════════════════════════════
+   A sheet over Browse. Built from pieces that already exist — .sheet,
+   .chips, .chip — because it is the same act as the topic row on the
+   add-a-word screen and should not read as a new idea. */
+
+.topics-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.topics-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.topics-title .jp {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.topics-gloss {
+  font-size: 13px;
+  color: var(--ink-muted);
+  /* One line: the sheet is about the topics, and a three-line gloss would
+     push them under the fold on a small phone. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topics-close {
+  flex: none;
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  color: var(--ink-muted);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.topics-deck,
+.topics-mine {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* The deck's own tags, shown and not editable. Without them the card looks
+   untagged until she adds something, which misreads the deck and invites a
+   duplicate of a topic that is already there. Flat, no press state, no
+   pressed attribute — it is a label, and must not look like a control that
+   refuses to work. */
+.topics-deck .chip.fixed {
+  background: none;
+  border: 1px solid var(--surface-hi);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* A chip's default background is --surface, and so is the sheet's, so an
+   unselected chip in here would be invisible: the same colour on the same
+   colour. Everywhere else chips sit on --night, where that contrast exists.
+   So they are lifted a step, and the selected state goes to solid --ink — the
+   treatment 36's set chips already use. This screen is nothing but toggling,
+   and "on or off" has to be readable at a glance. */
+.topics-mine .chip {
+  background: var(--surface-hi);
+  color: var(--ink-muted);
+}
+.topics-mine .chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--night);
+  font-weight: 700;
+}
+.topics-mine .chip.new-tag {
+  background: none;
+  border: 2px dashed var(--ink-dim);
 }

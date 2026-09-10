@@ -162,3 +162,64 @@ export function allTags(db) {
     )
     .all();
 }
+
+/**
+ * Her own topics on any card, the deck's included (#35).
+ *
+ * Reported as "ich möchte aus eigenen Kategorien lernen können". She could
+ * already coin a topic while adding a word of her own, but there was no way to
+ * put one of the 1,500 Kaishi cards into it — so a topic she invented could
+ * only ever hold words she had typed herself.
+ *
+ * Replaces her whole set for that card rather than adding one: the screen is a
+ * row of chips she toggles, so the thing it knows is the final set, and an
+ * add/remove pair would need the client to work out the difference and get it
+ * right. An empty list clears them.
+ */
+export function setUserTags(db, userId, cardId, tags, now = Date.now()) {
+  const card = db.prepare("SELECT 1 FROM cards WHERE id = ? AND deleted_at IS NULL").get(cardId);
+  if (!card) return { ok: false, reason: "unknown_card" };
+
+  const clean = [...new Set((tags ?? []).map(normaliseTag).filter(Boolean))].slice(0, MAX_TAGS);
+  const seconds = Math.floor(now / 1000);
+
+  db.transaction(() => {
+    db.prepare("DELETE FROM card_user_tags WHERE user_id = ? AND card_id = ?").run(userId, cardId);
+    const insert = db.prepare(
+      "INSERT INTO card_user_tags (user_id, card_id, tag, added_at) VALUES (?, ?, ?, ?)",
+    );
+    for (const tag of clean) insert.run(userId, cardId, tag, seconds);
+  })();
+
+  return { ok: true, cardId, tags: clean };
+}
+
+/** Every topic she has coined, with how many cards carry it. */
+export function userTags(db, userId) {
+  return db
+    .prepare(
+      `SELECT ut.tag, count(*) n
+         FROM card_user_tags ut
+         JOIN cards c ON c.id = ut.card_id AND c.deleted_at IS NULL
+        WHERE ut.user_id = ?
+        GROUP BY ut.tag ORDER BY n DESC, ut.tag ASC`,
+    )
+    .all(userId);
+}
+
+/** Her topics for a given set of cards — for browse, which shows them per row. */
+export function userTagsFor(db, userId, cardIds) {
+  if (!cardIds?.length) return new Map();
+  const holes = cardIds.map(() => "?").join(",");
+  const out = new Map();
+  for (const { card_id, tag } of db
+    .prepare(
+      `SELECT card_id, tag FROM card_user_tags
+        WHERE user_id = ? AND card_id IN (${holes}) ORDER BY tag ASC`,
+    )
+    .all(userId, ...cardIds)) {
+    if (!out.has(card_id)) out.set(card_id, []);
+    out.get(card_id).push(tag);
+  }
+  return out;
+}

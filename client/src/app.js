@@ -4,6 +4,7 @@ import { signedOutScreen } from "./screens/signed-out.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
+import { cardTopicsSheet } from "./screens/card-topics.js";
 import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
 import { firstRunScreen } from "./screens/first-run.js";
 import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault } from "./screens/choose-set.js";
@@ -205,6 +206,9 @@ async function loadTopics() {
       // Redraw the sheet now that the chips have something to show.
       openSheet();
     }
+    if (state.topicsFor) {
+      openCardTopics(state.topicsFor.card, state.topicsFor.onChanged);
+    }
   } catch {
     /* the sheet works without them; the topic row is just "Any" */
   }
@@ -263,6 +267,45 @@ function openBrowse() {
     onAddWord: (query) => {
       closeBrowse();
       openAddWord(query);
+    },
+    // #35: tapping a row files it under one of her own topics.
+    onTopics: openCardTopics,
+  });
+  renderApp();
+}
+
+/**
+ * Her topics for one card (#35).
+ *
+ * An overlay above Browse rather than a replacement for it: it is a decision
+ * about one row of the list behind it, and taking the screen would lose the
+ * search she may have typed to get there.
+ */
+function openCardTopics(card, onChanged) {
+  // Kept so loadTopics can rebuild this sheet if the list arrives after it
+  // opened — the same trick openSheet uses, for the same reason.
+  state.topicsFor = { card, onChanged };
+  state.overlay = cardTopicsSheet({
+    card,
+    topics: state.topics,
+    onClose: () => {
+      state.topicsFor = undefined;
+      closeOverlay();
+    },
+    onSaved: (tags) => {
+      state.topicsFor = undefined;
+      // The row keeps the object it was drawn from, so writing back to it and
+      // asking Browse to repaint is what makes the chips appear without
+      // reloading the search she is in the middle of.
+      card.myTags = tags;
+      onChanged?.();
+      state.overlay = undefined;
+      // A newly coined topic has to reach the picker, and the counts of the
+      // ones she moved a card into have changed. Cheaper to re-ask than to
+      // reproduce the server's arithmetic here and get it subtly wrong.
+      state.topics = [];
+      loadTopics();
+      renderApp();
     },
   });
   renderApp();
@@ -389,6 +432,12 @@ function renderApp() {
       setMeta("user", user);
       checkDeck();
       loadSettings();
+      // #35: the topic list is needed anywhere she files or filters by one,
+      // and Browse can be reached in two taps from here. Loading it only when
+      // the set sheet opened meant the card-topics sheet came up offering
+      // nothing but "+ new" — every existing topic invisible, and a duplicate
+      // one keystroke away.
+      loadTopics();
       loadOwnDeck();
       startFlushing();
       renderApp();
