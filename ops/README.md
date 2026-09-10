@@ -190,6 +190,14 @@ step to do it automatically (phase-0-plan §1.5), so it is a line in the diff.
 nginx already sends `Cache-Control: no-cache` for the shell, so the new worker
 is picked up on the next load and the old cache is deleted on activation.
 
+**On the phone, "the next load" is not opening the app.** An app installed to
+the home screen is resumed, not reloaded, so it can keep serving the previous
+shell for days. Checking a fix there means quitting it properly first — app
+switcher, swipe the card away — and only then opening it again. A deploy that
+looks like it did not work is worth suspecting of this before it is suspected
+of anything else: it cost a full round of debugging on a layout fix that had
+in fact already shipped correctly.
+
 ## What is not here yet
 
 The three practice modes other than 選ぶ, which wait on designs. Everything
