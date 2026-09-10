@@ -12,6 +12,21 @@ const PAUSE_CORRECT = 900;
 const PAUSE_WRONG = 2400;
 
 /**
+ * How long the card waits after she asks to hear the sentence again (#32).
+ *
+ * 選ぶ and 聞く move on by themselves — the tapped option is the grade, and a
+ * recognition drill that made her press Next every time would be a slower
+ * drill. But a replay button on a card that leaves in 900ms is decoration: the
+ * recording is longer than that, so she would hear the first syllable and then
+ * the next card.
+ *
+ * So the tap postpones the departure. Long enough for a sentence at 0.85 rate
+ * with a beat afterwards, and tapping again buys the same window over. Nothing
+ * happens unless she asks — the drill keeps its pace for everyone who doesn't.
+ */
+const PAUSE_REPLAY = 3600;
+
+/**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
  * the self-graded modes give *again* and *good*; and *hard* and *easy* are
  * offered only in めくる, where she is already making a judgement.
@@ -130,6 +145,10 @@ export function sessionScreen({
   let answered = 0;
   let before;
   let intervals = {};   // card id → { 1..4: seconds }, for めくる's rating row
+  // The pending move to the next card in 選ぶ and 聞く. Held here rather than
+  // left anonymous so a replay can push it back (#32) and so leaving the
+  // session cancels it — an orphaned timer redraws a screen that is gone.
+  let advanceTimer;
 
   /**
    * 45 and 46 look identical to her — "the distinction between refused and
@@ -269,6 +288,9 @@ export function sessionScreen({
   function askToLeave() {
     stop();
     stopRecognition();
+    // Deliberately not cancelling the pending advance: "Keep going" has to
+    // land her back in a session that still moves, and the card behind the
+    // sheet is one she has already answered.
 
     if (answered === 0) return leave();
 
@@ -296,6 +318,12 @@ export function sessionScreen({
   }
 
   function leave() {
+    // A pending advance would fire into a screen that no longer exists, draw a
+    // card into a detached node, and — at the end of the queue — call finish()
+    // on a session she has already left.
+    clearTimeout(advanceTimer);
+    advanceTimer = undefined;
+
     // The answers are already in the outbox (§4); this only asks for them to
     // go up now rather than at the next flush.
     if (answered > 0) flush().catch(() => {});
@@ -359,7 +387,21 @@ export function sessionScreen({
 
     // Redraw the strip so the marker just answered takes its colour.
     root.replaceChild(chrome(), root.firstChild);
-    setTimeout(next, pause);
+    clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(next, pause);
+  }
+
+  /**
+   * Hold the card she is looking at, because she asked to hear it again (#32).
+   *
+   * Only ever pushes the departure further out, never brings it closer: in
+   * めくる and 話す there is no timer running at all — she leaves by rating the
+   * card — and this must not invent one.
+   */
+  function holdForReplay() {
+    if (!advanceTimer) return;
+    clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(next, PAUSE_REPLAY);
   }
 
   /**
@@ -379,12 +421,20 @@ export function sessionScreen({
     return el("div.reading.reveal", { text: kana });
   }
 
-  function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false } = {}) {
-    return el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}`, {
+  function speaker(
+    text,
+    file,
+    { rate, ghost = true, label = "Read aloud", big = false, small = false, holds = false } = {},
+  ) {
+    return el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`, {
       type: "button",
       "aria-label": label,
       text: "♪",
-      onclick: () => say(text, file, rate ? { rate } : undefined),
+      onclick: () => {
+        say(text, file, rate ? { rate } : undefined);
+        // A replay on an answered card asks the drill to wait for it (#32).
+        if (holds) holdForReplay();
+      },
     });
   }
 
@@ -585,7 +635,17 @@ export function sessionScreen({
 
     render(
       area,
-      card.sentence ? revealedSentence(card) : el("h2.word.jp.reveal", { text: card.word }),
+      card.sentence
+        ? revealedSentence(card)
+        : el(
+            "div.word-line.reveal",
+            {},
+            el("h2.word.jp", { text: card.word }),
+            // 話す is the mode where hearing it back matters most: she has just
+            // tried to produce it, and the recording is the only way to find
+            // out whether what she said was right (#32).
+            speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+          ),
       el("p.sentence-en.reveal", {
         text: (card.sentence ? card.sentence_meaning : card.word_meaning) ?? "",
       }),
@@ -659,7 +719,16 @@ export function sessionScreen({
   function revealFlip(card, area, answers) {
     render(
       area,
-      el("h2.word.jp.reveal", { text: card.word }),
+      el(
+        "div.word-line.reveal",
+        {},
+        el("h2.word.jp", { text: card.word }),
+        // The front of the card carries this button; before #32 the flip took
+        // it away, so the one gesture that had worked a second earlier stopped
+        // working exactly when the reading was finally on screen to check it
+        // against.
+        speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+      ),
       reading(card.word_furigana, card.word),
       el("div.meaning.reveal", { text: card.word_meaning }),
       card.sentence ? revealedSentence(card) : null,
@@ -756,7 +825,35 @@ export function sessionScreen({
     for (const part of splitEmphasis(card.sentence)) {
       p.append(part.bold ? el("b", { text: part.text }) : document.createTextNode(part.text));
     }
-    return p;
+
+    // The sentence never appears without a way to hear it again.
+    //
+    // A deviation from screens 41 and 42, which draw the revealed card with no
+    // speaker at all — reported from the phone as "keine Wiederholung des
+    // Audio-Outputs möglich" (#32). The reveal is the moment she is most
+    // likely to want the audio: she has just seen what the sentence means, and
+    // "read cards aloud" had already played it once, before she knew. Without
+    // this the only way to hear it a second time is to fail the card.
+    //
+    // Offered whether or not a recording exists, because that is what the
+    // automatic playback beside it already does — synthesis stands in, and on
+    // her own cards it is the only voice there is. 48's rule against offering
+    // synthesis applies where the sound is a bonus she is not listening to;
+    // here she is.
+    return el(
+      "div.sentence-line.reveal",
+      {},
+      p,
+      speaker(card.sentence, card.sentence_audio, {
+        rate: 0.85,
+        small: true,
+        label: "Hear the sentence again",
+        // The two multiple-choice modes reveal this and then move on by
+        // themselves; holdForReplay is a no-op in the two that wait for a
+        // rating, so this is safe to ask for everywhere.
+        holds: true,
+      }),
+    );
   }
 
   function next() {

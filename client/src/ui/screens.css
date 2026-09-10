@@ -909,6 +909,39 @@
   transform: scale(0.92);
 }
 
+/* On a revealed card the speaker sits beside the thing it plays rather than
+   under it, so it stays clear of the reading she is there to check. 44px is a
+   comfortable target on a phone without competing with the word, which at
+   clamp(44px, 15vw, 76px) is much the larger of the two. */
+.speaker.small {
+  width: 44px;
+  height: 44px;
+  font-size: 19px;
+}
+
+/* Word or sentence, then its speaker.
+
+   The pair is centred, which leaves the text itself sitting about half a
+   button left of the screen's centre — visible under めくる's word, where the
+   reading and the meaning below it are centred on the screen.
+
+   Tried and rejected: a ::before spacer mirroring the button, which centres
+   the text exactly. Text does not push a flex sibling out of the way — it
+   wraps inside whatever width is left first — so the spacer never yielded and
+   食べる broke across two lines. A word split in half is a worse thing to
+   look at than a word four pixels off centre. */
+.word-line,
+.sentence-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+/* `.speaker` is flex: none, so it is the text that gives way on a long line. */
+.sentence-line .sentence {
+  flex: 0 1 auto;
+}
+
 .sentence {
   font-size: 22px;
   line-height: 1.6;
