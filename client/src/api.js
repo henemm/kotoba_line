@@ -71,7 +71,7 @@ export const api = {
   logout: () => request("/auth/logout", { method: "POST" }),
   me: () => request("/me"),
 
-  deck: (since = 0) => request(`/deck${query({ since })}`),
+  deck: (since = 0, page) => request(`/deck${query({ since, ...page })}`),
   queue: (opts) => request(`/queue${query(opts)}`),
   browse: (opts) => request(`/browse${query(opts)}`),
   star: (cardId, starred) => request("/stars", { method: "POST", body: { cardId, starred } }),

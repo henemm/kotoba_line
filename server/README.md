@@ -35,7 +35,7 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/me` | the current user, or 401 |
 | `POST` | `/api/events` | `{ events: [...] }` → `{ accepted, rejected, states }` |
-| `GET` | `/api/deck` | `?since=` → cards changed since then, with their tags |
+| `GET` | `/api/deck` | `?since=&offset=&limit=` → cards changed since then, with their tags; paged for the first run |
 | `GET` | `/api/queue` | `?mode=&limit=&deck=&tag=&only=` → card ids in scheduler order |
 | `GET` | `/api/browse` | `?q=&deck=&tag=&starred=&page=` → searchable card list |
 | `GET` | `/api/queue` | …and, for `mode=flip`, the four intervals per card |

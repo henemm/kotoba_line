@@ -79,8 +79,7 @@ and the × asks once. What remains is deliberate, and short.
 - **Pitch accent is still not built.** The deck carries it on 1,500 of its
   1,501 notes as inline-styled spans, and nothing in this round changes that.
 
-**Not yet built, all newly drawn:** first run (49), the resume row (51) and the
-expired cookie (52). §5a is complete — browse (31–34) and choose-a-set (36–40)
+**Not yet built:** the expired cookie (52). §5a is complete — browse (31–34) and choose-a-set (36–40)
 — and so is the personal deck (27–30); its deck and topic chips are
 deliberately left to 36, where all three dimensions are offered together, and
 the route out of an empty search into "add it as your own word" waits on the

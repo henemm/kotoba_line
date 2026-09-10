@@ -10,6 +10,8 @@ import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { when } from "../src/screens/settings.js";
 import { offlineStatus } from "../src/outbox.js";
+import { unwrap } from "../src/store.js";
+import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
 import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
 
 describe("query strings", () => {
@@ -484,5 +486,71 @@ describe("a chosen set's summary (40)", () => {
       chosenSentence({ chosenLabel: "konbini" }),
       "Your konbini set, not today's reviews.",
     );
+  });
+});
+
+describe("an unfinished session (51)", () => {
+  const DAY = "2026-09-10";
+  const at = (iso) => Date.parse(iso);
+  const saved = (over = {}) => ({
+    mode: "choose",
+    cardIds: [1, 2, 3, 4],
+    index: 1,
+    at: at(`${DAY}T09:00:00+09:00`),
+    ...over,
+  });
+
+  it("is offered inside four hours, on the same Tokyo day", () => {
+    assert.equal(isResumable(saved(), at(`${DAY}T12:00:00+09:00`)), true);
+  });
+
+  it("expires after four hours", () => {
+    assert.equal(isResumable(saved(), at(`${DAY}T13:30:00+09:00`)), false);
+  });
+
+  it("expires at the Tokyo day boundary even when four hours have not passed", () => {
+    // Started at 23:00 Tokyo, reopened at 01:00: two hours later, but the
+    // streak has already turned over and the queue with it.
+    const late = saved({ at: at(`${DAY}T23:00:00+09:00`) });
+    assert.equal(isResumable(late, at("2026-09-11T01:00:00+09:00")), false);
+  });
+
+  it("is not offered when there is nothing left of it", () => {
+    assert.equal(isResumable(saved({ index: 4 }), at(`${DAY}T09:30:00+09:00`)), false);
+    assert.equal(isResumable(saved({ cardIds: [] }), at(`${DAY}T09:30:00+09:00`)), false);
+    assert.equal(isResumable(undefined), false);
+  });
+
+  it("says how far she got and how long ago", () => {
+    assert.equal(describeResume(saved(), at(`${DAY}T09:20:00+09:00`)), "1 of 4 done, 20 minutes ago");
+    assert.equal(describeResume(saved(), at(`${DAY}T09:00:30+09:00`)), "1 of 4 done, just now");
+    assert.equal(describeResume(saved(), at(`${DAY}T11:00:00+09:00`)), "1 of 4 done, 2 hours ago");
+  });
+
+  it("uses the same day boundary as the streak", () => {
+    // §8a counts days in Asia/Tokyo. A session and the day it counts towards
+    // must not disagree about when the day ended.
+    assert.equal(tokyoDay(at("2026-09-10T14:59:00Z")), "2026-09-10");
+    assert.equal(tokyoDay(at("2026-09-10T15:00:00Z")), "2026-09-11");
+  });
+});
+
+describe("what the store hands back for a key that was never set", () => {
+  // Regression: `result?.result ?? result` returned the IDBRequest itself when
+  // the stored value was undefined, because ?? only falls through on undefined
+  // — and an IDBRequest is truthy. A device that had never paused a download
+  // was told it had.
+  const request = (value) => ({ readyState: "done", result: value });
+
+  it("unwraps a request whose result is undefined, rather than returning the request", () => {
+    assert.equal(unwrap(request(undefined)), undefined);
+    assert.equal(unwrap(request(0)), 0);
+    assert.equal(unwrap(request(false)), false);
+    assert.equal(unwrap(request({ handle: "mira" })).handle, "mira");
+  });
+
+  it("passes a plain value through, which is what a write returns", () => {
+    assert.equal(unwrap(undefined), undefined);
+    assert.deepEqual(unwrap({ handle: "mira" }), { handle: "mira" });
   });
 });

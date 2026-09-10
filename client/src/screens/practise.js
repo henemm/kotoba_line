@@ -1,5 +1,6 @@
 import { api } from "../api.js";
-import { MODES } from "../modes.js";
+import { MODES, modeByKey } from "../modes.js";
+import { describe } from "../resume.js";
 import { isDefault, summaryLine } from "./choose-set.js";
 import { el, render, station, statusBar } from "../ui/dom.js";
 
@@ -28,6 +29,8 @@ export function practiseScreen({
   onChooseSet,
   onAddWord,
   onOwnDeck,
+  onResume,
+  resumable,
   ownWords,
   filters = {},
   sessionLength,
@@ -56,6 +59,7 @@ export function practiseScreen({
     render(
       root,
       ...(due > 0 ? normalDay(due) : nothingDue(nextDue, stats)),
+      resumeRow(),
       setLine(),
       linesBlock(),
       lengthPicker(),
@@ -144,6 +148,39 @@ export function practiseScreen({
       { type: "button", onclick: onChooseSet },
       el("span", { class: chosen ? "chosen" : undefined, text: summaryLine(filters) }),
       el("span", { text: "Change" }),
+    );
+  }
+
+  /**
+   * 51 — the unfinished session as one card above the four lines, carrying the
+   * mode colour it belongs to. The lines stay exactly where they were: this is
+   * an offer, not a detour.
+   */
+  function resumeRow() {
+    if (!resumable || !onResume) return null;
+    const mode = modeByKey(resumable.mode) ?? modeByKey("choose");
+    return el(
+      "div.resume-block",
+      {},
+      el(
+        "button.resume-row",
+        { type: "button", onclick: () => onResume(resumable) },
+        station(mode.colour, 26, 5),
+        el(
+          "span.copy",
+          {},
+          el("span.title", { text: `Carry on with ${mode.jp}` }),
+          el("span.detail", { text: describe(resumable) }),
+        ),
+        el("span.chevron", { text: "›" }),
+      ),
+      el(
+        "div.rule",
+        {},
+        el("span.line"),
+        el("span.text", { text: "Or start fresh" }),
+        el("span.line"),
+      ),
     );
   }
 

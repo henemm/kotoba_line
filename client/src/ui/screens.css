@@ -2420,3 +2420,148 @@
   border-style: solid;
   border-color: var(--ink);
 }
+
+/* 51: an unfinished session as one card above the four lines. The lines stay
+   exactly where they were — this is an offer, not a detour. */
+.resume-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.resume-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin: 0 var(--gutter);
+  width: calc(100% - var(--gutter) * 2);
+  padding: 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.resume-row .copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.resume-row .title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.resume-row .detail {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.resume-row .chevron {
+  flex: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+.resume-block .rule {
+  padding: 18px var(--gutter) 0;
+}
+
+/* ══ 49 First run ═════════════════════════════════════════════════
+   The first thing she ever sees after signing in, so it states the
+   size before the progress and offers the way out on mobile data. */
+
+.first-run {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.first-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+  padding: 0 30px;
+}
+.first-title {
+  margin: 0;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+.first-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.first-heading {
+  font-size: 20px;
+  font-weight: 700;
+}
+/* Twelve segments regardless of card count: the strip says "how far", not
+   "how many", and 1,500 stations would be a texture. */
+.segments {
+  display: flex;
+  gap: 4px;
+}
+.segment {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-hi);
+  transition: background 0.3s;
+}
+.segment.on {
+  background: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    transition: none;
+  }
+}
+.first-figures {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+}
+.first-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.first-card-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.first-card-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+.first-foot {
+  flex: none;
+  padding: 0 30px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.first-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.first-foot .btn-secondary {
+  width: 100%;
+  height: 56px;
+}

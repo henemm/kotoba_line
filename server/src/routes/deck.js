@@ -42,13 +42,22 @@ export default async function deckRoutes(app) {
         querystring: {
           type: "object",
           additionalProperties: false,
-          properties: { since: { type: "integer", minimum: 0 } },
+          properties: {
+            since: { type: "integer", minimum: 0 },
+            // The first run pages through the deck rather than taking 1,500
+            // cards in one response (design 49), so each page can be written
+            // to disk before the next is asked for — which is what makes "you
+            // can start practising as soon as the first cards arrive" true.
+            offset: { type: "integer", minimum: 0 },
+            limit: { type: "integer", minimum: 1, maximum: 500 },
+          },
         },
       },
       preHandler: app.requireUser,
     },
     async (req) => {
       const since = req.query.since ?? 0;
+      const paging = req.query.limit !== undefined;
       const cards = db
         .prepare(
           `SELECT id, word, word_furigana, word_reading, word_meaning, word_audio,
@@ -56,16 +65,23 @@ export default async function deckRoutes(app) {
                   frequency_rank, deck, updated_at, deleted_at
              FROM cards
             WHERE updated_at > ?
-            ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC`,
+            ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC
+            ${paging ? "LIMIT ? OFFSET ?" : ""}`,
         )
-        .all(since);
+        .all(...(paging ? [since, req.query.limit, req.query.offset ?? 0] : [since]));
 
-      const tags = db
-        .prepare(
-          `SELECT card_id, tag FROM tags
-            WHERE card_id IN (SELECT id FROM cards WHERE updated_at > ?)`,
-        )
-        .all(since);
+      // Only the tags for the cards actually being sent: a paged first run
+      // would otherwise carry the whole tag table in every page.
+      const ids = cards.map((c) => c.id);
+      const tags =
+        ids.length === 0
+          ? []
+          : db
+              .prepare(
+                `SELECT card_id, tag FROM tags
+                  WHERE card_id IN (${ids.map(() => "?").join(",")})`,
+              )
+              .all(...ids);
 
       const byCard = new Map();
       for (const { card_id, tag } of tags) {
@@ -74,10 +90,14 @@ export default async function deckRoutes(app) {
       }
 
       const latest = db.prepare("SELECT max(updated_at) m FROM cards").get().m ?? 0;
+      const { n: total } = db
+        .prepare("SELECT count(*) n FROM cards WHERE updated_at > ?")
+        .get(since);
 
       return {
         since,
         latest,
+        total,
         cards: cards.map((c) => ({ ...c, tags: byCard.get(c.id) ?? [] })),
       };
     },

@@ -40,6 +40,8 @@ in `server/README.md`.
 | Browse | 31–34 | done — search, star, the starred list, practise the set |
 | Choose a set | 36–40 | done — three filter dimensions, the live count, the dashed rule, its own summary |
 | Her own words | 27–30 | done — the dashed station, add a word, the list |
+| First run | 49 | done — paged download, pause, carry on |
+| Coming back | 51 | done — the resume row, four hours or the Tokyo day |
 
 ## Layout
 
@@ -156,6 +158,30 @@ honest way to check the synthesis got the reading right; if it did not, the
 reading field is what fixes it. Her cards never have a recording, so they always
 meet 47's synthesis state — and the note under the form says so before she
 commits rather than after.
+
+## First run and coming back (49, 51)
+
+**The deck arrives visibly, in pages.** It used to arrive silently on the first
+session, which on a slow connection looks exactly like an app that has hung. The
+screen states the size before the progress and offers "Pause until Wi-Fi",
+because §1 says mobile data in Japan is metered — and the card in the middle
+says what §7 requires anyway: audio is never bulk-fetched. Paging is what makes
+"you can start practising as soon as the first cards arrive" true rather than
+hopeful: each page is written to IndexedDB before the next is asked for, so a
+pause or a failure keeps everything already received.
+
+**An unfinished session comes back as one row** above the four lines, in its
+mode colour, with the lines exactly where they were. Her *answers* always
+survived an interruption — they go into the outbox as she gives them — but the
+session did not, so being interrupted meant starting over, which is the normal
+way a session on a train ends.
+
+It expires after four hours **or** at the Tokyo day boundary, whichever comes
+first: past either edge the remaining cards are simply due again, and a queue
+built yesterday is one the scheduler has since revised. The day boundary is the
+same one §8a counts streaks by, so a session and the day it counts towards
+cannot disagree. A chosen set resumes with its filter intact, dashed rule and
+all.
 
 ## Offline
 

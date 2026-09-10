@@ -4,6 +4,7 @@ import { loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { sessionQueue } from "../queue.js";
+import { forget, remember } from "../resume.js";
 import { el, render } from "../ui/dom.js";
 
 /** How long the answer stays on screen before the next card. */
@@ -108,6 +109,9 @@ export function sessionScreen({
   chosenLabel,
   limit = 20,
   readAloud = true,
+  // 51: a session she left. The queue and the position are restored; the
+  // answers she already gave are in the outbox and never came from here.
+  resuming,
   onFinish,
   onExit,
 }) {
@@ -144,6 +148,10 @@ export function sessionScreen({
     try {
       const [loaded, q, snapshot] = await Promise.all([
         loadDeck(),
+        // Resuming still asks, for めくる's intervals — but the card ids it
+        // returns are ignored in favour of the ones she was already working
+        // through. Re-composing the queue would silently swap her session for
+        // a different one under the same name.
         sessionQueue({ ...filters, mode, limit }),
         api.stats().catch(() => undefined),
       ]);
@@ -153,8 +161,10 @@ export function sessionScreen({
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];
       intervals = q.intervals ?? {};
-      const due = q.cardIds.map((id) => deck.get(id)).filter(Boolean);
+      const ids = resuming?.cardIds ?? q.cardIds;
+      const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
+      if (resuming) index = Math.min(resuming.index ?? 0, Math.max(queue.length - 1, 0));
 
       // 聞く dropped everything it was given: the cards are due, they just
       // cannot be listened to. That is a different message from "nothing due".
@@ -336,6 +346,16 @@ export function sessionScreen({
     // interrupted is the normal way a session on a train ends. Not awaited:
     // the write is fast and the next card must not wait on a disk.
     record([event]).catch(() => {});
+
+    // 51: where she is, kept for the next start. Written after the answer is
+    // recorded, so a session note can never claim progress the outbox has not.
+    remember({
+      mode,
+      filters,
+      chosenLabel,
+      cardIds: queue.map((c) => c.id),
+      index: index + 1,
+    }).catch(() => {});
 
     // Redraw the strip so the marker just answered takes its colour.
     root.replaceChild(chrome(), root.firstChild);
@@ -747,6 +767,8 @@ export function sessionScreen({
 
   async function finish() {
     stop();
+    // Finished sessions are not resumable, whatever the four-hour window says.
+    forget().catch(() => {});
 
     // Every answer was written to the outbox as it happened, so there is
     // nothing to record here — only to send.

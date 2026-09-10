@@ -4,12 +4,14 @@ import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
 import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
+import { firstRunScreen } from "./screens/first-run.js";
 import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault } from "./screens/choose-set.js";
 import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
 import { offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
-import { clearPersonal, getMeta, setMeta } from "./store.js";
+import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
+import { forget, openSession } from "./resume.js";
 import { el, render, statusBar } from "./ui/dom.js";
 
 const TABS = [
@@ -44,6 +46,11 @@ const state = {
   // screen the way browse does.
   ownWords: 0,
   overlay: undefined,
+  // 51: an unfinished session, if there is one worth offering.
+  resumable: undefined,
+  // 49: this device has no deck yet, so the first thing after signing in is
+  // getting one.
+  firstRun: false,
   // The server's copy of the settings, so the session length and the sound
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
@@ -123,6 +130,8 @@ function currentScreen() {
       ownWords: state.ownWords,
       onAddWord: openAddWord,
       onOwnDeck: openOwnDeck,
+      resumable: state.resumable,
+      onResume: resumeSession,
     });
   }
   if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
@@ -253,6 +262,28 @@ function closeBrowse() {
 function startSession({ mode = "choose", ...filters } = {}) {
   state.session = { mode, filters };
   state.summary = undefined;
+  state.resumable = undefined;
+  // Starting fresh abandons the saved one: 51 offers a choice, and taking the
+  // other branch is an answer.
+  forget().catch(() => {});
+  renderApp();
+}
+
+/** Re-read the saved session and offer it if it is still worth offering. */
+async function offerResume() {
+  const saved = await openSession();
+  if (saved) {
+    state.resumable = saved;
+    renderApp();
+  }
+}
+
+/** 51. A chosen set resumes with its filter intact, dashed rule and all. */
+function resumeSession(saved) {
+  state.filters = saved.filters ?? { ...DEFAULT_FILTERS };
+  state.session = { mode: saved.mode, filters: state.filters, resuming: saved };
+  state.summary = undefined;
+  state.resumable = undefined;
   renderApp();
 }
 
@@ -262,11 +293,25 @@ function renderApp() {
       state.user = user;
       state.tab = "practise";
       setMeta("user", user);
+      checkDeck();
       loadSettings();
       loadOwnDeck();
       startFlushing();
       renderApp();
     } }));
+    return;
+  }
+
+  // 49: before anything else, because without a deck there is nothing to do.
+  if (state.firstRun) {
+    state.firstRunNode ??= firstRunScreen({
+      onReady: () => {
+        state.firstRun = false;
+        state.firstRunNode = undefined;
+        renderApp();
+      },
+    });
+    render(app, statusBar(), state.firstRunNode);
     return;
   }
 
@@ -303,6 +348,7 @@ function renderApp() {
     state.session.node ??= sessionScreen({
       mode: state.session.mode,
       filters: state.session.filters,
+      resuming: state.session.resuming,
       // 39 only labels a session she chose, not one the scheduler laid.
       chosenLabel: isDefault(state.session.filters)
         ? undefined
@@ -312,9 +358,13 @@ function renderApp() {
       onExit: () => {
         state.session = undefined;
         renderApp();
+        // 51 is not only for coming back tomorrow: she taps × and the offer
+        // should be there when the tab redraws, not after a restart.
+        offerResume();
       },
       onFinish: (result) => {
         state.session = undefined;
+        state.resumable = undefined;
         state.summary = result.empty ? undefined : result;
         if (result.levelUp) state.jokerBadge = state.jokerBadge || false;
         renderApp();
@@ -393,6 +443,12 @@ if ("serviceWorker" in navigator) {
  * on the practice tab: the defaults above match the schema's, so the worst an
  * offline start costs is a session length she can change on the next screen.
  */
+/** 49: a device with no cards has to get them before it can offer a session. */
+async function checkDeck() {
+  state.firstRun = (await cardCount()) === 0;
+  if (state.firstRun) renderApp();
+}
+
 async function loadSettings() {
   try {
     const { settings } = await api.settings();
@@ -432,8 +488,10 @@ state.pendingEvents = await pending();
 renderApp();
 
 if (state.user) {
+  await checkDeck();
   loadSettings();
   loadOwnDeck();
+  offerResume();
   // §7: flush eagerly rather than batching for hours — iOS evicts storage
   // under pressure, and an event that never left the device is the one thing
   // here that cannot be reconstructed.
