@@ -775,8 +775,21 @@ export function sessionScreen({
           }
         : undefined;
 
+    // 40 needs both: which set this was, and what the real queue still holds.
+    // The second is only knowable online, and its absence is what collapses
+    // the two buttons into one.
+    let stillDue;
+    if (chosenLabel && accepted) {
+      stillDue = await api
+        .queue({ limit: 60 })
+        .then((q) => q.available ?? q.cardIds.length)
+        .catch(() => undefined);
+    }
+
     onFinish?.({
       mode,
+      chosenLabel,
+      stillDue,
       total: queue.length,
       right,
       missed,

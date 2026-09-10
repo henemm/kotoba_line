@@ -38,7 +38,7 @@ in `server/README.md`.
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
 | Browse | 31–34 | done — search, star, the starred list, practise the set |
-| Choose a set | 36–39 | done — three filter dimensions, the live count, the dashed rule |
+| Choose a set | 36–40 | done — three filter dimensions, the live count, the dashed rule, its own summary |
 
 ## Layout
 
@@ -120,6 +120,14 @@ station strip carrying only what she changed, "Your set · konbini". Dashed
 because the route is provisional — the scheduler did not lay it. It occupies a
 fixed 18px and is absent entirely on an ordinary session, so the card never
 moves.
+
+**And its summary says finishing a set is not finishing the day** (40). The
+rule carries over, one sentence names the set and what the real queue still
+holds, and the way back to that queue is the loudest thing on the screen.
+"Carry on" clears the filters as well as starting a session — otherwise it
+would run the same set again. Offline the outstanding count is unknowable, so
+the sentence stops short rather than guessing, and the two buttons collapse
+into one when nothing else is due.
 
 ## Offline
 

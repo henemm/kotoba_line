@@ -1266,11 +1266,17 @@
 
 /* ══ 09 Session summary ═══════════════════════════════════════════ */
 
+/* The strip is a column now: the stations, and under them the dashed rule
+   when the session was a chosen set (40), so the summary belongs to the
+   session it came from rather than to the day. */
 .summary-strip {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 7px;
   padding: 10px 20px 0;
+  flex: none;
+}
+.summary-strip .stations {
   flex: none;
 }
 
@@ -2105,4 +2111,22 @@
   text-transform: uppercase;
   color: var(--ink-muted);
   white-space: nowrap;
+}
+
+/* 40: a chosen set's summary. The way back to the real queue is the loudest
+   thing on the screen, because finishing a set is not finishing the day. */
+.summary-foot.stacked {
+  flex-direction: column;
+  gap: 10px;
+}
+.summary-foot.stacked .btn-primary {
+  width: 100%;
+  height: 56px;
+}
+.summary-foot.stacked .summary-done {
+  width: 100%;
+  height: 52px;
+}
+.summary-note.chosen-note {
+  text-wrap: pretty;
 }

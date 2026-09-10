@@ -222,6 +222,14 @@ function renderApp() {
           renderApp();
         },
         onAgain: () => startSession({ mode: state.summary.mode }),
+        // 40: back to the day's real queue, which means clearing the filters
+        // as well as starting a session — otherwise "carry on" would run the
+        // chosen set again.
+        onCarryOn: () => {
+          const mode = state.summary.mode;
+          state.filters = { ...DEFAULT_FILTERS };
+          startSession({ mode });
+        },
       }),
     );
     return;

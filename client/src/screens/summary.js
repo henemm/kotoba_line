@@ -17,7 +17,7 @@ export const mmss = (seconds) =>
  * mode colour for cleared, red for missed. A session is modal, so there is no
  * tab bar underneath.
  */
-export function summaryScreen(result, { onDone, onAgain }) {
+export function summaryScreen(result, { onDone, onAgain, onCarryOn }) {
   const line = modeByKey(result.mode) ?? modeByKey("choose");
   const root = el("div.summary", { style: { "--rail": line.colour } });
 
@@ -29,7 +29,22 @@ export function summaryScreen(result, { onDone, onAgain }) {
     el(
       "div.summary-strip",
       {},
-      result.results.map((ok) => el("span.station", { class: ok ? "done" : "missed" })),
+      el(
+        "div.stations",
+        {},
+        result.results.map((ok) => el("span.station", { class: ok ? "done" : "missed" })),
+      ),
+      // 40: the chosen set keeps its dashed rule here too, so the summary
+      // belongs to the session it came from rather than to the day.
+      result.chosenLabel
+        ? el(
+            "div.chosen-rule",
+            {},
+            el("span.dash"),
+            el("span.chosen-text", { text: `Your set · ${result.chosenLabel}` }),
+            el("span.dash.long"),
+          )
+        : null,
     ),
     el(
       "div.summary-body",
@@ -66,13 +81,19 @@ export function summaryScreen(result, { onDone, onAgain }) {
             more > 0 ? el("div.missed-more", { text: `and ${more} more` }) : null,
           )
         : null,
+      // 40: "finishing a chosen set is not finishing the day". The sentence
+      // says which it was, and the primary button below is the way back to
+      // the real queue.
+      result.chosenLabel
+        ? el("p.summary-note.chosen-note", { text: chosenSentence(result) })
+        : null,
       result.synced === false
         ? el("p.summary-note", {
             text: "Saved on this device. It will reach the server when the connection does.",
           })
         : null,
     ),
-    el(
+    result.chosenLabel ? chosenFoot(result, { onDone, onCarryOn }) : el(
       "div.summary-foot",
       {},
       el("button.summary-done", { type: "button", text: "Done", onclick: onDone }),
@@ -82,6 +103,42 @@ export function summaryScreen(result, { onDone, onAgain }) {
 
   if (result.levelUp) root.append(levelUpOverlay(result));
   return root;
+}
+
+/**
+ * 40's sentence. "When nothing is due the sentence becomes 'Nothing else is
+ * due today'" — and the two buttons collapse into one.
+ */
+export function chosenSentence({ chosenLabel, stillDue }) {
+  const set = `Your ${chosenLabel} set, not today's reviews.`;
+  if (stillDue === undefined) return set;
+  if (stillDue === 0) return `${set} Nothing else is due today.`;
+  return `${set} ${num(stillDue)} ${stillDue === 1 ? "card is" : "cards are"} still due.`;
+}
+
+/**
+ * 40's foot. The way back to the real queue is the loudest thing on the
+ * screen, because finishing a chosen set is not finishing the day — and when
+ * there is nothing to carry on to, the two buttons become one.
+ */
+function chosenFoot({ stillDue }, { onDone, onCarryOn }) {
+  if (!stillDue) {
+    return el(
+      "div.summary-foot.stacked",
+      {},
+      el("button.btn-primary", { type: "button", text: "Done for now", onclick: onDone }),
+    );
+  }
+  return el(
+    "div.summary-foot.stacked",
+    {},
+    el("button.btn-primary", {
+      type: "button",
+      text: `Carry on with ${num(stillDue)} due`,
+      onclick: onCarryOn,
+    }),
+    el("button.summary-done", { type: "button", text: "Done for now", onclick: onDone }),
+  );
 }
 
 function greeting({ right, total }) {

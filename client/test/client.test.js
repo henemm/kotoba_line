@@ -5,7 +5,7 @@ import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
 import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
-import { mmss } from "../src/screens/summary.js";
+import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { when } from "../src/screens/settings.js";
@@ -453,5 +453,36 @@ describe("what a chosen set is called (36, 39)", () => {
   it("knows when nothing was chosen at all", () => {
     assert.equal(isDefault({}), true);
     assert.equal(isDefault({ tag: "food" }), false);
+  });
+});
+
+describe("a chosen set's summary (40)", () => {
+  it("says which it was, and what is still waiting", () => {
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini", stillDue: 22 }),
+      "Your konbini set, not today's reviews. 22 cards are still due.",
+    );
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini", stillDue: 1 }),
+      "Your konbini set, not today's reviews. 1 card is still due.",
+    );
+  });
+
+  it("becomes 'nothing else is due' at zero", () => {
+    // At which point the two buttons collapse into one, because there is
+    // nothing to carry on to.
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini", stillDue: 0 }),
+      "Your konbini set, not today's reviews. Nothing else is due today.",
+    );
+  });
+
+  it("says nothing about the queue when it could not be asked", () => {
+    // Offline the count is unknowable, and inventing one would be worse than
+    // leaving the sentence short.
+    assert.equal(
+      chosenSentence({ chosenLabel: "konbini" }),
+      "Your konbini set, not today's reviews.",
+    );
   });
 });
