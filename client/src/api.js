@@ -78,6 +78,10 @@ export const api = {
   events: (events) => request("/events", { method: "POST", body: { events } }),
   stats: () => request("/stats"),
 
+  cards: () => request("/cards"),
+  addCard: (card) => request("/cards", { method: "POST", body: card }),
+  deleteCard: (id) => request(`/cards/${id}`, { method: "DELETE" }),
+
   settings: () => request("/settings"),
   updateSettings: (patch) => request("/settings", { method: "PATCH", body: patch }),
 };

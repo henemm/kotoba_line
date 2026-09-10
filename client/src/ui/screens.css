@@ -2130,3 +2130,293 @@
 .summary-note.chosen-note {
   text-wrap: pretty;
 }
+
+/* ══ 27–30 Her own words ══════════════════════════════════════════ */
+
+/* 27: a dashed station below the last stop — on the network, not part of it.
+   Under the four lines, never a floating button: nothing here floats. */
+.add-word-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 18px var(--gutter) 0;
+  border: 0;
+  border-top: 1px solid var(--surface-hi);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.dashed-station {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 2px dashed var(--ink-muted);
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  font: 700 18px/1 var(--ui);
+  color: var(--ink-muted);
+}
+.add-word-row .copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.add-word-row .title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.add-word-row .detail {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.add-word-row .chevron,
+.add-disclosure .chevron {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-muted);
+  flex: none;
+}
+
+/* 33's route out of an empty search, straight into 28. */
+.browse-add {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  align-self: flex-start;
+  padding: 8px 0 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 600 16px/1 var(--ui);
+}
+.browse-add .dashed-station {
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+}
+
+/* 28/29: the form. */
+.add-word {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.add-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px var(--gutter) 20px;
+}
+.add-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+.add-cancel {
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 600 16px/1 var(--ui);
+  padding: 0;
+}
+/* Save stays dim until the word and the meaning both have content. */
+.add-save {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 700 16px/1 var(--ui);
+  padding: 0;
+}
+.add-save:disabled {
+  color: var(--ink-dim);
+}
+
+.add-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.add-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.add-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.field {
+  background: var(--surface);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  min-height: 56px;
+}
+.field.big {
+  min-height: 82px;
+}
+.field-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: 600 17px/1.3 var(--ui);
+  resize: none;
+  padding: 14px 0;
+}
+.field-input.jp {
+  font-family: var(--jp);
+  font-size: 20px;
+}
+.field-input.big.jp {
+  font-size: 38px;
+  font-weight: 800;
+}
+.field-input::placeholder {
+  color: var(--ink-muted);
+}
+.field-input:focus {
+  outline: none;
+}
+
+.add-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 600 16px/1 var(--ui);
+  text-align: left;
+}
+.add-speak {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-hi);
+  color: var(--ink);
+  font: 600 14px/1 var(--ui);
+}
+.add-chips .chip.new-tag {
+  background: none;
+  border: 2px dashed var(--ink-dim);
+}
+.add-foot {
+  flex: none;
+  padding: 18px var(--gutter) 30px;
+}
+.add-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.add-problem {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--no);
+}
+
+/* 30: her list. Maturity in words rather than a bar — five rows do not need
+   a chart. */
+.own-deck {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.own-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px var(--gutter);
+}
+.own-note {
+  margin: 0;
+  padding: 10px var(--gutter) 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.own-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+}
+.own-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--surface-hi);
+}
+.own-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.own-word {
+  font-size: 21px;
+  font-weight: 700;
+}
+.own-gloss {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.own-band {
+  flex: none;
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-muted);
+}
+.own-foot {
+  flex: none;
+  padding: 16px var(--gutter) 30px;
+}
+.own-foot .btn-primary {
+  width: 100%;
+  height: 56px;
+}
+
+/* 29: coining a topic in place. A native prompt() in a standalone PWA is the
+   browser's dialog, not the app's, and looks like it. */
+.new-tag-input {
+  min-width: 96px;
+  max-width: 160px;
+  border: 2px dashed var(--ink-dim);
+  background: none;
+  color: var(--ink);
+  font: 600 14px/1 var(--ui);
+  padding: 10px 16px;
+}
+.new-tag-input:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--ink);
+}

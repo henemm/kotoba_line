@@ -3,6 +3,7 @@ import { signInScreen } from "./screens/signin.js";
 import { practiseScreen } from "./screens/practise.js";
 import { statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
+import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
 import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault } from "./screens/choose-set.js";
 import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
@@ -38,6 +39,11 @@ const state = {
   filters: { ...DEFAULT_FILTERS },
   topics: [],
   sheet: undefined,
+  // Her own deck (27–30). `ownWords` is the count on the practise tab's
+  // dashed station; `overlay` is the add screen or the list, which take the
+  // screen the way browse does.
+  ownWords: 0,
+  overlay: undefined,
   // The server's copy of the settings, so the session length and the sound
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
@@ -85,6 +91,7 @@ function tabBar() {
             if (tab.key === "stats") state.jokerBadge = false;
             state.tab = tab.key;
             state.browse = undefined;
+            state.overlay = undefined;
             renderApp();
           },
         },
@@ -113,6 +120,9 @@ function currentScreen() {
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
+      ownWords: state.ownWords,
+      onAddWord: openAddWord,
+      onOwnDeck: openOwnDeck,
     });
   }
   if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
@@ -177,12 +187,59 @@ async function loadTopics() {
   }
 }
 
+/** 28/29. Takes the screen: it is a form, and a tab bar under a keyboard is noise. */
+function openAddWord(initialWord = "") {
+  state.overlay = addWordScreen({
+    tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
+    initialWord,
+    onCancel: closeOverlay,
+    onSaved: () => {
+      // 29: "saving returns to the practise tab with the count incremented,
+      // no confirmation screen."
+      state.overlay = undefined;
+      state.tab = "practise";
+      loadOwnDeck();
+      renderApp();
+    },
+  });
+  loadTopics();
+  renderApp();
+}
+
+/** 30. */
+function openOwnDeck() {
+  state.overlay = ownDeckScreen({ onBack: closeOverlay, onAdd: () => openAddWord() });
+  renderApp();
+}
+
+function closeOverlay() {
+  state.overlay = undefined;
+  renderApp();
+}
+
+/** The count on 27's dashed station. */
+async function loadOwnDeck() {
+  try {
+    const { cards } = await api.cards();
+    state.ownWords = cards.length;
+    renderApp();
+  } catch {
+    /* the row still offers to add one */
+  }
+}
+
 function openBrowse() {
   state.browse = browseScreen({
     onBack: closeBrowse,
     onPractiseStarred: () => {
       closeBrowse();
       startSession({ only: "starred" });
+    },
+    // 33: "a word she cannot find is usually a word she should add, so the
+    // empty result leads straight into 28 with the query carried over."
+    onAddWord: (query) => {
+      closeBrowse();
+      openAddWord(query);
     },
   });
   renderApp();
@@ -206,6 +263,7 @@ function renderApp() {
       state.tab = "practise";
       setMeta("user", user);
       loadSettings();
+      loadOwnDeck();
       startFlushing();
       renderApp();
     } }));
@@ -269,6 +327,13 @@ function renderApp() {
   // Browse (31) has its own back arrow and its own footer button, and the
   // drawn frame carries no tab bar — it takes the screen the way a session
   // does rather than sitting inside a tab.
+  // Her own deck's screens take the whole screen, like browse: 28 is a form,
+  // and a tab bar under a keyboard is noise.
+  if (state.overlay) {
+    render(app, statusBar(), state.overlay);
+    return;
+  }
+
   if (state.browse) {
     render(app, statusBar(), state.browse);
     return;
@@ -368,6 +433,7 @@ renderApp();
 
 if (state.user) {
   loadSettings();
+  loadOwnDeck();
   // §7: flush eagerly rather than batching for hours — iOS evicts storage
   // under pressure, and an event that never left the device is the one thing
   // here that cannot be reconstructed.

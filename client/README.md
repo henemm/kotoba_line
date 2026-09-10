@@ -39,6 +39,7 @@ in `server/README.md`.
 | Level up | 03 | done — overlays the summary, dismisses itself |
 | Browse | 31–34 | done — search, star, the starred list, practise the set |
 | Choose a set | 36–40 | done — three filter dimensions, the live count, the dashed rule, its own summary |
+| Her own words | 27–30 | done — the dashed station, add a word, the list |
 
 ## Layout
 
@@ -128,6 +129,33 @@ holds, and the way back to that queue is the loudest thing on the screen.
 would run the same set again. Offline the outstanding count is unknowable, so
 the sentence stops short rather than guessing, and the two buttons collapse
 into one when nothing else is due.
+
+## Her own words (27–30)
+
+The word she just heard at the dinner table. Everything here is shaped by where
+she is when she types it: on a train, one-handed, with the conversation still
+going on.
+
+**The way in is a dashed station below the last stop** — on the network, not
+part of it. Under the four lines rather than in a header, because it is used far
+less than starting a session and must never be what a thumb hits by accident.
+Its count doubles as the way into the list.
+
+**Two fields make a card savable**, not three: the word and the meaning. The
+reading and the example sentence are what make it *good*. The sentence sits
+behind a disclosure, because on a train she will not write one and an empty
+field would only reproach her.
+
+**A topic can be coined on the spot**, in an inline field rather than a native
+`prompt()` — in a standalone PWA that dialog belongs to the browser, not to the
+app, and looks like it. Enter and blur are both ways of finishing and on a phone
+Enter causes a blur, so the commit runs once whichever arrives first.
+
+**The speaker reads the card back** once the word has content, which is the only
+honest way to check the synthesis got the reading right; if it did not, the
+reading field is what fixes it. Her cards never have a recording, so they always
+meet 47's synthesis state — and the note under the form says so before she
+commits rather than after.
 
 ## Offline
 

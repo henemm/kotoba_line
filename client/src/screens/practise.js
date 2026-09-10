@@ -26,6 +26,9 @@ export function practiseScreen({
   onStart,
   onDrillTopic,
   onChooseSet,
+  onAddWord,
+  onOwnDeck,
+  ownWords,
   filters = {},
   sessionLength,
   onSessionLength,
@@ -57,6 +60,7 @@ export function practiseScreen({
       linesBlock(),
       lengthPicker(),
       soundNote(),
+      addWordRow(),
     );
   }
 
@@ -182,6 +186,42 @@ export function practiseScreen({
       ),
     );
     return picker;
+  }
+
+  /**
+   * 27 — "a dashed station below the last stop: on the network, not part of
+   * it". Under the four lines rather than in a header, because it is used far
+   * less than starting a session and must never be what a thumb hits by
+   * accident. Not a floating button; nothing in this design floats.
+   */
+  function addWordRow() {
+    if (!onAddWord) return null;
+    return el(
+      "button.add-word-row",
+      // Called with no argument: `onclick: onAddWord` would hand the click
+      // event to it as the word to prefill, which is where 33 passes the
+      // search query.
+      { type: "button", onclick: () => onAddWord() },
+      el("span.dashed-station", { text: "+" }),
+      el(
+        "span.copy",
+        {},
+        el("span.title", { text: "Add a word" }),
+        el("span.detail", {
+          text: ownWords ? `${ownWords} in your own deck` : "nothing in your own deck yet",
+        }),
+      ),
+      // The count doubles as the way into the list (27's note).
+      ownWords && onOwnDeck
+        ? el("span.chevron", {
+            text: "›",
+            onclick: (e) => {
+              e.stopPropagation();
+              onOwnDeck();
+            },
+          })
+        : null,
+    );
   }
 
   function soundNote() {

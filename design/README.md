@@ -68,13 +68,20 @@ and the × asks once. What remains is deliberate, and short.
   is unreliable alongside recognition on iOS — the risk is breaking the feature
   to animate it honestly. Worth revisiting if the API ever exposes a level.
 - **Two rows in Settings are still not built**, and now have designs behind
-  them: the per-deck toggles and "Topics in a session".
+  them: the per-deck toggles and "Topics in a session". The deck toggles are
+  worth building now that there are two decks to toggle.
+- **29's topic field is inline, not a native prompt.** The design does not say
+  which; a browser dialog in a standalone PWA looks like the browser's, so it
+  is a field.
+- **30's rows do not swipe to edit or delete.** The delete endpoint is built
+  and tested; the gesture is not, and a swipe that only deletes is worse than
+  no swipe.
 - **Pitch accent is still not built.** The deck carries it on 1,500 of its
   1,501 notes as inline-styled spans, and nothing in this round changes that.
 
-**Not yet built, all newly drawn:** first run (49), the resume row (51), the
-expired cookie (52), and the personal deck (27–30). §5a is complete — browse
-(31–34) and choose-a-set (36–40) are built; its deck and topic chips are
+**Not yet built, all newly drawn:** first run (49), the resume row (51) and the
+expired cookie (52). §5a is complete — browse (31–34) and choose-a-set (36–40)
+— and so is the personal deck (27–30); its deck and topic chips are
 deliberately left to 36, where all three dimensions are offered together, and
 the route out of an empty search into "add it as your own word" waits on the
 personal deck.

@@ -31,7 +31,7 @@ export function maturityBand(card) {
   return "mature";
 }
 
-export function browseScreen({ onBack, onPractiseStarred }) {
+export function browseScreen({ onBack, onPractiseStarred, onAddWord }) {
   const root = el("div.browse");
 
   const state = {
@@ -233,6 +233,16 @@ export function browseScreen({ onBack, onPractiseStarred }) {
         // likeliest way to arrive here.
         text: "Search covers Japanese, the reading and the English gloss — but not romaji.",
       }),
+      // 33: not an error state — a word she cannot find is usually a word she
+      // should add, so it leads straight into 28 with the query carried over.
+      onAddWord
+        ? el(
+            "button.browse-add",
+            { type: "button", onclick: () => onAddWord(state.q) },
+            el("span.dashed-station", { text: "+" }),
+            el("span", { text: "Add it as your own word" }),
+          )
+        : null,
     ];
   }
 
