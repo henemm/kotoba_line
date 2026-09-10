@@ -1,5 +1,12 @@
 import { MAX_TAGS, allTags, createCard, deleteCard, personalCards } from "../cards.js";
-import { MAX_SESSION_LENGTH, ONLY_MODES, browseCards, queueForUser, setStar } from "../queue.js";
+import {
+  MAX_SESSION_LENGTH,
+  ONLY_MODES,
+  browseCards,
+  queueForUser,
+  setStar,
+  starredAmong,
+} from "../queue.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
 
 /**
@@ -131,6 +138,17 @@ export default async function deckRoutes(app) {
       // the queue is what the client caches for offline (client/src/queue.js).
       if (req.query.mode === "flip" && answer.cardIds.length > 0) {
         answer.intervals = intervalsForCards(db, req.user.id, answer.cardIds);
+      }
+
+      // Which of these she has already starred (#35).
+      //
+      // Stars live in card_stars, per user; the deck the client caches is
+      // public and cannot carry them. Sent with the queue for the same reason
+      // as the intervals — wanted for exactly these cards, and the queue is
+      // what the client caches for offline, so a session started without a
+      // connection still knows which of its cards are starred.
+      if (answer.cardIds.length > 0) {
+        answer.starred = starredAmong(db, req.user.id, answer.cardIds);
       }
       return answer;
     },

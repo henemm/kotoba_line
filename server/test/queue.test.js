@@ -366,6 +366,57 @@ describe("the endpoints", () => {
     await app.close();
   });
 
+  it("says which of the queue's cards are starred (#35)", async () => {
+    // The session draws a ★ on every card. Stars are per user and live in
+    // card_stars, so the cached public deck cannot carry them — they ride
+    // along with the queue, which is also what makes them available offline.
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+
+    const before = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie } })
+    ).json();
+    assert.deepEqual(before.starred, [], "nothing starred yet");
+
+    const pick = before.cardIds[1];
+    await app.inject({
+      method: "POST",
+      url: "/api/stars",
+      headers: { cookie },
+      payload: { cardId: pick, starred: true },
+    });
+
+    const after = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie } })
+    ).json();
+    assert.deepEqual(after.starred, [pick]);
+    await app.close();
+  });
+
+  it("does not leak another user's stars into the queue", async () => {
+    const { app, db, config } = await fixture();
+    await seedUser(db, { handle: "someone", pin: "111111", display: "Someone" });
+
+    const mine = await signIn(app, config);
+    const theirs = await signIn(app, config, { handle: "someone", pin: "111111" });
+
+    const ids = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie: theirs } })
+    ).json().cardIds;
+    await app.inject({
+      method: "POST",
+      url: "/api/stars",
+      headers: { cookie: theirs },
+      payload: { cardId: ids[0], starred: true },
+    });
+
+    const body = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie: mine } })
+    ).json();
+    assert.deepEqual(body.starred, [], "her queue shows her stars, not someone else's");
+    await app.close();
+  });
+
   it("rejects a filter value it does not know", async () => {
     const { app, config } = await fixture();
     const cookie = await signIn(app, config);

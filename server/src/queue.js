@@ -253,3 +253,19 @@ export function setStar(db, userId, cardId, starred) {
   }
   return { ok: true, cardId, starred };
 }
+
+/**
+ * Which of these card ids the user has starred (#35).
+ *
+ * Answered for a given set rather than "all her stars" because the callers all
+ * have a set in hand — a session's queue — and the whole list would be an
+ * unbounded thing to send in order to colour twenty buttons.
+ */
+export function starredAmong(db, userId, cardIds) {
+  if (!cardIds?.length) return [];
+  const holes = cardIds.map(() => "?").join(",");
+  return db
+    .prepare(`SELECT card_id FROM card_stars WHERE user_id = ? AND card_id IN (${holes})`)
+    .all(userId, ...cardIds)
+    .map((r) => r.card_id);
+}

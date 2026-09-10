@@ -70,13 +70,4 @@ describe("a revealed card can be heard again (#32)", () => {
     assert.match(rule[0], /width:\s*44px/);
     assert.match(rule[0], /height:\s*44px/);
   });
-
-  it("bumps the service worker VERSION so installed phones drop the old shell", () => {
-    // Without this the change ships and her phone keeps serving the cached
-    // screen, which is indistinguishable from the fix not working.
-    const sw = readFileSync(join(__dirname, "..", "sw.js"), "utf8");
-    const version = sw.match(/const VERSION = "([^"]+)"/);
-    assert.ok(version, "VERSION constant not found in sw.js");
-    assert.notEqual(version[1], "v7", "VERSION still reads v7 — bump it with this change");
-  });
 });

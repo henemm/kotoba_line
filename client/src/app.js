@@ -136,6 +136,9 @@ function currentScreen() {
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
+      // #35: Browse is where a card gets starred, and the practise tab is
+      // where she is when she wants to.
+      onBrowse: openBrowse,
       ownWords: state.ownWords,
       onAddWord: openAddWord,
       onOwnDeck: openOwnDeck,
