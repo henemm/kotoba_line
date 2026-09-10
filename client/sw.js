@@ -15,7 +15,7 @@
  * automatically (phase-0-plan §1.5), so it is a line in a diff like everything
  * else, and `ops/deploy.sh` is where it would be forgotten.
  */
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -131,15 +131,74 @@ async function shell(request) {
  */
 async function media(request) {
   const cache = await caches.open(MEDIA);
-  const hit = await cache.match(request);
-  if (hit) return hit;
+  // The cache always holds the whole file, never a slice, and the network is
+  // asked for the whole file too: cache.put() rejects a 206 outright, and a
+  // cached partial body would break every later play of that word.
+  const whole = request.url;
 
-  const res = await fetch(request);
-  if (res.ok) {
-    await cache.put(request, res.clone());
-    await evict(cache);
+  let res = await cache.match(whole);
+  if (!res) {
+    res = await fetch(whole);
+    if (res.ok) {
+      await cache.put(whole, res.clone());
+      await evict(cache);
+    }
   }
-  return res;
+
+  const range = request.headers.get("range");
+  return range && res.ok ? partial(res, range) : res;
+}
+
+/**
+ * Answer a Range request with the 206 the media element asked for.
+ *
+ * Not optional, and the reason this file had to change: iOS asks for every
+ * media file with a `Range` header and then silently refuses to play a reply
+ * that answers one with a plain 200. Desktop Safari plays it regardless, so
+ * the bug existed only on the phone -- the whole deck was silent there while
+ * every check from a laptop said the audio was fine.
+ *
+ * Only single `bytes=` ranges, which is all a media element sends. Anything
+ * unparseable falls through to the whole file rather than failing the request:
+ * a complete answer plays, a rejected one does not.
+ */
+async function partial(res, range) {
+  const asked = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+  if (!asked) return res;
+
+  const body = await res.clone().arrayBuffer();
+  const total = body.byteLength;
+  const from = asked[1] === "" ? undefined : Number(asked[1]);
+  const to = asked[2] === "" ? undefined : Number(asked[2]);
+
+  let start;
+  let end;
+  if (from === undefined) {
+    if (!to) return res; // "bytes=-" and "bytes=-0" ask for nothing
+    start = Math.max(0, total - to); // a suffix range: the last N bytes
+    end = total - 1;
+  } else {
+    start = from;
+    end = to === undefined || to >= total ? total - 1 : to;
+  }
+
+  if (start > end || start >= total) {
+    return new Response(null, {
+      status: 416,
+      statusText: "Range Not Satisfiable",
+      headers: { "Content-Range": `bytes */${total}` },
+    });
+  }
+
+  const headers = new Headers(res.headers);
+  headers.set("Content-Range", `bytes ${start}-${end}/${total}`);
+  headers.set("Content-Length", String(end - start + 1));
+  headers.set("Accept-Ranges", "bytes");
+  return new Response(body.slice(start, end + 1), {
+    status: 206,
+    statusText: "Partial Content",
+    headers,
+  });
 }
 
 /**
