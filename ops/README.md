@@ -20,18 +20,21 @@ and the client has no build step, so there is no `npm install` anywhere below.
 
 **0. The code.** Every command below is run *inside the clone* — `ops/deploy.sh`,
 `ops/nginx/kotoba.conf` and `ops/docker-compose.yml` are all paths relative to
-it, and `deploy.sh` refuses to run from anywhere else. Where the clone lives is
-up to you; it holds no data, so it can be replaced at any time.
+it, and `deploy.sh` refuses to run from anywhere else.
+
+Your home directory, not `/opt`: nothing here needs root, and cloning into a
+root-owned directory only means every later `git pull` needs `sudo` too. The
+clone holds no data, so it can be deleted and made again at any time.
 
 ```sh
-sudo mkdir -p /opt && cd /opt
+cd ~
 git clone https://github.com/henemm/kotoba_line.git
 cd kotoba_line
 ```
 
-That directory — `/opt/kotoba_line` here — is what the rest of this file means
-by "the repository directory". It is not the same thing as `/srv/kotoba`, which
-is where her data lives and which nothing here ever overwrites.
+That directory — `~/kotoba_line` — is what the rest of this file means by "the
+repository directory". It is not the same thing as `/srv/kotoba`, which is
+where her data lives and which nothing here ever overwrites.
 
 **1. Directories.** They are host volumes, so a container rebuild never touches
 her data.
@@ -80,7 +83,7 @@ It exits non-zero if anything is wrong, so it is worth reading.
 
 ## Updating
 
-From the repository directory (`cd /opt/kotoba_line`, or wherever you cloned it):
+From the repository directory (`cd ~/kotoba_line`, or wherever you cloned it):
 
 ```sh
 git pull
