@@ -33,6 +33,27 @@ case "${1:-}" in
   *) echo "usage: $0 [--client|--api] [--force]" >&2; exit 2 ;;
 esac
 
+# Is this the server at all?
+#
+# Checked before anything else, because it is the most basic precondition and
+# because getting it wrong was silent. `/srv/kotoba` is created by hand in step
+# 1 of ops/README.md and then holds her data for good, so its absence means
+# this machine does not serve the app.
+#
+# A session in a cloud sandbox has a clone of the repository and no server. This
+# script used to mkdir its own /srv/kotoba/app there, copy the client in and
+# print "31 files" — a deploy that reported success and reached nobody. Work
+# stayed merged and not live for hours that way, and nothing said so.
+target_root=$(dirname "$APP_DIR")
+if [[ ! -d $target_root ]]; then
+  echo "$target_root does not exist, so this is not the server." >&2
+  echo "Deploying writes into /srv/kotoba, which is on the host that serves the" >&2
+  echo "app: a session without it can merge, but cannot release." >&2
+  echo "  ops/README.md step 1                      a genuine first install" >&2
+  echo "  mkdir -p /tmp/k && APP_DIR=/tmp/k/app …   rehearse somewhere harmless" >&2
+  exit 1
+fi
+
 # A checkout that is behind deploys the older client over the newer one and
 # says nothing about it — the failure looks exactly like a deploy that worked.
 # Only *behind* is refused: deploying a feature branch to try it on the phone
@@ -72,7 +93,6 @@ if $do_client; then
   previous="$APP_DIR.previous.$$"
   trap 'rm -rf "$staging" "$previous"' EXIT
 
-  mkdir -p "$(dirname "$APP_DIR")"
   rm -rf "$staging"
   mkdir -p "$staging"
   cp -R client/. "$staging/"

@@ -79,9 +79,23 @@ is rejected rather than silently dropped, which used to return 200 and change
 nothing.
 
 **The client has no DOM in tests.** Screen behaviour is verified by driving the
-real app in Chromium (`executablePath: "/opt/pw-browsers/chromium-*/chrome-linux/chrome"`),
-not by unit tests. When a test reads the *source* instead, say so in the test and
-record what the browser run actually measured.
+real app in a browser, not by unit tests. Let Playwright resolve its own
+browsers rather than hardcoding a path: they live wherever the environment put
+them — `~/.cache/ms-playwright/` on the server, `/opt/pw-browsers/` in a cloud
+sandbox — and a path from the other one silently finds nothing. When a test
+reads the *source* instead, say so in the test and record what the browser run
+actually measured.
+
+**Use WebKit for anything that has to hold on her phone.** Chromium is fine for
+layout and copy, but every device trap listed here was invisible in it: the
+`Range` request for audio, `height: 100%` short of the bottom, the safe-area
+inset eating a fixed height. WebKit at 394 × 859 with `isMobile` is the closest
+thing here to her iPhone.
+
+**Only a session on the server can deploy.** `/srv/kotoba` is on this machine,
+so a cloud session can merge but not release — and `ops/deploy.sh` used to
+create its own `/srv/kotoba/app` in the sandbox and report success. It now
+refuses instead. If work is merged and not live, that is why.
 
 **Deck data is never committed.** No `.apkg`, no audio, no SQLite file. See
 `.gitignore`; the import fetches ~110 MB and writes ~75 MB of audio.
