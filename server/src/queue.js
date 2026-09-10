@@ -102,7 +102,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?" : ""}
-      WHERE 1=1 ${filterClause({ deck, tag }, params)} ${extra}`;
+      WHERE c.deleted_at IS NULL ${filterClause({ deck, tag }, params)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
@@ -179,7 +179,9 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   // Join parameters and filter parameters are kept apart deliberately: mixing
   // them is how a query ends up reading a user id as a search term.
   const whereParams = [];
-  let where = "WHERE 1=1";
+  // A card she deleted leaves every list, but its row stays for the event log
+  // to point at (migration 004).
+  let where = "WHERE c.deleted_at IS NULL";
 
   if (q) {
     // Japanese has no word boundaries, so a substring match is right for the

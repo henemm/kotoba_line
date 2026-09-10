@@ -1,3 +1,4 @@
+import { MAX_TAGS, allTags, createCard, deleteCard, personalCards } from "../cards.js";
 import { MAX_SESSION_LENGTH, ONLY_MODES, browseCards, queueForUser, setStar } from "../queue.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
 
@@ -52,7 +53,7 @@ export default async function deckRoutes(app) {
         .prepare(
           `SELECT id, word, word_furigana, word_reading, word_meaning, word_audio,
                   sentence, sentence_furigana, sentence_meaning, sentence_audio,
-                  frequency_rank, deck, updated_at
+                  frequency_rank, deck, updated_at, deleted_at
              FROM cards
             WHERE updated_at > ?
             ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC`,
@@ -148,7 +149,9 @@ export default async function deckRoutes(app) {
           required: ["cardId", "starred"],
           additionalProperties: false,
           properties: {
-            cardId: { type: "integer", minimum: 1 },
+            // Not `minimum: 1`: a personal card's id is negative on purpose,
+            // so that Anki's note ids and hers can never collide (cards.js).
+            cardId: { type: "integer" },
             starred: { type: "boolean" },
           },
         },
@@ -159,6 +162,69 @@ export default async function deckRoutes(app) {
       const result = setStar(db, req.user.id, req.body.cardId, req.body.starred);
       if (!result.ok) return reply.code(404).send({ error: result.reason });
       return result;
+    },
+  );
+}
+
+/**
+ * Her own words (§8, design 27–30).
+ *
+ * Registered beside the deck because that is what they are — the same table,
+ * the same tags, the same scheduler. Only the way in is new.
+ */
+export async function personalDeckRoutes(app) {
+  const { db } = app;
+
+  app.get("/api/cards", { preHandler: app.requireUser }, async (req) => ({
+    cards: personalCards(db, req.user.id),
+    tags: allTags(db),
+  }));
+
+  app.post(
+    "/api/cards",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["word", "meaning"],
+          additionalProperties: false,
+          properties: {
+            word: { type: "string", minLength: 1, maxLength: 64 },
+            reading: { type: "string", maxLength: 64 },
+            meaning: { type: "string", minLength: 1, maxLength: 200 },
+            sentence: { type: "string", maxLength: 300 },
+            sentenceMeaning: { type: "string", maxLength: 300 },
+            tags: {
+              type: "array",
+              maxItems: MAX_TAGS,
+              items: { type: "string", minLength: 1, maxLength: 32 },
+            },
+          },
+        },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const card = createCard(db, req.body);
+      return reply.code(201).send({ card });
+    },
+  );
+
+  app.delete(
+    "/api/cards/:id",
+    {
+      schema: { params: { type: "object", properties: { id: { type: "integer" } } } },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const result = deleteCard(db, req.params.id);
+      if (!result.ok) {
+        // "not_yours" is a 403 rather than a 404: the card exists, it is simply
+        // not hers to delete, and pretending otherwise would be confusing when
+        // the row is visible two screens away.
+        return reply.code(result.reason === "not_found" ? 404 : 403).send({ error: result.reason });
+      }
+      return { ok: true };
     },
   );
 }

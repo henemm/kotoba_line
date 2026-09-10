@@ -91,6 +91,13 @@ export async function allCards() {
   return rows ?? [];
 }
 
+/** Cards she deleted; they arrive from `/api/deck` marked, not missing. */
+export async function dropCards(ids) {
+  return run("deck", "readwrite", (store) => {
+    for (const id of ids) store.delete(id);
+  });
+}
+
 export async function cardCount() {
   return (await run("deck", "readonly", (store) => store.count())) ?? 0;
 }

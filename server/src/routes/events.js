@@ -24,7 +24,9 @@ const eventsSchema = {
           additionalProperties: false,
           properties: {
             id: { type: "string", minLength: 8, maxLength: 64 },
-            card_id: { type: "integer", minimum: 1 },
+            // Not `minimum: 1`: her own cards have negative ids (cards.js),
+            // and a review of one is an ordinary review.
+            card_id: { type: "integer" },
             mode: { type: "string", enum: VALID_MODES },
             // 1 again, 2 hard, 3 good, 4 easy. Deliberately not coupled to the
             // mode: §6 says hard and easy are only *offered* in めくる, which
