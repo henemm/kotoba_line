@@ -46,7 +46,11 @@ sudo chown -R "$USER" /srv/kotoba
 
 **2. nginx.** Copy the `limit_req_zone` line from `ops/nginx/kotoba.conf` into
 the `http` block, and the `location` blocks into the TLS server block for the
-host. Then:
+host — **which host is a decision, not a lookup.** A server with several
+vhosts has several TLS server blocks and nothing in this repository says which
+one is hers; picking the wrong one puts the app on the wrong domain, and the
+app will still work, which is what makes it worth getting right first time.
+Then:
 
 ```sh
 sudo nginx -t && sudo systemctl reload nginx
@@ -68,6 +72,11 @@ docker compose -f ops/docker-compose.yml exec api node bin/adduser.js --handle m
 ```
 
 It prompts for the PIN twice, with echo off. Six digits minimum.
+
+**Type this step yourself.** `--pin 483920` exists for scripts, but a PIN
+passed as an argument is in the shell history and in the process list, and a
+PIN chosen by anything other than the two people who use it is not hers. The
+hidden prompt is the point of the step, not an obstacle to it.
 
 **5. The deck.** This is the long step — about 110 MB downloaded and 75 MB of
 audio written.
