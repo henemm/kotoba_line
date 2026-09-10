@@ -519,6 +519,9 @@ function renderApp() {
         : activeLabel(state.session.filters),
       limit: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
+      // #21: off by default, and read here rather than inside the session so
+      // the setting is in one place with the others.
+      pitchAccent: state.settings.pitchAccent,
       onExit: () => {
         state.session = undefined;
         renderApp();

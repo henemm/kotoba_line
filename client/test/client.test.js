@@ -13,6 +13,7 @@ import { offlineStatus } from "../src/outbox.js";
 import { unwrap } from "../src/store.js";
 import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
 import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
+import { accentLabel, accentsOf, contour } from "../src/pitch.js";
 import { signedOutCopy } from "../src/screens/signed-out.js";
 
 describe("query strings", () => {
@@ -630,5 +631,45 @@ describe("what the store hands back for a key that was never set", () => {
   it("passes a plain value through, which is what a write returns", () => {
     assert.equal(unwrap(undefined), undefined);
     assert.deepEqual(unwrap({ handle: "mira" }), { handle: "mira" });
+  });
+});
+
+describe("the pitch contour (#21)", () => {
+  const shape = (reading, accent) => {
+    const c = contour(reading, accent);
+    return c && c.moras.map((m, i) => (c.high[i] ? "‾" : "_")).join("") + (c.particleHigh ? "‾" : "_");
+  };
+
+  it("draws the three patterns, particle included", () => {
+    // The particle is the last character: it is the only thing that separates
+    // 花 [2] from 鼻 [0], both はな, both low-high.
+    assert.equal(shape("はな", 0), "_‾‾", "鼻 — stays up");
+    assert.equal(shape("はな", 2), "_‾_", "花 — falls after the word");
+    assert.equal(shape("あめ", 1), "‾__", "雨 — falls at once");
+    assert.equal(shape("せんせい", 3), "_‾‾__", "先生");
+    assert.equal(shape("わたし", 0), "_‾‾‾", "私");
+  });
+
+  it("keeps a small kana with the mora it rides on", () => {
+    // べんきょう is four moras, not five: べ-ん-きょ-う.
+    assert.equal(contour("べんきょう", 0).moras.length, 4);
+    assert.equal(shape("べんきょう", 0), "_‾‾‾‾");
+  });
+
+  it("has nothing to draw where the deck said nothing", () => {
+    // Her own cards carry no accent, and the deck draws none on ten
+    // single-mora words. An invented contour would be a guess shown as a fact.
+    assert.equal(contour("はな", undefined), undefined);
+    assert.equal(contour("はな", null), undefined);
+    assert.equal(contour("", 0), undefined);
+    assert.equal(contour("はな", 5), undefined, "an accent past the last mora is not a contour");
+  });
+
+  it("reports both accents where the deck gives two", () => {
+    assert.deepEqual(accentsOf({ word_pitch: "0,2" }), [0, 2]);
+    assert.equal(accentLabel({ word_pitch: "0,2" }), "[0 or 2]");
+    assert.equal(accentLabel({ word_pitch: "2" }), "[2]");
+    assert.equal(accentLabel({}), undefined);
+    assert.deepEqual(accentsOf({ word_pitch: null }), []);
   });
 });

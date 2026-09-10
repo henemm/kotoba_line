@@ -3,6 +3,7 @@ import { say, stop, unlock } from "../audio.js";
 import { loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
+import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { el, render } from "../ui/dom.js";
@@ -124,6 +125,7 @@ export function sessionScreen({
   chosenLabel,
   limit = 20,
   readAloud = true,
+  pitchAccent = false,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -473,10 +475,60 @@ export function sessionScreen({
    * Dropped when it carries nothing: a kana-only word like いい reads back as
    * itself, and repeating it says only that the app did not notice.
    */
-  function reading(furigana, word) {
+  function reading(furigana, word, card) {
     const kana = kanaReading(furigana);
     if (!kana || kana === word) return null;
-    return el("div.reading.reveal", { text: kana });
+    return pitchLine(card, kana) ?? el("div.reading.reveal", { text: kana });
+  }
+
+  /**
+   * The reading with its pitch contour drawn over it (#21).
+   *
+   * Replaces the plain reading rather than sitting beside it: they are the same
+   * information, and two copies of かたい one above the other is a puzzle, not
+   * a lesson.
+   *
+   * Off by default and behind a setting, because it is one more thing on a
+   * card for someone who has not asked for it — and unreadable if you do not
+   * know what the line means. On, it is the reading she was already reading.
+   *
+   * Returns nothing where there is no accent: her own cards have none, and the
+   * deck draws none on ten single-mora words. A contour invented for those
+   * would be a guess presented as a fact.
+   */
+  function pitchLine(card, kana) {
+    if (!pitchAccent) return null;
+    const accents = accentsOf(card);
+    if (accents.length === 0) return null;
+
+    // The contour drawn is the first accent; the label beside it names them
+    // all. 55 of 1,500 words have two, and drawing both would double the width
+    // of the line for 3.7% of cards — a dictionary prints "[2 or 0]" and draws
+    // the head entry, which is the same trade and a familiar one.
+    const shape = contour(kana, accents[0]);
+    if (!shape) return null;
+
+    return el(
+      "div.pitch.reveal",
+      {},
+      el(
+        "span.pitch-moras",
+        {},
+        shape.moras.map((mora, i) =>
+          el("span.mora", { class: shape.high[i] ? "high" : undefined, text: mora }),
+        ),
+        // The particle is the whole point on a word like 花: はな [0] and
+        // はな [2] are both low-high, and differ only in what follows. Drawn
+        // as a mora of its own so the difference is visible rather than
+        // asserted in a caption she would have to decode.
+        //
+        // ○ rather than a blank line, which is the notation these charts use
+        // and which reads as "whatever comes next"; an underscore reads as a
+        // field waiting to be filled in.
+        el("span.mora.particle", { class: shape.particleHigh ? "high" : undefined, text: "○" }),
+      ),
+      el("span.pitch-number", { text: accentLabel(card) }),
+    );
   }
 
   function speaker(
@@ -787,7 +839,7 @@ export function sessionScreen({
         // against.
         speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
       ),
-      reading(card.word_furigana, card.word),
+      reading(card.word_furigana, card.word, card),
       el("div.meaning.reveal", { text: card.word_meaning }),
       card.sentence ? revealedSentence(card) : null,
       card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,

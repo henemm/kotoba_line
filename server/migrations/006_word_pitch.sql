@@ -1,0 +1,16 @@
+-- Pitch accent, as a number (#21).
+--
+-- Kaishi carries it on 1,500 of its 1,501 notes, but as a drawing: katakana
+-- with the high moras overlined by CSS borders and the downstep marked by a
+-- border on a span's right edge. The import reduces that to what it means —
+-- the mora the pitch drops after, or 0 for a word that never drops — which is
+-- the standard notation and lets the client draw the contour itself rather
+-- than being handed someone else's markup.
+--
+-- TEXT rather than INTEGER because 55 words have two current accents: 硬い is
+-- both カタイ and カタ\イ. Stored as "0,2". Saying "either is right" is true
+-- and useful; picking one would quietly teach that the other is wrong.
+--
+-- NULL for the ten single-mora words the deck draws no line on at all, and
+-- for her own cards, which have no accent data and must not pretend to.
+ALTER TABLE cards ADD COLUMN word_pitch TEXT;

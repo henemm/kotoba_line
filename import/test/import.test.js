@@ -105,6 +105,10 @@ describe("field mapping", () => {
         "Sentence Meaning": "I am Ann.",
         "Sentence Audio": "[sound:JLPT_Tango_N5_0001.mp3]",
         Frequency: "19",
+        // The accent as the deck draws it: ワ low, タシ overlined to the end.
+        "Pitch Accent":
+          'ワ<span style="position:relative;"><span style="display:inline;">タシ</span>' +
+          '<span style="border-top-width:0.1em;border-top-style:solid;"></span></span>',
         Picture: '<img alt="x" src="y.webp">',
       }),
       fields,
@@ -117,6 +121,8 @@ describe("field mapping", () => {
       // The plain kana, kept apart from the furigana above: a search for わた
       // cannot match `私[わたし]`, where the brackets split it (migration 003).
       word_reading: "わたし",
+      // The overline runs to the end and never falls: heiban, 私 [0] (#21).
+      word_pitch: "0",
       word_meaning: "I (polite, general)",
       word_audio: "私_ワタシ━_0_NHK-2016.mp3",
       sentence: "<b>私</b>はアンです。",
