@@ -60,6 +60,26 @@ describe("the service worker precaches the whole shell (#53)", () => {
     );
   });
 
+  it("agrees with the version the client code carries", () => {
+    // Two constants, because they answer two questions the device gets wrong
+    // separately: sw.js names the cache (what is *downloaded*), and
+    // src/shell-version.js travels with the modules (what is *running*).
+    // `skipWaiting()` makes them disagree for real — v16 installed and claimed
+    // the page while the page kept running v15, and Settings said "v16"
+    // (#59). The row only means anything if a bump reaches both, and a bump
+    // that reaches one is exactly the mistake a test can catch and a person
+    // cannot.
+    const inSw = sw.match(/const VERSION = "([^"]+)"/)?.[1];
+    const inClient = readFileSync(join(clientRoot, "src/shell-version.js"), "utf8").match(
+      /SHELL_VERSION = "([^"]+)"/,
+    )?.[1];
+    assert.equal(
+      inClient,
+      inSw,
+      `sw.js is ${inSw} and src/shell-version.js is ${inClient} — bump both`,
+    );
+  });
+
   it("lists nothing that is not there, which would fail the install fetch", () => {
     const onDisk = new Set(walk(clientRoot).map((p) => relative(clientRoot, p)));
     const phantom = [...listed].filter(

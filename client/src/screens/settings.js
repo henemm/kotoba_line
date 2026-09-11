@@ -1,35 +1,41 @@
 import { ApiError, OfflineError, api } from "../api.js";
 import { cardCount } from "../store.js";
+import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
- * Which app shell this device is actually running.
+ * Which app shell this device is running, and which one it has ready.
  *
- * Not the same question as the server's version, and it is the one that gets
- * asked: an installed PWA is resumed rather than reloaded, so a deploy can be
- * live on the server for days while the phone still serves the old shell. The
- * row used to show `server/package.json`, which has read "1.0.0" since the
- * first commit and answers neither question.
+ * Not the same question as the server's version. An installed PWA is resumed
+ * rather than reloaded, so a deploy can be live for days while the phone still
+ * serves the old shell — and this row used to answer it with
+ * `server/package.json`, which has read "1.0.0" since the first commit.
  *
- * Read from the cache name rather than from a constant in this file, because a
- * constant would describe the code that is *running* the comparison. The cache
- * is named by the worker that installed it (`kotoba-shell-v15`, sw.js), so it
- * is the shell on the device — which is the thing a deploy changes and a force
- * quit picks up.
+ * The first attempt read the cache name alone. That was still the wrong
+ * question, and it gave a wrong answer within hours: the worker calls
+ * `skipWaiting()` and `clients.claim()`, so v16 installed, deleted v15's cache
+ * and took control while the open page went on running the v15 modules it had
+ * already loaded. Settings said "App v16" and the diagnostics were missing a
+ * field only v16 has. A row that says a fix has arrived when it has not is
+ * worse than no row.
+ *
+ * So: `SHELL_VERSION` is what is *running* — a constant compiled into this
+ * code, which is the only thing that travels with it — and the cache name is
+ * what is *ready*. They agree almost always, and when they do not, saying so
+ * is the entire value of the row: quit the app and reopen it.
  */
 async function shellVersion() {
-  if (typeof caches === "undefined") return undefined;
+  if (typeof caches === "undefined") return SHELL_VERSION;
   try {
-    const names = await caches.keys();
-    const shells = names.filter((name) => name.startsWith("kotoba-shell-"));
-    if (shells.length === 0) return undefined;
-    // More than one means an install is finished but the old worker still has
-    // the page; worth seeing rather than hiding, since that is exactly the
-    // state where quitting the app changes what she sees.
-    return shells.map((name) => name.replace("kotoba-shell-", "")).sort().join(" → ");
+    const ready = (await caches.keys())
+      .filter((name) => name.startsWith("kotoba-shell-"))
+      .map((name) => name.replace("kotoba-shell-", ""));
+    if (ready.length === 0) return `${SHELL_VERSION} · not installed`;
+    if (ready.length === 1 && ready[0] === SHELL_VERSION) return SHELL_VERSION;
+    return `${SHELL_VERSION} running · ${ready.sort().join(" ")} ready — quit and reopen`;
   } catch {
-    return undefined;
+    return SHELL_VERSION;
   }
 }
 
@@ -343,7 +349,7 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
       // routinely out of step: "App" is the shell this phone is running and
       // changes only after the app is quit and reopened; "Server" is what the
       // box is serving.
-      diagnostic("App", data.shell ?? "not installed"),
+      diagnostic("App", data.shell ?? SHELL_VERSION),
       diagnostic("Server", version),
       // The tab bar sometimes stops short of the bottom edge on her phone and
       // only a force quit clears it. It cannot be reproduced here — desktop
