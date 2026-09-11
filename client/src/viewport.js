@@ -71,12 +71,26 @@ export function watchViewport() {
  * What the phone believes right now, for the diagnostics block in Settings.
  *
  * This exists because the bug cannot be reproduced on the server: desktop
- * WebKit reports 859 for every one of these units at her geometry (measured
- * 2026-09-11), so the only way to learn which of them iOS gets wrong is to ask
- * the device while it is wrong. If this ever reads `dvh 798 · lvh 859`, the
- * unit is the culprit and the CSS can say so directly; if both are 798, the
- * remembered height below is the only thing holding the layout up.
+ * WebKit reports one height for every one of these units, so the only way to
+ * learn which of them iOS gets wrong was to ask the device while it was wrong.
+ * It answered on 2026-09-11 — `dvh 812 · lvh 874` on an 874px display — and
+ * `base.css` now asks for `lvh` in standalone because of it.
+ *
+ * The rows stay, because that answer created the next question. The rule is
+ * inside `@media (display-mode: standalone)`, and a media query that quietly
+ * fails to match looks exactly like a fix that did not work, so `mode` reports
+ * whether it matched. Once a reading shows `mode standalone` with the bar at
+ * the bottom, all of this can come out (#59).
  */
+/** Which of the manifest's display modes the browser thinks it is showing. */
+function displayMode() {
+  if (typeof matchMedia !== "function") return "?";
+  for (const mode of ["standalone", "fullscreen", "minimal-ui", "browser"]) {
+    if (matchMedia(`(display-mode: ${mode})`).matches) return mode;
+  }
+  return "?";
+}
+
 export function viewportReport() {
   const measure = (css) => {
     const probe = document.createElement("div");
@@ -103,16 +117,14 @@ export function viewportReport() {
   const held = tallest.get(window.innerWidth) ?? 0;
 
   return [
-    // `screen.height` is a property of the display, not of the viewport, so it
-    // takes no part in the staleness. Next to `held` it says which of two
-    // worlds this is: `screen 859 · held 859` means the remembered height is
-    // the right one and the fix is doing its job; `screen 859 · held 798`
-    // means the page never saw a correct reading at all, and the remembered
-    // height would have to be seeded from the screen instead.
+    // `screen.height` belongs to the display, not the viewport, so it takes no
+    // part in the staleness and is the yardstick the rest are read against.
+    // `mode` is whether the standalone rule in base.css matched at all — the
+    // one thing that separates "the fix is wrong" from "the fix never ran".
     [
       "Screen",
       `${window.innerWidth} × ${window.innerHeight} · screen ${window.screen?.height ?? 0}` +
-        ` · held ${held} · low ${lowest}`,
+        ` · held ${held} · low ${lowest} · mode ${displayMode()}`,
     ],
     ["Units", `dvh ${measure("100dvh")} · lvh ${measure("100lvh")} · svh ${measure("100svh")}`],
     [
