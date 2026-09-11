@@ -15,14 +15,11 @@ body {
      above the bottom edge. `dvh` is the viewport that is actually visible;
      the line above stays as the fallback where dvh is unsupported. */
   min-height: 100dvh;
-  /* And dvh itself is not always told the truth. In the installed app it
-     intermittently comes back as the layout viewport — the same 798px — after
-     a switch back into the app or a dismissed keyboard, and stays wrong until
-     the app is force quit (measured from a phone screenshot, 2026-09-11).
-     `--viewport-h` is the tallest viewport `src/viewport.js` has seen, so the
-     larger of the two is the last height that was demonstrably right. Stale
-     readings are always too small, and `max()` ignores those. The line above
-     stays as the floor for a first paint, before the script has run. */
+  /* And dvh itself is not always told the truth. `--viewport-h` is the tallest
+     viewport `src/viewport.js` has seen, so the larger of the two is the last
+     height that was demonstrably right: a wrong reading is always too *small*,
+     and max() ignores those. It is the net for a viewport that goes wrong part
+     way through; the rule below is for one that is wrong from the start. */
   min-height: max(100dvh, var(--viewport-h, 0px));
   background: var(--night);
   color: var(--ink);
@@ -48,6 +45,41 @@ body {
   min-height: max(100dvh, var(--viewport-h, 0px));
   position: relative;
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/**
+ * In the installed app, ask for the *large* viewport instead.
+ *
+ * Read off her phone on 2026-09-11, while the tab bar was floating:
+ *
+ *   Screen   402 × 812 · screen 874 · held 812 · low 812
+ *   Units    dvh 812 · lvh 874 · svh 812
+ *   Layout   page 812 · fixed 812 · app 812
+ *
+ * The display is 874 tall and `lvh` says so. `dvh` — the unit whose whole job
+ * is to track the viewport that is actually visible — says 812, and so does
+ * every other measure the page can reach: the layout viewport, a `position:
+ * fixed` bottom edge, `svh`. 62px, which is the gap. And `held 812 · low 812`
+ * says the page never once saw the right number, so remembering the tallest
+ * reading had nothing to remember: it came up wrong and stayed wrong.
+ *
+ * `lvh` is the viewport with any retractable browser chrome retracted. A
+ * standalone app has none to retract, so there it is simply the screen — which
+ * is why it is trustworthy here and why this is scoped to standalone rather
+ * than applied everywhere. In a browser tab `lvh` is deliberately *larger*
+ * than what you can see, and using it would hide the tab bar behind Safari's
+ * toolbar — trading this bug for its mirror image.
+ *
+ * `--display-mode` in the diagnostics reports whether this rule matched, since
+ * a media query that quietly fails to apply looks exactly like a fix that did
+ * not work.
+ */
+@media (display-mode: standalone) {
+  html,
+  body,
+  #app {
+    min-height: max(100dvh, 100lvh, var(--viewport-h, 0px));
+  }
 }
 
 button {
