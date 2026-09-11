@@ -459,6 +459,15 @@
   text-align: left;
   color: inherit;
 }
+/* #58: the prototype's tap feedback on the station dot, dropped somewhere
+   along the way — restored so the row it belongs to feels pressable and not
+   just decorative. */
+.practise .line-row .station {
+  transition: transform 0.12s ease;
+}
+.practise .line-row:active .station {
+  transform: scale(0.88);
+}
 .practise .line-row .copy {
   flex: 1;
   display: flex;
