@@ -3,6 +3,36 @@ import { cardCount } from "../store.js";
 import { viewportReport } from "../viewport.js";
 import { el, num, render } from "../ui/dom.js";
 
+/**
+ * Which app shell this device is actually running.
+ *
+ * Not the same question as the server's version, and it is the one that gets
+ * asked: an installed PWA is resumed rather than reloaded, so a deploy can be
+ * live on the server for days while the phone still serves the old shell. The
+ * row used to show `server/package.json`, which has read "1.0.0" since the
+ * first commit and answers neither question.
+ *
+ * Read from the cache name rather than from a constant in this file, because a
+ * constant would describe the code that is *running* the comparison. The cache
+ * is named by the worker that installed it (`kotoba-shell-v15`, sw.js), so it
+ * is the shell on the device — which is the thing a deploy changes and a force
+ * quit picks up.
+ */
+async function shellVersion() {
+  if (typeof caches === "undefined") return undefined;
+  try {
+    const names = await caches.keys();
+    const shells = names.filter((name) => name.startsWith("kotoba-shell-"));
+    if (shells.length === 0) return undefined;
+    // More than one means an install is finished but the old worker still has
+    // the page; worth seeing rather than hiding, since that is exactly the
+    // state where quitting the app changes what she sees.
+    return shells.map((name) => name.replace("kotoba-shell-", "")).sort().join(" → ");
+  } catch {
+    return undefined;
+  }
+}
+
 /** How many audio files the service worker is holding (§7). */
 async function countCachedAudio() {
   if (typeof caches === "undefined") return undefined;
@@ -62,8 +92,12 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
 
     // The device's own figures come from the browser, not the server, so they
     // arrive after the screen rather than holding it up.
-    const [cachedCards, cachedAudio] = await Promise.all([cardCount(), countCachedAudio()]);
-    data = { ...data, cachedCards, cachedAudio };
+    const [cachedCards, cachedAudio, shell] = await Promise.all([
+      cardCount(),
+      countCachedAudio(),
+      shellVersion(),
+    ]);
+    data = { ...data, cachedCards, cachedAudio, shell };
     draw();
   }
 
@@ -305,7 +339,12 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
       ),
       diagnostic("Cards on device", `${num(data.cachedCards ?? 0)} of ${num(deckTotal())}`),
       diagnostic("Audio cached", audioLine()),
-      diagnostic("Version", version),
+      // Two versions, because they answer different questions and they are
+      // routinely out of step: "App" is the shell this phone is running and
+      // changes only after the app is quit and reopened; "Server" is what the
+      // box is serving.
+      diagnostic("App", data.shell ?? "not installed"),
+      diagnostic("Server", version),
       // The tab bar sometimes stops short of the bottom edge on her phone and
       // only a force quit clears it. It cannot be reproduced here — desktop
       // WebKit reports the full height for every viewport unit — so these three
