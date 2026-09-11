@@ -510,6 +510,7 @@
    most repeated spacing on the screen — rather than hide or shrink content. */
 @media (max-width: 699px) {
   .practise .due-line {
+    padding-top: 18px;
     padding-bottom: 14px;
   }
   .practise .lines {
@@ -527,6 +528,9 @@
   }
   .practise .sound-note {
     padding-bottom: 18px;
+  }
+  .practise .add-word-row {
+    padding-top: 14px;
   }
 }
 
