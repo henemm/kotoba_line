@@ -427,15 +427,23 @@ export function sessionScreen({
 
     // #57: a card was reported to advance in 聞く with no tap at all, right as
     // the sentence finished — not reproducible from here, so the device
-    // records what actually triggered the grade instead. `trusted` is what
-    // tells a real touch from a script- or assistive-technology-dispatched
-    // one; `ms` is how long the card had been up. Settings' diagnostics shows
-    // the last one. Remove once #57 is settled.
+    // records what actually triggered the grade instead. `trusted` alone
+    // under-discriminates (VoiceOver and Switch Control activations are also
+    // trusted), so this also keeps where the event landed and its `detail`:
+    // a finger lands at varying coordinates with `detail: 1`; a synthetic or
+    // assistive-technology activation tends to report `0,0` or the element's
+    // centre, often with `detail: 0`. `active` is what still has focus, in
+    // case this is a focus-plus-activation path rather than a touch at all.
+    // Settings' diagnostics shows the last one. Remove once #57 is settled.
     setMeta("diag.lastGrade", {
       mode,
       rating,
       cardId: card.id,
       trusted: tapEvent?.isTrusted ?? null,
+      x: tapEvent?.clientX ?? null,
+      y: tapEvent?.clientY ?? null,
+      detail: tapEvent?.detail ?? null,
+      active: document.activeElement?.className || null,
       ms: revealedAt ? Date.now() - revealedAt : null,
       at: Math.floor(Date.now() / 1000),
     }).catch(() => {});

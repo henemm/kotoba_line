@@ -367,7 +367,11 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
   function lastGradeLine() {
     const g = data.lastGrade;
     if (!g) return "none yet";
-    return `${g.mode} · rating ${g.rating} · trusted ${g.trusted} · ${g.ms}ms · ${when(g.at)}`;
+    return (
+      `${g.mode} · rating ${g.rating} · trusted ${g.trusted} · ` +
+      `(${g.x},${g.y}) detail ${g.detail} · active ${g.active} · ` +
+      `${g.ms}ms · ${when(g.at)}`
+    );
   }
 
   const deckTotal = () => data.decks.reduce((n, d) => n + d.cards, 0);
