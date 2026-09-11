@@ -1,5 +1,6 @@
 import { ApiError, OfflineError, api } from "../api.js";
 import { cardCount } from "../store.js";
+import { viewportReport } from "../viewport.js";
 import { el, num, render } from "../ui/dom.js";
 
 /** How many audio files the service worker is holding (§7). */
@@ -305,6 +306,12 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
       diagnostic("Cards on device", `${num(data.cachedCards ?? 0)} of ${num(deckTotal())}`),
       diagnostic("Audio cached", audioLine()),
       diagnostic("Version", version),
+      // The tab bar sometimes stops short of the bottom edge on her phone and
+      // only a force quit clears it. It cannot be reproduced here — desktop
+      // WebKit reports the full height for every viewport unit — so these three
+      // rows are how the device reports its own numbers while it is wrong.
+      // See `src/viewport.js`; remove them once that question is settled.
+      ...viewportReport().map(([label, value]) => diagnostic(label, value)),
     );
   }
 
