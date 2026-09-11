@@ -60,7 +60,8 @@ export function practiseScreen({
     // #65: the resume card sits on top of an already-tight layout, and only
     // this state needs the extra room below tightened further — see the
     // media-query rule this class gates in screens.css.
-    root.classList.toggle("has-resume", Boolean(resumable && onResume));
+    const hasResume = Boolean(resumable && onResume);
+    root.classList.toggle("has-resume", hasResume);
 
     render(
       root,
@@ -68,7 +69,12 @@ export function practiseScreen({
       // four lines are its only answer — so it sits right above them, below
       // the chooser, not above it where the WHAT TO PRACTISE block used to
       // read as what the sentence was introducing.
-      ...(due > 0 ? [] : nothingDue(nextDue, stats)),
+      //
+      // #70: "nothing due" and "carry on where you left off" both answer
+      // "what do you do now", and stacked together they push the four lines
+      // themselves below the fold. Carry on is the more specific answer, so
+      // when it's on offer the generic suggestions step aside for it.
+      ...(due > 0 || hasResume ? [] : nothingDue(nextDue, stats)),
       resumeRow(),
       setLine(),
       ...(due > 0 ? normalDay(due) : []),
