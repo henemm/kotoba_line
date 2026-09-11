@@ -1,5 +1,5 @@
 import { ApiError, OfflineError, api } from "../api.js";
-import { cardCount } from "../store.js";
+import { cardCount, getMeta } from "../store.js";
 import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
 import { el, num, render } from "../ui/dom.js";
@@ -98,12 +98,13 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
 
     // The device's own figures come from the browser, not the server, so they
     // arrive after the screen rather than holding it up.
-    const [cachedCards, cachedAudio, shell] = await Promise.all([
+    const [cachedCards, cachedAudio, shell, lastGrade] = await Promise.all([
       cardCount(),
       countCachedAudio(),
       shellVersion(),
+      getMeta("diag.lastGrade"),
     ]);
-    data = { ...data, cachedCards, cachedAudio, shell };
+    data = { ...data, cachedCards, cachedAudio, shell, lastGrade };
     draw();
   }
 
@@ -357,7 +358,16 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
       // rows are how the device reports its own numbers while it is wrong.
       // See `src/viewport.js`; remove them once that question is settled.
       ...viewportReport().map(([label, value]) => diagnostic(label, value)),
+      // #57: the last card graded, and how — see the comment on `grade()` in
+      // session.js. Remove this row together with that one.
+      diagnostic("Last grade", lastGradeLine()),
     );
+  }
+
+  function lastGradeLine() {
+    const g = data.lastGrade;
+    if (!g) return "none yet";
+    return `${g.mode} · rating ${g.rating} · trusted ${g.trusted} · ${g.ms}ms · ${when(g.at)}`;
   }
 
   const deckTotal = () => data.decks.reduce((n, d) => n + d.cards, 0);
