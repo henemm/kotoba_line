@@ -9,25 +9,6 @@ import { forget, remember } from "../resume.js";
 import { setMeta } from "../store.js";
 import { el, render } from "../ui/dom.js";
 
-/** How long the answer stays on screen before the next card. */
-const PAUSE_CORRECT = 900;
-const PAUSE_WRONG = 2400;
-
-/**
- * How long the card waits after she asks to hear the sentence again (#32).
- *
- * 選ぶ and 聞く move on by themselves — the tapped option is the grade, and a
- * recognition drill that made her press Next every time would be a slower
- * drill. But a replay button on a card that leaves in 900ms is decoration: the
- * recording is longer than that, so she would hear the first syllable and then
- * the next card.
- *
- * So the tap postpones the departure. Long enough for a sentence at 0.85 rate
- * with a beat afterwards, and tapping again buys the same window over. Nothing
- * happens unless she asks — the drill keeps its pace for everyone who doesn't.
- */
-const PAUSE_REPLAY = 3600;
-
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
  * the self-graded modes give *again* and *good*; and *hard* and *easy* are
@@ -415,9 +396,10 @@ export function sessionScreen({
   /**
    * Record the answer and move on.
    *
-   * Every mode ends here, whatever it asked. The pause differs: after a
-   * multiple-choice answer she is reading the correction, so the screen holds;
-   * after a self-grade she has already read it, so it does not.
+   * Every mode ends here, whatever it asked. `pause` decides how: a number
+   * schedules the departure (めくる and 話す pass 0 — tapping a rating already
+   * is her decision to move on); `null` schedules nothing at all, because the
+   * caller is going to ask her first (#57 — see `chooseFrom`'s "Continue").
    */
   function grade(card, rating, pause = 0, tapEvent) {
     const ok = recalled(rating);
@@ -477,20 +459,7 @@ export function sessionScreen({
     // Redraw the strip so the marker just answered takes its colour.
     root.replaceChild(chrome(), root.firstChild);
     clearTimeout(advanceTimer);
-    advanceTimer = setTimeout(next, pause);
-  }
-
-  /**
-   * Hold the card she is looking at, because she asked to hear it again (#32).
-   *
-   * Only ever pushes the departure further out, never brings it closer: in
-   * めくる and 話す there is no timer running at all — she leaves by rating the
-   * card — and this must not invent one.
-   */
-  function holdForReplay() {
-    if (!advanceTimer) return;
-    clearTimeout(advanceTimer);
-    advanceTimer = setTimeout(next, PAUSE_REPLAY);
+    if (pause !== null) advanceTimer = setTimeout(next, pause);
   }
 
   /**
@@ -560,20 +529,12 @@ export function sessionScreen({
     );
   }
 
-  function speaker(
-    text,
-    file,
-    { rate, ghost = true, label = "Read aloud", big = false, small = false, holds = false } = {},
-  ) {
+  function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false, small = false } = {}) {
     return el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`, {
       type: "button",
       "aria-label": label,
       text: "♪",
-      onclick: () => {
-        say(text, file, rate ? { rate } : undefined);
-        // A replay on an answered card asks the drill to wait for it (#32).
-        if (holds) holdForReplay();
-      },
+      onclick: () => say(text, file, rate ? { rate } : undefined),
     });
   }
 
@@ -619,7 +580,20 @@ export function sessionScreen({
               area.append(revealedSentence(card));
             }
 
-            grade(card, correct ? RATING_GOOD : RATING_AGAIN, correct ? PAUSE_CORRECT : PAUSE_WRONG, e);
+            // #57: this used to schedule the next card on a fixed 900/2400ms
+            // pause, cutting the confirmation sentence off on nearly every
+            // correct answer (real recordings run 1.6-4.5s). Henning's call
+            // once that was diagnosed: she should decide when to move on,
+            // the same as めくる and 話す already work — so `grade` schedules
+            // nothing (`pause: null`) and a "Continue" button does instead.
+            grade(card, correct ? RATING_GOOD : RATING_AGAIN, null, e);
+            answers.append(
+              el(
+                "div.actions",
+                {},
+                el("button.btn.primary", { type: "button", text: "Continue", onclick: () => next() }),
+              ),
+            );
           },
         }),
       ),
@@ -990,10 +964,6 @@ export function sessionScreen({
         rate: 0.85,
         small: true,
         label: "Hear the sentence again",
-        // The two multiple-choice modes reveal this and then move on by
-        // themselves; holdForReplay is a no-op in the two that wait for a
-        // rating, so this is safe to ask for everywhere.
-        holds: true,
       }),
     );
   }
