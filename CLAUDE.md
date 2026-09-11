@@ -172,3 +172,17 @@ When the build deviates from `design/`, say so in the source and give the
 reason. Screens 41 and 42 draw a revealed card with no speaker; the app now adds
 one, because for a language app that call was wrong — and the comment says that,
 so the next reader does not "fix" it back.
+
+**Reproduce a bug against the real server with a real account before reading
+code, and validate the fix the same way before calling it done.** Not a
+throwaway server with hand-seeded data — that hid #57's actual cause for two
+rounds: synthetic audio (a generated 2.2s tone, faked sentences) produced a
+clean negative reproduction and led to wrong theories (a resting finger,
+VoiceOver, wireless-charger interference) before checking the real deck's
+audio files showed the fixed 900/2400ms pause was shorter than 97% of real
+recordings. A dedicated test account created directly on the server
+(`docker compose ... exec api node bin/adduser.js`, removed afterward from
+`users` **and** `sessions`, `review_events`, `card_stars`, `card_state`,
+`user_settings`) is the sanctioned way to do this without touching her own
+account or data. A throwaway server is fine for isolating a *mechanism* once
+the real shape of a bug is known — never as the first or last word on it.

@@ -6,7 +6,6 @@ import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
-import { setMeta } from "../store.js";
 import { el, render } from "../ui/dom.js";
 
 /**
@@ -133,10 +132,6 @@ export function sessionScreen({
   // left anonymous so a replay can push it back (#32) and so leaving the
   // session cancels it — an orphaned timer redraws a screen that is gone.
   let advanceTimer;
-  // When the card currently on screen became answerable — the moment a
-  // choice/rating appears, which in 聞く and めくる is also when the sentence
-  // starts playing. Diagnostic only: how long between that and a grade.
-  let revealedAt;
   // Card ids she has starred, for the ★ in the chrome (#35). Comes down with
   // the queue, because the cached deck is public and cannot carry it.
   let starred = new Set();
@@ -383,7 +378,6 @@ export function sessionScreen({
     const area = el("div.card-area");
     const answers = el("div.options");
 
-    revealedAt = Date.now();
     render(root, chrome(), area, answers);
     // §7: iOS produces no sound from speech synthesis until a user gesture has
     // happened, and every mode here may reach for it.
@@ -401,34 +395,11 @@ export function sessionScreen({
    * is her decision to move on); `null` schedules nothing at all, because the
    * caller is going to ask her first (#57 — see `chooseFrom`'s "Continue").
    */
-  function grade(card, rating, pause = 0, tapEvent) {
+  function grade(card, rating, pause = 0) {
     const ok = recalled(rating);
     results[index] = ok;
     if (ok) right += 1;
     else if (!missed.some((m) => m.id === card.id)) missed.push(card);
-
-    // #57: a card was reported to advance in 聞く with no tap at all, right as
-    // the sentence finished — not reproducible from here, so the device
-    // records what actually triggered the grade instead. `trusted` alone
-    // under-discriminates (VoiceOver and Switch Control activations are also
-    // trusted), so this also keeps where the event landed and its `detail`:
-    // a finger lands at varying coordinates with `detail: 1`; a synthetic or
-    // assistive-technology activation tends to report `0,0` or the element's
-    // centre, often with `detail: 0`. `active` is what still has focus, in
-    // case this is a focus-plus-activation path rather than a touch at all.
-    // Settings' diagnostics shows the last one. Remove once #57 is settled.
-    setMeta("diag.lastGrade", {
-      mode,
-      rating,
-      cardId: card.id,
-      trusted: tapEvent?.isTrusted ?? null,
-      x: tapEvent?.clientX ?? null,
-      y: tapEvent?.clientY ?? null,
-      detail: tapEvent?.detail ?? null,
-      active: document.activeElement?.className || null,
-      ms: revealedAt ? Date.now() - revealedAt : null,
-      at: Math.floor(Date.now() / 1000),
-    }).catch(() => {});
 
     const event = {
       id: uuid(),
@@ -586,7 +557,7 @@ export function sessionScreen({
             // once that was diagnosed: she should decide when to move on,
             // the same as めくる and 話す already work — so `grade` schedules
             // nothing (`pause: null`) and a "Continue" button does instead.
-            grade(card, correct ? RATING_GOOD : RATING_AGAIN, null, e);
+            grade(card, correct ? RATING_GOOD : RATING_AGAIN, null);
             answers.append(
               el(
                 "div.actions",
@@ -772,8 +743,8 @@ export function sessionScreen({
       el(
         "div.ratings.two",
         {},
-        ratingButton("Missed it", RATING_AGAIN, (e) => grade(card, RATING_AGAIN, undefined, e)),
-        ratingButton("Had it", RATING_GOOD, (e) => grade(card, RATING_GOOD, undefined, e)),
+        ratingButton("Missed it", RATING_AGAIN, () => grade(card, RATING_AGAIN)),
+        ratingButton("Had it", RATING_GOOD, () => grade(card, RATING_GOOD)),
       ),
     );
   }
@@ -830,9 +801,6 @@ export function sessionScreen({
   }
 
   function revealFlip(card, area, answers) {
-    // Reset here, not just in drawCard: this is when the sentence starts
-    // playing, and that is the moment a grade's timing is measured against.
-    revealedAt = Date.now();
     render(
       area,
       el(
@@ -862,10 +830,10 @@ export function sessionScreen({
       el(
         "div.ratings",
         {},
-        ratingButton("Again", RATING_AGAIN, (e) => grade(card, RATING_AGAIN, undefined, e), intervals[RATING_AGAIN]),
-        ratingButton("Hard", RATING_HARD, (e) => grade(card, RATING_HARD, undefined, e), intervals[RATING_HARD]),
-        ratingButton("Good", RATING_GOOD, (e) => grade(card, RATING_GOOD, undefined, e), intervals[RATING_GOOD]),
-        ratingButton("Easy", RATING_EASY, (e) => grade(card, RATING_EASY, undefined, e), intervals[RATING_EASY]),
+        ratingButton("Again", RATING_AGAIN, () => grade(card, RATING_AGAIN), intervals[RATING_AGAIN]),
+        ratingButton("Hard", RATING_HARD, () => grade(card, RATING_HARD), intervals[RATING_HARD]),
+        ratingButton("Good", RATING_GOOD, () => grade(card, RATING_GOOD), intervals[RATING_GOOD]),
+        ratingButton("Easy", RATING_EASY, () => grade(card, RATING_EASY), intervals[RATING_EASY]),
       ),
     );
   }
