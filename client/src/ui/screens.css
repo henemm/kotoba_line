@@ -504,6 +504,32 @@
   color: var(--ink-muted);
 }
 
+/* #56: on a phone with real safe-area insets the screen is 53px taller than
+   the space it has, and the fold lands mid-row on the last two lines. Tighten
+   the rhythm between the four mode lines and the length picker — the tallest,
+   most repeated spacing on the screen — rather than hide or shrink content. */
+@media (max-width: 699px) {
+  .practise .due-line {
+    padding-bottom: 14px;
+  }
+  .practise .lines {
+    padding: 6px var(--gutter) 14px;
+  }
+  .practise .lines .rail {
+    top: calc(6px + 10px + 15px);
+    bottom: calc(14px + 10px + 15px);
+  }
+  .practise .line-row {
+    padding: 10px 0;
+  }
+  .practise .length {
+    padding-bottom: 16px;
+  }
+  .practise .sound-note {
+    padding-bottom: 18px;
+  }
+}
+
 @media (min-width: 700px) {
   .practise .head h1 {
     font-size: 52px;
