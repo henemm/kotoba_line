@@ -140,6 +140,17 @@ GitHub (a store)  →  ~/kotoba_line (the clone)  →  /srv/kotoba (what runs)
                        git pull                      ops/deploy.sh
 ```
 
+The middle box is a *role*, not that path. Any checkout that is exactly
+`origin/main` fills it, a worktree included — `deploy.sh` verifies the checkout
+it runs in and refuses one that is behind. This matters because you work in
+`.claude/worktrees/<name>/` and are blocked from running git against the shared
+clone from every direction, the user's own `!` command included (measured: it
+leaves no reflog entry). So bring **your** worktree up to date — `git fetch -q
+origin && git merge --ff-only origin/main`, because `git pull` there pulls the
+feature branch — and deploy from it. Never ask for a manual pull of
+`~/kotoba_line`; it is not a step anyone can carry out from here, and its being
+stale changes nothing.
+
 `/srv/kotoba` holds her data and is never overwritten by a deploy. Migrations
 run themselves when the container starts. After deploying a client change, the
 installed app on the phone must be **quit and reopened**, not just backgrounded.

@@ -49,7 +49,18 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   behind=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
   ahead=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
   if [[ $behind -gt 0 ]]; then
-    warn "git pull" "$behind commit(s) behind origin/main — run: git pull"
+    # `git pull` is the right advice only where the branch tracks origin/main.
+    # In a worktree on a feature branch it pulls that branch instead and leaves
+    # the checkout exactly as behind as it was — and an agent session works in
+    # a worktree and cannot run git against the main clone to escape, so the
+    # advice has to be a command that works from where the reader is standing.
+    upstream=$(git rev-parse --abbrev-ref '@{upstream}' 2>/dev/null || echo "")
+    if [[ $upstream == origin/main ]]; then
+      catch_up="git pull"
+    else
+      catch_up="git merge --ff-only origin/main"
+    fi
+    warn "$catch_up" "$behind commit(s) behind origin/main — run: $catch_up"
   else
     ok "up to date with origin/main$([[ $ahead -gt 0 ]] && echo " (and $ahead ahead)")"
   fi
