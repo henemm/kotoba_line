@@ -59,9 +59,14 @@ export function practiseScreen({
 
     render(
       root,
-      ...(due > 0 ? normalDay(due) : nothingDue(nextDue, stats)),
+      // #58: on a normal day the due-line sentence is the instruction and the
+      // four lines are its only answer — so it sits right above them, below
+      // the chooser, not above it where the WHAT TO PRACTISE block used to
+      // read as what the sentence was introducing.
+      ...(due > 0 ? [] : nothingDue(nextDue, stats)),
       resumeRow(),
       setLine(),
+      ...(due > 0 ? normalDay(due) : []),
       linesBlock(),
       lengthPicker(),
       soundNote(),
