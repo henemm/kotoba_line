@@ -15,6 +15,7 @@ import { describe as describeResume, isResumable, tokyoDay } from "../src/resume
 import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
 import { accentLabel, accentsOf, contour } from "../src/pitch.js";
 import { signedOutCopy } from "../src/screens/signed-out.js";
+import { fold } from "../src/viewport.js";
 
 describe("query strings", () => {
   it("omits what is not set, so /api/queue gets no empty filters", () => {
@@ -671,5 +672,34 @@ describe("the pitch contour (#21)", () => {
     assert.equal(accentLabel({ word_pitch: "2" }), "[2]");
     assert.equal(accentLabel({}), undefined);
     assert.deepEqual(accentsOf({ word_pitch: null }), []);
+  });
+});
+
+describe("the remembered viewport height", () => {
+  // iOS hands back a viewport 61px shorter than the screen after a resume or a
+  // dismissed keyboard, and the tab bar floats above the bottom edge until the
+  // app is force quit. Stale readings are always *too small*, so keeping the
+  // tallest one seen makes the timing of the reading irrelevant — which is the
+  // whole reason this is a fold over readings and not a re-measure on resume.
+  it("keeps the tallest height and ignores a short reading", () => {
+    let seen = fold({}, { width: 394, height: 859 });
+    assert.equal(seen.tallest, 859);
+    seen = fold(seen, { width: 394, height: 798 });
+    assert.equal(seen.tallest, 859, "the short reading is the stale one");
+    assert.equal(seen.lowest, 798, "but it is still worth reporting");
+  });
+
+  it("recovers on its own if the first reading was the short one", () => {
+    let seen = fold({}, { width: 394, height: 798 });
+    assert.equal(seen.tallest, 798);
+    seen = fold(seen, { width: 394, height: 859 });
+    assert.equal(seen.tallest, 859);
+  });
+
+  it("ignores a measurement taken while the page is hidden", () => {
+    // A backgrounded page can report 0, and 0 is not a height.
+    const seen = fold({ tallest: 859, lowest: 859 }, { width: 0, height: 0 });
+    assert.equal(seen.tallest, 859);
+    assert.equal(seen.lowest, 859);
   });
 });

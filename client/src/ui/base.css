@@ -15,6 +15,15 @@ body {
      above the bottom edge. `dvh` is the viewport that is actually visible;
      the line above stays as the fallback where dvh is unsupported. */
   min-height: 100dvh;
+  /* And dvh itself is not always told the truth. In the installed app it
+     intermittently comes back as the layout viewport — the same 798px — after
+     a switch back into the app or a dismissed keyboard, and stays wrong until
+     the app is force quit (measured from a phone screenshot, 2026-09-11).
+     `--viewport-h` is the tallest viewport `src/viewport.js` has seen, so the
+     larger of the two is the last height that was demonstrably right. Stale
+     readings are always too small, and `max()` ignores those. The line above
+     stays as the floor for a first paint, before the script has run. */
+  min-height: max(100dvh, var(--viewport-h, 0px));
   background: var(--night);
   color: var(--ink);
   font-family: var(--ui);
@@ -35,6 +44,8 @@ body {
   flex-direction: column;
   min-height: 100%;
   min-height: 100dvh;
+  /* Same reasoning as on html/body above. */
+  min-height: max(100dvh, var(--viewport-h, 0px));
   position: relative;
   padding-top: env(safe-area-inset-top, 0px);
 }

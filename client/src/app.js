@@ -14,6 +14,7 @@ import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { forget, openSession } from "./resume.js";
+import { watchViewport } from "./viewport.js";
 import { el, render } from "./ui/dom.js";
 
 const TABS = [
@@ -23,6 +24,10 @@ const TABS = [
 ];
 
 const app = document.getElementById("app");
+
+// Before the first render: the shell's height depends on `--viewport-h`, and a
+// first paint at the wrong height is the bug this fixes.
+watchViewport();
 
 const state = {
   user: undefined,
