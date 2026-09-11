@@ -57,6 +57,11 @@ export function practiseScreen({
       due = 0;
     }
 
+    // #65: the resume card sits on top of an already-tight layout, and only
+    // this state needs the extra room below tightened further — see the
+    // media-query rule this class gates in screens.css.
+    root.classList.toggle("has-resume", Boolean(resumable && onResume));
+
     render(
       root,
       // #58: on a normal day the due-line sentence is the instruction and the
