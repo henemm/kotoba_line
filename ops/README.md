@@ -139,6 +139,25 @@ ops/deploy.sh --client     # the usual case: no container rebuild needed
 ops/deploy.sh              # when server/ changed
 ```
 
+**Any checkout that is exactly `origin/main` may deploy — a git worktree
+included.** `deploy.sh` checks the checkout *it runs in* and refuses one that is
+behind, so nothing depends on `~/kotoba_line` in particular, and nothing depends
+on it being fresh. This is not a loophole; it is the only route open to an agent
+session, which works in `.claude/worktrees/<name>/` and is blocked from running
+git against the shared clone at all — including through a command the user types
+by hand. A session that asks a human to `git pull ~/kotoba_line` is asking for
+something that will not work. From a worktree:
+
+```sh
+git fetch -q origin
+git merge --ff-only origin/main   # `git pull` pulls the feature branch here
+ops/status.sh
+ops/deploy.sh --client
+```
+
+`~/kotoba_line` drifting behind is then harmless, and it says so itself: the
+first `status.sh` run there reports how many commits it is behind.
+
 The client has no build step, so deploying it is a copy. Database migrations run
 by themselves when the container starts, so `ops/deploy.sh` is enough for those.
 
