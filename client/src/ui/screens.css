@@ -2392,10 +2392,17 @@
   gap: 10px;
 }
 .summary-foot.stacked .btn-primary {
+  /* #55: `.summary-foot button` sets `flex: 1` for the side-by-side Done/Again
+     row, where flex-basis: 0% is what splits the width evenly. In this
+     column layout that same flex-basis wins over the height below, so a tall
+     body (a long missed list, the chosen-set sentence) squeezed both buttons
+     down to ~14px instead of shrinking the body that has room to give. */
+  flex: none;
   width: 100%;
   height: 56px;
 }
 .summary-foot.stacked .summary-done {
+  flex: none;
   width: 100%;
   height: 52px;
 }
