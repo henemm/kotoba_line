@@ -541,6 +541,35 @@
   .practise .add-word-row {
     padding-top: 14px;
   }
+
+  /* #65: the resume card (51) sits on top of this already-tight layout, and
+     pushes "Find and star words" so that the fold — the tab bar's top edge —
+     lands *inside* that row rather than above or below it, on both of the
+     real heights this was measured against (852pt, Charlotte's own phone,
+     confirmed from a screenshot; 859pt, this project's usual test rig — see
+     reference_device_testing.md). The two only differ by 7px, but that is
+     enough: closing the gap by exactly the 33px needed to clear the row at
+     852pt reopens it 4px into the *next* row at 859pt, because the margin
+     between the two add-word-rows (4px) is narrower than the 7px the fold
+     itself moves. No single amount of tightening threads that needle, so
+     this widens the target instead of aiming more precisely at it: tighten
+     the resume card enough that "Find and star words" clears the fold at
+     the shorter height (with room to spare at the taller one), then widen
+     the row below it past the 7px the fold can move, so wherever the fold
+     falls near that boundary, it falls in the gap and never inside a row. */
+  .practise.has-resume .resume-row {
+    padding: 9px 16px;
+  }
+  .practise.has-resume .resume-block .rule {
+    padding-top: 6px;
+  }
+  .practise.has-resume .due-line {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+  .practise.has-resume .add-word-row + .add-word-row {
+    margin-top: 20px;
+  }
 }
 
 @media (min-width: 700px) {
