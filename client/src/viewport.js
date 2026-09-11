@@ -103,7 +103,17 @@ export function viewportReport() {
   const held = tallest.get(window.innerWidth) ?? 0;
 
   return [
-    ["Screen", `${window.innerWidth} × ${window.innerHeight} · held ${held} · low ${lowest}`],
+    // `screen.height` is a property of the display, not of the viewport, so it
+    // takes no part in the staleness. Next to `held` it says which of two
+    // worlds this is: `screen 859 · held 859` means the remembered height is
+    // the right one and the fix is doing its job; `screen 859 · held 798`
+    // means the page never saw a correct reading at all, and the remembered
+    // height would have to be seeded from the screen instead.
+    [
+      "Screen",
+      `${window.innerWidth} × ${window.innerHeight} · screen ${window.screen?.height ?? 0}` +
+        ` · held ${held} · low ${lowest}`,
+    ],
     ["Units", `dvh ${measure("100dvh")} · lvh ${measure("100lvh")} · svh ${measure("100svh")}`],
     [
       "Layout",
