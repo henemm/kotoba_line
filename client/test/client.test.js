@@ -4,7 +4,8 @@ import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
-import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, splitEmphasis } from "../src/screens/session.js";
+import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, sentenceKana, splitEmphasis } from "../src/screens/session.js";
+import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
@@ -454,6 +455,22 @@ describe("Anki's bracket readings", () => {
     assert.deepEqual(parseFurigana(""), []);
     assert.deepEqual(parseFurigana(null), []);
   });
+
+  it("stops the base at the kanji, even with no space to mark the boundary (#75)", () => {
+    // A real sentence from the deck: Anki's leading space is not reliable —
+    // the bolded occurrence of a word gets none, the plain one does, in the
+    // very same sentence. The base used to be "anything that is not a
+    // bracket or a space", which swallowed the whole clause before 人[ひと]
+    // as part of its "base" (silently discarded) whenever there was no space
+    // to stop it at.
+    assert.deepEqual(parseFurigana("あの人[ひと]はいい 人[ひと]です。"), [
+      { text: "あの" },
+      { base: "人", reading: "ひと" },
+      { text: "はいい" },
+      { base: "人", reading: "ひと" },
+      { text: "です。" },
+    ]);
+  });
 });
 
 describe("the interval under a rating button (41)", () => {
@@ -503,6 +520,57 @@ describe("the reading line under めくる's word (41)", () => {
   it("reads a kana-only word back as itself, so the line can be dropped", () => {
     assert.equal(kanaReading("いい"), "いい");
     assert.equal(kanaReading(null), undefined);
+  });
+});
+
+describe("sentence romaji's word-boundary guess (#75)", () => {
+  it("nothing without a sentence reading", () => {
+    assert.equal(sentenceKana(undefined), undefined);
+    assert.equal(sentenceKana(null), undefined);
+  });
+
+  it("puts a space at the furigana boundary next to a particle", () => {
+    assert.equal(
+      sentenceKana("<b>図書館[としょかん]</b>でにほんごのべんきょうをします。"),
+      "としょかん でにほんごのべんきょうをします。",
+    );
+    assert.equal(toRomaji(sentenceKana("<b>図書館[としょかん]</b>でにほんごをします。"))
+      , "toshokan denihongowoshimasu.");
+  });
+
+  it("never breaks a plain-kana word open, even one that contains a particle character", () => {
+    // でも and とても are common words whose *second* mora is a particle
+    // character. Nothing here should ever put a space inside them — only at
+    // a furigana boundary, which these sentences do have (時間[じかん]), right
+    // before the run that happens to start with でも/とても.
+    assert.equal(toRomaji(sentenceKana("<b>時間[じかん]</b>でもたりません。")), "jikan demotarimasen.");
+    assert.equal(
+      toRomaji(sentenceKana("<b>時間[じかん]</b>がとてもかかります。")),
+      "jikan gatotemokakarimasu.",
+    );
+    // No furigana at all: nothing to anchor a boundary on, so the whole
+    // thing stays one fused run rather than a guess that could be wrong.
+    assert.equal(toRomaji(sentenceKana("それでもいいです。")), "soredemoiidesu.");
+  });
+
+  it("never splits a multi-kanji word's own bracket groups, even when one ends in a particle character", () => {
+    // 友達 (friend) is split by Anki into two brackets, 友[とも] and 達[だち] —
+    // とも happens to end in も, one of the particle characters. The two
+    // brackets are still one word and must stay fused: "tomodachi", never
+    // "tomo dachi". No boundary is ever guessed between two annotated
+    // brackets in a row, on either side of them — 時間[じかん] and 友[とも]
+    // are two different words with nothing between them in the data, and
+    // that pair fuses too ("jikantomodachi"), same trade-off as a sentence
+    // with no furigana at all: left fused rather than guessed apart wrong.
+    assert.equal(
+      toRomaji(sentenceKana("1[いち] 時[じ] 間[かん] 友[とも] 達[だち]を 待[ま]ちました。")),
+      "ichijikantomodachi wo machimashita.",
+    );
+  });
+
+  it("strips the deck's <b> emphasis markup before reading the kana", () => {
+    assert.equal(sentenceKana("<b>私[わたし]</b>はアンです。").startsWith("わたし"), true);
+    assert.equal(sentenceKana("<b>私[わたし]</b>はアンです。").includes("<b>"), false);
   });
 });
 

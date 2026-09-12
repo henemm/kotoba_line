@@ -1,4 +1,6 @@
 import { OfflineError, api } from "../api.js";
+import { toRomaji } from "../romaji.js";
+import { kanaReading } from "./session.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -31,7 +33,22 @@ export function maturityBand(card) {
   return "mature";
 }
 
-export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics }) {
+/**
+ * The word in romaji under it (#75), same rule as the reveal screens: no
+ * reading is better than a guess.
+ *
+ * `word_reading` is the fallback between the Kaishi deck's `word_furigana`
+ * and the bare word: Browse lists both decks, and a personal card never has
+ * `word_furigana` (it is NULL by construction — `server/src/cards.js`), so
+ * skipping straight to `card.word` would try to read her own kanji as if it
+ * were kana and produce nothing for every card she typed a reading for.
+ */
+function romajiSpan(card) {
+  const text = toRomaji(kanaReading(card.word_furigana) ?? card.word_reading ?? card.word);
+  return text ? el("span.row-romaji", { text }) : null;
+}
+
+export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, romaji = false }) {
   const root = el("div.browse");
 
   const state = {
@@ -230,6 +247,7 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics })
             }
           : {},
         el("span.row-word.jp", { text: card.word }),
+        romaji ? romajiSpan(card) : null,
         el("span.row-gloss", { text: card.word_meaning }),
         // Her topics, on the row that carries them, so the list shows what she
         // has organised without her opening anything.

@@ -1118,8 +1118,16 @@
   gap: 12px;
 }
 /* `.speaker` is flex: none, so it is the text that gives way on a long line. */
-.sentence-line .sentence {
+.sentence-line .sentence-copy {
   flex: 0 1 auto;
+}
+.sentence-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sentence-romaji {
+  margin: 0;
 }
 
 .sentence {
@@ -2067,6 +2075,10 @@
   font-weight: 700;
 }
 /* "Long glosses stay on one line and ellipsis — a browse row is scanned." */
+.browse-list .row-romaji {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
 .browse-list .row-gloss {
   font-size: 13px;
   color: var(--ink-muted);
@@ -2671,6 +2683,10 @@
 .own-word {
   font-size: 21px;
   font-weight: 700;
+}
+.own-romaji {
+  font-size: 13px;
+  color: var(--ink-muted);
 }
 .own-gloss {
   font-size: 13px;

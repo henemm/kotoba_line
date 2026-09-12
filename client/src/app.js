@@ -240,7 +240,11 @@ function openAddWord(initialWord = "") {
 
 /** 30. */
 function openOwnDeck() {
-  state.overlay = ownDeckScreen({ onBack: closeOverlay, onAdd: () => openAddWord() });
+  state.overlay = ownDeckScreen({
+    onBack: closeOverlay,
+    onAdd: () => openAddWord(),
+    romaji: state.settings.romaji,
+  });
   renderApp();
 }
 
@@ -262,6 +266,7 @@ async function loadOwnDeck() {
 
 function openBrowse() {
   state.browse = browseScreen({
+    romaji: state.settings.romaji,
     onBack: closeBrowse,
     onPractiseStarred: () => {
       closeBrowse();
