@@ -63,3 +63,11 @@ test("kanji with no furigana resolves nothing, rather than a partial string", ()
   assert.equal(toRomaji("だい丈夫"), undefined);
 });
 
+test("sentence punctuation passes through unchanged", () => {
+  assert.equal(toRomaji("げんきですか。"), "genkidesuka.");
+});
+
+test("a space in the input is preserved — toRomaji has no word-boundary logic of its own", () => {
+  assert.equal(toRomaji("としょかん でにほんごの"), "toshokan denihongono");
+});
+

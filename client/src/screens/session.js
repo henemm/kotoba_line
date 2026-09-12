@@ -509,18 +509,38 @@ export function sessionScreen({
    * kana line is right — repeating いい as いい says nothing — but "ii" is not
    * the same string and is exactly the case where romaji earns its place. So
    * this reads `word_furigana` itself rather than reusing `reading()`'s
-   * output, and falls back to the word when it is already kana-only.
+   * output.
    *
-   * Off by default, and silent rather than a guess wherever a kana reading
-   * cannot be produced at all — a kanji word with no furigana, which today
-   * means only her own cards.
+   * `word_reading` — the plain kana she types into her own card's optional
+   * "Reading" field — is the second choice, before falling back to the word
+   * itself for the kana-only case. Missing this fallback meant "Show romaji"
+   * did nothing for every one of her own cards where she had *done exactly
+   * what the field asks for* (#75) — 食べる with reading たべる produced
+   * nothing, because `word_furigana` is always NULL on a personal card
+   * (`server/src/cards.js`) and the word itself is kanji, not kana.
+   *
+   * Off by default, and silent rather than a guess wherever no kana reading
+   * can be produced at all — a kanji word with neither field filled in.
    */
-  function romajiLine(furigana, word) {
+  function romajiLine(card) {
     if (!romaji) return null;
-    const kana = kanaReading(furigana) ?? word;
+    const kana = kanaReading(card.word_furigana) ?? card.word_reading ?? card.word;
     const text = toRomaji(kana);
     if (!text) return null;
     return el("div.romaji.reveal", { text });
+  }
+
+  /**
+   * The sentence in romaji, via the word-boundary guess in `sentenceKana`
+   * (#75). Silent wherever that guess still fails to convert — a sentence
+   * with a kanji `toRomaji` cannot resolve, most often — same rule as
+   * `romajiLine`: no reading is better than a wrong one.
+   */
+  function sentenceRomajiLine(card) {
+    if (!romaji) return null;
+    const text = toRomaji(sentenceKana(card.sentence_furigana));
+    if (!text) return null;
+    return el("p.romaji.sentence-romaji.reveal", { text });
   }
 
   function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false, small = false } = {}) {
@@ -753,7 +773,7 @@ export function sessionScreen({
             // out whether what she said was right (#32).
             speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
           ),
-      card.sentence ? null : romajiLine(card.word_furigana, card.word),
+      card.sentence ? null : romajiLine(card),
       el("p.sentence-en.reveal", {
         text: (card.sentence ? card.sentence_meaning : card.word_meaning) ?? "",
       }),
@@ -838,7 +858,7 @@ export function sessionScreen({
         speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
       ),
       reading(card.word_furigana, card.word, card),
-      romajiLine(card.word_furigana, card.word),
+      romajiLine(card),
       el("div.meaning.reveal", { text: card.word_meaning }),
       card.sentence ? revealedSentence(card) : null,
       card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
@@ -952,7 +972,7 @@ export function sessionScreen({
     return el(
       "div.sentence-line.reveal",
       {},
-      p,
+      el("div.sentence-copy", {}, p, sentenceRomajiLine(card)),
       speaker(card.sentence, card.sentence_audio, {
         rate: 0.85,
         small: true,
@@ -1041,15 +1061,29 @@ export function sessionScreen({
 
 /**
  * Kaishi stores readings the way Anki writes them: `事[こと]`, and for a
- * sentence ` 兄[あに]は 毎日[まいにち]テレビを 見[み]ます。` — a space before each
- * annotated run, which is a separator and not a space in the text.
+ * sentence ` 兄[あに]は 毎日[まいにち]テレビを 見[み]ます。` — usually a space before
+ * each annotated run, which is a separator and not a space in the text.
+ *
+ * "Usually" — the space is not reliable enough to parse by (#75). A real
+ * sentence from the deck reads `あの<b>人[ひと]</b>はいい 人[ひと]です。`: the
+ * second 人[ひと] gets Anki's leading space, the first does not. The base is
+ * matched as a run of kanji specifically, not "anything that is not a
+ * bracket or a space" as it briefly was — that version silently swallowed
+ * every kana character back to the previous annotation (or the start of the
+ * string) as part of the "base" whenever a run like the first 人[ひと] above
+ * had no space to stop it at, which is invisible on a single word
+ * (`word_furigana` starts right at the kanji) and total on a sentence: it
+ * cost the entire clause before the first annotated word.
  *
  * Shown raw it reads as brackets, which is how めくる looked before this. Split
  * into runs so it can be built as real `<ruby>` elements.
  */
 export function parseFurigana(text) {
   const parts = [];
-  const re = /([^\s[\]]+)\[([^\]]+)\]/g;
+  // Kanji, plus digits: a number can carry its own bracket reading too
+  // (`1[いち]`), and it is exactly as safe to bound the base at — a digit is
+  // never kana, so it can never wrongly swallow the clause before it.
+  const re = /([一-鿿々0-9０-９]+)\[([^\]]+)\]/g;
   let last = 0;
   let m;
   while ((m = re.exec(text ?? "")) !== null) {
@@ -1074,6 +1108,76 @@ export function kanaReading(text) {
   return parseFurigana(text)
     .map((p) => p.reading ?? p.text)
     .join("");
+}
+
+/** Single-mora particles common enough to guess a word boundary at (#75). */
+const SENTENCE_PARTICLES = new Set([..."はがをにでともへの"]);
+
+/**
+ * A sentence's reading, with a naive word-boundary guess: a space at each
+ * furigana-annotation boundary next to one of `SENTENCE_PARTICLES` — never
+ * inside a run of plain kana, and never at the word the deck itself
+ * annotates.
+ *
+ * Both restrictions matter. Real segmentation needs a dictionary, which
+ * this client does not have; guessing anywhere a target character appears
+ * would be worse than no guess at all, because とても and でも are common
+ * words whose *second* mora is one of these characters, and a boundary
+ * inserted inside them ("tote mo", "de mo") teaches a wrong word split.
+ * Confined to furigana boundaries — the edges of the one word per sentence
+ * the deck actually annotates — that specific mistake is impossible: such a
+ * word can end up fused to its neighbour, but it can never be broken in
+ * half.
+ *
+ * The second restriction is what stopped 図書館[としょかん] from getting a
+ * bogus space of its own: unrestricted, "starts with と" fires on と­しょ­かん
+ * itself, because と is also the quoting particle — a false positive on
+ * every word that happens to start with one of these nine sounds, found by
+ * actually running this against the deck rather than reasoning about it (a
+ * hand-traced example said no boundary would appear here; the real output
+ * disagreed). The fix is directional: a particle character only creates a
+ * boundary on the *plain-text* side of a furigana annotation, never as a
+ * property of the annotated word's own reading — and, for the same reason,
+ * never between two annotated parts in a row. A multi-kanji word is split
+ * into one bracket per kanji (友[とも] 達[だち] for 友達, "friend"), and とも
+ * ends in も — running the same directional check there split ともだち into
+ * "tomo dachi", an actual word broken in half, found the same way as the
+ * first bug: by running this against the deck, not by reasoning that the
+ * "never breaks a word open" guarantee would obviously still hold.
+ *
+ * One case neither restriction catches: 最も (もっとも, "most") is one word
+ * whose own reading ends in も, split into "motto" + "mo" once in the 1,500
+ * sentences measured — the same shape as とても, but on the *reading* side
+ * of a single annotated bracket rather than across two, so the "not between
+ * two annotated parts" rule does not see it. なにも/だれも/いちども split the
+ * same way and are left alone on purpose: those are transparently pronoun +
+ * も, not a fused adverb, so "nani mo" is a defensible reading rather than a
+ * wrong one. もっとも is the one confirmed case that is not — rare enough
+ * (once in 1,500 sentences), and dropping も from `SENTENCE_PARTICLES` would
+ * lose more correct splits elsewhere than this single word is worth fixing,
+ * that a hardcoded exception is not worth adding (see this project's own
+ * history with growing lists like that).
+ */
+export function sentenceKana(sentenceFurigana) {
+  if (!sentenceFurigana) return undefined;
+  const parts = parseFurigana(sentenceFurigana.replace(/<\/?b>/gi, ""));
+  let kana = "";
+  parts.forEach((part, i) => {
+    const text = part.reading ?? part.text;
+    if (i > 0) {
+      const prev = parts[i - 1];
+      const prevText = prev.reading ?? prev.text;
+      const prevAnnotated = prev.reading !== undefined;
+      const thisAnnotated = part.reading !== undefined;
+      const boundary =
+        prevAnnotated !== thisAnnotated &&
+        ((prevAnnotated && SENTENCE_PARTICLES.has(text[0])) ||
+          (thisAnnotated && SENTENCE_PARTICLES.has(prevText[prevText.length - 1])));
+      if (boundary) kana += " ";
+    }
+    kana += text;
+  });
+  return kana;
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */

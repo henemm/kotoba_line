@@ -55,10 +55,43 @@ const TABLE = {
   うぃ: "wi", うぇ: "we", うぉ: "wo",
 };
 
-/** Katakana → hiragana for the range this table covers. ー is left alone. */
+/**
+ * Not phonetic content, so carrying it through unchanged is not "inventing a
+ * reading" — a sentence keeps its punctuation and the spaces #75 inserts at
+ * word boundaries.
+ */
+const PUNCTUATION = {
+  "。": ".", "、": ", ", "！": "!", "？": "?",
+  "「": "“", "」": "”", "『": "“", "』": "”",
+  "・": " ", "〜": "~", "：": ": ",
+  // A dialogue card's own ASCII punctuation (`A:「…」`), carried through
+  // unchanged rather than converted to the Japanese-punctuation column above.
+  ":": ": ", ".": ".", ",": ", ",
+  " ": " ", "　": " ",
+};
+
+/**
+ * A dialogue card spells `A「…」B「…」`, and a number can carry its own
+ * bracket reading (`1[いち]`, handled by `parseFurigana`) or appear bare —
+ * `normalizeChar` above has already folded a full-width `３` to `3` by the
+ * time this runs. None of that is phonetic content either — same rule as
+ * `PUNCTUATION`, just too large a set (all of ASCII) to write out by hand.
+ */
+function isPlainAscii(mora) {
+  if (mora.length !== 1) return false;
+  const code = mora.codePointAt(0);
+  return (code >= 0x30 && code <= 0x39) || (code >= 0x41 && code <= 0x5a) || (code >= 0x61 && code <= 0x7a);
+}
+
+/**
+ * Katakana → hiragana for the range this table covers (ー is left alone),
+ * and full-width digits → ASCII digits, so `３` reads the same as `3`.
+ */
 function normalizeChar(ch) {
   const code = ch.codePointAt(0);
-  return code >= 0x30a1 && code <= 0x30f6 ? String.fromCodePoint(code - 0x60) : ch;
+  if (code >= 0x30a1 && code <= 0x30f6) return String.fromCodePoint(code - 0x60);
+  if (code >= 0xff10 && code <= 0xff19) return String.fromCodePoint(code - 0xff10 + 0x30);
+  return ch;
 }
 
 function normalizeMora(mora) {
@@ -69,7 +102,11 @@ export function toRomaji(kana) {
   if (!kana) return undefined;
 
   const parts = moras(kana).map(normalizeMora);
-  const chunks = parts.map((p) => (p === "っ" || p === "ー" || p === "ん" ? null : TABLE[p]));
+  const chunks = parts.map((p) =>
+    p === "っ" || p === "ー" || p === "ん"
+      ? null
+      : (TABLE[p] ?? PUNCTUATION[p] ?? (isPlainAscii(p) ? p : undefined)),
+  );
 
   // Any ordinary mora the table does not resolve fails the whole reading —
   // partial romaji (real syllables next to a bare kanji) would read as a

@@ -1,5 +1,6 @@
 import { OfflineError, api } from "../api.js";
 import { say, unlock } from "../audio.js";
+import { toRomaji } from "../romaji.js";
 import { maturityBand } from "./browse.js";
 import { el, num, render } from "../ui/dom.js";
 
@@ -273,7 +274,7 @@ export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }
  *
  * Maturity per row in words rather than a bar: five rows do not need a chart.
  */
-export function ownDeckScreen({ onBack, onAdd }) {
+export function ownDeckScreen({ onBack, onAdd, romaji = false }) {
   const root = el("div.own-deck");
   let cards;
   let problem;
@@ -334,6 +335,7 @@ export function ownDeckScreen({ onBack, onAdd }) {
         "span.own-copy",
         {},
         el("span.own-word.jp", { text: card.word }),
+        romaji ? romajiSpan(card) : null,
         el("span.own-gloss", { text: card.word_meaning }),
       ),
       el("span.own-band", { text: maturityWord(card) }),
@@ -350,3 +352,16 @@ export function ownDeckScreen({ onBack, onAdd }) {
  * copies of "twenty-one days" is two things to change and one to forget.
  */
 export const maturityWord = maturityBand;
+
+/**
+ * The word in romaji under it (#75).
+ *
+ * `word_reading` is already plain kana — she types it straight into the
+ * "Reading" field with no bracket notation to parse (contrast the Kaishi
+ * deck's `word_furigana` in browse.js) — so this reads it directly rather
+ * than going through `kanaReading`.
+ */
+function romajiSpan(card) {
+  const text = toRomaji(card.word_reading ?? card.word);
+  return text ? el("span.own-romaji", { text }) : null;
+}
