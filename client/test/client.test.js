@@ -10,6 +10,7 @@ import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { when } from "../src/screens/settings.js";
+import { byFrequencyThenId, matchesQuery } from "../src/screens/browse.js";
 import { offlineStatus } from "../src/outbox.js";
 import { unwrap } from "../src/store.js";
 import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
@@ -437,6 +438,61 @@ describe("which cards a mode can actually ask about", () => {
     assert.equal(playableIn("listen", noAudio, true).length, 1);
     // …and drops it on a device that cannot speak either.
     assert.equal(playableIn("listen", noAudio, false).length, 0);
+  });
+});
+
+describe("browsing the deck cached on the device (#22)", () => {
+  const card = (over = {}) => ({
+    id: 1,
+    word: "食べる",
+    word_reading: "たべる",
+    word_furigana: "食[た]べる",
+    word_meaning: "to eat, to consume",
+    frequency_rank: 100,
+    ...over,
+  });
+
+  it("matches nothing to an empty query — the same as no filter at all", () => {
+    assert.equal(matchesQuery(card(), ""), true);
+    assert.equal(matchesQuery(card(), undefined), true);
+  });
+
+  it("matches the word, its reading or its furigana as a plain substring", () => {
+    assert.equal(matchesQuery(card(), "べる"), true);
+    assert.equal(matchesQuery(card(), "たべ"), true);
+    assert.equal(matchesQuery(card(), "食[た]"), true);
+    assert.equal(matchesQuery(card(), "のむ"), false);
+  });
+
+  it("anchors the gloss match to a word start, so a substring is not enough", () => {
+    // Same case a plain LIKE '%eat%' would get wrong: "great" and "weather"
+    // both contain "eat" but neither one means it.
+    assert.equal(matchesQuery(card({ word_meaning: "great weather" }), "eat"), false);
+    assert.equal(matchesQuery(card(), "eat"), true);
+    // …but a word starting with the query still counts, same as the server.
+    assert.equal(matchesQuery(card({ word_meaning: "eating out" }), "eat"), true);
+  });
+
+  it("treats the gloss's punctuation as a word boundary too", () => {
+    assert.equal(matchesQuery(card({ word_meaning: "(to consume)" }), "consume"), true);
+  });
+
+  it("is case-insensitive on the gloss", () => {
+    assert.equal(matchesQuery(card(), "EAT"), true);
+  });
+
+  it("does not search romaji — the note under an empty result says so", () => {
+    assert.equal(matchesQuery(card(), "taberu"), false);
+  });
+
+  it("orders like the server does: ranked cards first, unranked last, ties by id", () => {
+    const ranked5 = card({ id: 5, frequency_rank: 5 });
+    const ranked2 = card({ id: 2, frequency_rank: 2 });
+    const unranked1 = card({ id: 1, frequency_rank: null });
+    const unranked9 = card({ id: 9, frequency_rank: null });
+    const tie = card({ id: 3, frequency_rank: 5 });
+    const sorted = [unranked9, ranked5, unranked1, tie, ranked2].sort(byFrequencyThenId);
+    assert.deepEqual(sorted.map((c) => c.id), [2, 3, 5, 1, 9]);
   });
 });
 

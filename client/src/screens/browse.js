@@ -1,4 +1,5 @@
 import { OfflineError, api } from "../api.js";
+import { loadDeck } from "../deck.js";
 import { toRomaji } from "../romaji.js";
 import { kanaReading } from "./session.js";
 import { el, num, render } from "../ui/dom.js";
@@ -34,6 +35,36 @@ export function maturityBand(card) {
 }
 
 /**
+ * Whether a card matches a Browse search offline (#22).
+ *
+ * Mirrors the `q` half of `browseCards()`'s SQL in `server/src/queue.js` —
+ * the only filter this screen ever sends alongside it is `starred`, which has
+ * no offline answer at all (see `fetchOfflinePage`), so there is no `deck` or
+ * `tag` case to mirror here. A plain substring match against the word and its
+ * readings, and a word-start match against the gloss (padded, lowercased, its
+ * punctuation flattened to spaces) so searching "eat" does not also turn up
+ * "great" or "weather".
+ */
+export function matchesQuery(card, q) {
+  if (!q) return true;
+  const needle = q.toLowerCase();
+  if (card.word?.toLowerCase().includes(needle)) return true;
+  if (card.word_reading?.toLowerCase().includes(needle)) return true;
+  if (card.word_furigana?.toLowerCase().includes(needle)) return true;
+  const gloss = ` ${(card.word_meaning ?? "").toLowerCase().replace(/[,;()[\]/.!?'"-]/g, " ")} `;
+  return gloss.includes(` ${needle}`);
+}
+
+/** The server's ORDER BY, so an offline list reads the same as an online one. */
+export function byFrequencyThenId(a, b) {
+  const aNull = a.frequency_rank == null;
+  const bNull = b.frequency_rank == null;
+  if (aNull !== bNull) return aNull ? 1 : -1;
+  if (!aNull && a.frequency_rank !== b.frequency_rank) return a.frequency_rank - b.frequency_rank;
+  return a.id - b.id;
+}
+
+/**
  * The word in romaji under it (#75), same rule as the reveal screens: no
  * reading is better than a guess.
  *
@@ -61,6 +92,9 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
     loading: false,
     error: undefined,
     starred: undefined, // how many cards are starred overall
+    // #22: the deck cache has no star or maturity data, so an offline result
+    // has to draw its rows differently — never as a guessed ☆.
+    offline: false,
   };
 
   const list = el("div.browse-list", { onscroll: maybePage });
@@ -136,6 +170,10 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
         // screen serves as the starred list — no second view to build."
         el("button.chip", {
           type: "button",
+          // #22: offline, the deck cache cannot answer "which of these are
+          // starred" — so turning the filter on is refused before the tap
+          // rather than after, but turning it back off always works.
+          disabled: state.offline && !state.starredOnly,
           "aria-pressed": String(state.starredOnly),
           text: `★ ${state.starred === undefined ? "starred" : `${num(state.starred)} starred`}`,
           onclick: () => {
@@ -198,39 +236,53 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
   }
 
   function row(card) {
+    // #22: an offline row comes from the deck cache, which carries no star or
+    // maturity data — both live in server-side tables the cache never syncs.
+    // Guessing ☆ would tell her a starred card is not starred; saying nothing
+    // is the honest answer, same as `romajiLine`'s rule that no reading beats
+    // a wrong one.
+    const hasLiveData = !state.offline;
+
     const star = el("button.star", {
       type: "button",
-      "aria-label": card.starred ? `Unstar ${card.word}` : `Star ${card.word}`,
+      disabled: !hasLiveData,
+      "aria-label": hasLiveData
+        ? card.starred
+          ? `Unstar ${card.word}`
+          : `Star ${card.word}`
+        : "Stars need a connection",
       "aria-pressed": String(Boolean(card.starred)),
-      text: card.starred ? "★" : "☆",
+      text: hasLiveData && card.starred ? "★" : "☆",
     });
 
     // 32: "one tap on the star writes immediately and the footer count changes
     // under her hand — that is the whole confirmation."
-    star.addEventListener("click", async () => {
-      const wanted = !card.starred;
-      card.starred = wanted;
-      state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
-      star.textContent = wanted ? "★" : "☆";
-      star.setAttribute("aria-pressed", String(wanted));
-      drawChrome();
-
-      try {
-        await api.star(card.id, wanted);
-      } catch {
-        // Put it back rather than leave a star that is not on the server.
-        card.starred = !wanted;
-        state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? -1 : 1));
-        star.textContent = card.starred ? "★" : "☆";
-        star.setAttribute("aria-pressed", String(card.starred));
+    if (hasLiveData) {
+      star.addEventListener("click", async () => {
+        const wanted = !card.starred;
+        card.starred = wanted;
+        state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
+        star.textContent = wanted ? "★" : "☆";
+        star.setAttribute("aria-pressed", String(wanted));
         drawChrome();
-      }
-    });
+
+        try {
+          await api.star(card.id, wanted);
+        } catch {
+          // Put it back rather than leave a star that is not on the server.
+          card.starred = !wanted;
+          state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? -1 : 1));
+          star.textContent = card.starred ? "★" : "☆";
+          star.setAttribute("aria-pressed", String(card.starred));
+          drawChrome();
+        }
+      });
+    }
 
     return el(
       "div.row",
       {},
-      el("span.band", { class: maturityBand(card) }),
+      el("span.band", { class: hasLiveData ? maturityBand(card) : undefined }),
       // #35: the word and its gloss open her topics for this card. The star is
       // a sibling, not inside — one tap must not mean two things, and the star
       // is the one gesture on this screen that has to stay a single tap.
@@ -314,8 +366,11 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
     try {
       const { total } = await api.browse({ starred: true, pageSize: 1 });
       state.starred = total;
-    } catch {
-      state.starred = 0;
+    } catch (err) {
+      // Offline: the deck cache carries no star data, so this cannot be
+      // answered — leaving it `undefined` reads as "★ starred" with no count,
+      // which is honest. Reporting zero would be a guess, and probably wrong.
+      if (!(err instanceof OfflineError)) state.starred = 0;
     }
     drawChrome();
     drawList();
@@ -342,15 +397,52 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
       state.cards = page === 0 ? answer.cards : [...state.cards, ...answer.cards];
       state.total = answer.total;
       state.more = state.cards.length < answer.total;
+      state.offline = false;
     } catch (err) {
-      state.error =
-        err instanceof OfflineError
-          ? "Browse needs a connection. Practice does not."
-          : "Could not load the deck.";
+      if (err instanceof OfflineError) await fetchOfflinePage(page);
+      else state.error = "Could not load the deck.";
     }
     state.loading = false;
     drawChrome();
     drawList();
+  }
+
+  /**
+   * #22: search over the deck already cached on the device (the same one
+   * practice runs from offline), since design 32 always meant for search to
+   * work this way.
+   *
+   * Starring stays out of scope here on purpose (see the issue): the cache
+   * has no per-card star state, so honouring "★ starred" offline would mean
+   * either a stale answer or an empty list that reads as "nothing is
+   * starred" — both worse than saying plainly that this one filter needs a
+   * connection.
+   */
+  async function fetchOfflinePage(page) {
+    state.offline = true;
+    if (state.starredOnly) {
+      state.cards = [];
+      state.total = 0;
+      state.more = false;
+      state.error = "Stars need a connection. Search does not.";
+      return;
+    }
+    const deck = await loadDeck().catch(() => new Map());
+    if (deck.size === 0) {
+      // Offline on a device that has never synced a deck — search has
+      // nothing to search. Distinct from "nothing matches", which means the
+      // deck is there and the query just found nothing in it.
+      state.cards = [];
+      state.total = 0;
+      state.more = false;
+      state.error = "Offline, and nothing has been cached to browse yet.";
+      return;
+    }
+    const matches = [...deck.values()].filter((c) => matchesQuery(c, state.q)).sort(byFrequencyThenId);
+    state.total = matches.length;
+    state.cards = matches.slice(0, (page + 1) * PAGE_SIZE);
+    state.more = state.cards.length < matches.length;
+    state.error = undefined;
   }
 
   /** 32: "an unfiltered browse never materialises the whole deck." */
