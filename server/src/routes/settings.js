@@ -23,6 +23,7 @@ const patchSchema = {
       sessionLength: { type: "integer", enum: SESSION_LENGTHS },
       readAloud: { type: "boolean" },
       pitchAccent: { type: "boolean" },
+      romaji: { type: "boolean" },
     },
   },
 };

@@ -292,6 +292,11 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
           write({ pitchAccent: on }),
         ),
       ),
+      row(
+        "Show romaji",
+        "The word written in latin letters under the kana, for reading it back without a dictionary.",
+        toggle(data.settings.romaji, "Show romaji", (on) => write({ romaji: on })),
+      ),
     );
   }
 
