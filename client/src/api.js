@@ -29,6 +29,18 @@ export class OfflineError extends Error {
 }
 
 /**
+ * A dead connection fails `fetch()` fast; a bad one does not. On a weak
+ * signal the request neither succeeds nor is refused — it stalls — and
+ * without a bound `await api.me()` at boot (§ app.js) waits on it forever,
+ * leaving the screen the app has not painted anything onto yet: black,
+ * because that is `--night`. The device already has an answer for this case
+ * (the remembered signed-in user, a cached deck), it just never reaches it.
+ * Ten seconds is long enough for a slow reply and short enough that "the app
+ * did not open" does not sit there for minutes before it does.
+ */
+export const REQUEST_TIMEOUT_MS = 10000;
+
+/**
  * The server saying the cookie is gone (design 52) rather than saying a PIN is
  * wrong. Both are 401 and only the body separates them: `unauthenticated` comes
  * from the session guard, `invalid_credentials` from the login route.
@@ -50,17 +62,23 @@ export function onSessionExpired(fn) {
 }
 
 async function request(path, { method = "GET", body, signal } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  signal?.addEventListener("abort", () => controller.abort(), { once: true });
+
   let res;
   try {
     res = await fetch(`${API}${path}`, {
       method,
-      signal,
+      signal: controller.signal,
       credentials: "same-origin",
       headers: body ? { "content-type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new OfflineError();
+  } finally {
+    clearTimeout(timer);
   }
 
   const text = await res.text();

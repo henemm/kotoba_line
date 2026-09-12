@@ -17,4 +17,4 @@
  * Kept in step with `sw.js` by a test, not by discipline — see
  * `client/test/shell-files.test.js`.
  */
-export const SHELL_VERSION = "v25";
+export const SHELL_VERSION = "v26";
