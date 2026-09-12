@@ -131,8 +131,14 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
     return el("div.settings-head", { text: "Settings" });
   }
 
+  /**
+   * The screen failed to load — same treatment as Stats and Browse: told
+   * apart in what it says, not in how alarming it looks. `.settings-problem`'s
+   * red stays for a control she just touched and that did not take (`write`,
+   * `signOut`); a screen that has not loaded yet is not a mistake she made.
+   */
   function problem(err) {
-    return el("p.settings-problem", {
+    return el("p.settings-offline", {
       text:
         err instanceof OfflineError
           ? "Settings need a connection. Practice does not."
