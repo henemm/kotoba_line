@@ -24,6 +24,7 @@ describe("the settings row", () => {
       readAloud: true,
       pitchAccent: false,
       romaji: false,
+      speakSource: "sentence",
     });
     db.close();
   });
@@ -53,6 +54,13 @@ describe("the settings row", () => {
     const db = openDatabase(":memory:");
     const user = await seedUser(db);
     assert.throws(() => updateSettings(db, user.id, { newPerDay: 0 }), /CHECK/i);
+    db.close();
+  });
+
+  it("refuses a speak source outside the three at the schema, not just the route", async () => {
+    const db = openDatabase(":memory:");
+    const user = await seedUser(db);
+    assert.throws(() => updateSettings(db, user.id, { speakSource: "sentences-only-please" }), /CHECK/i);
     db.close();
   });
 });
@@ -92,6 +100,7 @@ describe("GET /api/settings", () => {
       readAloud: true,
       pitchAccent: false,
       romaji: false,
+      speakSource: "sentence",
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -136,6 +145,7 @@ describe("PATCH /api/settings", () => {
       readAloud: false,
       pitchAccent: false,
       romaji: false,
+      speakSource: "sentence",
     });
     await app.close();
   });
@@ -156,6 +166,7 @@ describe("PATCH /api/settings", () => {
       readAloud: true,
       pitchAccent: true,
       romaji: false,
+      speakSource: "sentence",
     });
     await app.close();
   });
@@ -200,6 +211,33 @@ describe("PATCH /api/settings", () => {
     });
     assert.equal(res.statusCode, 200);
     assert.equal(res.json().settings.romaji, true);
+    await app.close();
+  });
+
+  it("writes and reads back what 話す draws its prompt from", async () => {
+    const { app, cookie } = await signedIn();
+    for (const speakSource of ["word", "sentence", "random"]) {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/settings",
+        headers: { cookie },
+        payload: { speakSource },
+      });
+      assert.equal(res.statusCode, 200, speakSource);
+      assert.equal(res.json().settings.speakSource, speakSource);
+    }
+    await app.close();
+  });
+
+  it("refuses a speak source outside the three the screen offers", async () => {
+    const { app, cookie } = await signedIn();
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      headers: { cookie },
+      payload: { speakSource: "sentences-only-please" },
+    });
+    assert.equal(res.statusCode, 400);
     await app.close();
   });
 

@@ -40,13 +40,17 @@ const COLUMNS = {
   readAloud: "read_aloud",
   pitchAccent: "pitch_accent",
   romaji: "romaji",
+  speakSource: "speak_source",
 };
+
+/** The three 話す can draw a prompt from (#77). Same list as the CHECK in the schema. */
+export const SPEAK_SOURCES = ["word", "sentence", "random"];
 
 /** The row as the client sees it: camelCase, and 0/1 as booleans. */
 export function settingsForUser(db, userId) {
   const row = db
     .prepare(
-      `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji
+      `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji, speak_source
          FROM user_settings WHERE user_id = ?`,
     )
     .get(userId);
@@ -61,6 +65,7 @@ export function settingsForUser(db, userId) {
     readAloud: row.read_aloud === 1,
     pitchAccent: row.pitch_accent === 1,
     romaji: row.romaji === 1,
+    speakSource: row.speak_source,
   };
 }
 

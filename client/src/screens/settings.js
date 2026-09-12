@@ -79,6 +79,13 @@ const SESSION_LENGTHS = [
   { value: 60, label: "All" },
 ];
 
+/** What 話す ("Say it aloud") can draw its prompt from (#77). */
+const SPEAK_SOURCES = [
+  { value: "word", label: "Word" },
+  { value: "sentence", label: "Sentence" },
+  { value: "random", label: "Random" },
+];
+
 export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
   const root = el("div.settings");
   render(root, el("div.loading", { text: "…" }));
@@ -114,6 +121,7 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
       dailyLoad(),
       deckGroup(),
       sound(),
+      practice(),
       account(),
       diagnostics(),
     );
@@ -296,6 +304,41 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
         "Show romaji",
         "The word written in latin letters under the kana, for reading it back without a dictionary.",
         toggle(data.settings.romaji, "Show romaji", (on) => write({ romaji: on })),
+      ),
+    );
+  }
+
+  // ── Practice ────────────────────────────────────────────────────
+
+  /**
+   * What 話す ("Say it aloud") asks her to produce (#77).
+   *
+   * "Sentence" is what the mode always did — Henning found the word-only path
+   * effectively dead, since almost every card carries a sentence and the mode
+   * preferred it whenever one existed. This makes the choice a setting instead
+   * of an accident of the deck's content, without changing anyone's practice
+   * until they touch it: the default stays "Sentence".
+   */
+  function practice() {
+    const { speakSource } = data.settings;
+    return group(
+      "Practice",
+      el(
+        "div.field",
+        {},
+        el("span.field-label", { text: "Say it aloud asks about" }),
+        el(
+          "div.choice",
+          {},
+          SPEAK_SOURCES.map(({ value, label }) =>
+            el("button", {
+              type: "button",
+              text: label,
+              "aria-pressed": String(value === speakSource),
+              onclick: () => value !== speakSource && write({ speakSource: value }),
+            }),
+          ),
+        ),
       ),
     );
   }
