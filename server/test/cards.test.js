@@ -252,7 +252,7 @@ describe("the API", () => {
       method: "POST",
       url: "/api/stars",
       headers: { cookie },
-      payload: { cardId: card.id, starred: true },
+      payload: { cardId: card.id, starred: true, changedAt: Math.floor(Date.now() / 1000) },
     });
     assert.equal(res.statusCode, 200);
 

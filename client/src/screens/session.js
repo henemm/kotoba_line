@@ -7,6 +7,7 @@ import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
+import { setStar } from "../stars.js";
 import { el, render } from "../ui/dom.js";
 
 /**
@@ -297,20 +298,17 @@ export function sessionScreen({
       text: on ? "★" : "☆",
     });
 
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       const wanted = !starred.has(card.id);
       // 32's rule, the same here: the tap writes and the mark changes under
       // her hand — that is the whole confirmation.
       paint(wanted);
-      try {
-        await api.star(card.id, wanted);
-      } catch {
-        // Put it back rather than leave a star the server does not have.
-        // Offline this is what happens, and it is the honest outcome: the
-        // outbox carries answers, not stars, and a star that silently failed
-        // would be worse than one that visibly did not take.
-        paint(!wanted);
-      }
+      // #22: the current card's starred state came down with this session's
+      // own queue, so — unlike Browse's search, which has no reliable star
+      // data to show for an arbitrary card — this tap knows what it is
+      // toggling. `setStar` queues it durably and delivers it when it can;
+      // offline is not a failure to undo, it is the queue doing its job.
+      setStar(card.id, wanted);
     });
 
     function paint(on) {

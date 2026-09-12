@@ -326,6 +326,40 @@ describe("stars (§5a)", () => {
     assert.deepEqual(setStar(db, user.id, 9999, true), { ok: false, reason: "unknown_card" });
     await app.close();
   });
+
+  describe("as a last-write-wins register (#22)", () => {
+    it("ignores a write that is older than what is already stored", async () => {
+      // Two devices, one offline for a while: the star that reaches the
+      // server first is not necessarily the one that happened first, and the
+      // one that happened first must not lose just because it arrived second.
+      const { app, db, user } = await fixture();
+      setStar(db, user.id, 5, true, 200);
+      const result = setStar(db, user.id, 5, false, 100); // decided earlier, arrives later
+      assert.equal(result.starred, true, "reports what is actually stored, not what was requested");
+      assert.equal(browseCards(db, user.id, { starred: true }).total, 1);
+      await app.close();
+    });
+
+    it("applies a write at the same timestamp — idempotent, not a race", async () => {
+      // The exact case an offline retry produces: the same action, sent
+      // twice, carrying the same `changedAt` both times.
+      const { app, db, user } = await fixture();
+      setStar(db, user.id, 5, true, 500);
+      const again = setStar(db, user.id, 5, true, 500);
+      assert.equal(again.starred, true);
+      assert.equal(browseCards(db, user.id, { starred: true }).total, 1);
+      await app.close();
+    });
+
+    it("applies a newer write regardless of arrival order", async () => {
+      const { app, db, user } = await fixture();
+      setStar(db, user.id, 5, true, 100);
+      const result = setStar(db, user.id, 5, false, 200); // decided later, correctly wins
+      assert.equal(result.starred, false);
+      assert.equal(browseCards(db, user.id, { starred: true }).total, 0);
+      await app.close();
+    });
+  });
 });
 
 describe("the endpoints", () => {
@@ -335,8 +369,13 @@ describe("the endpoints", () => {
       assert.equal((await app.inject({ method: "GET", url })).statusCode, 401, url);
     }
     assert.equal(
-      (await app.inject({ method: "POST", url: "/api/stars", payload: { cardId: 1, starred: true } }))
-        .statusCode,
+      (
+        await app.inject({
+          method: "POST",
+          url: "/api/stars",
+          payload: { cardId: 1, starred: true, changedAt: Math.floor(Date.now() / 1000) },
+        })
+      ).statusCode,
       401,
     );
     await app.close();
@@ -383,13 +422,46 @@ describe("the endpoints", () => {
       method: "POST",
       url: "/api/stars",
       headers: { cookie },
-      payload: { cardId: pick, starred: true },
+      payload: { cardId: pick, starred: true, changedAt: Math.floor(Date.now() / 1000) },
     });
 
     const after = (
       await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie } })
     ).json();
     assert.deepEqual(after.starred, [pick]);
+    await app.close();
+  });
+
+  it("drops a card from the queue's starred list once it is unstarred (#22)", async () => {
+    // card_stars now keeps one row per (user, card) forever and flips its
+    // `starred` column instead of being deleted (that is what makes the LWW
+    // comparison possible). starredAmong() must filter on that column, not
+    // on row presence, or an unstarred card would keep reporting as starred.
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+
+    const { cardIds } = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie } })
+    ).json();
+    const pick = cardIds[1];
+
+    await app.inject({
+      method: "POST",
+      url: "/api/stars",
+      headers: { cookie },
+      payload: { cardId: pick, starred: true, changedAt: Math.floor(Date.now() / 1000) },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/stars",
+      headers: { cookie },
+      payload: { cardId: pick, starred: false, changedAt: Math.floor(Date.now() / 1000) + 1 },
+    });
+
+    const after = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie } })
+    ).json();
+    assert.deepEqual(after.starred, [], "the row still exists, but starred = 0 must not leak through");
     await app.close();
   });
 
@@ -407,7 +479,7 @@ describe("the endpoints", () => {
       method: "POST",
       url: "/api/stars",
       headers: { cookie: theirs },
-      payload: { cardId: ids[0], starred: true },
+      payload: { cardId: ids[0], starred: true, changedAt: Math.floor(Date.now() / 1000) },
     });
 
     const body = (
@@ -432,14 +504,14 @@ describe("the endpoints", () => {
 
     const ok = await app.inject({
       method: "POST", url: "/api/stars", headers: { cookie },
-      payload: { cardId: 4, starred: true },
+      payload: { cardId: 4, starred: true, changedAt: Math.floor(Date.now() / 1000) },
     });
     assert.equal(ok.statusCode, 200);
     assert.deepEqual(ok.json(), { ok: true, cardId: 4, starred: true });
 
     const missing = await app.inject({
       method: "POST", url: "/api/stars", headers: { cookie },
-      payload: { cardId: 9999, starred: true },
+      payload: { cardId: 9999, starred: true, changedAt: Math.floor(Date.now() / 1000) },
     });
     assert.equal(missing.statusCode, 404);
     await app.close();

@@ -117,7 +117,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   const base = (extra, params) =>
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
-      ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?" : ""}
+      ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ? AND st.starred = 1" : ""}
       WHERE c.deleted_at IS NULL ${filterClause({ deck, tag }, params, userId)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
@@ -229,7 +229,8 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     whereParams.push(tag, userId, tag);
   }
   if (starred) {
-    where += " AND EXISTS (SELECT 1 FROM card_stars s2 WHERE s2.card_id = c.id AND s2.user_id = ?)";
+    where +=
+      " AND EXISTS (SELECT 1 FROM card_stars s2 WHERE s2.card_id = c.id AND s2.user_id = ? AND s2.starred = 1)";
     whereParams.push(userId);
   }
 
@@ -240,7 +241,7 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     .prepare(
       `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning,
               c.deck, c.frequency_rank,
-              st.card_id IS NOT NULL AS starred,
+              COALESCE(st.starred, 0) AS starred,
               s.due_at, s.reps, s.last_review
          FROM cards c
          LEFT JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?
@@ -287,19 +288,37 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   return { page, pageSize: size, total, cards };
 }
 
-export function setStar(db, userId, cardId, starred) {
+/**
+ * Set or clear a star (#22 and #35).
+ *
+ * A last-write-wins register, not an insert-or-delete: the row stays once a
+ * card has been touched, and a write only takes effect if `changedAt` is at
+ * least as new as what is already stored. That `>=` (not `>`) is what makes
+ * sending the same star twice — a retried offline action, most often — safe:
+ * the second write changes nothing rather than racing the first.
+ *
+ * `changedAt` defaults to now for the handful of internal/test callers that
+ * do not carry one; the route always passes the client's own timestamp,
+ * because *that* is the moment the tap actually happened, not whenever the
+ * request happens to arrive.
+ */
+export function setStar(db, userId, cardId, starred, changedAt = Math.floor(Date.now() / 1000)) {
   const exists = db.prepare("SELECT 1 FROM cards WHERE id = ?").get(cardId);
   if (!exists) return { ok: false, reason: "unknown_card" };
 
-  if (starred) {
-    db.prepare(
-      `INSERT OR IGNORE INTO card_stars (user_id, card_id, added_at)
-       VALUES (?, ?, ?)`,
-    ).run(userId, cardId, Math.floor(Date.now() / 1000));
-  } else {
-    db.prepare("DELETE FROM card_stars WHERE user_id = ? AND card_id = ?").run(userId, cardId);
-  }
-  return { ok: true, cardId, starred };
+  db.prepare(
+    `INSERT INTO card_stars (user_id, card_id, starred, changed_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT (user_id, card_id) DO UPDATE SET
+       starred = excluded.starred,
+       changed_at = excluded.changed_at
+     WHERE excluded.changed_at >= card_stars.changed_at`,
+  ).run(userId, cardId, starred ? 1 : 0, changedAt);
+
+  const row = db
+    .prepare("SELECT starred FROM card_stars WHERE user_id = ? AND card_id = ?")
+    .get(userId, cardId);
+  return { ok: true, cardId, starred: Boolean(row.starred) };
 }
 
 /**
@@ -313,7 +332,7 @@ export function starredAmong(db, userId, cardIds) {
   if (!cardIds?.length) return [];
   const holes = cardIds.map(() => "?").join(",");
   return db
-    .prepare(`SELECT card_id FROM card_stars WHERE user_id = ? AND card_id IN (${holes})`)
+    .prepare(`SELECT card_id FROM card_stars WHERE user_id = ? AND starred = 1 AND card_id IN (${holes})`)
     .all(userId, ...cardIds)
     .map((r) => r.card_id);
 }
