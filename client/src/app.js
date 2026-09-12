@@ -12,6 +12,7 @@ import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
+import { startFlushingStars } from "./stars.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { forget, openSession } from "./resume.js";
 import { watchViewport } from "./viewport.js";
@@ -450,6 +451,7 @@ function renderApp() {
       loadTopics();
       loadOwnDeck();
       startFlushing();
+      startFlushingStars();
       renderApp();
     } }));
     return;
@@ -700,4 +702,5 @@ if (state.user) {
   // under pressure, and an event that never left the device is the one thing
   // here that cannot be reconstructed.
   startFlushing();
+  startFlushingStars();
 }

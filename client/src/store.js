@@ -5,12 +5,14 @@
  * size-limited, and iOS clears it more readily than IndexedDB. The deck alone
  * is well past what localStorage would hold.
  *
- * Three stores, and they hold different kinds of thing:
+ * Four stores, and they hold different kinds of thing:
  *
  *   deck    the cards, keyed by card id — a cache, rebuildable from the server
  *   outbox  answered cards not yet acknowledged — the only irreplaceable data
  *           on the device, which is why it is written before anything else
  *   meta    small values: the deck's sync timestamp, the last queue seen
+ *   stars   a star or unstar not yet acknowledged, one pending entry per card
+ *           (#22) — small enough that losing one is a re-tap, not a re-answer
  *
  * Everything here resolves rather than throws when the database cannot be
  * opened. Private browsing and a storage-pressure eviction both look like
@@ -18,7 +20,7 @@
  */
 
 const DB_NAME = "kotoba";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let opening;
 
@@ -39,6 +41,11 @@ function open() {
       if (!db.objectStoreNames.contains("deck")) db.createObjectStore("deck", { keyPath: "id" });
       if (!db.objectStoreNames.contains("outbox")) db.createObjectStore("outbox", { keyPath: "id" });
       if (!db.objectStoreNames.contains("meta")) db.createObjectStore("meta");
+      // #22: one pending star per card, keyed by card id rather than given an
+      // id of its own — a star is a last-write-wins register, not a log, so
+      // toggling the same card twice offline only needs to keep the final
+      // decision, not both taps.
+      if (!db.objectStoreNames.contains("stars")) db.createObjectStore("stars", { keyPath: "card_id" });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => resolve(null);
@@ -149,6 +156,25 @@ export async function acknowledge(ids) {
   });
 }
 
+// ── pending stars ────────────────────────────────────────────────
+
+/** `put`, not `add`: a second tap on the same card before it syncs replaces
+ *  the first — only the final decision needs to survive, not both. */
+export async function queueStar(entry) {
+  return run("stars", "readwrite", (store) => store.put(entry));
+}
+
+export async function pendingStars() {
+  return (await run("stars", "readonly", (store) => store.getAll())) ?? [];
+}
+
+/** Remove what the server has accepted (or will never accept — see stars.js). */
+export async function unqueueStars(cardIds) {
+  return run("stars", "readwrite", (store) => {
+    for (const id of cardIds) store.delete(id);
+  });
+}
+
 // ── meta ──────────────────────────────────────────────────────────
 
 export async function getMeta(key) {
@@ -163,4 +189,5 @@ export async function setMeta(key, value) {
 export async function clearPersonal() {
   await run("outbox", "readwrite", (store) => store.clear());
   await run("meta", "readwrite", (store) => store.clear());
+  await run("stars", "readwrite", (store) => store.clear());
 }

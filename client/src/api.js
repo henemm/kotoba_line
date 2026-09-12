@@ -120,7 +120,8 @@ export const api = {
   deck: (since = 0, page) => request(`/deck${query({ since, ...page })}`),
   queue: (opts) => request(`/queue${query(opts)}`),
   browse: (opts) => request(`/browse${query(opts)}`),
-  star: (cardId, starred) => request("/stars", { method: "POST", body: { cardId, starred } }),
+  star: (cardId, starred, changedAt) =>
+    request("/stars", { method: "POST", body: { cardId, starred, changedAt } }),
   // #35: the whole set of her topics for one card, not an addition — see the
   // route's comment for why the client is not asked to compute a difference.
   setCardTags: (cardId, tags) =>

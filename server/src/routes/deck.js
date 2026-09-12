@@ -223,27 +223,36 @@ export default async function deckRoutes(app) {
     },
   );
 
-  /** §5a: pin a card so a session can be built from exactly those. */
+  /**
+   * §5a: pin a card so a session can be built from exactly those.
+   *
+   * `changedAt` is required, not defaulted server-side (#22): it is the one
+   * thing that makes a star safe to set offline and deliver late, the same
+   * way `reviewed_at` is for an answer. Stamping arrival time here instead
+   * would let whichever device happens to sync last always win, which is
+   * exactly the wrong-order bug an offline star is supposed to survive.
+   */
   app.post(
     "/api/stars",
     {
       schema: {
         body: {
           type: "object",
-          required: ["cardId", "starred"],
+          required: ["cardId", "starred", "changedAt"],
           additionalProperties: false,
           properties: {
             // Not `minimum: 1`: a personal card's id is negative on purpose,
             // so that Anki's note ids and hers can never collide (cards.js).
             cardId: { type: "integer" },
             starred: { type: "boolean" },
+            changedAt: { type: "integer", minimum: 0 },
           },
         },
       },
       preHandler: app.requireUser,
     },
     async (req, reply) => {
-      const result = setStar(db, req.user.id, req.body.cardId, req.body.starred);
+      const result = setStar(db, req.user.id, req.body.cardId, req.body.starred, req.body.changedAt);
       if (!result.ok) return reply.code(404).send({ error: result.reason });
       return result;
     },
