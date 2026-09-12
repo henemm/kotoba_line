@@ -151,8 +151,14 @@ input:focus-visible {
 /* ── the offline strip (design 25) ──────────────────────────────── */
 /* Never shown during a session: the strip belongs to the tab screens only,
    so a card is never covered. */
+/* Henning's call: the strip read as an afterthought while offline — same
+   `--surface` as an inactive control, muted text — and stood out only once
+   there was good news to report ("Synced" got the bright text, "Offline" did
+   not). The one moment this bar exists to flag is the one it downplayed.
+   Now both tones share the raised background and the bright text; the dot
+   colour alone still says which one it is. */
 .offline-bar {
-  background: var(--surface);
+  background: var(--surface-hi);
   padding: 9px var(--gutter);
   display: flex;
   align-items: center;
@@ -175,10 +181,6 @@ input:focus-visible {
 .offline-bar span:last-child {
   font-size: 13px;
   font-weight: 600;
-  color: var(--ink-muted);
-}
-
-.offline-bar.synced span:last-child {
   color: var(--ink);
 }
 
