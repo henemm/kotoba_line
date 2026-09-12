@@ -109,6 +109,10 @@ export function sessionScreen({
   readAloud = true,
   pitchAccent = false,
   romaji = false,
+  // #77: what 話す draws its prompt from. "sentence" is what the mode always
+  // did before this setting existed — prefer the sentence, fall back to the
+  // word — so leaving it untouched changes nothing for anyone.
+  speakSource = "sentence",
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -630,6 +634,11 @@ export function sessionScreen({
       // synthesis: the synthetic voice belongs where she is listening for the
       // pronunciation, which in 選ぶ she is not.
       card.word_audio ? speaker(card.word, card.word_audio) : null,
+      // The question here is meaning, not pronunciation, so a romaji line
+      // gives nothing away — it just lets "Show romaji" do on the prompt what
+      // its settings description promises ("for reading it back") instead of
+      // only after she has already answered.
+      romajiLine(card),
     ]);
   }
 
@@ -673,7 +682,10 @@ export function sessionScreen({
    * cannot listen at all.
    */
   function drawSpeak(card, area, answers) {
-    const prompt = card.sentence ? card.sentence_meaning : card.word_meaning;
+    // Decided once per card, at the prompt — not re-rolled at reveal, or a
+    // "random" card could ask about the word and then reveal the sentence.
+    const useSentence = speakUsesSentence(card, speakSource);
+    const prompt = useSentence ? card.sentence_meaning : card.word_meaning;
 
     /**
      * `phase` is what the card is doing, not what the microphone can do:
@@ -733,7 +745,7 @@ export function sessionScreen({
         el("button.btn.primary", {
           type: "button",
           text: "Show answer",
-          onclick: () => revealSpeak(card, area, answers),
+          onclick: () => revealSpeak(card, area, answers, useSentence),
         }),
       );
       render(answers, row);
@@ -755,14 +767,14 @@ export function sessionScreen({
     );
   }
 
-  function revealSpeak(card, area, answers) {
+  function revealSpeak(card, area, answers, useSentence) {
     stopRecognition();
-    const text = card.sentence ?? card.word;
-    const audio = card.sentence ? card.sentence_audio : card.word_audio;
+    const text = useSentence ? card.sentence : card.word;
+    const audio = useSentence ? card.sentence_audio : card.word_audio;
 
     render(
       area,
-      card.sentence
+      useSentence
         ? revealedSentence(card)
         : el(
             "div.word-line.reveal",
@@ -773,12 +785,12 @@ export function sessionScreen({
             // out whether what she said was right (#32).
             speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
           ),
-      card.sentence ? null : romajiLine(card),
+      useSentence ? null : romajiLine(card),
       el("p.sentence-en.reveal", {
-        text: (card.sentence ? card.sentence_meaning : card.word_meaning) ?? "",
+        text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "",
       }),
     );
-    if (readAloud) say(text, audio, card.sentence ? { rate: 0.85 } : undefined);
+    if (readAloud) say(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
     // 42: same height and tints as めくる's row, half the count and no
     // intervals — 話す asks whether she could produce it, a yes-or-no question.
@@ -827,6 +839,9 @@ export function sessionScreen({
       area,
       el("h2.word.jp", { text: card.word }),
       speaker(card.word, card.word_audio),
+      // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
+      // "what does it say" — a romaji line here does not spoil the flip.
+      romajiLine(card),
     );
     if (readAloud) say(card.word, card.word_audio);
 
@@ -1202,6 +1217,21 @@ export function playableIn(mode, cards, speaks = canSpeak()) {
   return cards.filter(
     (c) => c.sentence && c.sentence_meaning && (c.sentence_audio || speaks),
   );
+}
+
+/**
+ * Whether 話す asks about the sentence or the word (#77).
+ *
+ * A card with no sentence is never in doubt — "sentence" and "random" both
+ * fall back to the word, the same as before this setting existed, so her own
+ * cards (which have none) are unaffected by any of the three values. "random"
+ * only spends the coin flip where there is a real choice to make.
+ */
+export function speakUsesSentence(card, speakSource, random = Math.random) {
+  if (!card.sentence) return false;
+  if (speakSource === "word") return false;
+  if (speakSource === "random") return random() < 0.5;
+  return true;
 }
 
 /**

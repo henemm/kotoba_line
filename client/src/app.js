@@ -62,7 +62,7 @@ const state = {
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
   // Settings tab has ever been opened.
-  settings: { newPerDay: 15, sessionLength: 20, readAloud: true, pitchAccent: false, romaji: false },
+  settings: { newPerDay: 15, sessionLength: 20, readAloud: true, pitchAccent: false, romaji: false, speakSource: "sentence" },
   online: navigator.onLine,
   // 52: the server is reachable and the cookie is not. Two flags, because the
   // state and the screen have different lifetimes — she can put the screen
@@ -534,6 +534,8 @@ function renderApp() {
       pitchAccent: state.settings.pitchAccent,
       // #73: same reasoning as pitchAccent above.
       romaji: state.settings.romaji,
+      // #77: same reasoning — read here so every setting lives in one place.
+      speakSource: state.settings.speakSource,
       onExit: () => {
         state.session = undefined;
         renderApp();

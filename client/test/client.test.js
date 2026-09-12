@@ -4,7 +4,7 @@ import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
-import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, sentenceKana, splitEmphasis } from "../src/screens/session.js";
+import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, sentenceKana, speakUsesSentence, splitEmphasis } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
@@ -399,6 +399,30 @@ describe("which cards a mode can actually ask about", () => {
     for (const mode of ["choose", "speak", "flip"]) {
       assert.equal(playableIn(mode, cards).length, 2, mode);
     }
+  });
+
+  it("keeps her own cards unaffected by any of the three speak sources", () => {
+    // No sentence at all — her own cards, and the pre-#77 fallback everyone
+    // else already relied on.
+    const noSentence = card({ sentence: null, sentence_meaning: null });
+    for (const speakSource of ["word", "sentence", "random"]) {
+      assert.equal(speakUsesSentence(noSentence, speakSource), false, speakSource);
+    }
+  });
+
+  it("draws from the sentence except when told to draw from the word", () => {
+    assert.equal(speakUsesSentence(card(), "sentence"), true);
+    assert.equal(speakUsesSentence(card(), "word"), false);
+  });
+
+  it("only spends the coin flip where there is an actual choice", () => {
+    const wouldPickSentence = () => 0.1; // < 0.5
+    assert.equal(speakUsesSentence(card(), "random", wouldPickSentence), true);
+    // A card with nothing to choose between never asks the coin at all — it
+    // would have said "sentence" here if it had, which is the bug this guards.
+    assert.equal(speakUsesSentence(card({ sentence: null }), "random", wouldPickSentence), false);
+    const wouldPickWord = () => 0.9; // >= 0.5
+    assert.equal(speakUsesSentence(card(), "random", wouldPickWord), false);
   });
 
   it("drops a 聞く card with nothing to listen to", () => {

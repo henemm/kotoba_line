@@ -3,6 +3,7 @@ import {
   NEW_PER_DAY_MAX,
   NEW_PER_DAY_MIN,
   SESSION_LENGTHS,
+  SPEAK_SOURCES,
   deckCounts,
   settingsForUser,
   syncStateForUser,
@@ -24,6 +25,7 @@ const patchSchema = {
       readAloud: { type: "boolean" },
       pitchAccent: { type: "boolean" },
       romaji: { type: "boolean" },
+      speakSource: { type: "string", enum: SPEAK_SOURCES },
     },
   },
 };
