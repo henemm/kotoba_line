@@ -39,13 +39,14 @@ const COLUMNS = {
   sessionLength: "session_length",
   readAloud: "read_aloud",
   pitchAccent: "pitch_accent",
+  romaji: "romaji",
 };
 
 /** The row as the client sees it: camelCase, and 0/1 as booleans. */
 export function settingsForUser(db, userId) {
   const row = db
     .prepare(
-      `SELECT new_per_day, session_length, read_aloud, pitch_accent
+      `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji
          FROM user_settings WHERE user_id = ?`,
     )
     .get(userId);
@@ -59,6 +60,7 @@ export function settingsForUser(db, userId) {
     sessionLength: row.session_length,
     readAloud: row.read_aloud === 1,
     pitchAccent: row.pitch_accent === 1,
+    romaji: row.romaji === 1,
   };
 }
 

@@ -23,6 +23,7 @@ describe("the settings row", () => {
       sessionLength: 20,
       readAloud: true,
       pitchAccent: false,
+      romaji: false,
     });
     db.close();
   });
@@ -90,6 +91,7 @@ describe("GET /api/settings", () => {
       sessionLength: 20,
       readAloud: true,
       pitchAccent: false,
+      romaji: false,
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -133,6 +135,7 @@ describe("PATCH /api/settings", () => {
       sessionLength: 20,
       readAloud: false,
       pitchAccent: false,
+      romaji: false,
     });
     await app.close();
   });
@@ -152,6 +155,7 @@ describe("PATCH /api/settings", () => {
       sessionLength: 60,
       readAloud: true,
       pitchAccent: true,
+      romaji: false,
     });
     await app.close();
   });
@@ -183,6 +187,19 @@ describe("PATCH /api/settings", () => {
       });
       assert.equal(res.statusCode, expected, `sessionLength=${sessionLength}`);
     }
+    await app.close();
+  });
+
+  it("writes and reads back the romaji toggle", async () => {
+    const { app, cookie } = await signedIn();
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      headers: { cookie },
+      payload: { romaji: true },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().settings.romaji, true);
     await app.close();
   });
 

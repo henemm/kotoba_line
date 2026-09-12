@@ -6,6 +6,7 @@ import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
+import { toRomaji } from "../romaji.js";
 import { el, render } from "../ui/dom.js";
 
 /**
@@ -107,6 +108,7 @@ export function sessionScreen({
   limit = 20,
   readAloud = true,
   pitchAccent = false,
+  romaji = false,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -500,6 +502,27 @@ export function sessionScreen({
     );
   }
 
+  /**
+   * The word in romaji, as one more line below the reading (#73).
+   *
+   * Independent of `reading()`'s "carries nothing" rule: いい dropping its own
+   * kana line is right — repeating いい as いい says nothing — but "ii" is not
+   * the same string and is exactly the case where romaji earns its place. So
+   * this reads `word_furigana` itself rather than reusing `reading()`'s
+   * output, and falls back to the word when it is already kana-only.
+   *
+   * Off by default, and silent rather than a guess wherever a kana reading
+   * cannot be produced at all — a kanji word with no furigana, which today
+   * means only her own cards.
+   */
+  function romajiLine(furigana, word) {
+    if (!romaji) return null;
+    const kana = kanaReading(furigana) ?? word;
+    const text = toRomaji(kana);
+    if (!text) return null;
+    return el("div.romaji.reveal", { text });
+  }
+
   function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false, small = false } = {}) {
     return el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`, {
       type: "button",
@@ -730,6 +753,7 @@ export function sessionScreen({
             // out whether what she said was right (#32).
             speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
           ),
+      card.sentence ? null : romajiLine(card.word_furigana, card.word),
       el("p.sentence-en.reveal", {
         text: (card.sentence ? card.sentence_meaning : card.word_meaning) ?? "",
       }),
@@ -814,6 +838,7 @@ export function sessionScreen({
         speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
       ),
       reading(card.word_furigana, card.word, card),
+      romajiLine(card.word_furigana, card.word),
       el("div.meaning.reveal", { text: card.word_meaning }),
       card.sentence ? revealedSentence(card) : null,
       card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,

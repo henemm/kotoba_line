@@ -1313,6 +1313,13 @@
      the chrome, and grey would file it with the captions. */
   color: var(--rail);
 }
+/* The romaji line (#73) — secondary to the kana reading above it, so it is
+   smaller and muted rather than competing with it in the rail colour. */
+.romaji {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+}
 .sentence-en {
   margin: 0;
   font-size: 14px;
