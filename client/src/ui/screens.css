@@ -1867,6 +1867,17 @@
   padding: 0 var(--gutter);
   color: var(--no);
 }
+/* The screen failed to load — same calm treatment as `.stats-offline` and
+   `.browse-note`, not the red of `.settings-problem`. Same box as that one
+   (it renders in the same unpadded spot, outside any `.group`); only the
+   colour differs. */
+.settings-offline {
+  margin: 0;
+  padding: 0 var(--gutter);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
 
 /* Diagnostics, not settings. */
 .settings .diagnostics {

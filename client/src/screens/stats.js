@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { OfflineError, api } from "../api.js";
 import { el, num, render } from "../ui/dom.js";
 
 /** The level bar is drawn as twelve segments however far apart the levels are. */
@@ -70,12 +70,18 @@ export function statsScreen({ onBrowse } = {}) {
   async function load() {
     try {
       data = await api.stats();
-    } catch {
+    } catch (err) {
+      // Same shape as Browse and Settings: told apart in what it says, not in
+      // how alarming it looks — a background fetch failing is not a mistake
+      // she made, offline or not (§25 and the same reasoning as `.browse-note`).
       render(
         root,
         el("div.stats-head", { text: "Stats" }),
         el("p.stats-offline", {
-          text: "These numbers come from the server. They will be here when the connection is.",
+          text:
+            err instanceof OfflineError
+              ? "These numbers come from the server. They will be here when the connection is."
+              : "Could not load stats.",
         }),
       );
       return;
