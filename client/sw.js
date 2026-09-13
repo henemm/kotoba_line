@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v46";
+const VERSION = "v47";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -211,28 +211,52 @@ async function shell(request) {
 /**
  * Cache on first use, capped, oldest evicted.
  *
- * §7: audio is never bulk-fetched. A word's recording lands here the first
- * time it is played, so after a week the cache holds the words she is actually
- * studying and nothing else. Mobile data in Japan is metered (§1).
+ * §7: audio is never bulk-fetched. A card's recordings land here when the card
+ * is first shown (#116: `prime()` in src/audio.js), so after a week the cache
+ * holds the words she is actually studying and nothing else. Mobile data in
+ * Japan is metered (§1).
  */
 async function media(request) {
-  const cache = await caches.open(MEDIA);
-  // The cache always holds the whole file, never a slice, and the network is
-  // asked for the whole file too: cache.put() rejects a 206 outright, and a
-  // cached partial body would break every later play of that word.
-  const whole = request.url;
-
-  let res = await cache.match(whole);
-  if (!res) {
-    res = await fetch(whole);
-    if (res.ok) {
-      await cache.put(whole, res.clone());
-      await evict(cache);
-    }
-  }
-
+  const res = await wholeFile(request.url);
   const range = request.headers.get("range");
   return range && res.ok ? partial(res, range) : res;
+}
+
+/** Downloads in progress, by URL — see `wholeFile`. */
+const inflight = new Map();
+
+/**
+ * One file, from the cache or else from the network — once, however many ask.
+ *
+ * The cache always holds the whole file, never a slice, and the network is
+ * asked for the whole file too: cache.put() rejects a 206 outright, and a
+ * cached partial body would break every later play of that word.
+ *
+ * A drawn card asks twice at the same moment: `prime()` fetches its
+ * recordings and read-aloud starts playing one of them. Both miss the cache,
+ * so without this each would download the file. The lookup is registered
+ * before the first `await` so the second request cannot slip in between.
+ * Every caller gets its own clone; the shared response's body is never read.
+ */
+function wholeFile(url) {
+  let pending = inflight.get(url);
+  if (!pending) {
+    pending = (async () => {
+      const cache = await caches.open(MEDIA);
+      const hit = await cache.match(url);
+      if (hit) return hit;
+      const res = await fetch(url);
+      if (res.ok) {
+        await cache.put(url, res.clone());
+        await evict(cache);
+      }
+      return res;
+    })();
+    inflight.set(url, pending);
+    const done = () => inflight.delete(url);
+    pending.then(done, done);
+  }
+  return pending.then((res) => res.clone());
 }
 
 /**

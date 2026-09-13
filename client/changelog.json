@@ -1,5 +1,13 @@
 [
   {
+    "version": "v47",
+    "summary": "The ♪ button shows that you tapped it.",
+    "notes": [
+      "When you tap ♪, a ring now flashes around the button straight away, so you can see the tap worked even before the sound starts.",
+      "The sound for a card now starts loading as soon as the card appears, so it plays faster when you tap."
+    ]
+  },
+  {
     "version": "v46",
     "summary": "When you show the answer, the question stays where it was.",
     "notes": [

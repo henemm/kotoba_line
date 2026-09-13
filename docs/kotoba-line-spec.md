@@ -295,8 +295,10 @@ Register the service worker from `/kotoba/sw.js` so its scope is `/kotoba/`.
 A worker served from the domain root cannot control a subpath app reliably,
 and the failure is silent.
 
-Audio is never bulk-fetched. A card's audio lands in the cache the first time
-it is played and stays there. After a week of use the cache holds exactly the
+Audio is never bulk-fetched. A card's own recordings are fetched when the card
+is shown (#116), so ♪ plays at once, and they stay in the cache. That is about
+25 KB a file (2,972 files averaged), at most ~1 MB for a 20-card session, and
+read-aloud fetches most of it anyway. After a week of use the cache holds exactly the
 words she is actually studying.
 
 **iOS specifics to plan for:**
