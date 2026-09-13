@@ -11,13 +11,14 @@ running state.
 
 ## 1. Goals and constraints
 
-**What the app does.** Four practice modes over a shared vocabulary deck:
+**What the app does.** Five practice modes over a shared vocabulary deck:
 
 | Mode | Prompt | Answer | Trains |
 |---|---|---|---|
 | 選ぶ choose | Japanese word (+ audio) | pick the meaning | recognition |
 | 聞く listen | audio only, no text | pick the meaning | listening |
 | 話す speak | English meaning | say it aloud, then self-grade | production |
+| 書く type | English meaning | type the Japanese, checked | production |
 | めくる flip | Japanese word | reveal, then self-grade | review |
 
 **Hard constraints:**
@@ -118,7 +119,7 @@ CREATE TABLE review_events (
   id          TEXT PRIMARY KEY,          -- UUID generated on the CLIENT
   user_id     INTEGER NOT NULL REFERENCES users(id),
   card_id     INTEGER NOT NULL REFERENCES cards(id),
-  mode        TEXT NOT NULL,             -- choose | listen | speak | flip
+  mode        TEXT NOT NULL,             -- choose | listen | speak | type | flip
   rating      INTEGER NOT NULL,          -- 1 again, 2 hard, 3 good, 4 easy
   reviewed_at INTEGER NOT NULL,          -- unix seconds, client clock
   received_at INTEGER NOT NULL           -- unix seconds, server clock
@@ -255,8 +256,18 @@ Map the four ratings straight through: the self-grade buttons in 話す and
 wrong answer and *good* on a correct one. Offer *hard* and *easy* only in
 めくる, where the user is already making a judgement.
 
+書く (#97) is checked like the multiple-choice modes — *good* when the typed
+answer spells the card's reading — with one difference: a wrong answer asks
+her whether it was a typo before anything is recorded, and "It was a typo"
+gives *good*. The question comes first because the log is append-only; an
+*again* taken back afterwards would still be in the history. A typed answer
+is not rated differently from a picked one, for the reason in the next
+paragraph. What counts as right is in `client/src/typing.js`: any spelling of
+the reading in romaji or kana, or the word itself, and also any other card
+whose English meaning is the same words (33 meanings in the deck are shared).
+
 **Per-mode state is deliberately not modelled.** One `card_state` row per
-card per user, shared across all four modes. Recognising a word and being able
+card per user, shared across all modes. Recognising a word and being able
 to produce it are different skills, and modelling them separately is
 defensible — but it quadruples the review load, and a half-empty queue is
 better than an abandoned one. Revisit only if she asks for it.

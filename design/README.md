@@ -40,7 +40,7 @@ Frame sizes: 390 × 844 (iPhone), 834 × 1194 (iPad portrait), 1194 × 834 (land
   afterwards, on the next screen.
 - **The offline bar never appears during a session**, so a card is never covered.
   It belongs to the tab screens only.
-- **The four saturated line colours are reserved for the modes.** Maturity bands and
+- **The saturated line colours are reserved for the modes.** Maturity bands and
   topic bars are a grey-to-white ramp on purpose.
 - **A diamond is the only diamond in the app**, and it means a joker. Circles are
   stations, bars are progress.
@@ -74,6 +74,15 @@ and the × asks once. What remains is deliberate, and short.
   weeks ago does not. "Topics in a session" led to the topic picker (23), which
   the filter sheet (36) supersedes for anything beyond one topic. The reasoning
   is on `deckGroup()` in `client/src/screens/settings.js`.
+- **There is a fifth line, 書く (#97), that no screen draws.** Type the Japanese
+  for an English meaning. It takes 話す's prompt, a text field at the top of the
+  card (the keyboard covers the bottom half), 選ぶ's right and wrong colours on
+  what she typed, and 話す's two-button row for "Missed it" / "It was a typo".
+  Its colour is Hanzōmon purple `#8F76D6`, from the same metro map as the other
+  four. With five lines the Practise tab still fits at 394 × 852 on a normal
+  day (last line ends at 495, tab bar at 780); on a nothing-due day the last
+  line ends 4px under the tab bar at 852 and clear of it at 859, and the page
+  scrolls.
 - **29's topic field is inline, not a native prompt.** The design does not say
   which; a browser dialog in a standalone PWA looks like the browser's, so it
   is a field.

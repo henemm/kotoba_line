@@ -34,7 +34,7 @@ in `server/README.md`.
 | Offline strip | 25 | done — the three states, driven by the outbox, never during a session |
 | Stats | 02, 12, 24 | done — level, streak, jokers, maturity, topics with the truncation rule |
 | Settings | 22, 26 | done — daily load, decks, sound, account, diagnostics |
-| Session | 16 + prototype | done — all four modes, with めくる's four ratings (§6) |
+| Session | 16 + prototype | done — all five modes, with めくる's four ratings (§6). 書く (#97) has no screen in design/: it borrows 話す's prompt and 選ぶ's right/wrong colours |
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
 | Joker spent | 04, 19 | done — once per covered gap, before the practise tab; "Continue" rather than "Start today's session" (#86) |

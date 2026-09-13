@@ -8,6 +8,7 @@ import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
 import { setStar } from "../stars.js";
+import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { el, render } from "../ui/dom.js";
 
 /**
@@ -89,7 +90,8 @@ const uuid = () =>
     .slice(2, 14)}`;
 
 /**
- * Design 16 and the prototype — the session, in all four modes.
+ * Design 16 and the prototype — the session, in every mode. 書く (#97) came
+ * later and has no screen of its own; see `drawType`.
  *
  * The loop is not up for redesign: `prototype/kotoba-line.html` is the agreed
  * visual direction and it already works out all four, so this follows its
@@ -179,13 +181,19 @@ export function sessionScreen({
       queue = playableIn(mode, due);
       if (resuming) index = Math.min(resuming.index ?? 0, Math.max(queue.length - 1, 0));
 
-      // 聞く dropped everything it was given: the cards are due, they just
-      // cannot be listened to. That is a different message from "nothing due".
+      // 聞く or 書く dropped everything it was given: the cards are due, they
+      // just cannot be asked this way. That is a different message from
+      // "nothing due".
       if (due.length > 0 && queue.length === 0) {
         render(
           root,
           el("div.session-error", {},
-            el("p", { text: `Nothing here can be played in ${line.jp}. The cards that are due have no sentence to listen to.` }),
+            el("p", {
+              text:
+                mode === "type"
+                  ? `Nothing here can be typed in ${line.jp}. The cards that are due are your own words with no reading, so there is nothing to check an answer against.`
+                  : `Nothing here can be played in ${line.jp}. The cards that are due have no sentence to listen to.`,
+            }),
             el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
           ),
         );
@@ -387,7 +395,7 @@ export function sessionScreen({
     // happened, and every mode here may reach for it.
     unlock();
 
-    ({ choose: drawChoose, listen: drawListen, speak: drawSpeak, flip: drawFlip }[mode] ??
+    ({ choose: drawChoose, listen: drawListen, speak: drawSpeak, type: drawType, flip: drawFlip }[mode] ??
       drawChoose)(card, area, answers);
   }
 
@@ -524,8 +532,8 @@ export function sessionScreen({
    * Off by default, and silent rather than a guess wherever no kana reading
    * can be produced at all — a kanji word with neither field filled in.
    */
-  function romajiLine(card) {
-    if (!romaji) return null;
+  function romajiLine(card, always = false) {
+    if (!romaji && !always) return null;
     const kana = kanaReading(card.word_furigana) ?? card.word_reading ?? card.word;
     const text = toRomaji(kana);
     if (!text) return null;
@@ -799,6 +807,175 @@ export function sessionScreen({
         {},
         ratingButton("Missed it", RATING_AGAIN, () => grade(card, RATING_AGAIN)),
         ratingButton("Had it", RATING_GOOD, () => grade(card, RATING_GOOD)),
+      ),
+    );
+  }
+
+  /**
+   * 書く — see the meaning, type the Japanese (#97).
+   *
+   * The only mode that asks her to produce the word and then checks it; 話す
+   * asks for the same thing and leaves the judging to her. Romaji, kana or
+   * the word itself all count — `typing.js` says how.
+   *
+   * Everything she needs is at the top of the card, not in the answer row at
+   * the bottom like the other modes: on the phone the keyboard covers the
+   * bottom half of the screen while she types, and a Check button under it
+   * would be a button she cannot see. Return on the keyboard checks too.
+   */
+  function drawType(card, area, answers) {
+    const input = el("input.field-input.jp.type-input", {
+      type: "text",
+      lang: "ja",
+      // Each of these would get between her and what she typed: iOS
+      // capitalises the first letter, autocorrect rewrites romaji into English
+      // words, and spellcheck underlines all of it as misspelt.
+      autocomplete: "off",
+      autocorrect: "off",
+      autocapitalize: "off",
+      spellcheck: "false",
+      enterkeyhint: "go",
+      placeholder: "romaji or kana",
+      "aria-label": "The Japanese word",
+    });
+    // Kept at its height when empty, so the buttons below do not jump the
+    // moment she starts typing.
+    const preview = el("p.type-preview.jp", { "aria-live": "polite" });
+    const check = el("button.btn.primary", { type: "submit", text: "Check", disabled: true });
+
+    input.addEventListener("input", () => {
+      // Only while there are letters to turn into kana. Kana from a Japanese
+      // keyboard is already in the field, and a second copy under it says
+      // nothing.
+      preview.textContent = /[a-z]/i.test(input.value) ? kanaPreview(input.value) : "";
+      check.disabled = !normalizeTyped(input.value);
+    });
+
+    area.classList.add("typing");
+    render(
+      area,
+      el("span.prompt-label", { text: "Type it in Japanese" }),
+      el("p.meaning", { text: card.word_meaning ?? "" }),
+      el(
+        "form.type-form",
+        {
+          onsubmit: (e) => {
+            e.preventDefault();
+            if (normalizeTyped(input.value)) revealType(card, area, answers, input.value);
+          },
+        },
+        el("div.field", {}, input),
+        preview,
+        el(
+          "div.actions",
+          {},
+          // 話す's label for the same way out: she does not know it, and
+          // typing nonsense to get past the card should not be the only exit.
+          el("button.btn", {
+            type: "button",
+            text: "Show answer",
+            onclick: () => revealType(card, area, answers),
+          }),
+          check,
+        ),
+      ),
+    );
+    render(answers);
+    // Opens the keyboard for the next card straight away. iOS only does that
+    // for focus() inside a tap, which is why every way to the next card
+    // (Continue, Missed it, It was a typo) calls next() from its own click
+    // rather than from a timer. The first card has no tap behind it, so there
+    // she taps the field herself. Not measurable without the phone — desktop
+    // WebKit has no on-screen keyboard.
+    input.focus();
+  }
+
+  /**
+   * 書く's answer. `typed` is undefined when she asked to see it.
+   *
+   * §6's mapping, unchanged: *good* for a right answer, *again* for a wrong
+   * one — no *easy* for typing it, and no gentler rating for failing to. #97
+   * asked whether a typed answer should be graded differently; §6 decided
+   * that one card state is shared by every mode and not to model the skills
+   * apart "unless she asks for it", and a mode-specific rating is that model
+   * by another name.
+   *
+   * What is new is who calls a wrong answer. A typo is not forgetting, and
+   * only she knows which it was — so a wrong answer asks before anything is
+   * recorded, rather than recording *again* and offering to take it back.
+   * Rule 1 is why it has to be that order: the log cannot take anything back,
+   * and *again* followed by *good* is not the same history as *good*.
+   */
+  function revealType(card, area, answers, typed) {
+    // The keyboard goes, or it covers the answer and the buttons — and with it
+    // the reason to sit high on the screen.
+    document.activeElement?.blur?.();
+    area.classList.remove("typing");
+
+    const given = typed === undefined ? undefined : judge(typed, typingAnswers(card, pool));
+    const correct = given !== undefined;
+
+    render(
+      area,
+      typed === undefined
+        ? null
+        : el(
+            "div.typed.reveal",
+            { class: correct ? "right" : "wrong" },
+            el("span.typed-label", { text: correct ? "Right" : "You typed" }),
+            el("p.typed-text.jp", { text: typed.trim() }),
+          ),
+      el(
+        "div.word-line.reveal",
+        {},
+        el("h2.word.jp", { text: card.word }),
+        speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+      ),
+      reading(card.word_furigana || card.word_reading, card.word, card),
+      // Always, whatever "Show romaji" says: she has most likely just typed
+      // romaji, and this is the line to compare it with, letter by letter.
+      romajiLine(card, true),
+      // A meaning shared with another card (33 are): she typed a word that is
+      // right, just not this card's. It counts, and says which.
+      given && given.id !== card.id
+        ? el("p.type-note.reveal", {
+            text: `${given.word} means that too. This card is ${card.word}.`,
+          })
+        : null,
+      el("p.sentence-en.reveal", { text: card.word_meaning ?? "" }),
+    );
+    // The word, not the sentence: the sound of what she just tried to write
+    // is the thing worth hearing here.
+    if (readAloud) say(card.word, card.word_audio);
+
+    if (typed !== undefined && !correct) {
+      render(
+        answers,
+        el(
+          "div.ratings.two",
+          {},
+          // Moved on within the tap rather than on a timer, so the next
+          // card's field can still open the keyboard (see `drawType`).
+          ratingButton("Missed it", RATING_AGAIN, () => {
+            grade(card, RATING_AGAIN, null);
+            next();
+          }),
+          ratingButton("It was a typo", RATING_GOOD, () => {
+            grade(card, RATING_GOOD, null);
+            next();
+          }),
+        ),
+      );
+      return;
+    }
+
+    grade(card, correct ? RATING_GOOD : RATING_AGAIN, null);
+    render(
+      answers,
+      el(
+        "div.actions",
+        {},
+        el("button.btn.primary", { type: "button", text: "Continue", onclick: () => next() }),
       ),
     );
   }
@@ -1219,10 +1396,41 @@ export function plainSentence(sentence) {
  * personal deck will have none.
  */
 export function playableIn(mode, cards, speaks = canSpeak()) {
+  // 書く needs a reading to check the answer against. Every deck card has one
+  // (measured: 1,500 of 1,500); her own kanji words without the optional
+  // Reading field do not, and could only be answered on a Japanese keyboard
+  // she may not have.
+  if (mode === "type") return cards.filter((c) => readingsOf(c).length > 0);
   if (mode !== "listen") return cards;
   return cards.filter(
     (c) => c.sentence && c.sentence_meaning && (c.sentence_audio || speaks),
   );
+}
+
+/**
+ * A card's readings as kana, for 書く: from the deck's furigana, then from the
+ * Reading field of her own card, then the word itself when it is kana already.
+ * The same order `romajiLine` reads them in. Nothing that is not kana counts
+ * as a reading — a kanji word with no reading has none.
+ */
+export function readingsOf(card) {
+  const kana = kanaReading(card.word_furigana) || card.word_reading || card.word;
+  return splitReadings(kana).filter((r) => /^[ぁ-ゖー]+$/.test(r));
+}
+
+/**
+ * The cards 書く accepts for this card's prompt: this one, and every other
+ * whose English meaning is the same words (`typing.js`'s `judge`).
+ */
+export function typingAnswers(card, pool) {
+  const meaning = (m) => (m ?? "").trim().toLowerCase();
+  const asked = meaning(card.word_meaning);
+  const others = asked
+    ? pool.filter((c) => c.id !== card.id && meaning(c.word_meaning) === asked)
+    : [];
+  return [card, ...others]
+    .map((c) => ({ id: c.id, word: c.word, readings: readingsOf(c) }))
+    .filter((a) => a.readings.length > 0 || a.id === card.id);
 }
 
 /**

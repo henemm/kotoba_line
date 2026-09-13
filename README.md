@@ -1,8 +1,8 @@
 # kotoba_line
 
-ことばライン — a Japanese vocabulary PWA. Four practice modes over the Kaishi 1.5k
-deck, drawn as four Tokyo metro lines: pick the meaning (選ぶ), listen only (聞く),
-say it aloud (話す), flip the card (めくる).
+ことばライン — a Japanese vocabulary PWA. Five practice modes over the Kaishi 1.5k
+deck, drawn as Tokyo metro lines: pick the meaning (選ぶ), listen only (聞く),
+say it aloud (話す), type the Japanese (書く), flip the card (めくる).
 
 Self-hosted behind nginx under the path `/kotoba/`, with a small Fastify + SQLite
 backend. Progress is derived from an append-only review log, so an iPhone and an
@@ -11,7 +11,7 @@ iPad never disagree. Fully usable offline; events reconcile afterwards.
 **Status: phase 5.** The server is complete — schema, authentication, the event
 log with FSRS scheduling, the deck import (1,500 cards with audio, 191
 topic-tagged), and the whole API including §5a's filters and the settings. The
-client has sign-in, the practise tab, Stats, Settings, and **all four practice
+client has sign-in, the practise tab, Stats, Settings, and **all five practice
 modes** with their summary.
 
 **It works offline.** The deck lives in IndexedDB, answers go into an outbox
