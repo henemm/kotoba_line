@@ -1762,14 +1762,16 @@
   color: var(--ink-muted);
 }
 
-.missed {
+/* Not ".missed": that is also the red station in both strips, and an
+   unscoped rule here pushed every missed station 6px below the line (#100). */
+.missed-list {
   width: 100%;
   text-align: left;
   margin-top: 12px;
   display: flex;
   flex-direction: column;
 }
-.missed .mono-label {
+.missed-list .mono-label {
   padding-bottom: 10px;
 }
 .missed-row {
