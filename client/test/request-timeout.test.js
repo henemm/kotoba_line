@@ -36,6 +36,35 @@ describe("a request that stalls instead of failing (found while chasing a black 
     await outcome;
   });
 
+  // #72, the shape the first fix missed: the status line arrives, the body
+  // does not. The stub's body settles only when the signal fires, as a real
+  // fetch's body stream does — so this fails if the timer is cleared on
+  // headers, which is what the code did (measured in WebKit: still hanging at
+  // 25 s against a server that sent headers and half a body).
+  it("gives up when the headers arrive and the body stalls", async (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const original = globalThis.fetch;
+    globalThis.fetch = async (url, opts) => ({
+      ok: true,
+      status: 200,
+      text: () =>
+        new Promise((resolve, reject) => {
+          opts.signal?.addEventListener("abort", () =>
+            reject(new DOMException("stalled", "AbortError")),
+          );
+        }),
+    });
+    t.after(() => {
+      globalThis.fetch = original;
+    });
+
+    const outcome = assert.rejects(api.me(), OfflineError);
+    // Let request() reach the body read before the clock moves.
+    await new Promise((resolve) => setImmediate(resolve));
+    t.mock.timers.tick(REQUEST_TIMEOUT_MS);
+    await outcome;
+  });
+
   it("still resolves normally when the server answers well inside the timeout", async (t) => {
     const original = globalThis.fetch;
     globalThis.fetch = async () =>

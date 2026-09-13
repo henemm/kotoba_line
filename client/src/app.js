@@ -122,6 +122,20 @@ function offlineBar() {
   );
 }
 
+/**
+ * Swap the strip in place, on the screens that draw one first (the tabs and
+ * 52), for a change of connection state that should not rebuild
+ * the screen under it. Anywhere else the next redraw picks it up.
+ */
+function replaceOfflineBar() {
+  if (!app.querySelector(":scope > nav.tabbar, :scope > .signed-out")) return;
+  const current = app.querySelector(":scope > .offline-bar");
+  const next = offlineBar();
+  if (current && next) current.replaceWith(next);
+  else if (current) current.remove();
+  else if (next) app.prepend(next);
+}
+
 function tabBar() {
   return el(
     "nav.tabbar",
@@ -832,28 +846,40 @@ async function loadSettings() {
  * user is remembered on the device and stands in until the server can be
  * reached — the events she records go into the outbox either way, and a 401
  * when it *can* be reached is what actually ends a session.
+ *
+ * And the remembered user does not wait for the server either (#72). Nothing
+ * is painted until boot gets past this point, and on a weak signal `me()`
+ * takes its full timeout to fail: measured on the live app with the API
+ * stalled, 10 s of an empty dark page before the tab bar appeared. When this
+ * device already knows who she is, the app draws at once and the answer is
+ * applied when it comes. Only a device with nobody remembered — the first
+ * start, or after signing out — waits, because the sign-in screen needs the
+ * server anyway.
  */
-try {
-  state.user = await api.me();
-  await setMeta("user", state.user);
-} catch (err) {
-  if (err instanceof OfflineError) {
-    state.online = false;
-    state.user = await getMeta("user");
-  } else if (isSessionExpired(err)) {
-    // The same state as a cookie that expires mid-practice, so it takes the
-    // same screen: the remembered handle stands in until she signs in again.
-    //
-    // This used to call clearPersonal(), which clears the outbox — so opening
-    // the app after the cookie had lapsed destroyed every answer that had not
-    // been sent yet, which is precisely what 52 promises is safe, and took the
-    // remembered handle with it. Only signing out on purpose clears this
-    // device.
-    state.user = await getMeta("user");
-    state.signedOut = true;
-  } else {
+async function checkSession() {
+  try {
+    const user = await api.me();
+    await setMeta("user", user);
+    return { user };
+  } catch (err) {
+    if (err instanceof OfflineError) return { offline: true };
+    if (isSessionExpired(err)) return { expired: true };
     throw err;
   }
+}
+
+const remembered = await getMeta("user");
+const sessionCheck = checkSession();
+
+if (remembered) {
+  state.user = remembered;
+  // Caught at once: on a device that is already drawing, a server error is not
+  // a reason to stop it, and the next request that matters reports its own.
+  sessionCheck.catch(() => {});
+} else {
+  const result = await sessionCheck;
+  state.user = result.user;
+  if (result.offline) state.online = false;
 }
 
 state.pendingEvents = await pending();
@@ -866,6 +892,38 @@ state.pendingEvents = await pending();
 onSessionExpired(noteSignedOut);
 
 renderApp();
+
+if (remembered) {
+  sessionCheck.then((result) => {
+    if (result.user) {
+      // Only a change worth a redraw gets one: the practise tab fetches its
+      // numbers as it is built, so redrawing on every start would ask twice.
+      const changed =
+        result.user.id !== remembered.id ||
+        result.user.handle !== remembered.handle ||
+        result.user.display !== remembered.display;
+      state.user = result.user;
+      if (changed && !state.session) renderApp();
+    } else if (result.offline) {
+      state.online = false;
+      // Not renderApp(): that rebuilds the practise tab, whose own requests
+      // went out alongside this one and are about to give up too — a fresh tab
+      // would ask again and show "…" for another full timeout.
+      replaceOfflineBar();
+    } else {
+      // The same state as a cookie that expires mid-practice, so it takes the
+      // same screen: the remembered handle stands in until she signs in again.
+      //
+      // This used to call clearPersonal(), which clears the outbox — so
+      // opening the app after the cookie had lapsed destroyed every answer
+      // that had not been sent yet, which is precisely what 52 promises is
+      // safe, and took the remembered handle with it. Only signing out on
+      // purpose clears this device.
+      noteSignedOut();
+    }
+  }, () => {});
+}
+
 noteUpdated();
 
 if (state.user) {

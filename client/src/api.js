@@ -37,6 +37,13 @@ export class OfflineError extends Error {
  * (the remembered signed-in user, a cached deck), it just never reaches it.
  * Ten seconds is long enough for a slow reply and short enough that "the app
  * did not open" does not sit there for minutes before it does.
+ *
+ * The bound covers the body as well as the headers. It used to be cleared as
+ * soon as `fetch()` resolved, which is when the status line arrives — so a
+ * reply that started and then stalled, the likely shape in a train tunnel,
+ * hung in `res.text()` with nothing left to stop it. Measured in WebKit
+ * against a server that sends headers and half a body: still hanging at 25 s
+ * before, OfflineError at 10 s after (#72).
  */
 export const REQUEST_TIMEOUT_MS = 10000;
 
@@ -67,6 +74,7 @@ async function request(path, { method = "GET", body, signal } = {}) {
   signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   let res;
+  let text;
   try {
     res = await fetch(`${API}${path}`, {
       method,
@@ -75,13 +83,15 @@ async function request(path, { method = "GET", body, signal } = {}) {
       headers: body ? { "content-type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
+    text = await res.text();
   } catch {
+    // An abort rejects the body read too, and a connection lost part way
+    // through a reply is no less offline than one lost before it.
     throw new OfflineError();
   } finally {
     clearTimeout(timer);
   }
 
-  const text = await res.text();
   const parsed = text ? safeJson(text) : undefined;
 
   if (!res.ok) {
