@@ -11,7 +11,7 @@
  * one row lookup and changes nothing.
  */
 import { ApiError, OfflineError, api } from "./api.js";
-import { acknowledge, enqueue, outbox, outboxCount } from "./store.js";
+import { acknowledge, enqueue, noteAnswered, outbox, outboxCount } from "./store.js";
 
 const listeners = new Set();
 
@@ -45,6 +45,9 @@ export async function pending() {
 export async function record(events) {
   if (events.length === 0) return;
   await enqueue(events);
+  // After the outbox, which is the write that must not be lost; this one only
+  // keeps a cached queue from offering the card again (#106, queue.js).
+  await noteAnswered(events);
   await announce();
 }
 

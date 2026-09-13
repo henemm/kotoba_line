@@ -185,6 +185,38 @@ export async function setMeta(key, value) {
   return run("meta", "readwrite", (store) => store.put(value, key));
 }
 
+const ANSWERED = "answered";
+const ANSWERED_KEPT_S = 7 * 24 * 3600;
+
+/**
+ * When each card was last answered on this device, kept after the outbox has
+ * let go of it (#106).
+ *
+ * A cached queue minus the outbox is only right while nothing has been sent:
+ * a session answered this morning and flushed leaves an empty outbox, so the
+ * same cached queue offered all twenty cards again in the afternoon. That was
+ * already true offline; using the cache on a slow connection as well made it
+ * the ordinary case. One map in one transaction, so two answers recorded at
+ * once cannot overwrite each other's entry.
+ */
+export async function noteAnswered(events) {
+  return run("meta", "readwrite", (store) => {
+    const read = store.get(ANSWERED);
+    read.onsuccess = () => {
+      const map = read.result ?? {};
+      const cutoff = Math.floor(Date.now() / 1000) - ANSWERED_KEPT_S;
+      for (const [id, at] of Object.entries(map)) if (at < cutoff) delete map[id];
+      for (const e of events) map[e.card_id] = Math.max(map[e.card_id] ?? 0, e.reviewed_at);
+      store.put(map, ANSWERED);
+    };
+  });
+}
+
+/** Card id → the last `reviewed_at` (seconds) recorded on this device. */
+export async function answeredOnDevice() {
+  return (await getMeta(ANSWERED)) ?? {};
+}
+
 /** Sign-out: her data leaves the device, the deck cache may stay. */
 export async function clearPersonal() {
   await run("outbox", "readwrite", (store) => store.clear());

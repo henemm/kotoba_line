@@ -12,6 +12,8 @@ let cards = new Map();
 let loadedAt = 0;
 // The refresh `syncDeck` has in flight, if any.
 let syncing;
+// The first difference of this run, when `loadDeck` did not wait for it.
+let catchingUp;
 
 const SINCE = "deck.since";
 
@@ -29,17 +31,35 @@ export async function loadDeck() {
   if (cards.size > 0) return cards;
 
   const cached = await allCards();
-  if (cached.length > 0) cards = new Map(cached.map((c) => [c.id, c]));
-
-  try {
+  if (cached.length === 0) {
     await fetchDifference();
-  } catch (err) {
-    if (cards.size === 0) throw err;
-    // Offline with a cached deck: exactly what this is for.
+    return cards;
   }
 
+  cards = new Map(cached.map((c) => [c.id, c]));
+  // #106: with a cached deck the difference is not waited for. On a stalled
+  // connection it only ended as a timeout, and a session start sat on "…"
+  // for those ten seconds holding every card it needed. The difference still
+  // lands in this same Map when it arrives; a session whose queue names a card
+  // the cache lacks waits for it through `deckCatchingUp()`.
+  const run = fetchDifference().catch(() => {
+    // Offline with a cached deck: exactly what this is for.
+  });
+  catchingUp = run;
+  run.then(() => {
+    if (catchingUp === run) catchingUp = undefined;
+  });
   return cards;
 }
+
+/**
+ * Settles once the first difference of this run has arrived or given up.
+ *
+ * For a session whose fresh queue names a card the cached deck does not hold
+ * yet — a word she added on another device, say. Dropping it would repeat
+ * #85's "Start 2, then 1/1".
+ */
+export const deckCatchingUp = () => catchingUp ?? Promise.resolve();
 
 /**
  * Fetch what changed on the server now, even though the deck is already in

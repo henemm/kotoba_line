@@ -48,6 +48,40 @@ export class OfflineError extends Error {
 export const REQUEST_TIMEOUT_MS = 10000;
 
 /**
+ * How long a screen waits for the server before it goes on with what the
+ * device already holds (#106).
+ *
+ * The timeout above is when a request is given up. That is the wrong moment
+ * to fall back: the cached queue and the cached deck were on the device the
+ * whole time, and a session start on a stalled connection sat on "…" for all
+ * ten seconds of it (measured on the live app, v41: 10.16 s to the first
+ * card). A request that has not answered in a second and a half is no longer
+ * "quick"; one from Tokyo to this server on a working connection answers well
+ * inside it.
+ */
+export const PATIENCE_MS = 1500;
+
+/**
+ * The promise's outcome if it settles within `ms`, otherwise `undefined` — and
+ * the promise keeps running, so a late answer can still be put to use.
+ *
+ * `{ value }` or `{ error }`, rather than a rejection, so the caller decides
+ * what a failure means; and a rejection that arrives after the wait is caught
+ * here, since nobody may be listening for it any more.
+ */
+export function answerSoon(promise, ms = PATIENCE_MS) {
+  let timer;
+  const outcome = promise.then(
+    (value) => ({ value }),
+    (error) => ({ error }),
+  );
+  const late = new Promise((resolve) => {
+    timer = setTimeout(resolve, ms);
+  });
+  return Promise.race([outcome, late]).finally(() => clearTimeout(timer));
+}
+
+/**
  * The server saying the cookie is gone (design 52) rather than saying a PIN is
  * wrong. Both are 401 and only the body separates them: `unauthenticated` comes
  * from the session guard, `invalid_credentials` from the login route.
