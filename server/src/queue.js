@@ -1,4 +1,5 @@
 import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
+import { nextDay, tokyoDay } from "./stats.js";
 
 /**
  * Building a session's queue (§5, §5a).
@@ -16,7 +17,10 @@ const LAPSE_WINDOW_DAYS = 3;
 /** §5a and phase-0-plan §3.1 D: "All" is capped so a backlog stays finishable. */
 export const MAX_SESSION_LENGTH = 60;
 
-export const ONLY_MODES = ["starred", "lapsed", "new"];
+/** Design 10's "Practise ahead": cards due in the next two days (#90). */
+const AHEAD_WINDOW_DAYS = 2;
+
+export const ONLY_MODES = ["starred", "lapsed", "new", "ahead"];
 
 /**
  * Fisher-Yates with an injectable source of randomness, so a test can pin the
@@ -163,6 +167,21 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // §5a's `only=` narrows to one group rather than mixing.
   if (only === "lapsed") groups = { due: [], lapsed, fresh: [] };
   else if (only === "new") groups = { due: [], lapsed: [], fresh };
+  else if (only === "ahead") {
+    // #90: design 10 offers this when nothing is due, and it is what it says —
+    // cards the scheduler will ask for within two days, soonest first. Anything
+    // already due counts too: it is due within two days, and a device that
+    // opened the tab a minute before a card fell due should not miss it.
+    groups = {
+      due: run(
+        "AND s.card_id IS NOT NULL AND s.due_at <= ?",
+        "ORDER BY s.due_at ASC",
+        [now + AHEAD_WINDOW_DAYS * DAY],
+      ),
+      lapsed: [],
+      fresh: [],
+    };
+  }
 
   const queue = composeQueue(groups, limit);
 
@@ -175,6 +194,65 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
   return { mode: mode ?? null, filtered, available, cardIds: shuffle(queue, random) };
+}
+
+const tokyoTime = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Tokyo",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+const tokyoWeekday = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", weekday: "short" });
+const tokyoDate = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", day: "numeric", month: "short" });
+
+/**
+ * "tomorrow 06:00" — when a moment falls, said the way design 10 says it, in
+ * Tokyo (§8a) whatever the device's clock thinks. Today and tomorrow by name,
+ * the rest of the week by weekday, anything later by date.
+ */
+export function whenInTokyo(at, now) {
+  const today = tokyoDay(now);
+  const day = tokyoDay(at);
+  let label;
+  if (day === today) label = "today";
+  else if (day === nextDay(today)) label = "tomorrow";
+  else if (at - now < 6 * DAY) label = tokyoWeekday.format(at * 1000);
+  else label = tokyoDate.format(at * 1000);
+  return `${label} ${tokyoTime.format(at * 1000)}`;
+}
+
+/**
+ * What the practise tab's nothing-due block needs to say (design 10; #90, #91).
+ *
+ *   ahead    cards due within two days — the "Practise ahead" count
+ *   lapsed   cards missed in the last three days — "Recent mistakes"
+ *   nextDue  `{ count, at, when }`: when the next card falls due, and how many
+ *            fall due that same Tokyo day — "28 · tomorrow 06:00"
+ *
+ * The two counts come from `queueForUser` itself, so an offer can never
+ * promise a number its session then does not deliver. `nextDue` counts only
+ * cards the scheduler has seen: new cards are not "due", they are allowed, and
+ * the allowance is a different sentence.
+ */
+export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
+  const ahead = queueForUser(db, userId, { only: "ahead" }, now).available;
+  const lapsed = queueForUser(db, userId, { only: "lapsed" }, now).available;
+
+  const visible = visibleTo(userId);
+  const scheduled = `FROM card_state s JOIN cards c ON c.id = s.card_id
+     WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}`;
+  const { at } = db.prepare(`SELECT min(s.due_at) AS at ${scheduled} AND s.due_at > ?`).get(userId, ...visible.params, now);
+
+  let nextDue = null;
+  if (at) {
+    const endOfThatDay = Math.floor(Date.parse(`${nextDay(tokyoDay(at))}T00:00:00+09:00`) / 1000);
+    const { n } = db
+      .prepare(`SELECT count(*) AS n ${scheduled} AND s.due_at > ? AND s.due_at < ?`)
+      .get(userId, ...visible.params, now, endOfThatDay);
+    nextDue = { count: n, at, when: whenInTokyo(at, now) };
+  }
+
+  return { ahead, lapsed, nextDue };
 }
 
 /**

@@ -121,7 +121,7 @@ export function levelFloor(level) {
 export function streakFromDays(qualifyingDays, today) {
   const qualifying = new Set(qualifyingDays);
   if (qualifying.size === 0) {
-    return { current: 0, longest: 0, jokers: 0, jokerSpentOn: undefined, gapDays: 0, jokerGap: null };
+    return { current: 0, longest: 0, jokers: 0, jokerSpentOn: undefined, gapDays: 0, jokerGap: null, streakReset: null };
   }
 
   const sorted = [...qualifying].sort();
@@ -133,6 +133,11 @@ export function streakFromDays(qualifyingDays, today) {
   let gapDays = 0;
   // The latest run of missed days that jokers covered, as it grows.
   let gap;
+  // #89: the latest run of missed days of any kind — covered or not — and
+  // whether it ended a streak. Design 08 says "Four days without reviews, and
+  // no joker left to cover them": the days are the whole run, including any a
+  // joker covered before the jokers ran out.
+  let missed;
 
   for (let day = sorted[0]; day <= today; day = nextDay(day)) {
     if (qualifying.has(day)) {
@@ -146,6 +151,9 @@ export function streakFromDays(qualifyingDays, today) {
     // The day is still running; judge it tomorrow.
     if (day === today) continue;
 
+    if (missed && nextDay(missed.lastDay) === day) missed = { ...missed, lastDay: day, days: missed.days + 1 };
+    else missed = { firstDay: day, lastDay: day, days: 1, ended: 0 };
+
     if (jokers > 0) {
       jokers -= 1;
       // One more covered day of the gap already open, or the start of a new one.
@@ -158,6 +166,10 @@ export function streakFromDays(qualifyingDays, today) {
 
     // §8a: with no joker in hand the streak resets. Unspent jokers survive it,
     // and the five-day counter starts again.
+    //
+    // A streak that was already zero has nothing to lose, so only the day that
+    // actually ended one marks the run.
+    if (current > 0) missed = { ...missed, ended: current };
     current = 0;
     consecutive = 0;
     jokerSpentOn = undefined;
@@ -172,7 +184,16 @@ export function streakFromDays(qualifyingDays, today) {
   // missed day would have extended the gap up to yesterday anyway.
   const jokerGap = gap && nextDay(gap.lastDay) === today ? gap : null;
 
-  return { current, longest, jokers, jokerSpentOn, gapDays, jokerGap };
+  // #89, the counterpart (design 08): the run of missed days ended a streak,
+  // reported on the same day and for the same reason as jokerGap. `lost` is the
+  // streak it ended — the number the screen does not print but the copy needs
+  // to know was not zero.
+  const streakReset =
+    missed?.ended > 0 && nextDay(missed.lastDay) === today
+      ? { firstDay: missed.firstDay, lastDay: missed.lastDay, days: missed.days, lost: missed.ended }
+      : null;
+
+  return { current, longest, jokers, jokerSpentOn, gapDays, jokerGap, streakReset };
 }
 
 /**
@@ -279,6 +300,10 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     // `{ firstDay, lastDay, days }` on the first day after jokers covered a
     // gap, otherwise null (#86). The client shows the notice once per lastDay.
     jokerGap: streak.jokerGap,
+    // `{ firstDay, lastDay, days, lost }` on the first day after a run of
+    // missed days ended the streak, otherwise null (#89). Shown once per
+    // lastDay, like jokerGap.
+    streakReset: streak.streakReset,
     reviewsToday: reviewsPerDay.get(tokyoDay(now)) ?? 0,
     reviewsPerQualifyingDay: REVIEWS_PER_QUALIFYING_DAY,
     cardsSeen: seenCardIds.size,

@@ -12,6 +12,7 @@ import {
   MAX_SESSION_LENGTH,
   ONLY_MODES,
   browseCards,
+  outlookForUser,
   queueForUser,
   setStar,
   starredAmong,
@@ -174,6 +175,13 @@ export default async function deckRoutes(app) {
       // connection still knows which of its cards are starred.
       if (answer.cardIds.length > 0) {
         answer.starred = starredAmong(db, req.user.id, answer.cardIds);
+      }
+
+      // Design 10 (#90, #91): an empty day's queue is exactly when the practise
+      // tab draws "Next cards due" and the counted offers, so they come with
+      // that answer rather than costing the tab another request.
+      if (!answer.filtered && answer.cardIds.length === 0) {
+        answer.outlook = outlookForUser(db, req.user.id);
       }
       return answer;
     },

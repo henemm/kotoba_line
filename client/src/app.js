@@ -3,7 +3,7 @@ import { signInScreen } from "./screens/signin.js";
 import { signedOutScreen } from "./screens/signed-out.js";
 import { updateSheet } from "./screens/update-sheet.js";
 import { practiseScreen } from "./screens/practise.js";
-import { jokerSpentScreen, statsScreen } from "./screens/stats.js";
+import { jokerSpentScreen, statsScreen, streakResetScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
 import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
@@ -85,10 +85,11 @@ const state = {
   // cleared once the tab is opened" (#86). Kept in meta as well, so quitting
   // the app before looking does not lose it.
   jokerBadge: false,
-  // Designs 04/19 (#86): the stats whose `jokerGap` is being shown, and the
-  // last gap already shown. The second is also in meta; holding it here too
-  // means a device without IndexedDB sees the notice once per run rather than
-  // on every redraw of the practise tab.
+  // Designs 04/19 (#86) and 08/20 (#89): the notice being shown — a joker
+  // covered the gap, or the gap ended the streak — and the last one already
+  // shown. The second is also in meta; holding it here too means a device
+  // without IndexedDB sees the notice once per run rather than on every redraw
+  // of the practise tab.
   jokerNotice: undefined,
   jokerNoticed: undefined,
   // #93: the update sheet, built once and kept so "More info" stays open
@@ -163,7 +164,15 @@ function currentScreen() {
       },
       // 36: "tapping a line still starts a session with whatever the sheet
       // last held, so the two-tap path survives."
-      onStart: ({ mode } = {}) => startSession({ mode, ...state.filters }),
+      // A line carries only its mode, and runs whatever the sheet last held.
+      // An offer from the nothing-due block carries `only` as well (#90): it
+      // is its own set — "cards due in the next two days", "recent mistakes" —
+      // and not a narrowing of the sheet's. Taking just `{ mode }` from it
+      // dropped the `only` on the floor, so both offers started the day's
+      // queue, which on that screen is empty by definition, and the tap did
+      // nothing at all (measured on the live app, 2026-09-13).
+      onStart: ({ mode, only } = {}) =>
+        startSession(only ? { mode, ...DEFAULT_FILTERS, only } : { mode, ...state.filters }),
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
@@ -208,10 +217,18 @@ function currentScreen() {
  * covered gap; this makes it once per gap on this device.
  */
 async function considerJokerNotice(stats) {
-  const gap = stats?.jokerGap;
-  if (!gap || state.jokerNotice || state.jokerNoticed === gap.lastDay) return;
-  if ((await getMeta("joker.noticed")) === gap.lastDay) {
-    state.jokerNoticed = gap.lastDay;
+  // #89: a gap that ended the streak is the same moment with the other screen
+  // (design 08). The server never reports both for one gap.
+  const kind = stats?.jokerGap ? "joker" : stats?.streakReset ? "reset" : undefined;
+  if (!kind) return;
+  const gap = kind === "joker" ? stats.jokerGap : stats.streakReset;
+  const key = `${kind}:${gap.lastDay}`;
+  if (state.jokerNotice || state.jokerNoticed === key) return;
+  // The joker key predates #89 and stays as it was, so a device that has
+  // already seen a notice is not shown it again after this update.
+  const metaKey = kind === "joker" ? "joker.noticed" : "streak.reset.noticed";
+  if ((await getMeta(metaKey)) === gap.lastDay) {
+    state.jokerNoticed = key;
     return;
   }
   // Only over the practise tab as it stands: never over a session, a summary,
@@ -219,15 +236,15 @@ async function considerJokerNotice(stats) {
   if (state.tab !== "practise" || state.session || state.summary || state.overlay || state.browse || state.sheet) {
     return;
   }
-  state.jokerNotice = stats;
+  state.jokerNotice = { stats, kind, key, metaKey, lastDay: gap.lastDay };
   renderApp();
 }
 
 function dismissJokerNotice() {
-  const { lastDay } = state.jokerNotice.jokerGap;
-  state.jokerNoticed = lastDay;
+  const { key, metaKey, lastDay } = state.jokerNotice;
+  state.jokerNoticed = key;
   state.jokerNotice = undefined;
-  setMeta("joker.noticed", lastDay);
+  setMeta(metaKey, lastDay);
   renderApp();
 }
 
@@ -665,10 +682,11 @@ function renderApp() {
     return;
   }
 
-  // Designs 04/19: before the mode picker, and without the tab bar — read
-  // once and put away, like the level-up moment.
+  // Designs 04/19 and 08/20: before the mode picker, and without the tab bar —
+  // read once and put away, like the level-up moment.
   if (state.jokerNotice) {
-    render(app, offlineBar(), jokerSpentScreen({ stats: state.jokerNotice, onContinue: dismissJokerNotice }));
+    const notice = state.jokerNotice.kind === "reset" ? streakResetScreen : jokerSpentScreen;
+    render(app, offlineBar(), notice({ stats: state.jokerNotice.stats, onContinue: dismissJokerNotice }));
     return;
   }
 

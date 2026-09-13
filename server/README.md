@@ -40,7 +40,7 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `GET` | `/api/browse` | `?q=&deck=&tag=&starred=&page=` → searchable card list |
 | `GET` | `/api/queue` | …and, for `mode=flip`, the four intervals per card |
 | `POST` | `/api/stars` | `{ cardId, starred }` → pin or unpin a card |
-| `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts, and `jokerGap` on the day after jokers covered a gap |
+| `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts, `jokerGap` on the day after jokers covered a gap, and `streakReset` on the day after a gap ended the streak |
 | `GET` | `/api/settings` | the four settings, the deck rows, the sync state, the version |
 | `PATCH` | `/api/settings` | a partial update — writes one control at a time |
 | `GET` | `/api/cards` | her own deck, and every topic on cards she can see |
@@ -180,9 +180,14 @@ covered by a joker, one practised is a streak of six.
 
 **A covered gap is reported once, the next day.** `jokerGap` is set only on the
 day straight after the jokers covered a gap, which is the first day she can be
-back. The client shows designs 04/19's notice once per gap (#86). A gap that
-used up the last joker and reset the streak is not reported; that is design 08,
-not built yet (#89).
+back. The client shows designs 04/19's notice once per gap (#86).
+
+**A gap that ended the streak is reported the same way.** `streakReset`
+(`{ firstDay, lastDay, days, lost }`) is set on the day after a run of missed
+days that reset a streak above zero, and the client shows design 08 once per
+gap (#89). `days` is the whole run, including days a joker covered before the
+jokers ran out — 08 says "four days without reviews". The server never sets
+both for one gap.
 
 Levels follow §8a literally — level *n* starts at `100·n·(n+1)/2`, so level 7
 begins at 2,800 XP, which is what the Stats design draws. The one adjustment is
@@ -197,10 +202,20 @@ within the session so the same cards do not always arrive in the same order.
 It returns **ids only**: the client already holds the deck, and re-sending card
 content on every session start would waste the bandwidth §1 is trying to save.
 
-`deck=`, `tag=` and `only=` (`starred`, `lapsed`, `new`) narrow it. When any of
-them is set the session counts as one she chose, and §5a's rule applies: the
-daily new-card limit is for unfiltered sessions only, so a deliberately picked
-session is never capped.
+`deck=`, `tag=` and `only=` (`starred`, `lapsed`, `new`, `ahead`) narrow it.
+When any of them is set the session counts as one she chose, and §5a's rule
+applies: the daily new-card limit is for unfiltered sessions only, so a
+deliberately picked session is never capped. `ahead` is design 10's "Practise
+ahead": cards due within two days, soonest first (#90).
+
+An unfiltered request that comes back empty also carries `outlook` —
+`{ ahead, lapsed, nextDue: { count, at, when } | null }` — which is what the
+practise tab's nothing-due block draws: the two offers' counts, taken from this
+same function so an offer never promises cards its session does not have, and
+"Next cards due · 3 · tomorrow 06:00", worded in Tokyo time (#91). In practice
+`lapsed` is 0 there: a card lapsed in the last three days is already in the
+unfiltered queue, so a day with one is not a nothing-due day. The row is
+dropped, not disabled, as design 10 asks.
 
 "All" is capped at 60 cards (phase-0-plan §3.1 D). After a week away the backlog
 can be several hundred, and a session nobody finishes is worse than a short one.
