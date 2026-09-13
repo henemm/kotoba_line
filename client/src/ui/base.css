@@ -184,22 +184,67 @@ input:focus-visible {
   color: var(--ink);
 }
 
-/* ── tab bar (design 11) ────────────────────────────────────────── */
+/* ── tab bar (design 11, floating since #102) ───────────────────── */
 /* No icons: three words and a station dot for the active tab, the same dot
-   used everywhere else. Hidden during a session and behind sign-in. */
+   used everywhere else. Hidden during a session and behind sign-in.
+
+   Design 11 draws a bar joined to the bottom edge. #102 (Henning's call)
+   makes it float, the way iOS 26 draws its tab bar: a capsule held off the
+   sides and the bottom, the screen scrolling on underneath it, the active tab
+   in a pill of its own. Only the floating was asked for — iOS 26's glass was
+   explicitly not, so the capsule is opaque and uses the app's own colours.
+   Do not join it back to the edge as a "fix" for design 11.
+
+   Absolute inside #app, never `position: fixed`: in the installed app a fixed
+   bottom edge came out 62px above the real one (see the standalone rule at
+   the top of this file), and a bar that is meant to float would hide exactly
+   that. #app already carries the corrected height. */
+:root {
+  --tabbar-h: 64px;
+  /* Off the bottom edge: just over the home indicator where the phone has
+     one, a plain gap where it has not. */
+  --tabbar-gap: max(12px, calc(env(safe-area-inset-bottom, 0px) - 10px));
+  /* What a tab screen keeps clear at the end of its scroll, so its last row
+     can be scrolled out from under the capsule. */
+  --tabbar-space: calc(var(--tabbar-h) + var(--tabbar-gap) + 24px);
+}
+
+/* The screen fades out into the page just above the capsule, as iOS 26 does
+   at a scroll edge. Without it the top few pixels of whichever row sat under
+   the bar showed as a sliver between the capsule and the row above — on the
+   practise tab, the edge of a dashed station (measured at 852). Same height
+   as the space a screen keeps clear, so a row scrolled to the end is never
+   faded. */
+#app:has(> nav.tabbar)::after {
+  content: "";
+  position: absolute;
+  z-index: 9;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tabbar-space);
+  background: linear-gradient(to bottom, transparent, var(--night) 24px);
+  pointer-events: none;
+}
+
 .tabbar {
-  /* 72px is the design's content height, and the home-indicator clearance goes
-     below it rather than out of it. With border-box a plain `height: 72px`
-     plus the padding below leaves only 38px to centre the dot and label in,
-     which on a phone put the dots 5px from the top edge where the design has
-     them at 22px. */
-  height: calc(72px + env(safe-area-inset-bottom, 0px));
-  flex: none;
-  background: var(--night-deep);
-  border-top: 1px solid var(--surface-hi);
+  position: absolute;
+  z-index: 10; /* over the screen, under the sheets and their scrims (20) */
+  left: 20px;
+  right: 20px;
+  bottom: var(--tabbar-gap);
+  max-width: 420px;
+  margin: 0 auto;
+  height: var(--tabbar-h);
+  padding: 5px;
+  border-radius: calc(var(--tabbar-h) / 2);
+  background: var(--surface);
+  border: 1px solid var(--surface-hi);
+  /* Black, not a token: a shadow is the absence of light, and it is what
+     lifts the capsule off a screen of the same dark blue. */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: stretch;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tabbar button {
@@ -208,18 +253,31 @@ input:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   background: none;
   border: 0;
+  border-radius: calc((var(--tabbar-h) - 12px) / 2);
   padding: 0;
   position: relative;
+}
+
+.tabbar [aria-current="page"] {
+  background: var(--surface-hi);
+}
+
+/* The tab screens run to the bottom edge now, under the capsule. */
+.practise,
+.stats,
+.settings {
+  padding-bottom: var(--tabbar-space);
 }
 
 .tabbar .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--surface-hi);
+  /* --surface-hi, as before, would vanish into the capsule's border colour. */
+  background: var(--ink-dim);
   display: block;
 }
 
@@ -241,10 +299,13 @@ input:focus-visible {
    once the tab is opened. A diamond is the only diamond in the app.
    Design 11 puts it 12px right of centre over a 12px label. The label here is
    larger, and measured in WebKit at 394 × 852 that covered the "s" of Stats by
-   8px (#86, the first time the badge could light at all) — so 28px. */
+   8px (#86, the first time the badge could light at all) — so 28px.
+   In the capsule (#102) `top` moved from 16px to 7px to keep it level with
+   the dot and label; measured at 394 × 852 the diamond clears the "s" by 8px
+   and stays inside the capsule top and bottom. */
 .tabbar .joker-badge {
   position: absolute;
-  top: 16px;
+  top: 7px;
   left: 50%;
   margin-left: 28px;
   width: 26px;
@@ -256,10 +317,8 @@ input:focus-visible {
 }
 
 @media (min-width: 700px) {
-  .tabbar {
-    height: 80px;
-    padding-left: 25%;
-    padding-right: 25%;
+  :root {
+    --tabbar-h: 72px;
   }
   .tabbar .label {
     font-size: 13px;

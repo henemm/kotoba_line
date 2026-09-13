@@ -1,5 +1,13 @@
 [
   {
+    "version": "v43",
+    "summary": "The bar with Practise, Stats and Settings now floats above the bottom of the screen.",
+    "notes": [
+      "The bar at the bottom is now a rounded bar that floats, like on the newest iPhones. The tab you are on sits in a lighter bubble.",
+      "The page scrolls on underneath the bar, so you see a little more of each screen."
+    ]
+  },
+  {
     "version": "v42",
     "summary": "On a bad connection, you can start practising straight away.",
     "notes": [

@@ -30,7 +30,7 @@ in `server/README.md`.
 |---|---|---|
 | Sign in | 01, 14 | done — default, wrong PIN, rate limited |
 | Practise tab | 10, 15 | done — normal day and nothing-due, both with the four lines; nothing-due has "Next cards due" and counted offers, a row with no cards dropped (#90, #91). Not drawn: 10's "You cleared 34 cards this morning" |
-| Tab bar | 11 | done — three tabs, active dot, joker badge |
+| Tab bar | 11 | done — three tabs, active dot, joker badge; floats as a capsule since #102, which design 11 does not draw |
 | Offline strip | 25 | done — the three states, driven by the outbox, never during a session |
 | Stats | 02, 12, 24 | done — level, streak, jokers, maturity, topics with the truncation rule |
 | Settings | 22, 26 | done — daily load, decks, sound, account, diagnostics |
