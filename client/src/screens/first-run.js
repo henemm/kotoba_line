@@ -65,7 +65,11 @@ export function firstRunScreen({ onReady }) {
         latest = answer.latest ?? latest;
 
         if (rows.length > 0) {
-          await putCards(rows);
+          // Deletions are not cards. A deleted word of her own, and every
+          // word of someone else's (#84), arrive as rows marked `deleted_at`;
+          // stored, they turned up again in an offline search. Still counted
+          // in `got`, because that is the offset of the next page.
+          await putCards(rows.filter((c) => !c.deleted_at));
           state.got += rows.length;
           draw();
         }

@@ -1,4 +1,4 @@
-import { userTagsFor } from "./cards.js";
+import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 
 /**
  * Building a session's queue (§5, §5a).
@@ -114,15 +114,20 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   const starredOnly = only === "starred";
 
+  // Someone else's own words are never in her queue (#84).
+  const visible = visibleTo(userId);
+
   const base = (extra, params) =>
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ? AND st.starred = 1" : ""}
-      WHERE c.deleted_at IS NULL ${filterClause({ deck, tag }, params, userId)} ${extra}`;
+      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deck, tag }, params, userId)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
     if (starredOnly) params.push(userId);
+    // Before filterClause runs, because its placeholders come after this one.
+    params.push(...visible.params);
     const sql = base(extra, params) + " " + order;
     return db.prepare(sql).all(...params, ...extraParams).map((r) => r.id);
   };
@@ -194,10 +199,12 @@ function normalisedGloss(column) {
 export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageSize = 50 } = {}) {
   // Join parameters and filter parameters are kept apart deliberately: mixing
   // them is how a query ends up reading a user id as a search term.
-  const whereParams = [];
   // A card she deleted leaves every list, but its row stays for the event log
-  // to point at (migration 004).
-  let where = "WHERE c.deleted_at IS NULL";
+  // to point at (migration 004). Someone else's own words were never on it
+  // (#84).
+  const visible = visibleTo(userId);
+  const whereParams = [...visible.params];
+  let where = `WHERE c.deleted_at IS NULL AND ${visible.sql}`;
 
   if (q) {
     // Japanese has no word boundaries, so a substring match is right for the
@@ -303,8 +310,7 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
  * request happens to arrive.
  */
 export function setStar(db, userId, cardId, starred, changedAt = Math.floor(Date.now() / 1000)) {
-  const exists = db.prepare("SELECT 1 FROM cards WHERE id = ?").get(cardId);
-  if (!exists) return { ok: false, reason: "unknown_card" };
+  if (!visibleCard(db, userId, cardId)) return { ok: false, reason: "unknown_card" };
 
   db.prepare(
     `INSERT INTO card_stars (user_id, card_id, starred, changed_at)

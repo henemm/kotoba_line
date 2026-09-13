@@ -870,7 +870,11 @@ export function sessionScreen({
         // against.
         speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
       ),
-      reading(card.word_furigana, card.word, card),
+      // `word_reading` for her own words (#85): `word_furigana` is Anki's
+      // bracket notation and is always NULL on a card she wrote, so the
+      // reading she typed was stored and never shown. Plain kana passes
+      // through `kanaReading` unchanged.
+      reading(card.word_furigana || card.word_reading, card.word, card),
       romajiLine(card),
       el("div.meaning.reveal", { text: card.word_meaning }),
       card.sentence ? revealedSentence(card) : null,

@@ -2646,6 +2646,11 @@
   line-height: 1.5;
   color: var(--no);
 }
+/* #85: the edit form's way out for a word. A quiet outline rather than red —
+   the sheet it opens is where the decision is made. */
+.add-delete {
+  margin-top: 14px;
+}
 
 /* 30: her list. Maturity in words rather than a bar — five rows do not need
    a chart. */
@@ -2677,13 +2682,21 @@
   display: flex;
   flex-direction: column;
 }
+/* A button since #85 — tapping a word opens it for editing — so the browser's
+   own button styling is undone here. */
 .own-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 14px;
+  width: 100%;
   padding: 14px 0;
+  border: 0;
   border-top: 1px solid var(--surface-hi);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 .own-copy {
   display: flex;

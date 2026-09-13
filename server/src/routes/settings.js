@@ -43,7 +43,7 @@ export default async function settingsRoutes(app) {
    */
   app.get("/api/settings", { preHandler: app.requireUser }, async (req) => ({
     settings: settingsForUser(db, req.user.id),
-    decks: deckCounts(db),
+    decks: deckCounts(db, req.user.id),
     sync: syncStateForUser(db, req.user.id),
     version,
   }));

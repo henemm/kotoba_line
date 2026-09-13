@@ -1,3 +1,5 @@
+import { visibleTo } from "./cards.js";
+
 /**
  * XP, levels, streak and jokers (§8a).
  *
@@ -225,6 +227,10 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
   // them still can. A name on both sides — she puts a card into `food` — is one
   // row whose cards are the union, and `own` is true, because the fact worth
   // surfacing is that she has touched it.
+  //
+  // Only over cards she can see (#84): a friend's own words, and the topics
+  // they coined for them, are not part of her deck.
+  const visible = visibleTo(userId);
   const topics = db
     .prepare(
       `WITH all_tags AS (
@@ -238,13 +244,13 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
                                   THEN a.card_id END)     AS seen,
               max(a.own)                                  AS own
          FROM all_tags a
-         JOIN cards c ON c.id = a.card_id AND c.deleted_at IS NULL
+         JOIN cards c ON c.id = a.card_id AND c.deleted_at IS NULL AND ${visible.sql}
          LEFT JOIN review_events e
                 ON e.card_id = a.card_id AND e.user_id = ?
         GROUP BY a.tag
         ORDER BY a.tag`,
     )
-    .all(userId, userId)
+    .all(userId, ...visible.params, userId)
     .map((t) => ({ ...t, own: Boolean(t.own) }));
 
   return {

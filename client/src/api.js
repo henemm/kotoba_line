@@ -131,6 +131,8 @@ export const api = {
 
   cards: () => request("/cards"),
   addCard: (card) => request("/cards", { method: "POST", body: card }),
+  // #85: the whole card, like adding one — see the route for why not a patch.
+  updateCard: (id, card) => request(`/cards/${id}`, { method: "PUT", body: card }),
   deleteCard: (id) => request(`/cards/${id}`, { method: "DELETE" }),
 
   settings: () => request("/settings"),
