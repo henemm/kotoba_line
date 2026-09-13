@@ -524,8 +524,16 @@
    the space it has, and the fold lands mid-row on the last two lines. Tighten
    the rhythm between the four mode lines and the length picker — the tallest,
    most repeated spacing on the screen — rather than hide or shrink content. */
+/* #109: the fifth line (書く, #97) added 67px and pushed "Add a word" out
+   from under the tab bar again — measured at 394 × 852, 59px past the fade
+   above the floating capsule (#102); at 402 × 874, 37px. Two more cuts, the
+   ones with the least to lose: the due line's paragraph margins, which were
+   never meant — a browser's default 16px above and below one line of text,
+   32px in all — and 3px off each mode line, 30px over five. What the screen
+   does not fit after that (a resume card, a smaller phone), it scrolls. */
 @media (max-width: 699px) {
   .practise .due-line {
+    margin: 0;
     padding-top: 18px;
     padding-bottom: 14px;
   }
@@ -533,11 +541,11 @@
     padding: 6px var(--gutter) 14px;
   }
   .practise .lines .rail {
-    top: calc(6px + 10px + 15px);
-    bottom: calc(14px + 10px + 15px);
+    top: calc(6px + 7px + 15px);
+    bottom: calc(14px + 7px + 15px);
   }
   .practise .line-row {
-    padding: 10px 0;
+    padding: 7px 0;
   }
   .practise .length {
     padding-bottom: 16px;
@@ -563,7 +571,11 @@
      the resume card enough that "Find and star words" clears the fold at
      the shorter height (with room to spare at the taller one), then widen
      the row below it past the 7px the fold can move, so wherever the fold
-     falls near that boundary, it falls in the gap and never inside a row. */
+     falls near that boundary, it falls in the gap and never inside a row.
+     Since the fifth line (#97) that no longer holds, and #109 does not try to
+     restore it: with the card showing the tab is 93px too tall at 852 and
+     scrolls, and the row cut under the floating tab bar's fade is what says
+     there is more. These rules still keep that scroll short. */
   .practise.has-resume .resume-row {
     padding: 9px 16px;
   }
@@ -2999,8 +3011,11 @@
   line-height: 1;
   color: var(--ink-muted);
 }
+/* #109: bottom padding. With none, "Or start fresh" sat on top of "What to
+   practise" — 0px between them, the two labels drawn over each other —
+   since the set block moved up under the resume card (#58). */
 .resume-block .rule {
-  padding: 18px var(--gutter) 0;
+  padding: 18px var(--gutter) 14px;
 }
 
 /* ══ 49 First run ═════════════════════════════════════════════════

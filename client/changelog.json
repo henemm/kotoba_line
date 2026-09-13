@@ -1,5 +1,13 @@
 [
   {
+    "version": "v44",
+    "summary": "“Add a word” is back on the Practise screen without scrolling.",
+    "notes": [
+      "Since 書く was added, “Add a word” had slipped below the bottom of the screen. The Practise screen is now a little more compact, so both entries under the lines fit again.",
+      "When you can carry on with a session, “Or start fresh” no longer overlaps “What to practise”."
+    ]
+  },
+  {
     "version": "v43",
     "summary": "The bar with Practise, Stats and Settings now floats above the bottom of the screen.",
     "notes": [
