@@ -1184,6 +1184,11 @@
   padding: 0 24px;
   text-align: center;
 }
+/* #113: a revealed card keeps its question where the front put it —
+   `holdInPlace` in session.js sets the padding that does that. */
+.card-area.held {
+  justify-content: flex-start;
+}
 .prompt-label {
   font-size: 13px;
   color: var(--ink-muted);
@@ -1657,6 +1662,19 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--ink-muted);
+}
+/* #114: one line per version waiting, under "N updates in one:". The same
+   size as the sentence it replaces, and a little brighter, because here the
+   lines are the news and the lead-in is not. */
+.update-summaries {
+  margin: -8px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.update-summaries li + li {
+  margin-top: 6px;
 }
 .sheet-actions {
   display: flex;

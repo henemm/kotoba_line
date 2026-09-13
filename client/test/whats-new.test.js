@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
-import { notesSince, startingPoint, versionNumber } from "../src/whats-new.js";
+import { SUMMARIES_SHOWN, notesSince, sheetSummary, startingPoint, versionNumber } from "../src/whats-new.js";
 
 const clientRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const changelog = JSON.parse(readFileSync(join(clientRoot, "changelog.json"), "utf8"));
@@ -51,6 +51,36 @@ describe("what changed between two shells (#93)", () => {
 
   it("tells a device that has just installed the app nothing", () => {
     assert.equal(startingPoint({ seen: undefined, running: "v36", hasDeck: false }), "v36");
+  });
+});
+
+describe("what the sheet says above More info (#114)", () => {
+  const entry = (n) => ({ version: `v${n}`, summary: `summary ${n}`, notes: [] });
+
+  it("gives one version's summary as a sentence, as before", () => {
+    assert.deepEqual(sheetSummary([entry(45)]), { text: "summary 45", items: [], more: 0 });
+  });
+
+  it("lists every version's summary when more than one arrives, newest first", () => {
+    // The case that prompted it: v42 → v45, where v45's one-line fix stood for
+    // the tab bar changing shape in v43.
+    const { text, items, more } = sheetSummary([entry(45), entry(44), entry(43)]);
+    assert.equal(text, "3 updates in one:");
+    assert.deepEqual(items, ["summary 45", "summary 44", "summary 43"]);
+    assert.equal(more, 0);
+  });
+
+  it("counts the rest past a handful, so the sheet does not scroll before Update", () => {
+    const many = [50, 49, 48, 47, 46, 45].map(entry);
+    const { text, items, more } = sheetSummary(many);
+    assert.equal(text, "6 updates in one:");
+    assert.equal(items.length, SUMMARIES_SHOWN);
+    assert.equal(more, 6 - SUMMARIES_SHOWN);
+  });
+
+  it("says nothing of its own when there are no notes to go on", () => {
+    assert.deepEqual(sheetSummary([]), { text: undefined, items: [], more: 0 });
+    assert.deepEqual(sheetSummary(undefined), { text: undefined, items: [], more: 0 });
   });
 });
 
