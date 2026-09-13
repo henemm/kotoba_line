@@ -238,12 +238,15 @@ input:focus-visible {
 }
 
 /* The joker badge: a diamond on Stats the first time one is earned, cleared
-   once the tab is opened. A diamond is the only diamond in the app. */
+   once the tab is opened. A diamond is the only diamond in the app.
+   Design 11 puts it 12px right of centre over a 12px label. The label here is
+   larger, and measured in WebKit at 394 × 852 that covered the "s" of Stats by
+   8px (#86, the first time the badge could light at all) — so 28px. */
 .tabbar .joker-badge {
   position: absolute;
   top: 16px;
   left: 50%;
-  margin-left: 12px;
+  margin-left: 28px;
   width: 26px;
   height: 26px;
   background: var(--ink);

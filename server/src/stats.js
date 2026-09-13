@@ -121,7 +121,7 @@ export function levelFloor(level) {
 export function streakFromDays(qualifyingDays, today) {
   const qualifying = new Set(qualifyingDays);
   if (qualifying.size === 0) {
-    return { current: 0, longest: 0, jokers: 0, jokerSpentOn: undefined, gapDays: 0 };
+    return { current: 0, longest: 0, jokers: 0, jokerSpentOn: undefined, gapDays: 0, jokerGap: null };
   }
 
   const sorted = [...qualifying].sort();
@@ -131,6 +131,8 @@ export function streakFromDays(qualifyingDays, today) {
   let consecutive = 0;
   let jokerSpentOn;
   let gapDays = 0;
+  // The latest run of missed days that jokers covered, as it grows.
+  let gap;
 
   for (let day = sorted[0]; day <= today; day = nextDay(day)) {
     if (qualifying.has(day)) {
@@ -146,6 +148,9 @@ export function streakFromDays(qualifyingDays, today) {
 
     if (jokers > 0) {
       jokers -= 1;
+      // One more covered day of the gap already open, or the start of a new one.
+      if (gap && nextDay(jokerSpentOn) === day) gap = { ...gap, lastDay: day, days: gap.days + 1 };
+      else gap = { firstDay: day, lastDay: day, days: 1 };
       jokerSpentOn = day;
       gapDays += 1;
       continue;
@@ -157,9 +162,17 @@ export function streakFromDays(qualifyingDays, today) {
     consecutive = 0;
     jokerSpentOn = undefined;
     gapDays = 0;
+    gap = undefined;
   }
 
-  return { current, longest, jokers, jokerSpentOn, gapDays };
+  // §8a: "tell her when one is spent" (#86). Designs 04/19 show that once,
+  // "before the mode picker, only after a gap that a joker covered" — so the
+  // gap is reported only on the day straight after it, which is the first day
+  // she can be back. Any later and she has practised since, or a further
+  // missed day would have extended the gap up to yesterday anyway.
+  const jokerGap = gap && nextDay(gap.lastDay) === today ? gap : null;
+
+  return { current, longest, jokers, jokerSpentOn, gapDays, jokerGap };
 }
 
 /**
@@ -263,6 +276,9 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     jokers: streak.jokers,
     jokerSpentOn: streak.jokerSpentOn ?? null,
     daysCoveredByJokers: streak.gapDays,
+    // `{ firstDay, lastDay, days }` on the first day after jokers covered a
+    // gap, otherwise null (#86). The client shows the notice once per lastDay.
+    jokerGap: streak.jokerGap,
     reviewsToday: reviewsPerDay.get(tokyoDay(now)) ?? 0,
     reviewsPerQualifyingDay: REVIEWS_PER_QUALIFYING_DAY,
     cardsSeen: seenCardIds.size,

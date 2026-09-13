@@ -765,6 +765,100 @@
   text-wrap: pretty;
 }
 
+/* ── "Joker spent" (designs 04, 19; #86) ─────────────────────────
+   Shown once before the practise tab. Takes the screen like the level-up
+   moment, and like it is read once and put away. */
+.joker-notice {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.joker-notice-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 34px;
+  padding: 0 var(--gutter);
+}
+.joker-notice-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.joker-notice .joker-slots {
+  display: flex;
+  gap: 12px;
+}
+.joker-notice .slot {
+  flex: 1;
+  height: 64px;
+  border-radius: 14px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+}
+.joker-notice .slot.filled {
+  border: 2px solid var(--surface-hi);
+}
+.joker-notice .slot.spent,
+.joker-notice .slot.empty {
+  border: 2px dashed var(--ink-dim);
+}
+.joker-notice .slot-label {
+  font: 400 11px/1 var(--mono);
+  color: var(--ink-muted);
+}
+.joker-notice .diamond {
+  width: 30px;
+  height: 30px;
+  background: var(--ink);
+  transform: rotate(45deg);
+  border-radius: 5px;
+  display: block;
+}
+.joker-notice-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.joker-notice-copy h2 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+.joker-notice-copy p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+.joker-notice-streak {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.joker-notice-streak .tabular {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+}
+.joker-notice-streak-label {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  white-space: pre-line;
+}
+.joker-notice-foot {
+  flex: none;
+  padding: 0 var(--gutter) 30px;
+}
+
 /* ── shared section furniture ──────────────────────────────────── */
 .stats .section-head {
   display: flex;
