@@ -10,6 +10,8 @@ import { allCards, dropCards, getMeta, putCards, setMeta } from "./store.js";
  */
 let cards = new Map();
 let loadedAt = 0;
+// The refresh `syncDeck` has in flight, if any.
+let syncing;
 
 const SINCE = "deck.since";
 
@@ -22,33 +24,69 @@ const SINCE = "deck.since";
  * to fall back on.
  */
 export async function loadDeck() {
+  // A session started straight after saving a word waits for that word.
+  if (syncing) await syncing;
   if (cards.size > 0) return cards;
 
   const cached = await allCards();
   if (cached.length > 0) cards = new Map(cached.map((c) => [c.id, c]));
 
   try {
-    const since = cards.size > 0 ? ((await getMeta(SINCE)) ?? 0) : 0;
-    const { cards: rows, latest } = await api.deck(since);
-    if (rows.length > 0) {
-      // A card she deleted arrives here marked rather than missing — the row
-      // stays on the server for the event log to point at (migration 004) —
-      // so the difference has to be applied, not just merged.
-      const live = rows.filter((c) => !c.deleted_at);
-      const gone = rows.filter((c) => c.deleted_at).map((c) => c.id);
-      for (const card of live) cards.set(card.id, card);
-      for (const id of gone) cards.delete(id);
-      await putCards(live);
-      if (gone.length > 0) await dropCards(gone);
-    }
-    await setMeta(SINCE, latest ?? since);
-    loadedAt = Date.now();
+    await fetchDifference();
   } catch (err) {
     if (cards.size === 0) throw err;
     // Offline with a cached deck: exactly what this is for.
   }
 
   return cards;
+}
+
+/**
+ * Fetch what changed on the server now, even though the deck is already in
+ * memory (#85).
+ *
+ * `loadDeck` only reaches the server once per run of the app — the first time
+ * a session asks. A word she added after that was counted by the server's
+ * queue and missing from this Map, so the session dropped it without a word:
+ * the sheet said "Start 2" and the session was 1/1. Adding, editing and
+ * deleting a word call this, so the change is there for the next session and
+ * not only after the app is quit and reopened.
+ *
+ * Best effort. It runs straight after a request that succeeded, so failing
+ * here is rare, and the next start of the app catches up anyway.
+ *
+ * Nothing to do while the deck is not in memory yet: the first `loadDeck` of
+ * this run asks the server for the difference regardless.
+ */
+export function syncDeck() {
+  if (cards.size === 0) return Promise.resolve();
+  const run = fetchDifference().catch(() => {
+    /* the next start of the app picks it up */
+  });
+  syncing = run;
+  run.then(() => {
+    if (syncing === run) syncing = undefined;
+  });
+  return run;
+}
+
+async function fetchDifference() {
+  const since = cards.size > 0 ? ((await getMeta(SINCE)) ?? 0) : 0;
+  const { cards: rows, latest } = await api.deck(since);
+  if (rows.length > 0) {
+    // A card she deleted arrives here marked rather than missing — the row
+    // stays on the server for the event log to point at (migration 004) —
+    // so the difference has to be applied, not just merged. So does someone
+    // else's own word, which reaches this device only as a deletion (#84).
+    const live = rows.filter((c) => !c.deleted_at);
+    const gone = rows.filter((c) => c.deleted_at).map((c) => c.id);
+    for (const card of live) cards.set(card.id, card);
+    for (const id of gone) cards.delete(id);
+    await putCards(live);
+    if (gone.length > 0) await dropCards(gone);
+  }
+  await setMeta(SINCE, latest ?? since);
+  loadedAt = Date.now();
 }
 
 export const deckCard = (id) => cards.get(id);

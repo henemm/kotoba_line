@@ -1,3 +1,5 @@
+import { visibleTo } from "./cards.js";
+
 /**
  * Per-user settings — §12 and design 22.
  *
@@ -94,9 +96,17 @@ export function updateSettings(db, userId, patch) {
   return settingsForUser(db, userId);
 }
 
-/** Card counts per deck, with both decks always present. */
-export function deckCounts(db) {
-  const rows = db.prepare("SELECT deck, count(*) n FROM cards GROUP BY deck").all();
+/**
+ * Card counts per deck, with both decks always present.
+ *
+ * Her own deck counts her own live words (#84) — not every account's, and not
+ * the ones she deleted, whose rows stay behind for the event log.
+ */
+export function deckCounts(db, userId) {
+  const v = visibleTo(userId);
+  const rows = db
+    .prepare(`SELECT c.deck, count(*) n FROM cards c WHERE c.deleted_at IS NULL AND ${v.sql} GROUP BY c.deck`)
+    .all(...v.params);
   const byDeck = new Map(rows.map((r) => [r.deck, r.n]));
   return DECKS.map((d) => ({ ...d, cards: byDeck.get(d.key) ?? 0 }));
 }

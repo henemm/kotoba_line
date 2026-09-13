@@ -173,10 +173,12 @@ Re-running the import is safe. Cards are keyed on Anki's note ids, so rows are
 updated in place and every `review_events` row keeps pointing at the card it was
 recorded against.
 
-**Her own topics survive it.** `npm run tag` starts with `DELETE FROM tags`,
-which is exactly why anything she filed herself lives in `card_user_tags`
-instead (migration 005). Re-importing and re-tagging the deck leaves every one
-of her categories where it was.
+**Her own topics survive it.** `npm run tag` rebuilds the deck's topics from
+scratch, which is exactly why anything she filed a deck card under lives in
+`card_user_tags` instead (migration 005). The topics on her own words do live
+in `tags`, so the rebuild deletes and assigns only for cards that are not
+`deck = 'personal'` — before #84 it wiped those too. Re-importing and
+re-tagging the deck leaves every one of her categories where it was.
 
 Under `umask 022`, as in the first-time import above — new audio files need to
 stay readable by nginx.

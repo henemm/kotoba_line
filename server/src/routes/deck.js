@@ -5,6 +5,7 @@ import {
   deleteCard,
   personalCards,
   setUserTags,
+  updateCard,
   userTags,
 } from "../cards.js";
 import {
@@ -73,11 +74,11 @@ export default async function deckRoutes(app) {
     async (req) => {
       const since = req.query.since ?? 0;
       const paging = req.query.limit !== undefined;
-      const cards = db
+      const rows = db
         .prepare(
           `SELECT id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
                   sentence, sentence_furigana, sentence_meaning, sentence_audio,
-                  frequency_rank, deck, updated_at, deleted_at
+                  frequency_rank, deck, owner_id, updated_at, deleted_at
              FROM cards
             WHERE updated_at > ?
             ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC
@@ -85,9 +86,25 @@ export default async function deckRoutes(app) {
         )
         .all(...(paging ? [since, req.query.limit, req.query.offset ?? 0] : [since]));
 
+      // Someone else's own word goes out as a tombstone, not left out (#84).
+      //
+      // Left out, a device that had already cached one — every device did,
+      // before cards had an owner — would keep it for good, because nothing
+      // would ever tell it otherwise. As a deletion the client already applies
+      // it (client/src/deck.js). The id is all that leaves the server; the
+      // word, its meaning and its topics do not.
+      //
+      // Kept in the same rows rather than filtered out of the query, so the
+      // first run's offset paging and `total` still count the same set.
+      const cards = rows.map(({ owner_id, ...card }) =>
+        card.deck === "personal" && owner_id !== req.user.id
+          ? { id: card.id, deck: card.deck, updated_at: card.updated_at, deleted_at: card.deleted_at ?? card.updated_at }
+          : card,
+      );
+
       // Only the tags for the cards actually being sent: a paged first run
       // would otherwise carry the whole tag table in every page.
-      const ids = cards.map((c) => c.id);
+      const ids = cards.filter((c) => !c.deleted_at).map((c) => c.id);
       const tags =
         ids.length === 0
           ? []
@@ -259,6 +276,25 @@ export default async function deckRoutes(app) {
   );
 }
 
+/** One of her own words, as the add and edit forms send it. */
+const cardBody = {
+  type: "object",
+  required: ["word", "meaning"],
+  additionalProperties: false,
+  properties: {
+    word: { type: "string", minLength: 1, maxLength: 64 },
+    reading: { type: "string", maxLength: 64 },
+    meaning: { type: "string", minLength: 1, maxLength: 200 },
+    sentence: { type: "string", maxLength: 300 },
+    sentenceMeaning: { type: "string", maxLength: 300 },
+    tags: {
+      type: "array",
+      maxItems: MAX_TAGS,
+      items: { type: "string", minLength: 1, maxLength: 32 },
+    },
+  },
+};
+
 /**
  * Her own words (§8, design 27–30).
  *
@@ -270,7 +306,7 @@ export async function personalDeckRoutes(app) {
 
   app.get("/api/cards", { preHandler: app.requireUser }, async (req) => ({
     cards: personalCards(db, req.user.id),
-    tags: allTags(db),
+    tags: allTags(db, req.user.id),
     // Hers, separately, so the picker can show them apart from the deck's
     // (#35). Merging the two lists here would lose which is which, and "my
     // topics" is exactly the distinction she is looking for.
@@ -279,31 +315,32 @@ export async function personalDeckRoutes(app) {
 
   app.post(
     "/api/cards",
+    { schema: { body: cardBody }, preHandler: app.requireUser },
+    async (req, reply) => {
+      const card = createCard(db, req.user.id, req.body);
+      return reply.code(201).send({ card });
+    },
+  );
+
+  /**
+   * Change one of her own words (#85). PUT, with the same body as adding one:
+   * the form holds the whole card, so the whole card is what it sends.
+   */
+  app.put(
+    "/api/cards/:id",
     {
       schema: {
-        body: {
-          type: "object",
-          required: ["word", "meaning"],
-          additionalProperties: false,
-          properties: {
-            word: { type: "string", minLength: 1, maxLength: 64 },
-            reading: { type: "string", maxLength: 64 },
-            meaning: { type: "string", minLength: 1, maxLength: 200 },
-            sentence: { type: "string", maxLength: 300 },
-            sentenceMeaning: { type: "string", maxLength: 300 },
-            tags: {
-              type: "array",
-              maxItems: MAX_TAGS,
-              items: { type: "string", minLength: 1, maxLength: 32 },
-            },
-          },
-        },
+        params: { type: "object", properties: { id: { type: "integer" } } },
+        body: cardBody,
       },
       preHandler: app.requireUser,
     },
     async (req, reply) => {
-      const card = createCard(db, req.body);
-      return reply.code(201).send({ card });
+      const result = updateCard(db, req.user.id, req.params.id, req.body);
+      if (!result.ok) {
+        return reply.code(result.reason === "not_found" ? 404 : 403).send({ error: result.reason });
+      }
+      return { card: result.card };
     },
   );
 
@@ -314,7 +351,7 @@ export async function personalDeckRoutes(app) {
       preHandler: app.requireUser,
     },
     async (req, reply) => {
-      const result = deleteCard(db, req.params.id);
+      const result = deleteCard(db, req.user.id, req.params.id);
       if (!result.ok) {
         // "not_yours" is a 403 rather than a 404: the card exists, it is simply
         // not hers to delete, and pretending otherwise would be confusing when

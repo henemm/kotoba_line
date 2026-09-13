@@ -14,10 +14,10 @@ describe("a card of her own", () => {
     // being negative means the two spaces cannot meet, with no counter kept
     // anywhere and no join needed to tell them apart.
     const db = openDatabase(":memory:");
-    await seedUser(db);
+    const user = await seedUser(db);
     seedCards(db, 3);
 
-    const card = createCard(db, { word: "レシート", meaning: "receipt" });
+    const card = createCard(db, user.id, { word: "レシート", meaning: "receipt" });
     assert.ok(card.id < 0, `id was ${card.id}`);
     assert.equal(card.deck, "personal");
     db.close();
@@ -25,32 +25,32 @@ describe("a card of her own", () => {
 
   it("stays unique when two are added in the same millisecond", async () => {
     const db = openDatabase(":memory:");
-    await seedUser(db);
+    const user = await seedUser(db);
     const now = 1_760_000_000_000;
-    const a = createCard(db, { word: "袋", meaning: "bag" }, now);
-    const b = createCard(db, { word: "箸", meaning: "chopsticks" }, now);
+    const a = createCard(db, user.id, { word: "袋", meaning: "bag" }, now);
+    const b = createCard(db, user.id, { word: "箸", meaning: "chopsticks" }, now);
     assert.notEqual(a.id, b.id);
     db.close();
   });
 
   it("needs a word and a meaning, and nothing else", async () => {
     const db = openDatabase(":memory:");
-    await seedUser(db);
+    const user = await seedUser(db);
 
-    const bare = createCard(db, { word: "先輩", meaning: "senior" });
+    const bare = createCard(db, user.id, { word: "先輩", meaning: "senior" });
     assert.equal(bare.word_reading, null);
     assert.equal(bare.sentence, null);
     assert.deepEqual(bare.tags, []);
 
-    assert.throws(() => createCard(db, { word: "  ", meaning: "x" }), /required/);
-    assert.throws(() => createCard(db, { word: "x", meaning: "" }), /required/);
+    assert.throws(() => createCard(db, user.id, { word: "  ", meaning: "x" }), /required/);
+    assert.throws(() => createCard(db, user.id, { word: "x", meaning: "" }), /required/);
     db.close();
   });
 
   it("keeps the reading, the sentence and the topics when they are given", async () => {
     const db = openDatabase(":memory:");
-    await seedUser(db);
-    const card = createCard(db, {
+    const user = await seedUser(db);
+    const card = createCard(db, user.id, {
       word: "改札",
       reading: "かいさつ",
       meaning: "ticket gate",
@@ -68,8 +68,8 @@ describe("a card of her own", () => {
 
   it("has no audio, so it always meets the synthesis state", async () => {
     const db = openDatabase(":memory:");
-    await seedUser(db);
-    const card = createCard(db, { word: "定期", meaning: "commuter pass" });
+    const user = await seedUser(db);
+    const card = createCard(db, user.id, { word: "定期", meaning: "commuter pass" });
     assert.equal(card.word_audio, null);
     assert.equal(card.sentence_audio, null);
     db.close();
@@ -98,9 +98,9 @@ describe("her list (design 30)", () => {
   it("is newest first", async () => {
     const db = openDatabase(":memory:");
     const user = await seedUser(db);
-    createCard(db, { word: "一", meaning: "one" }, 1_000);
-    createCard(db, { word: "二", meaning: "two" }, 2_000);
-    createCard(db, { word: "三", meaning: "three" }, 3_000);
+    createCard(db, user.id, { word: "一", meaning: "one" }, 1_000);
+    createCard(db, user.id, { word: "二", meaning: "two" }, 2_000);
+    createCard(db, user.id, { word: "三", meaning: "three" }, 3_000);
 
     // The card she just added is the one she is looking for; a personal deck
     // has no frequency order to fall back on.
@@ -112,7 +112,7 @@ describe("her list (design 30)", () => {
     const db = openDatabase(":memory:");
     const user = await seedUser(db);
     seedCards(db, 5);
-    createCard(db, { word: "袋", meaning: "bag" });
+    createCard(db, user.id, { word: "袋", meaning: "bag" });
     assert.deepEqual(personalCards(db, user.id).map((c) => c.word), ["袋"]);
     db.close();
   });
@@ -125,7 +125,7 @@ describe("deleting one of her words", () => {
     // rebuilt by replaying the log.
     const db = openDatabase(":memory:");
     const user = await seedUser(db);
-    const card = createCard(db, { word: "袋", meaning: "bag" });
+    const card = createCard(db, user.id, { word: "袋", meaning: "bag" });
 
     ingestEvents(db, user.id, [
       { id: uid(1), card_id: card.id, mode: "choose", rating: 3, reviewed_at: 1_700_000_000 },
@@ -133,7 +133,7 @@ describe("deleting one of her words", () => {
     const before = statsForUser(db, user.id).xp;
     assert.ok(before > 0);
 
-    assert.deepEqual(deleteCard(db, card.id), { ok: true });
+    assert.deepEqual(deleteCard(db, user.id, card.id), { ok: true });
 
     // The row stays, marked. `review_events.card_id` is a foreign key, so a
     // reviewed card cannot be removed outright — and an old summary still has
@@ -153,23 +153,23 @@ describe("deleting one of her words", () => {
   it("clears the scheduler row, which is a cache and would otherwise dangle", async () => {
     const db = openDatabase(":memory:");
     const user = await seedUser(db);
-    const card = createCard(db, { word: "袋", meaning: "bag" });
+    const card = createCard(db, user.id, { word: "袋", meaning: "bag" });
     ingestEvents(db, user.id, [
       { id: uid(2), card_id: card.id, mode: "choose", rating: 3, reviewed_at: 1_700_000_000 },
     ]);
     assert.equal(db.prepare("SELECT count(*) n FROM card_state WHERE card_id = ?").get(card.id).n, 1);
 
-    deleteCard(db, card.id);
+    deleteCard(db, user.id, card.id);
     assert.equal(db.prepare("SELECT count(*) n FROM card_state WHERE card_id = ?").get(card.id).n, 0);
     db.close();
   });
 
   it("refuses to delete a card from the shared deck", async () => {
     const db = openDatabase(":memory:");
-    await seedUser(db);
+    const user = await seedUser(db);
     seedCards(db, 3);
-    assert.deepEqual(deleteCard(db, 1), { ok: false, reason: "not_yours" });
-    assert.deepEqual(deleteCard(db, 999), { ok: false, reason: "not_found" });
+    assert.deepEqual(deleteCard(db, user.id, 1), { ok: false, reason: "not_yours" });
+    assert.deepEqual(deleteCard(db, user.id, 999), { ok: false, reason: "not_found" });
     db.close();
   });
 });
@@ -285,12 +285,12 @@ describe("the API", () => {
 describe("every topic in use", () => {
   it("counts them, so the sheet's chips and 29's field have a list", async () => {
     const db = openDatabase(":memory:");
-    await seedUser(db);
+    const user = await seedUser(db);
     seedCards(db, 3);
     db.prepare("INSERT INTO tags (card_id, tag) VALUES (1, 'food'), (2, 'food'), (3, 'travel')").run();
-    createCard(db, { word: "改札", meaning: "ticket gate", tags: ["travel"] });
+    createCard(db, user.id, { word: "改札", meaning: "ticket gate", tags: ["travel"] });
 
-    assert.deepEqual(allTags(db), [
+    assert.deepEqual(allTags(db, user.id), [
       { tag: "food", n: 2 },
       { tag: "travel", n: 2 },
     ]);

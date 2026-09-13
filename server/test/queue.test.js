@@ -9,16 +9,17 @@ const DAY = 86400;
 const NOW = 1_760_000_000;
 const uid = (n) => `9f8e7d6c-5b4a-4321-8765-${String(n).padStart(12, "0")}`;
 
-/** A deck with enough shape to exercise the filters. */
-function seedDeck(db) {
+/** A deck with enough shape to exercise the filters. Cards 31–40 are `ownerId`'s own. */
+function seedDeck(db, ownerId) {
   const card = db.prepare(
-    `INSERT INTO cards (id, word, word_meaning, frequency_rank, deck, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO cards (id, word, word_meaning, frequency_rank, deck, owner_id, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   const tag = db.prepare("INSERT INTO tags (card_id, tag) VALUES (?, ?)");
 
   for (let i = 1; i <= 40; i++) {
-    card.run(i, `語${i}`, `word ${i}`, i, i > 30 ? "personal" : "kaishi", NOW - DAY);
+    const personal = i > 30;
+    card.run(i, `語${i}`, `word ${i}`, i, personal ? "personal" : "kaishi", personal ? ownerId : null, NOW - DAY);
   }
   for (const id of [1, 2, 3, 4, 5]) tag.run(id, "food");
   for (const id of [5, 6, 7]) tag.run(id, "school");
@@ -35,7 +36,7 @@ function setState(db, userId, cardId, { dueAt, lapses = 0, lastReview = NOW - DA
 async function fixture() {
   const { app, db, config } = await testApp();
   const user = await seedUser(db);
-  seedDeck(db);
+  seedDeck(db, user.id);
   return { app, db, config, user };
 }
 

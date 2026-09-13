@@ -12,7 +12,35 @@
  * scheduler — "so a personal card is not a special case anywhere downstream"
  * (design 28). It has no recorded audio, so it always meets 47's synthesis
  * state, which is already built.
+ *
+ * The one thing that is special is who may see it (#84). A personal card has
+ * an `owner_id`, and every query that hands out or accepts a card goes through
+ * `visibleTo()` — the deck sync, the queue, browse, the topic lists, stars,
+ * her own topics and review events. Before that column existed a word one
+ * account added was in every account's deck.
  */
+
+/**
+ * The SQL condition for "this user may see this card", with its parameter.
+ *
+ * Returned together so a caller cannot use the condition and forget the id —
+ * a `?` left unbound would shift every later parameter by one, and the query
+ * would quietly read a user id as a search term.
+ */
+export function visibleTo(userId, alias = "c") {
+  return {
+    sql: `(${alias}.deck <> 'personal' OR ${alias}.owner_id = ?)`,
+    params: [userId],
+  };
+}
+
+/** One card, if this user may see it and it has not been deleted. */
+export function visibleCard(db, userId, cardId) {
+  const v = visibleTo(userId);
+  return db
+    .prepare(`SELECT c.id, c.deck FROM cards c WHERE c.id = ? AND c.deleted_at IS NULL AND ${v.sql}`)
+    .get(cardId, ...v.params);
+}
 
 /** Topics are coined on the spot (29), so this is a shape rule, not a list. */
 const TAG = /^[\p{L}\p{N}][\p{L}\p{N} _-]{0,30}$/u;
@@ -25,25 +53,39 @@ export function normaliseTag(tag) {
 }
 
 /**
+ * The fields of a card she writes, trimmed, with empty optionals as NULL.
+ * Shared by adding and editing, so the two cannot disagree on what is valid.
+ */
+function cleanFields({ word, reading, meaning, sentence, sentenceMeaning, tags = [] }) {
+  const fields = {
+    word: String(word ?? "").trim(),
+    reading: String(reading ?? "").trim() || null,
+    meaning: String(meaning ?? "").trim(),
+    sentence: String(sentence ?? "").trim() || null,
+    sentenceMeaning: String(sentenceMeaning ?? "").trim() || null,
+    tags: [...new Set(tags.map(normaliseTag).filter(Boolean))].slice(0, MAX_TAGS),
+  };
+  if (!fields.word || !fields.meaning) {
+    throw Object.assign(new Error("a word and a meaning are required"), { status: 400 });
+  }
+  return fields;
+}
+
+function replaceTags(db, cardId, tags) {
+  db.prepare("DELETE FROM tags WHERE card_id = ?").run(cardId);
+  const insert = db.prepare("INSERT OR IGNORE INTO tags (card_id, tag) VALUES (?, ?)");
+  for (const t of tags) insert.run(cardId, t);
+}
+
+/**
  * Add one of her own words.
  *
  * Only the word and the meaning are required (28: "three fields required to
  * save, of which one is optional to type well"). The reading and the example
  * sentence are what make the card good, not what make it valid.
  */
-export function createCard(db, { word, reading, meaning, sentence, sentenceMeaning, tags = [] }, now = Date.now()) {
-  const trimmed = {
-    word: String(word ?? "").trim(),
-    reading: String(reading ?? "").trim() || null,
-    meaning: String(meaning ?? "").trim(),
-    sentence: String(sentence ?? "").trim() || null,
-    sentenceMeaning: String(sentenceMeaning ?? "").trim() || null,
-  };
-  if (!trimmed.word || !trimmed.meaning) {
-    throw Object.assign(new Error("a word and a meaning are required"), { status: 400 });
-  }
-
-  const clean = [...new Set(tags.map(normaliseTag).filter(Boolean))].slice(0, MAX_TAGS);
+export function createCard(db, userId, input, now = Date.now()) {
+  const f = cleanFields(input);
 
   // Negative, and unique even when two cards are added in the same
   // millisecond — which a test does, and an impatient thumb might.
@@ -57,15 +99,49 @@ export function createCard(db, { word, reading, meaning, sentence, sentenceMeani
       `INSERT INTO cards
          (id, word, word_furigana, word_reading, word_meaning, word_audio,
           sentence, sentence_furigana, sentence_meaning, sentence_audio,
-          frequency_rank, deck, updated_at)
-       VALUES (?, ?, NULL, ?, ?, NULL, ?, NULL, ?, NULL, NULL, 'personal', ?)`,
-    ).run(id, trimmed.word, trimmed.reading, trimmed.meaning, trimmed.sentence, trimmed.sentenceMeaning, seconds);
-
-    const tag = db.prepare("INSERT OR IGNORE INTO tags (card_id, tag) VALUES (?, ?)");
-    for (const t of clean) tag.run(id, t);
+          frequency_rank, deck, owner_id, updated_at)
+       VALUES (?, ?, NULL, ?, ?, NULL, ?, NULL, ?, NULL, NULL, 'personal', ?, ?)`,
+    ).run(id, f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, userId, seconds);
+    replaceTags(db, id, f.tags);
   })();
 
   return getCard(db, id);
+}
+
+/**
+ * Change one of her own words (#85).
+ *
+ * The whole card, not a patch: the form she edits in holds every field, so
+ * what it knows is the final state — the same reasoning as her topics on a
+ * card. A field she cleared becomes NULL.
+ *
+ * Content only. Her history with the card stays exactly as it is: fixing a
+ * typo in the meaning is not a reason to forget that she has known the word
+ * for three weeks, and `review_events` is append-only anyway (§4).
+ * `updated_at` moves, which is what carries the change to her other device.
+ */
+export function updateCard(db, userId, id, input, now = Date.now()) {
+  const card = db.prepare("SELECT deck, owner_id, deleted_at FROM cards WHERE id = ?").get(id);
+  // Someone else's word answers exactly like a missing one: saying "not
+  // yours" would confirm that the id exists.
+  if (!card || card.deleted_at || (card.deck === "personal" && card.owner_id !== userId)) {
+    return { ok: false, reason: "not_found" };
+  }
+  if (card.deck !== "personal") return { ok: false, reason: "not_yours" };
+
+  const f = cleanFields(input);
+  const seconds = Math.floor(now / 1000);
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE cards
+          SET word = ?, word_reading = ?, word_meaning = ?,
+              sentence = ?, sentence_meaning = ?, updated_at = ?
+        WHERE id = ?`,
+    ).run(f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, seconds, id);
+    replaceTags(db, id, f.tags);
+  })();
+
+  return { ok: true, card: getCard(db, id) };
 }
 
 export function getCard(db, id) {
@@ -87,25 +163,29 @@ export function getCard(db, id) {
  *
  * Newest first rather than by frequency: a personal deck has no frequency
  * order, and the card she just added is the one she is looking for.
+ *
+ * The sentence and its meaning come along because the list is also where she
+ * opens a word to edit it (#85), and the form has to start from what is there.
  */
 export function personalCards(db, userId) {
   const rows = db
     .prepare(
-      `SELECT c.id, c.word, c.word_reading, c.word_meaning, c.sentence, c.updated_at,
-              s.due_at, s.reps, s.last_review
+      `SELECT c.id, c.word, c.word_reading, c.word_meaning, c.sentence, c.sentence_meaning,
+              c.updated_at, s.due_at, s.reps, s.last_review
          FROM cards c
          LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
-        WHERE c.deck = 'personal' AND c.deleted_at IS NULL
+        WHERE c.deck = 'personal' AND c.owner_id = ? AND c.deleted_at IS NULL
         ORDER BY c.id ASC`,
     )
-    .all(userId);
+    .all(userId, userId);
 
   const tags = db
     .prepare(
       `SELECT card_id, tag FROM tags
-        WHERE card_id IN (SELECT id FROM cards WHERE deck = 'personal' AND deleted_at IS NULL)`,
+        WHERE card_id IN (SELECT id FROM cards
+                           WHERE deck = 'personal' AND owner_id = ? AND deleted_at IS NULL)`,
     )
-    .all();
+    .all(userId);
   const byCard = new Map();
   for (const { card_id, tag } of tags) {
     if (!byCard.has(card_id)) byCard.set(card_id, []);
@@ -125,9 +205,12 @@ export function personalCards(db, userId) {
  * the confirmation, and the schema had already made the decision: `card_id` is
  * a foreign key, so a reviewed card cannot be removed outright at all.
  */
-export function deleteCard(db, id, now = Date.now()) {
-  const card = db.prepare("SELECT id, deck, deleted_at FROM cards WHERE id = ?").get(id);
-  if (!card) return { ok: false, reason: "not_found" };
+export function deleteCard(db, userId, id, now = Date.now()) {
+  const card = db.prepare("SELECT id, deck, owner_id, deleted_at FROM cards WHERE id = ?").get(id);
+  // Someone else's word is "not found", for the reason given in updateCard.
+  if (!card || (card.deck === "personal" && card.owner_id !== userId)) {
+    return { ok: false, reason: "not_found" };
+  }
   if (card.deck !== "personal") return { ok: false, reason: "not_yours" };
   if (card.deleted_at) return { ok: true };
 
@@ -152,15 +235,21 @@ export function deleteCard(db, id, now = Date.now()) {
   return { ok: true };
 }
 
-/** Every topic in use, for 29's "coin a new one" field and 36's chips. */
-export function allTags(db) {
+/**
+ * Every topic in use, for 29's "coin a new one" field and 36's chips.
+ *
+ * Counted over the cards she can see: a topic a friend coined for a word of
+ * their own is not a topic in her deck.
+ */
+export function allTags(db, userId) {
+  const v = visibleTo(userId);
   return db
     .prepare(
       `SELECT t.tag, count(*) n FROM tags t
-         JOIN cards c ON c.id = t.card_id AND c.deleted_at IS NULL
+         JOIN cards c ON c.id = t.card_id AND c.deleted_at IS NULL AND ${v.sql}
         GROUP BY t.tag ORDER BY n DESC, t.tag ASC`,
     )
-    .all();
+    .all(...v.params);
 }
 
 /**
@@ -177,8 +266,7 @@ export function allTags(db) {
  * right. An empty list clears them.
  */
 export function setUserTags(db, userId, cardId, tags, now = Date.now()) {
-  const card = db.prepare("SELECT 1 FROM cards WHERE id = ? AND deleted_at IS NULL").get(cardId);
-  if (!card) return { ok: false, reason: "unknown_card" };
+  if (!visibleCard(db, userId, cardId)) return { ok: false, reason: "unknown_card" };
 
   const clean = [...new Set((tags ?? []).map(normaliseTag).filter(Boolean))].slice(0, MAX_TAGS);
   const seconds = Math.floor(now / 1000);

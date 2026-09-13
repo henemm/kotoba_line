@@ -14,6 +14,7 @@ import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
 import { startFlushingStars } from "./stars.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
+import { syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { watchViewport } from "./viewport.js";
 import { el, render } from "./ui/dom.js";
@@ -231,7 +232,7 @@ function openAddWord(initialWord = "") {
       // no confirmation screen."
       state.overlay = undefined;
       state.tab = "practise";
-      loadOwnDeck();
+      ownWordsChanged();
       renderApp();
     },
   });
@@ -244,9 +245,43 @@ function openOwnDeck() {
   state.overlay = ownDeckScreen({
     onBack: closeOverlay,
     onAdd: () => openAddWord(),
+    onEdit: openEditWord,
     romaji: state.settings.romaji,
   });
   renderApp();
+}
+
+/**
+ * #85: one of her words, opened from her list. Saving or deleting goes back to
+ * the list, which is where she came from and where she can see the result.
+ */
+function openEditWord(card) {
+  const backToList = () => {
+    ownWordsChanged();
+    openOwnDeck();
+  };
+  state.overlay = addWordScreen({
+    tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
+    card,
+    onCancel: openOwnDeck,
+    onSaved: backToList,
+    onDeleted: backToList,
+  });
+  loadTopics();
+  renderApp();
+}
+
+/**
+ * After adding, editing or deleting a word: the count on the practise tab, the
+ * topic list (a word can bring a new topic or take the last card out of one),
+ * and the deck in memory — without that last one the next session cannot see
+ * the change until the app is restarted (#85).
+ */
+function ownWordsChanged() {
+  loadOwnDeck();
+  state.topics = [];
+  loadTopics();
+  syncDeck();
 }
 
 function closeOverlay() {

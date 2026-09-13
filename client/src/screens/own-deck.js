@@ -23,19 +23,35 @@ const MAX_TAGS = 5;
  * "because on a train she will not write one, and an empty sentence field
  * would only reproach her".
  */
-export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }) {
+export function addWordScreen({ tags = [], initialWord = "", card, onSaved, onDeleted, onCancel }) {
   const root = el("div.add-word");
+  // #85: the same form edits a word she already has. It is the same five
+  // fields and the same rules, and a second form would drift from this one.
+  const editing = Boolean(card);
   // Coerced rather than trusted: this arrives from two call sites, and one of
   // them is a click handler that would otherwise hand over the event.
-  const draft = {
-    word: typeof initialWord === "string" ? initialWord : "",
-    reading: "",
-    meaning: "",
-    sentence: "",
-    sentenceMeaning: "",
-  };
-  const chosen = new Set();
-  let sentenceOpen = false;
+  const draft = editing
+    ? {
+        word: card.word ?? "",
+        reading: card.word_reading ?? "",
+        meaning: card.word_meaning ?? "",
+        sentence: card.sentence ?? "",
+        sentenceMeaning: card.sentence_meaning ?? "",
+      }
+    : {
+        word: typeof initialWord === "string" ? initialWord : "",
+        reading: "",
+        meaning: "",
+        sentence: "",
+        sentenceMeaning: "",
+      };
+  const chosen = new Set(editing ? card.tags ?? [] : []);
+  // A topic on the card that the list does not carry still has to be a chip,
+  // or saving would silently take it off.
+  for (const tag of chosen) {
+    if (!tags.some((t) => t.tag === tag)) tags = [...tags, { tag, n: 1 }];
+  }
+  let sentenceOpen = editing && Boolean(draft.sentence || draft.sentenceMeaning);
   let coining = false;
   let saving = false;
   let problem;
@@ -53,6 +69,11 @@ export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }
       autocorrect: "off",
       spellcheck: "false",
     });
+    // Set as a property, not through el(): a `value` attribute means nothing
+    // to a <textarea>, so the word field came up empty while the draft behind
+    // it held the word — in the edit form (#85), and on the way in from an
+    // empty browse search, where Save then stored a word she could not see.
+    input.value = draft[key];
     input.addEventListener("input", () => {
       draft[key] = input.value;
       // Only the header needs redrawing — a full redraw would take the
@@ -70,7 +91,7 @@ export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }
     render(
       header,
       el("button.add-cancel", { type: "button", text: "Cancel", onclick: onCancel }),
-      el("span.add-title", { text: "Add a word" }),
+      el("span.add-title", { text: editing ? "Edit word" : "Add a word" }),
       // 28: "Save stays #3D465C until word and meaning both have content."
       el("button.add-save", {
         type: "button",
@@ -106,18 +127,87 @@ export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }
         topicGroup(),
         problem ? el("p.add-problem", { text: problem }) : null,
       ),
-      el(
-        "div.add-foot",
-        {},
-        el("p.add-note", {
-          // The same fact 47's caption states, said before she commits rather
-          // than after: her own cards never have a recording.
-          text: "No recording — your own words are read by the phone's Japanese voice. The card enters the queue as new, tomorrow.",
-        }),
-      ),
+      editing
+        ? el(
+            "div.add-foot",
+            {},
+            el("p.add-note", {
+              // Said because it is the question she would have: correcting a
+              // word does not throw away what she already knows of it.
+              text: "Changing a word keeps its progress.",
+            }),
+            el("button.btn-secondary.add-delete", {
+              type: "button",
+              text: "Delete this word",
+              disabled: saving,
+              onclick: askToDelete,
+            }),
+          )
+        : el(
+            "div.add-foot",
+            {},
+            el("p.add-note", {
+              // The same fact 47's caption states, said before she commits rather
+              // than after: her own cards never have a recording.
+              text: "No recording — your own words are read by the phone's Japanese voice. The card enters the queue as new, tomorrow.",
+            }),
+          ),
     );
     // Coming from an empty browse search, the word is already typed.
     if (initialWord && !draft.meaning) fields.meaning?.focus();
+  }
+
+  /**
+   * Design 30 asked for deleting to be confirmed, and it is the one thing on
+   * this screen that cannot be taken back from the app. The same sheet as
+   * leaving a session (50), and for the same reason the safe choice is the
+   * solid one: a tap that lands on "Delete" is often a mistake.
+   */
+  function askToDelete() {
+    const sheet = el(
+      "div.sheet-scrim",
+      { onclick: (e) => e.target === e.currentTarget && sheet.remove() },
+      el(
+        "div.sheet",
+        {},
+        el("h2.sheet-title", { text: `Delete ${card.word}?` }),
+        el("p.sheet-body", {
+          text: "It leaves your deck and your sessions. What you have already practised still counts towards your streak and XP.",
+        }),
+        el(
+          "div.sheet-actions",
+          {},
+          el("button.btn", {
+            type: "button",
+            text: "Delete",
+            onclick: () => {
+              sheet.remove();
+              remove();
+            },
+          }),
+          el("button.btn.solid", { type: "button", text: "Keep it", onclick: () => sheet.remove() }),
+        ),
+      ),
+    );
+    root.append(sheet);
+  }
+
+  async function remove() {
+    saving = true;
+    problem = undefined;
+    draw();
+    try {
+      await api.deleteCard(card.id);
+      onDeleted?.(card);
+      return;
+    } catch (err) {
+      problem =
+        err instanceof OfflineError
+          ? "Deleting a word needs a connection — it is on the server, not just this phone."
+          : "That did not delete.";
+    }
+    saving = false;
+    draw();
   }
 
   function disclosure() {
@@ -242,23 +332,28 @@ export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }
     problem = undefined;
     refreshHeader();
 
+    const body = {
+      word: draft.word.trim(),
+      reading: draft.reading.trim() || undefined,
+      meaning: draft.meaning.trim(),
+      sentence: draft.sentence.trim() || undefined,
+      sentenceMeaning: draft.sentenceMeaning.trim() || undefined,
+      tags: [...chosen],
+    };
     try {
-      const { card } = await api.addCard({
-        word: draft.word.trim(),
-        reading: draft.reading.trim() || undefined,
-        meaning: draft.meaning.trim(),
-        sentence: draft.sentence.trim() || undefined,
-        sentenceMeaning: draft.sentenceMeaning.trim() || undefined,
-        tags: [...chosen],
-      });
+      // Editing sends the whole card; a field she emptied is left out and the
+      // server stores it as empty.
+      const { card: saved } = editing ? await api.updateCard(card.id, body) : await api.addCard(body);
       // 29: "saving returns to the practise tab with the count incremented, no
       // confirmation screen."
-      onSaved?.(card);
+      onSaved?.(saved);
       return;
     } catch (err) {
       problem =
         err instanceof OfflineError
-          ? "Adding a word needs a connection — it goes on the server, not just this phone."
+          ? editing
+            ? "Changing a word needs a connection — it is on the server, not just this phone."
+            : "Adding a word needs a connection — it goes on the server, not just this phone."
           : "That did not save.";
     }
     saving = false;
@@ -274,7 +369,7 @@ export function addWordScreen({ tags = [], initialWord = "", onSaved, onCancel }
  *
  * Maturity per row in words rather than a bar: five rows do not need a chart.
  */
-export function ownDeckScreen({ onBack, onAdd, romaji = false }) {
+export function ownDeckScreen({ onBack, onAdd, onEdit, romaji = false }) {
   const root = el("div.own-deck");
   let cards;
   let problem;
@@ -305,7 +400,11 @@ export function ownDeckScreen({ onBack, onAdd, romaji = false }) {
           text: cards ? `${num(cards.length)} ${cards.length === 1 ? "word" : "words"}` : "",
         }),
       ),
-      el("p.own-note", { text: "Scheduled alongside the Kaishi deck." }),
+      // Design 30 says "Swipe a row to edit or delete." Built as a tap instead
+      // (#85): nothing on a row shows that it can be swiped, no other screen
+      // in the app uses a swipe, and a gesture she never discovers is a
+      // feature she does not have. Tapping opens the word; delete is in there.
+      el("p.own-note", { text: "Scheduled alongside the Kaishi deck. Tap a word to change or delete it." }),
       problem ? el("p.browse-note", { text: problem }) : body(),
       el(
         "div.own-foot",
@@ -329,8 +428,8 @@ export function ownDeckScreen({ onBack, onAdd, romaji = false }) {
 
   function row(card) {
     return el(
-      "div.own-row",
-      {},
+      "button.own-row",
+      { type: "button", onclick: () => onEdit?.(card) },
       el(
         "span.own-copy",
         {},

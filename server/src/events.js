@@ -1,3 +1,4 @@
+import { visibleTo } from "./cards.js";
 import { VALID_MODES, VALID_RATINGS, stateFromEvents } from "./scheduler.js";
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -13,12 +14,16 @@ const MAX_FUTURE_SKEW_SECONDS = 24 * 60 * 60;
  * (§4), so an event the server will never accept — a card that no longer
  * exists, say — would otherwise be retried forever.
  */
-function reasonToReject(db, event, serverNow) {
+function reasonToReject(db, userId, event, serverNow) {
   if (!VALID_MODES.includes(event.mode)) return "unknown_mode";
   if (!VALID_RATINGS.includes(event.rating)) return "unknown_rating";
   if (event.reviewed_at > serverNow + MAX_FUTURE_SKEW_SECONDS) return "reviewed_at_in_future";
 
-  const card = db.prepare("SELECT 1 FROM cards WHERE id = ?").get(event.card_id);
+  // A deleted card still takes events: one answered offline before she deleted
+  // it is real history. Someone else's own word never does (#84) — and says
+  // so the same way a missing card does.
+  const v = visibleTo(userId);
+  const card = db.prepare(`SELECT 1 FROM cards c WHERE c.id = ? AND ${v.sql}`).get(event.card_id, ...v.params);
   if (!card) return "unknown_card";
 
   return undefined;
@@ -82,7 +87,7 @@ export function ingestEvents(db, userId, events, serverNow = now()) {
 
   db.transaction(() => {
     for (const event of events) {
-      const reason = reasonToReject(db, event, serverNow);
+      const reason = reasonToReject(db, userId, event, serverNow);
       if (reason) {
         rejected.push({ id: event.id, reason });
         continue;
