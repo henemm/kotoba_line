@@ -122,6 +122,13 @@ self.addEventListener("install", (event) => {
       // tapping Update would land her on a shell with modules missing, which
       // is a blank screen (#53). Failing here keeps the working one, and the
       // next update check simply tries again.
+      //
+      // What this catches is a request that fails — the signal dropping part
+      // way through, the likely case on a train. Measured in WebKit: v40 with
+      // one request cut off was never offered, its cache was gone, v36 kept
+      // running, and v41 was offered and installed normally afterwards. A
+      // file that does not exist is *not* caught here: nginx's try_files
+      // answers it with index.html and a 200. The list test covers that.
       if (self.registration.active && missed.some(Boolean)) {
         await caches.delete(SHELL);
         throw new Error(`${SHELL} is incomplete; keeping the running version`);
