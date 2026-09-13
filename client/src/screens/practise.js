@@ -37,6 +37,7 @@ export function practiseScreen({
   sessionLength,
   onSessionLength,
   readAloud = true,
+  onStats,
 }) {
   const root = el("div.practise");
   render(root, el("div.loading", { text: "…" }));
@@ -52,6 +53,9 @@ export function practiseScreen({
       const [queue, s] = await Promise.all([api.queue({ limit: 60 }), api.stats()]);
       due = queue.cardIds.length;
       stats = s;
+      // #86: the joker notice is decided from these same numbers, so the
+      // tab does not fetch them twice.
+      onStats?.(stats);
     } catch {
       // Offline: the shell shows the strip; the tab still offers the lines.
       due = 0;

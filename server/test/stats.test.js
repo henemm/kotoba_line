@@ -193,6 +193,51 @@ describe("streak and jokers (§8a)", () => {
   });
 });
 
+describe("the gap a joker covered, for the notice (#86)", () => {
+  const days = (...ds) => ds.map((d) => `2026-03-${String(d).padStart(2, "0")}`);
+  const day = (d) => `2026-03-${String(d).padStart(2, "0")}`;
+
+  it("is reported on the first day back, before she has practised", () => {
+    // The production reproduction: five days, the sixth missed, today the 7th.
+    const s = streakFromDays(days(1, 2, 3, 4, 5), day(7));
+    assert.deepEqual(s.jokerGap, { firstDay: day(6), lastDay: day(6), days: 1 });
+    assert.equal(s.current, 5);
+    assert.equal(s.jokers, 0);
+  });
+
+  it("is still reported once she has practised today", () => {
+    const s = streakFromDays(days(1, 2, 3, 4, 5, 7), day(7));
+    assert.deepEqual(s.jokerGap, { firstDay: day(6), lastDay: day(6), days: 1 });
+  });
+
+  it("covers several days as one gap", () => {
+    // Fifteen days hold three jokers; days 16 and 17 spend two of them.
+    const fifteen = Array.from({ length: 15 }, (_, i) => day(i + 1));
+    const s = streakFromDays(fifteen, day(18));
+    assert.deepEqual(s.jokerGap, { firstDay: day(16), lastDay: day(17), days: 2 });
+    assert.equal(s.jokers, 1);
+  });
+
+  it("is gone the day after she came back", () => {
+    const s = streakFromDays(days(1, 2, 3, 4, 5, 7), day(8));
+    assert.equal(s.jokerGap, null);
+    assert.equal(s.jokerSpentOn, day(6), "the spend itself is still on record");
+  });
+
+  it("is not reported for a gap that ended the streak", () => {
+    // One joker, two missed days: the second resets the run, so this is the
+    // streak-reset case, which is a different screen.
+    const s = streakFromDays(days(1, 2, 3, 4, 5), day(8));
+    assert.equal(s.jokerGap, null);
+    assert.equal(s.current, 0);
+  });
+
+  it("is null with no history and with no gap", () => {
+    assert.equal(streakFromDays([], day(3)).jokerGap, null);
+    assert.equal(streakFromDays(days(1, 2, 3), day(3)).jokerGap, null);
+  });
+});
+
 describe("maturity bands", () => {
   const state = (intervalDays, reps = 3) => ({
     reps,

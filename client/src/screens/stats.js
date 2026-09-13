@@ -50,6 +50,103 @@ export function visibleTopics(topics, expanded, limit = TOPICS_BEFORE_TRUNCATION
   return { seen, shown, hidden: seen.length - shown.length };
 }
 
+const NUMBER_WORDS = ["No", "One", "Two", "Three"];
+const numberWord = (n) => NUMBER_WORDS[n] ?? String(n);
+
+/**
+ * What designs 04 and 19 say, for a gap of `days` covered by as many jokers.
+ * Exported because it is the part with the cases in it — one day or several,
+ * one joker left or none — and cases belong in a test.
+ */
+export function jokerNoticeCopy({ days, streak, jokers }) {
+  const headline =
+    days === 1
+      ? "Yesterday had no reviews. One joker covered it."
+      : `${numberWord(days)} days had no reviews. ${numberWord(days)} jokers covered them.`;
+  const left =
+    jokers === 0
+      ? "No jokers left"
+      : `${numberWord(jokers)} ${jokers === 1 ? "joker" : "jokers"} left`;
+  const body = `Your streak is at ${num(streak)} ${streak === 1 ? "day" : "days"} and unbroken. ${left}; five days in a row earns another.`;
+  return { headline, body };
+}
+
+/**
+ * The three joker slots on the notice: what she holds, what the gap just
+ * spent, and whatever is left empty. Never more than three in all.
+ */
+export function noticeSlots({ jokers, days }) {
+  const held = Math.min(jokers, 3);
+  const spent = Math.min(days, 3 - held);
+  return [
+    ...Array(held).fill("filled"),
+    ...Array(spent).fill("spent"),
+    ...Array(3 - held - spent).fill("empty"),
+  ];
+}
+
+/**
+ * "Joker spent" — designs 04 and 19 (#86).
+ *
+ * §8a: "tell her when one is spent. A safety net she does not know about does
+ * not reduce the pressure it exists to reduce." Shown once, before the mode
+ * picker, on the first day after a gap the jokers covered; the server decides
+ * that day (`jokerGap` in /api/stats), and app.js remembers per gap that it
+ * was shown.
+ *
+ * The design's button reads "Start today's session". This one says "Continue"
+ * and returns to the practise tab, because the notice comes *before* the mode
+ * picker: there is no session to start until she has picked a line, and a
+ * button that quietly started 選ぶ would decide that for her.
+ */
+export function jokerSpentScreen({ stats, onContinue }) {
+  const { days } = stats.jokerGap;
+  const { headline, body } = jokerNoticeCopy({ days, streak: stats.streak, jokers: stats.jokers });
+
+  return el(
+    "div.joker-notice",
+    {},
+    el(
+      "div.joker-notice-body",
+      {},
+      el(
+        "div.joker-notice-slots",
+        {},
+        el("span.mono-label", { text: "Jokers" }),
+        el(
+          "div.joker-slots",
+          {},
+          // No red, no green (04's note): a spent slot is dashed and says so.
+          noticeSlots({ jokers: stats.jokers, days }).map((kind) =>
+            kind === "filled"
+              ? el("span.slot.filled", {}, el("span.diamond"))
+              : kind === "spent"
+                ? el("span.slot.spent", {}, el("span.slot-label", { text: "spent" }))
+                : el("span.slot.empty"),
+          ),
+        ),
+      ),
+      el(
+        "div.joker-notice-copy",
+        {},
+        el("h2", { text: headline }),
+        el("p", { text: body }),
+      ),
+      el(
+        "div.joker-notice-streak",
+        {},
+        el("span.tabular", { text: num(stats.streak) }),
+        el("span.joker-notice-streak-label", { text: "day streak\ncontinues" }),
+      ),
+    ),
+    el(
+      "div.joker-notice-foot",
+      {},
+      el("button.btn-primary", { type: "button", text: "Continue", onclick: onContinue }),
+    ),
+  );
+}
+
 /**
  * Design 02 and 12. The screen that carries more numbers than any other, so
  * hierarchy is the whole job: one number at 96px, then two at 38px, then

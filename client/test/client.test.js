@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
-import { endDotOffset, levelProgress, visibleTopics } from "../src/screens/stats.js";
+import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, visibleTopics } from "../src/screens/stats.js";
 import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, sentenceKana, speakUsesSentence, splitEmphasis } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
@@ -93,6 +93,31 @@ describe("the level bar", () => {
     assert.equal(levelProgress({ xp: 0, xpForLevel: 0, xpForNextLevel: 0 }).filled, 0);
     assert.equal(levelProgress({ xp: 9999, xpForLevel: 0, xpForNextLevel: 100 }).filled, 12);
     assert.equal(levelProgress({ xp: 9999, xpForLevel: 0, xpForNextLevel: 100 }).remaining, 0);
+  });
+});
+
+describe("the joker-spent notice (designs 04/19, #86)", () => {
+  it("says what the design says for one day", () => {
+    const { headline, body } = jokerNoticeCopy({ days: 1, streak: 13, jokers: 2 });
+    assert.equal(headline, "Yesterday had no reviews. One joker covered it.");
+    assert.equal(body, "Your streak is at 13 days and unbroken. Two jokers left; five days in a row earns another.");
+  });
+
+  it("names several days, and a balance of one or none", () => {
+    assert.equal(
+      jokerNoticeCopy({ days: 3, streak: 20, jokers: 0 }).headline,
+      "Three days had no reviews. Three jokers covered them.",
+    );
+    assert.match(jokerNoticeCopy({ days: 2, streak: 11, jokers: 1 }).body, /One joker left;/);
+    assert.match(jokerNoticeCopy({ days: 1, streak: 5, jokers: 0 }).body, /^Your streak is at 5 days and unbroken\. No jokers left;/);
+    assert.match(jokerNoticeCopy({ days: 1, streak: 1, jokers: 0 }).body, /at 1 day and/);
+  });
+
+  it("draws held, then spent, then empty slots — three in all", () => {
+    assert.deepEqual(noticeSlots({ jokers: 2, days: 1 }), ["filled", "filled", "spent"]);
+    assert.deepEqual(noticeSlots({ jokers: 0, days: 1 }), ["spent", "empty", "empty"]);
+    assert.deepEqual(noticeSlots({ jokers: 1, days: 2 }), ["filled", "spent", "spent"]);
+    assert.deepEqual(noticeSlots({ jokers: 3, days: 3 }), ["filled", "filled", "filled"]);
   });
 });
 

@@ -2,7 +2,7 @@ import { OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js"
 import { signInScreen } from "./screens/signin.js";
 import { signedOutScreen } from "./screens/signed-out.js";
 import { practiseScreen } from "./screens/practise.js";
-import { statsScreen } from "./screens/stats.js";
+import { jokerSpentScreen, statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
 import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
@@ -77,7 +77,16 @@ const state = {
   // How many went up in the last flush — the green bar's number, which is not
   // the same as the number still waiting.
   justSent: 0,
+  // Design 11: the diamond on Stats "the first time a new joker is earned,
+  // cleared once the tab is opened" (#86). Kept in meta as well, so quitting
+  // the app before looking does not lose it.
   jokerBadge: false,
+  // Designs 04/19 (#86): the stats whose `jokerGap` is being shown, and the
+  // last gap already shown. The second is also in meta; holding it here too
+  // means a device without IndexedDB sees the notice once per run rather than
+  // on every redraw of the practise tab.
+  jokerNotice: undefined,
+  jokerNoticed: undefined,
 };
 
 /**
@@ -112,7 +121,10 @@ function tabBar() {
           type: "button",
           "aria-current": state.tab === tab.key ? "page" : undefined,
           onclick: () => {
-            if (tab.key === "stats") state.jokerBadge = false;
+            if (tab.key === "stats" && state.jokerBadge) {
+              state.jokerBadge = false;
+              setMeta("joker.badge", false);
+            }
             state.tab = tab.key;
             state.browse = undefined;
             state.overlay = undefined;
@@ -152,6 +164,7 @@ function currentScreen() {
       onOwnDeck: openOwnDeck,
       resumable: state.resumable,
       onResume: resumeSession,
+      onStats: considerJokerNotice,
     });
   }
   if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
@@ -176,6 +189,35 @@ function currentScreen() {
       renderApp();
     },
   });
+}
+
+/**
+ * Designs 04/19 (#86): whether the practise tab's fresh stats call for the
+ * joker notice. The server only reports `jokerGap` on the first day after a
+ * covered gap; this makes it once per gap on this device.
+ */
+async function considerJokerNotice(stats) {
+  const gap = stats?.jokerGap;
+  if (!gap || state.jokerNotice || state.jokerNoticed === gap.lastDay) return;
+  if ((await getMeta("joker.noticed")) === gap.lastDay) {
+    state.jokerNoticed = gap.lastDay;
+    return;
+  }
+  // Only over the practise tab as it stands: never over a session, a summary,
+  // an open sheet or a form she is typing into.
+  if (state.tab !== "practise" || state.session || state.summary || state.overlay || state.browse || state.sheet) {
+    return;
+  }
+  state.jokerNotice = stats;
+  renderApp();
+}
+
+function dismissJokerNotice() {
+  const { lastDay } = state.jokerNotice.jokerGap;
+  state.jokerNoticed = lastDay;
+  state.jokerNotice = undefined;
+  setMeta("joker.noticed", lastDay);
+  renderApp();
 }
 
 /**
@@ -584,7 +626,12 @@ function renderApp() {
         state.session = undefined;
         state.resumable = undefined;
         state.summary = result.empty ? undefined : result;
-        if (result.levelUp) state.jokerBadge = state.jokerBadge || false;
+        // Design 11. This used to read `state.jokerBadge || false` on a level
+        // up, so the badge could never light (#86).
+        if (result.jokerEarned) {
+          state.jokerBadge = true;
+          setMeta("joker.badge", true);
+        }
         renderApp();
       },
     });
@@ -604,6 +651,13 @@ function renderApp() {
 
   if (state.browse) {
     render(app, state.browse);
+    return;
+  }
+
+  // Designs 04/19: before the mode picker, and without the tab bar — read
+  // once and put away, like the level-up moment.
+  if (state.jokerNotice) {
+    render(app, offlineBar(), jokerSpentScreen({ stats: state.jokerNotice, onContinue: dismissJokerNotice }));
     return;
   }
 
@@ -729,6 +783,10 @@ onSessionExpired(noteSignedOut);
 renderApp();
 
 if (state.user) {
+  if (await getMeta("joker.badge")) {
+    state.jokerBadge = true;
+    renderApp();
+  }
   await checkDeck();
   loadSettings();
   loadOwnDeck();

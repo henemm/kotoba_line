@@ -1060,6 +1060,10 @@ export function sessionScreen({
       synced: accepted,
       xpGained,
       levelUp,
+      // #86: design 11's badge lights "the first time a new joker is earned".
+      // A joker is earned by the day's tenth review, which happens inside a
+      // session, so the same two server answers that give the XP give this.
+      jokerEarned: Boolean(before && after && after.jokers > before.jokers),
     });
   }
 
