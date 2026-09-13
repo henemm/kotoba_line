@@ -229,20 +229,25 @@ recent writes live in a sidecar. `.backup` handles that.
 ## Deploying a change to the app shell
 
 `client/sw.js` precaches the shell under a versioned cache name. **Bump
-`VERSION` in that file whenever a shell file changes**, or a device that
-already has the app keeps serving the old one from its cache. There is no build
-step to do it automatically (phase-0-plan §1.5), so it is a line in the diff.
+`VERSION` in that file whenever a shell file changes, and add an entry for the
+new version to `client/changelog.json`** — plain words, written for her; they
+are what the update prompt shows under "More info", and a test fails without
+one. There is no build step to do either automatically (phase-0-plan §1.5).
 
-nginx already sends `Cache-Control: no-cache` for the shell, so the new worker
-is picked up on the next load and the old cache is deleted on activation.
+**The phone asks (#93).** An app installed to the home screen is resumed, not
+reloaded, so it used to keep serving the previous shell until it was quit from
+the app switcher. Since v36 the app checks for a new worker itself — on every
+return to the foreground, and every half hour while open — downloads the new
+shell completely, and then shows "A new version is ready" with Later / Update.
+Nothing on the server side is needed beyond the deploy. The prompt never
+appears over a card, a summary or a form; it waits for the tab screens.
 
-**On the phone, "the next load" is not opening the app.** An app installed to
-the home screen is resumed, not reloaded, so it can keep serving the previous
-shell for days. Checking a fix there means quitting it properly first — app
-switcher, swipe the card away — and only then opening it again. A deploy that
-looks like it did not work is worth suspecting of this before it is suspected
-of anything else: it cost a full round of debugging on a layout fix that had
-in fact already shipped correctly.
+So after deploying: bring the app to the foreground (or open it), wait a few
+seconds on the Practise, Stats or Settings tab, tap Update. Settings →
+Diagnostics → App shows `vN running · vM ready to update` while one waits.
+If she taps Later, the prompt comes back on the next launch; if the app is
+closed meanwhile, the next launch starts on the new version and says
+"Updated" once.
 
 ## What is not here yet
 

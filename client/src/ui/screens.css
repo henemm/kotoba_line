@@ -3111,3 +3111,59 @@
   font: 600 12px/1 var(--mono);
   color: var(--ink-muted);
 }
+
+/* ══ A new version is ready (#93) ═════════════════════════════════
+   Not in design/. The leaving sheet (50) with a list that folds out, so it
+   reads as the app asking something, not as a new kind of screen. Fixed
+   rather than absolute, like the set sheet: the tab underneath can be taller
+   than the screen, and an absolute sheet would sit below the fold. */
+
+.update-scrim {
+  position: fixed;
+  z-index: 20;
+  justify-content: center;
+}
+.update-sheet {
+  /* On iPad the scrim spans the window; the sheet keeps to the column. */
+  max-width: var(--column);
+  max-height: 88dvh;
+  overflow-y: auto;
+}
+.update-more {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  color: var(--ink);
+  font: 600 15px/1.2 var(--ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.update-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.update-version {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* "v36", as Settings writes it, so the two can be matched up. */
+.update-version .mono-label {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+.update-version ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+.update-version li + li {
+  margin-top: 4px;
+}
+.update-sheet .btn[disabled] {
+  color: var(--ink-muted);
+}

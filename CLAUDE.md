@@ -45,12 +45,14 @@ else's word as a tombstone rather than leaving it out, so a device that cached
 it drops it.
 
 **5. Bump `VERSION` in `client/sw.js` whenever anything under `client/`
-changes.**
+changes — and add that version to `client/changelog.json`.**
 The precache is keyed by that name and nothing else about the content is
 consulted, so a device that already installed the old shell keeps serving it and
 never sees the change. CI enforces this against the base branch (the
 `shell-version` job) — it exists because two branches once picked "v8"
-independently and git merged them without a conflict.
+independently and git merged them without a conflict. The changelog entry is
+what the update prompt shows her under "More info" (#93), so write it for her,
+in plain words; `client/test/whats-new.test.js` fails without one.
 
 ## Shape of the thing
 
@@ -160,7 +162,12 @@ stale changes nothing.
 
 `/srv/kotoba` holds her data and is never overwritten by a deploy. Migrations
 run themselves when the container starts. After deploying a client change, the
-installed app on the phone must be **quit and reopened**, not just backgrounded.
+installed app asks for itself (#93): bring it to the foreground, wait on a tab
+screen for "A new version is ready", tap Update. The worker **waits** for that
+tap instead of calling `skipWaiting()` on install — do not put it back; that is
+what made "quit and reopen" the procedure. The one exception is in `sw.js`:
+the first prompting shell (v36) still takes over from an older one, because
+the older page cannot ask.
 
 `ops/README.md` is the runbook. Two steps in it are deliberately not an agent's
 to make: **the PIN** (`--pin` puts it in the shell history, and it is hers), and

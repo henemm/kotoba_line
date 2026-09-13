@@ -13,9 +13,16 @@
  *
  * Bump VERSION whenever a shell file changes. There is no build step to do it
  * automatically (phase-0-plan §1.5), so it is a line in a diff like everything
- * else, and `ops/deploy.sh` is where it would be forgotten.
+ * else, and `ops/deploy.sh` is where it would be forgotten. A bump also needs
+ * an entry in `changelog.json`; a test refuses one without.
+ *
+ * A new version waits (#93). It used to call `skipWaiting()` on install and
+ * take over at once, which swapped the cache under a page still running the
+ * old modules — so nothing changed on the phone until the app was quit from
+ * the app switcher. Now it installs, waits, and the page asks her
+ * (`src/update.js`).
  */
-const VERSION = "v35";
+const VERSION = "v36";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -43,6 +50,10 @@ const SHELL_FILES = [
   "",
   "index.html",
   "manifest.webmanifest",
+  // Not under src/, so the test that catches a missing module cannot catch
+  // this one. The prompt reads the notes out of the *waiting* version's cache,
+  // so a changelog that is not precached is a "More info" with nothing in it.
+  "changelog.json",
   "src/app.js",
   "src/api.js",
   "src/audio.js",
@@ -56,7 +67,9 @@ const SHELL_FILES = [
   "src/shell-version.js",
   "src/stars.js",
   "src/store.js",
+  "src/update.js",
   "src/viewport.js",
+  "src/whats-new.js",
   "src/screens/browse.js",
   "src/screens/card-topics.js",
   "src/screens/choose-set.js",
@@ -69,6 +82,7 @@ const SHELL_FILES = [
   "src/screens/signin.js",
   "src/screens/stats.js",
   "src/screens/summary.js",
+  "src/screens/update-sheet.js",
   "src/ui/base.css",
   "src/ui/dom.js",
   "src/ui/screens.css",
@@ -77,6 +91,12 @@ const SHELL_FILES = [
   "assets/icons/apple-touch-icon-180.png",
 ].map((f) => scope + f);
 
+/**
+ * The first shell whose page can ask. A worker waiting behind an older one
+ * would wait for a question that is never asked.
+ */
+const FIRST_PROMPTING_VERSION = 36;
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -84,19 +104,57 @@ self.addEventListener("install", (event) => {
       // One at a time rather than cache.addAll: addAll rejects the whole
       // install if a single file 404s, and a service worker that refuses to
       // install leaves the app with no offline support and no message.
-      await Promise.all(
+      const missed = await Promise.all(
         SHELL_FILES.map(async (url) => {
           try {
             const res = await fetch(url, { cache: "reload" });
             if (res.ok) await cache.put(url, res);
+            return !res.ok;
           } catch {
-            /* a missing shell file is worth less than a working install */
+            return true;
           }
         }),
       );
-      await self.skipWaiting();
+
+      // ...but an update is not a first install. "A partial shell beats none"
+      // is right when there is nothing else, and wrong when a complete older
+      // shell is running and the prompt is about to say the new one is ready:
+      // tapping Update would land her on a shell with modules missing, which
+      // is a blank screen (#53). Failing here keeps the working one, and the
+      // next update check simply tries again.
+      //
+      // What this catches is a request that fails — the signal dropping part
+      // way through, the likely case on a train. Measured in WebKit: v40 with
+      // one request cut off was never offered, its cache was gone, v36 kept
+      // running, and v41 was offered and installed normally afterwards. A
+      // file that does not exist is *not* caught here: nginx's try_files
+      // answers it with index.html and a 200. The list test covers that.
+      if (self.registration.active && missed.some(Boolean)) {
+        await caches.delete(SHELL);
+        throw new Error(`${SHELL} is incomplete; keeping the running version`);
+      }
+
+      // The one release whose predecessor cannot ask (v35 and older): take
+      // over the old way, once. Her phone gets this version by being quit and
+      // reopened, as before, and every version after it asks.
+      const previous = (await caches.keys())
+        .filter((name) => name.startsWith("kotoba-shell-v") && name !== SHELL)
+        .map((name) => Number(name.slice("kotoba-shell-v".length)));
+      if (previous.length > 0 && Math.max(...previous) < FIRST_PROMPTING_VERSION) {
+        await self.skipWaiting();
+      }
     })(),
   );
+});
+
+/**
+ * The page talks to the *waiting* worker: which version it is, so the prompt
+ * can read that version's notes out of its cache, and — once she taps
+ * Update — to take over.
+ */
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "version") event.ports[0]?.postMessage(VERSION);
+  if (event.data?.type === "skip-waiting") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
