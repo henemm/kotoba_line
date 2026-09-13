@@ -80,6 +80,12 @@ describe("the service worker precaches the whole shell (#53)", () => {
     );
   });
 
+  it("precaches the changelog, which lives outside src/ where the walk above looks (#93)", () => {
+    // The prompt reads the notes out of the waiting version's cache, because
+    // while it waits the old worker answers every fetch with the old file.
+    assert.ok(listed.has("changelog.json"), "changelog.json is not in SHELL_FILES");
+  });
+
   it("lists nothing that is not there, which would fail the install fetch", () => {
     const onDisk = new Set(walk(clientRoot).map((p) => relative(clientRoot, p)));
     const phantom = [...listed].filter(

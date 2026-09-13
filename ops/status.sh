@@ -207,8 +207,8 @@ head_ "What this needs"
 if [[ ${#NEEDED[@]} -eq 0 ]]; then
   echo "  Nothing. The server is up to date."
   echo
-  echo "  If the phone still shows something old, the app has to be quit and"
-  echo "  reopened — its own cache is the one thing no command here can clear."
+  echo "  If the phone still shows something old: bring the app to the"
+  echo "  foreground and wait on a tab for \"A new version is ready\" (#93)."
   exit 0
 fi
 
@@ -245,5 +245,6 @@ cat <<'EOF'
   other tables and are not read by it. The counts above are what it would
   leave alone.
 
-  Then quit and reopen the app on the phone.
+  Then bring the app on the phone to the foreground and tap Update when it
+  asks.
 EOF

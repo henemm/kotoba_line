@@ -45,6 +45,7 @@ in `server/README.md`.
 | First run | 49 | done — paged download, pause, carry on |
 | Coming back | 51 | done — the resume row, four hours or the Tokyo day |
 | Signed out by the server | 52 | done — the bar, the PIN-only screen, dismissible |
+| A new version is ready | — | done — not in design/; the leaving sheet (50) with the notes folded under "More info", Later / Update, and "Updated" once after a silent update (#93) |
 
 ## Layout
 
@@ -57,7 +58,10 @@ src/outbox.js         answers held on disk until the server acknowledges them
 src/queue.js          what to practise, including when the server is unreachable
 src/deck.js           the deck cache, and choosing wrong answers
 src/modes.js          the four lines
-src/app.js            shell, tabs, the offline strip, worker registration
+src/app.js            shell, tabs, the offline strip, where the update sheet may appear
+src/update.js         worker registration, update checks, the swap and reload (#93)
+src/whats-new.js      which changelog entries she has not seen — pure, tested
+changelog.json        one entry per shell VERSION, shown under "More info"
 src/screens/          one module per screen
 sw.js                 the service worker — shell, API and media strategies
 src/ui/tokens.css     the design system, and nothing else

@@ -1,0 +1,11 @@
+[
+  {
+    "version": "v36",
+    "summary": "Updates now tell you when they are ready.",
+    "notes": [
+      "When a new version is ready, the app asks: update now, or later.",
+      "No more closing the app from the app switcher to get the latest version.",
+      "Every update comes with a short list like this one, including anything you skipped."
+    ]
+  }
+]

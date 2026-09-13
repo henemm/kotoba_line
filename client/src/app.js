@@ -1,6 +1,7 @@
 import { OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { signedOutScreen } from "./screens/signed-out.js";
+import { updateSheet } from "./screens/update-sheet.js";
 import { practiseScreen } from "./screens/practise.js";
 import { jokerSpentScreen, statsScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
@@ -16,7 +17,10 @@ import { startFlushingStars } from "./stars.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
+import { SHELL_VERSION } from "./shell-version.js";
+import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
+import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 
 const TABS = [
@@ -87,6 +91,13 @@ const state = {
   // on every redraw of the practise tab.
   jokerNotice: undefined,
   jokerNoticed: undefined,
+  // #93: the update sheet, built once and kept so "More info" stays open
+  // across the redraws the outbox triggers. `updateDeferred` is the version
+  // she said Later to: asked again on the next launch, not on every return
+  // from the background.
+  update: undefined,
+  updateNode: undefined,
+  updateDeferred: undefined,
 };
 
 /**
@@ -661,7 +672,73 @@ function renderApp() {
     return;
   }
 
-  render(app, offlineBar(), currentScreen(), tabBar(), state.sheet);
+  // #93: only here, over the tab screens. Every branch above returns first, so
+  // the prompt never covers a card, a summary, a form or 52 — it waits, and
+  // appears on the next redraw that reaches the tabs. The set sheet wins while
+  // it is open; she is in the middle of choosing.
+  render(app, offlineBar(), currentScreen(), tabBar(), state.sheet ?? state.updateNode);
+}
+
+/**
+ * #93. Which shell to list notes from: the last one this device was shown, or
+ * — on a device that has never recorded one — see `startingPoint`. A promise,
+ * because the first update can be announced before the deck count is known.
+ */
+let notesFrom = (async () => {
+  const seen = lastSeen();
+  let hasDeck = false;
+  if (seen === undefined) hasDeck = (await cardCount().catch(() => 0)) > 0;
+  const from = startingPoint({ seen, running: SHELL_VERSION, hasDeck });
+  return versionNumber(from) > versionNumber(SHELL_VERSION) ? SHELL_VERSION : from;
+})();
+
+/** A newer shell is downloaded and waiting. */
+async function offerUpdate({ worker, version }) {
+  if (state.updateDeferred === version || state.update?.version === version) return;
+  const entries = notesSince(await readChangelog(version), await notesFrom, version);
+  showUpdate({ kind: "ready", worker, version, entries });
+}
+
+/**
+ * The shell changed without her being asked — the app was closed while a
+ * version waited, and the next launch started on it. Tell her once what came
+ * with it.
+ */
+async function noteUpdated() {
+  const from = await notesFrom;
+  const entries = notesSince(await readChangelog(SHELL_VERSION), from, SHELL_VERSION);
+  if (entries.length === 0) {
+    markSeen(SHELL_VERSION);
+    return;
+  }
+  // A waiting version's prompt already lists these, from the same point.
+  if (state.update) return;
+  showUpdate({ kind: "updated", entries });
+}
+
+function showUpdate(update) {
+  state.update = update;
+  state.updateNode = updateSheet({
+    kind: update.kind,
+    entries: update.entries,
+    onUpdate: () => applyUpdate(update.worker, update.version),
+    onLater: () => {
+      state.updateDeferred = update.version;
+      closeUpdate();
+    },
+    onDone: closeUpdate,
+  });
+  // Same rule as 52: nothing is drawn over a session, and its exit redraws.
+  if (!state.session) renderApp();
+}
+
+/** Whatever she did, the notes up to the running shell have now been shown. */
+function closeUpdate() {
+  markSeen(SHELL_VERSION);
+  notesFrom = Promise.resolve(SHELL_VERSION);
+  state.update = undefined;
+  state.updateNode = undefined;
+  renderApp();
 }
 
 window.addEventListener("online", () => {
@@ -704,18 +781,8 @@ subscribe(({ waiting, sent, status }) => {
   if (!state.session) renderApp();
 });
 
-/**
- * §7: the worker has to come from /kotoba/sw.js so its scope is /kotoba/. A
- * worker at the domain root cannot reliably control a subpath app, and the
- * failure is silent — so the path here is relative to the app, deliberately.
- */
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register(new URL("../sw.js", import.meta.url)).catch((err) => {
-    // No offline support, but the app works. Worth a line in the console
-    // rather than a message she cannot act on.
-    console.warn("service worker did not register", err);
-  });
-}
+// §7 and #93: registers the worker, and asks her when a newer one is waiting.
+watchForUpdates(offerUpdate);
 
 /**
  * Fetch the stored settings and redraw. Failure is not an error worth showing
@@ -781,6 +848,7 @@ state.pendingEvents = await pending();
 onSessionExpired(noteSignedOut);
 
 renderApp();
+noteUpdated();
 
 if (state.user) {
   if (await getMeta("joker.badge")) {

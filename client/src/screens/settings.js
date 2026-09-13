@@ -23,7 +23,11 @@ import { el, num, render } from "../ui/dom.js";
  * So: `SHELL_VERSION` is what is *running* — a constant compiled into this
  * code, which is the only thing that travels with it — and the cache name is
  * what is *ready*. They agree almost always, and when they do not, saying so
- * is the entire value of the row: quit the app and reopen it.
+ * is the entire value of the row.
+ *
+ * Since #93 a new version waits for her instead of taking over, so "ready"
+ * now means "the prompt is due" rather than "quit and reopen" — and the
+ * prompt is drawn over this tab too.
  */
 async function shellVersion() {
   if (typeof caches === "undefined") return SHELL_VERSION;
@@ -33,7 +37,8 @@ async function shellVersion() {
       .map((name) => name.replace("kotoba-shell-", ""));
     if (ready.length === 0) return `${SHELL_VERSION} · not installed`;
     if (ready.length === 1 && ready[0] === SHELL_VERSION) return SHELL_VERSION;
-    return `${SHELL_VERSION} running · ${ready.sort().join(" ")} ready — quit and reopen`;
+    const waiting = ready.filter((v) => v !== SHELL_VERSION).sort();
+    return `${SHELL_VERSION} running · ${waiting.join(" ")} ready to update`;
   } catch {
     return SHELL_VERSION;
   }
