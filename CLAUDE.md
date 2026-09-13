@@ -37,6 +37,13 @@ personal card's id is negative *on purpose*: any schema or validation that
 demands a positive integer is a bug. Deleting a card she has reviewed is a soft
 delete (`deleted_at`), because `review_events.card_id` is a foreign key.
 
+A personal card belongs to one account (`cards.owner_id`, migration 010). Every
+query that hands out or accepts a card goes through `visibleTo()` in
+`server/src/cards.js`. A new one that reads `cards` without it puts a friend's
+words into her deck, which is exactly what #84 was. `/api/deck` sends someone
+else's word as a tombstone rather than leaving it out, so a device that cached
+it drops it.
+
 **5. Bump `VERSION` in `client/sw.js` whenever anything under `client/`
 changes.**
 The precache is keyed by that name and nothing else about the content is

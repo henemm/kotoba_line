@@ -37,9 +37,11 @@ in `server/README.md`.
 | Session | 16 + prototype | done — all four modes, with めくる's four ratings (§6) |
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
+| Joker spent | 04, 19 | done — once per covered gap, before the practise tab; "Continue" rather than "Start today's session" (#86) |
+| Streak reset | 08 | not built (#89) |
 | Browse | 31–34 | done — search, star, the starred list, practise the set |
 | Choose a set | 36–40 | done — three filter dimensions, the live count, the dashed rule, its own summary |
-| Her own words | 27–30 | done — the dashed station, add a word, the list |
+| Her own words | 27–30 | done — the dashed station, add a word, the list; tap a word to edit or delete it (30 draws a swipe, see `own-deck.js`; #85) |
 | First run | 49 | done — paged download, pause, carry on |
 | Coming back | 51 | done — the resume row, four hours or the Tokyo day |
 | Signed out by the server | 52 | done — the bar, the PIN-only screen, dismissible |

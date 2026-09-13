@@ -35,17 +35,18 @@ docker compose -f ../ops/docker-compose.yml exec api node bin/adduser.js --handl
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/me` | the current user, or 401 |
 | `POST` | `/api/events` | `{ events: [...] }` → `{ accepted, rejected, states }` |
-| `GET` | `/api/deck` | `?since=&offset=&limit=` → cards changed since then, with their tags; paged for the first run |
+| `GET` | `/api/deck` | `?since=&offset=&limit=` → cards changed since then, with their tags; paged for the first run. Someone else's own word arrives only as `{ id, deleted_at }` |
 | `GET` | `/api/queue` | `?mode=&limit=&deck=&tag=&only=` → card ids in scheduler order |
 | `GET` | `/api/browse` | `?q=&deck=&tag=&starred=&page=` → searchable card list |
 | `GET` | `/api/queue` | …and, for `mode=flip`, the four intervals per card |
 | `POST` | `/api/stars` | `{ cardId, starred }` → pin or unpin a card |
-| `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts |
+| `GET` | `/api/stats` | XP, level, streak, jokers, maturity bands, per-topic counts, and `jokerGap` on the day after jokers covered a gap |
 | `GET` | `/api/settings` | the four settings, the deck rows, the sync state, the version |
 | `PATCH` | `/api/settings` | a partial update — writes one control at a time |
-| `GET` | `/api/cards` | her own deck, and every topic in use |
+| `GET` | `/api/cards` | her own deck, and every topic on cards she can see |
 | `POST` | `/api/cards` | add one of her own words → the card |
-| `DELETE` | `/api/cards/:id` | mark one of hers removed; never her history |
+| `PUT` | `/api/cards/:id` | the whole card, as the form holds it → the card; content only, her history stays |
+| `DELETE` | `/api/cards/:id` | mark one of hers removed; never her history. Someone else's word is a 404 |
 | `GET` | `/api/health` | liveness, no auth |
 
 ## The event log
@@ -176,6 +177,12 @@ morning.
 **The streak counts days practised, not days elapsed.** A joker keeps the run
 alive across a gap; it does not invent a day of study. Five days practised, one
 covered by a joker, one practised is a streak of six.
+
+**A covered gap is reported once, the next day.** `jokerGap` is set only on the
+day straight after the jokers covered a gap, which is the first day she can be
+back. The client shows designs 04/19's notice once per gap (#86). A gap that
+used up the last joker and reset the streak is not reported; that is design 08,
+not built yet (#89).
 
 Levels follow §8a literally — level *n* starts at `100·n·(n+1)/2`, so level 7
 begins at 2,800 XP, which is what the Stats design draws. The one adjustment is
