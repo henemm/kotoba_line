@@ -1,5 +1,12 @@
 [
   {
+    "version": "v45",
+    "summary": "A small fix: 10, 20 and All on the Practise screen show your choice every time.",
+    "notes": [
+      "After the first tap on 10, 20 or All, the highlight stopped moving, so it looked as if the buttons did nothing. Your choice was saved all along; now you can see it too."
+    ]
+  },
+  {
     "version": "v44",
     "summary": "“Add a word” is back on the Practise screen without scrolling.",
     "notes": [

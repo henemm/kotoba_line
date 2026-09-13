@@ -325,23 +325,33 @@ export function practiseScreen({
     );
   }
 
+  /**
+   * #111: every redraw goes into this one `picker`, the one on screen. It used
+   * to redraw by building a whole second picker and moving its buttons across
+   * — and those buttons' own taps then redrew the second picker, which was
+   * never on screen. So only the first tap moved the highlight; every later
+   * one was saved (measured: a PATCH per tap) and showed nothing, until a tab
+   * change rebuilt the screen.
+   */
   function lengthPicker() {
     const picker = el("div.length");
-    render(
-      picker,
-      SESSION_LENGTHS.map(({ value, label }) =>
-        el("button", {
-          type: "button",
-          text: label,
-          "aria-pressed": String(value === sessionLength),
-          onclick: () => {
-            sessionLength = value;
-            onSessionLength?.(value);
-            render(picker, ...lengthPicker().children);
-          },
-        }),
-      ),
-    );
+    const draw = () =>
+      render(
+        picker,
+        SESSION_LENGTHS.map(({ value, label }) =>
+          el("button", {
+            type: "button",
+            text: label,
+            "aria-pressed": String(value === sessionLength),
+            onclick: () => {
+              sessionLength = value;
+              onSessionLength?.(value);
+              draw();
+            },
+          }),
+        ),
+      );
+    draw();
     return picker;
   }
 
