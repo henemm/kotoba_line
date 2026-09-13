@@ -14,6 +14,11 @@
   --line-choose: #F15A22;  /* 選ぶ   pick the meaning */
   --line-listen: #00A7DB;  /* 聞く   listen only      */
   --line-speak:  #C7008B;  /* 話す   say it aloud     */
+  /* 書く, added with the mode (#97). Hanzōmon purple, from the same metro map
+     as the other four: far enough from 話す's magenta and from --no to be
+     told apart at a glance. Measured contrast: 4.8:1 on --night, 3.7:1 for
+     white on it — between 選ぶ's 3.4 and 話す's 5.5. */
+  --line-type:   #8F76D6;  /* 書く   type the Japanese */
   --line-flip:   #80C241;  /* めくる flip the card    */
 
   --yes: #3DDC84;

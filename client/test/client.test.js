@@ -4,7 +4,7 @@ import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, streakResetCopy, visibleTopics } from "../src/screens/stats.js";
-import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, sentenceKana, speakUsesSentence, splitEmphasis } from "../src/screens/session.js";
+import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, readingsOf, recalled, sentenceKana, speakUsesSentence, splitEmphasis, typingAnswers } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
@@ -35,10 +35,11 @@ describe("query strings", () => {
   });
 });
 
-describe("the four lines", () => {
-  it("are the four modes, each with its own colour", () => {
-    assert.deepEqual(MODES.map((m) => m.key), ["choose", "listen", "speak", "flip"]);
-    assert.equal(new Set(MODES.map((m) => m.colour)).size, 4);
+describe("the lines", () => {
+  it("are the five modes, each with its own colour", () => {
+    assert.deepEqual(MODES.map((m) => m.key), ["choose", "listen", "speak", "type", "flip"]);
+    assert.equal(new Set(MODES.map((m) => m.colour)).size, 5);
+    assert.equal(modeByKey("type").jp, "書く");
     assert.equal(modeByKey("flip").jp, "めくる");
     assert.equal(modeByKey("nope"), undefined);
   });
@@ -432,7 +433,7 @@ describe("which cards a mode can actually ask about", () => {
     sentence_audio: "s.mp3", ...over,
   });
 
-  it("leaves the other three modes alone", () => {
+  it("leaves the modes that need no more than a word alone", () => {
     const cards = [card(), card({ id: 2, sentence: null, sentence_meaning: null })];
     for (const mode of ["choose", "speak", "flip"]) {
       assert.equal(playableIn(mode, cards).length, 2, mode);
@@ -468,6 +469,33 @@ describe("which cards a mode can actually ask about", () => {
     // than merely thin.
     assert.deepEqual(playableIn("listen", [card({ sentence: null })]), []);
     assert.deepEqual(playableIn("listen", [card({ sentence_meaning: null })]), []);
+  });
+
+  it("drops a 書く card with no reading to check an answer against (#97)", () => {
+    const deckCard = card({ word_furigana: "水[みず]" });
+    const ownWithReading = card({ id: -1, word: "食べる", word_furigana: null, word_reading: "たべる" });
+    const ownKana = card({ id: -2, word: "もう", word_furigana: null, word_reading: null });
+    const ownKanjiOnly = card({ id: -3, word: "猫", word_furigana: null, word_reading: null });
+    assert.deepEqual(
+      playableIn("type", [deckCard, ownWithReading, ownKana, ownKanjiOnly]).map((c) => c.id),
+      [1, -1, -2],
+    );
+  });
+
+  it("reads both of 何's readings, and nothing that is not kana", () => {
+    assert.deepEqual(readingsOf(card({ word: "何", word_furigana: "何[なに・なん]" })), ["なに", "なん"]);
+    assert.deepEqual(readingsOf(card({ word: "コーヒー", word_furigana: "コーヒー" })), ["こーひー"]);
+    assert.deepEqual(readingsOf(card({ word: "猫", word_furigana: null, word_reading: "neko" })), []);
+  });
+
+  it("accepts another card for a 書く prompt only when the meaning is the same words", () => {
+    const big = card({ id: 10, word: "大きい", word_furigana: "大[おお]きい", word_meaning: "big, large" });
+    const pool = [
+      big,
+      card({ id: 11, word: "大きな", word_furigana: "大[おお]きな", word_meaning: "Big, large " }),
+      card({ id: 12, word: "巨大", word_furigana: "巨大[きょだい]", word_meaning: "huge, big" }),
+    ];
+    assert.deepEqual(typingAnswers(big, pool).map((a) => a.id), [10, 11]);
   });
 
   it("keeps a card with no recording when speech can stand in", () => {

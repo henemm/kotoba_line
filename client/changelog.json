@@ -1,5 +1,15 @@
 [
   {
+    "version": "v39",
+    "summary": "A new way to practise: 書く, type the Japanese.",
+    "notes": [
+      "書く shows you the English meaning, and you type the Japanese word.",
+      "Type in romaji or in kana, whichever keyboard you have. Romaji turns into kana under the box as you type.",
+      "If you made a typo, tap “It was a typo” and the card counts as right.",
+      "Your own words need a reading to show up in 書く."
+    ]
+  },
+  {
     "version": "v38",
     "summary": "On a day with nothing due, the suggestions work again.",
     "notes": [

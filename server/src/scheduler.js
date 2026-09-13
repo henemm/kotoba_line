@@ -20,7 +20,11 @@ const RATINGS = {
 };
 
 export const VALID_RATINGS = Object.keys(RATINGS).map(Number);
-export const VALID_MODES = ["choose", "listen", "speak", "flip"];
+// "type" is 書く (#97). An event's mode is a label for the log — the scheduler
+// folds every mode's ratings into one state (§6) and never reads it — but an
+// event with a mode missing here is refused at the schema, so a client with
+// a new mode must never reach a server without it.
+export const VALID_MODES = ["choose", "listen", "speak", "type", "flip"];
 
 /**
  * Order events the way the scheduler must see them.

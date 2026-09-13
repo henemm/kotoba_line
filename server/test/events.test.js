@@ -111,6 +111,37 @@ describe("POST /api/events", () => {
     await app.close();
   });
 
+  it("takes an answer from 書く like any other mode (#97)", async () => {
+    const { app, db, config } = await fixture();
+    const cookie = await signIn(app, config);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/events",
+      headers: { cookie },
+      payload: { events: [ev("typed", 1, 3, T0, "type")] },
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json().accepted, [uid("typed")]);
+    assert.equal(db.prepare("SELECT mode FROM review_events").get().mode, "type");
+
+    // One card state for every mode (§6): a typed answer schedules the card
+    // exactly as the same rating from 選ぶ would.
+    const { db: other, app: otherApp, config: otherConfig } = await fixture();
+    const otherCookie = await signIn(otherApp, otherConfig);
+    await otherApp.inject({
+      method: "POST",
+      url: "/api/events",
+      headers: { cookie: otherCookie },
+      payload: { events: [ev("typed", 1, 3, T0, "choose")] },
+    });
+    assert.equal(cardStates(db)[0].due_at, cardStates(other)[0].due_at);
+
+    await app.close();
+    await otherApp.close();
+  });
+
   it("refuses a malformed event at the schema", async () => {
     const { app, config } = await fixture();
     const cookie = await signIn(app, config);
