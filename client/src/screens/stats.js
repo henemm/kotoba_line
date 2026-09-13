@@ -50,7 +50,7 @@ export function visibleTopics(topics, expanded, limit = TOPICS_BEFORE_TRUNCATION
   return { seen, shown, hidden: seen.length - shown.length };
 }
 
-const NUMBER_WORDS = ["No", "One", "Two", "Three"];
+const NUMBER_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 const numberWord = (n) => NUMBER_WORDS[n] ?? String(n);
 
 /**
@@ -69,6 +69,25 @@ export function jokerNoticeCopy({ days, streak, jokers }) {
       : `${numberWord(jokers)} ${jokers === 1 ? "joker" : "jokers"} left`;
   const body = `Your streak is at ${num(streak)} ${streak === 1 ? "day" : "days"} and unbroken. ${left}; five days in a row earns another.`;
   return { headline, body };
+}
+
+/**
+ * What design 08 says when a gap ended the streak (#89). Exported for the
+ * same reason as the joker copy: one day or several, and — a case the design
+ * does not draw — a streak she has already started again today on another
+ * device, where "starts the next one" would be a step behind her.
+ */
+export function streakResetCopy({ days, cards, level, streak }) {
+  const headline =
+    days === 1
+      ? "A day without reviews, and no joker left to cover it."
+      : `${numberWord(days)} days without reviews, and no joker left to cover them.`;
+  const body = `The streak is back to zero. Nothing else changed: ${num(cards)} ${cards === 1 ? "card" : "cards"}, level ${level}, and the schedule picked up where it was.`;
+  const next =
+    streak > 0
+      ? "Today already counts as day one. Five days in a row earns a joker back."
+      : "Ten reviews today starts the next one. Five days in a row earns a joker back.";
+  return { headline, body, next };
 }
 
 /**
@@ -138,6 +157,70 @@ export function jokerSpentScreen({ stats, onContinue }) {
         el("span.tabular", { text: num(stats.streak) }),
         el("span.joker-notice-streak-label", { text: "day streak\ncontinues" }),
       ),
+    ),
+    el(
+      "div.joker-notice-foot",
+      {},
+      el("button.btn-primary", { type: "button", text: "Continue", onclick: onContinue }),
+    ),
+  );
+}
+
+/**
+ * "Streak reset" — designs 08 and 20 (#89).
+ *
+ * The counterpart to the joker notice and, per 08's note, "deliberately not
+ * louder": the same layout, three empty slots instead of spent ones, and a
+ * second paragraph that exists "to say what survived; without it the screen
+ * reads as though progress was lost". No red anywhere.
+ *
+ * Shown under the same rules as the joker notice (app.js), and its button says
+ * "Continue" rather than 08's "Start day one" for the same reason that one
+ * does not say "Start today's session": the practise tab is where she picks
+ * how.
+ */
+export function streakResetScreen({ stats, onContinue }) {
+  const { days } = stats.streakReset;
+  const { headline, body, next } = streakResetCopy({
+    days,
+    cards: stats.cardsSeen,
+    level: stats.level,
+    streak: stats.streak,
+  });
+
+  return el(
+    "div.joker-notice.streak-reset",
+    {},
+    el(
+      "div.joker-notice-body",
+      {},
+      el(
+        "div.joker-notice-slots",
+        {},
+        el("span.mono-label", { text: "Jokers" }),
+        el(
+          "div.joker-slots",
+          {},
+          noticeSlots({ jokers: stats.jokers, days: 0 }).map((kind) =>
+            kind === "filled" ? el("span.slot.filled", {}, el("span.diamond")) : el("span.slot.empty"),
+          ),
+        ),
+      ),
+      el(
+        "div.joker-notice-copy",
+        {},
+        el("h2", { text: headline }),
+        el("p", { text: body }),
+      ),
+      el(
+        "div.joker-notice-streak",
+        {},
+        el("span.tabular", { text: num(stats.streak) }),
+        el("span.joker-notice-streak-label", { text: "day\nstreak" }),
+        el("span.tabular.streak-reset-longest", { text: num(stats.longestStreak) }),
+        el("span.joker-notice-streak-label", { text: "longest" }),
+      ),
+      el("p.streak-reset-next", { text: next }),
     ),
     el(
       "div.joker-notice-foot",

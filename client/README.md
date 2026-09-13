@@ -29,7 +29,7 @@ in `server/README.md`.
 | Screen | Design | State |
 |---|---|---|
 | Sign in | 01, 14 | done — default, wrong PIN, rate limited |
-| Practise tab | 10, 15 | done — normal day and nothing-due, both with the four lines |
+| Practise tab | 10, 15 | done — normal day and nothing-due, both with the four lines; nothing-due has "Next cards due" and counted offers, a row with no cards dropped (#90, #91). Not drawn: 10's "You cleared 34 cards this morning" |
 | Tab bar | 11 | done — three tabs, active dot, joker badge |
 | Offline strip | 25 | done — the three states, driven by the outbox, never during a session |
 | Stats | 02, 12, 24 | done — level, streak, jokers, maturity, topics with the truncation rule |
@@ -38,7 +38,7 @@ in `server/README.md`.
 | Session summary | 09 | done |
 | Level up | 03 | done — overlays the summary, dismisses itself |
 | Joker spent | 04, 19 | done — once per covered gap, before the practise tab; "Continue" rather than "Start today's session" (#86) |
-| Streak reset | 08 | not built (#89) |
+| Streak reset | 08 | done — once per gap, before the practise tab, the joker notice's layout with three empty slots and "longest"; "Continue" rather than "Start day one", for #86's reason (#89) |
 | Browse | 31–34 | done — search, star, the starred list, practise the set |
 | Choose a set | 36–40 | done — three filter dimensions, the live count, the dashed rule, its own summary |
 | Her own words | 27–30 | done — the dashed station, add a word, the list; tap a word to edit or delete it (30 draws a swipe, see `own-deck.js`; #85) |

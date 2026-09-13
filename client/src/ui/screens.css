@@ -858,6 +858,19 @@
   flex: none;
   padding: 0 var(--gutter) 30px;
 }
+/* Streak reset (08; #89): the same screen, plus "longest" beside the zero —
+   what survived — and the sentence about the next one. */
+.streak-reset .streak-reset-longest {
+  margin-left: 18px;
+  color: var(--ink-muted);
+}
+.streak-reset-next {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
 
 /* ── shared section furniture ──────────────────────────────────── */
 .stats .section-head {

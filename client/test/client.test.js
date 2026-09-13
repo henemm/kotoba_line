@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
-import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, visibleTopics } from "../src/screens/stats.js";
+import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, streakResetCopy, visibleTopics } from "../src/screens/stats.js";
 import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, recalled, sentenceKana, speakUsesSentence, splitEmphasis } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
@@ -111,6 +111,18 @@ describe("the joker-spent notice (designs 04/19, #86)", () => {
     assert.match(jokerNoticeCopy({ days: 2, streak: 11, jokers: 1 }).body, /One joker left;/);
     assert.match(jokerNoticeCopy({ days: 1, streak: 5, jokers: 0 }).body, /^Your streak is at 5 days and unbroken\. No jokers left;/);
     assert.match(jokerNoticeCopy({ days: 1, streak: 1, jokers: 0 }).body, /at 1 day and/);
+  });
+
+  it("says design 08's sentences when a gap ended the streak (#89)", () => {
+    const four = streakResetCopy({ days: 4, cards: 486, level: 7, streak: 0 });
+    assert.equal(four.headline, "Four days without reviews, and no joker left to cover them.");
+    assert.equal(four.body, "The streak is back to zero. Nothing else changed: 486 cards, level 7, and the schedule picked up where it was.");
+    assert.equal(four.next, "Ten reviews today starts the next one. Five days in a row earns a joker back.");
+    // 08's note: "1 day → 'A day without reviews'".
+    assert.equal(streakResetCopy({ days: 1, cards: 10, level: 2, streak: 0 }).headline, "A day without reviews, and no joker left to cover it.");
+    assert.match(streakResetCopy({ days: 12, cards: 1, level: 1, streak: 0 }).headline, /^12 days/);
+    assert.match(streakResetCopy({ days: 2, cards: 1, level: 1, streak: 0 }).body, /1 card,/);
+    assert.match(streakResetCopy({ days: 2, cards: 10, level: 2, streak: 1 }).next, /^Today already counts as day one\./);
   });
 
   it("draws held, then spent, then empty slots — three in all", () => {
@@ -703,6 +715,13 @@ describe("what a chosen set is called (36, 39)", () => {
     assert.equal(activeLabel({ tag: "konbini" }), "konbini");
     assert.equal(activeLabel({ tag: "konbini", only: "starred" }), "konbini · Starred");
     assert.equal(activeLabel({}), "");
+  });
+
+  it("names a session of cards due in the next two days, which the sheet cannot choose (#90)", () => {
+    assert.equal(activeLabel({ only: "ahead" }), "Due in two days");
+    assert.equal(summaryLine({ only: "ahead" }), "Both decks · any topic · due in two days");
+    assert.equal(summaryLine({ only: "lapsed" }), "Both decks · any topic · lapsed");
+    assert.equal(summaryLine({}), "Both decks · any topic · due today");
   });
 
   it("knows when nothing was chosen at all", () => {

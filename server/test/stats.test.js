@@ -238,6 +238,52 @@ describe("the gap a joker covered, for the notice (#86)", () => {
   });
 });
 
+describe("the gap that ended a streak, for the notice (#89)", () => {
+  const days = (...ds) => ds.map((d) => `2026-03-${String(d).padStart(2, "0")}`);
+  const day = (d) => `2026-03-${String(d).padStart(2, "0")}`;
+
+  it("is reported on the first day back — the live reproduction", () => {
+    // Two days practised, four missed, no joker ever earned.
+    const s = streakFromDays(days(1, 2), day(7));
+    assert.deepEqual(s.streakReset, { firstDay: day(3), lastDay: day(6), days: 4, lost: 2 });
+    assert.equal(s.current, 0);
+    assert.equal(s.jokerGap, null, "not both notices");
+  });
+
+  it("counts the days a joker covered before the jokers ran out", () => {
+    // Five days earn one joker; day 6 spends it, day 7 ends the streak.
+    const s = streakFromDays(days(1, 2, 3, 4, 5), day(8));
+    assert.deepEqual(s.streakReset, { firstDay: day(6), lastDay: day(7), days: 2, lost: 5 });
+    assert.equal(s.jokerGap, null);
+  });
+
+  it("is still reported once she has practised today", () => {
+    const s = streakFromDays(days(1, 2, 5), day(5));
+    assert.deepEqual(s.streakReset, { firstDay: day(3), lastDay: day(4), days: 2, lost: 2 });
+    assert.equal(s.current, 1);
+  });
+
+  it("is gone the day after she came back", () => {
+    assert.equal(streakFromDays(days(1, 2, 5), day(6)).streakReset, null);
+  });
+
+  it("does not judge today", () => {
+    // Day 3 is missed and today is day 4: one day. On day 3 itself nothing has
+    // been missed yet — the day is still running.
+    assert.equal(streakFromDays(days(1, 2), day(4)).streakReset?.days, 1);
+    assert.equal(streakFromDays(days(1, 2), day(3)).streakReset, null, "today is not a missed day yet");
+  });
+
+  it("is not reported for a gap the jokers covered", () => {
+    assert.equal(streakFromDays(days(1, 2, 3, 4, 5), day(7)).streakReset, null);
+  });
+
+  it("is null with no history and with no gap", () => {
+    assert.equal(streakFromDays([], day(3)).streakReset, null);
+    assert.equal(streakFromDays(days(1, 2, 3), day(3)).streakReset, null);
+  });
+});
+
 describe("maturity bands", () => {
   const state = (intervalDays, reps = 3) => ({
     reps,

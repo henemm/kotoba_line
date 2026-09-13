@@ -230,8 +230,10 @@ Three levels of control, all of them in the first version she tests:
    anything she wants next. `only=starred` builds a session from exactly
    those cards, ignoring the scheduler.
 
-`only=` also takes `lapsed` (things she recently got wrong) and `new`
-(introduce fresh cards regardless of what is due).
+`only=` also takes `lapsed` (things she recently got wrong), `new`
+(introduce fresh cards regardless of what is due) and `ahead` (cards due in the
+next two days — the practise tab's "Practise ahead" on a day with nothing due,
+design 10; #90).
 
 **When a filter is active, the scheduler advises rather than decides.** Due
 cards still come first within the filtered set, but the set is hers. If she

@@ -39,6 +39,16 @@ export const DEFAULT_FILTERS = { deck: undefined, tag: undefined, only: undefine
 export const isDefault = (f) => !f.deck && !f.tag && !f.only;
 
 /**
+ * What an `only` is called. "ahead" is not one of the sheet's choices — only
+ * design 10's "Practise ahead" offer starts it (#90) — but a session of it can
+ * be resumed (51), which puts it back into the filters this line describes.
+ */
+function onlyLabel(only) {
+  if (only === "ahead") return "Due in two days";
+  return ONLY.find((o) => o.value === only)?.label.replace("★ ", "") ?? only;
+}
+
+/**
  * 36's summary line: "Both decks · any topic · due today".
  *
  * With three filters active it truncates from the left, "because the last-set
@@ -48,7 +58,7 @@ export function summaryLine({ deck, tag, only }, { max = 3 } = {}) {
   const parts = [
     deck ? (deck === "personal" ? "my deck" : "Kaishi") : "Both decks",
     tag ?? "any topic",
-    ONLY.find((o) => o.value === only)?.label.replace("★ ", "").toLowerCase() ?? "due today",
+    only ? onlyLabel(only).toLowerCase() : "due today",
   ];
   if (parts.length <= max) return parts.join(" · ");
   return `… · ${parts.slice(-max).join(" · ")}`;
@@ -65,7 +75,7 @@ export function activeLabel({ deck, tag, only }) {
   const parts = [];
   if (deck) parts.push(deck === "personal" ? "my deck" : "Kaishi");
   if (tag) parts.push(tag);
-  if (only) parts.push(ONLY.find((o) => o.value === only)?.label.replace("★ ", "") ?? only);
+  if (only) parts.push(onlyLabel(only));
   return parts.join(" · ");
 }
 

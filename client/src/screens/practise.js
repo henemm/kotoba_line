@@ -9,6 +9,9 @@ import { el, render, station } from "../ui/dom.js";
  * MAX_SESSION_LENGTH on the server, and the screen calls it "All". Both
  * places write the one stored setting, so picking 10 here shows 10 there.
  */
+/** "1 card", "20 cards" — design 10's offers lead with the count. */
+const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
+
 const SESSION_LENGTHS = [
   { value: 10, label: "10" },
   { value: 20, label: "20" },
@@ -46,12 +49,16 @@ export function practiseScreen({
 
   async function load() {
     let due = 0;
-    let nextDue;
+    let outlook;
     let stats;
 
     try {
       const [queue, s] = await Promise.all([api.queue({ limit: 60 }), api.stats()]);
       due = queue.cardIds.length;
+      // #91: this used to be a `let nextDue` nothing ever assigned, so the
+      // design's "Next cards due" row could not appear. The server sends it
+      // with an empty day's queue, along with the offers' counts (#90).
+      outlook = queue.outlook;
       stats = s;
       // #86: the joker notice is decided from these same numbers, so the
       // tab does not fetch them twice.
@@ -78,7 +85,7 @@ export function practiseScreen({
       // "what do you do now", and stacked together they push the four lines
       // themselves below the fold. Carry on is the more specific answer, so
       // when it's on offer the generic suggestions step aside for it.
-      ...(due > 0 || hasResume ? [] : nothingDue(nextDue, stats)),
+      ...(due > 0 || hasResume ? [] : nothingDue(outlook, stats)),
       resumeRow(),
       setLine(),
       ...(due > 0 ? normalDay(due) : []),
@@ -129,15 +136,20 @@ export function practiseScreen({
     ];
   }
 
-  function nothingDue(nextDue, stats) {
+  function nothingDue(outlook, stats) {
     const offers = [];
+    const { ahead = 0, lapsed = 0, nextDue } = outlook ?? {};
 
-    // "If a row has nothing behind it the row is dropped, not disabled."
-    offers.push(
-      offer("Practise ahead", "Cards due in the next two days", () =>
-        onStart({ only: "new" }),
-      ),
-    );
+    // "If a row has nothing behind it the row is dropped, not disabled." Both
+    // counts are the server's own count of the session the row starts, so a
+    // row that is shown always has cards behind it (#90).
+    if (ahead > 0) {
+      offers.push(
+        offer("Practise ahead", `${cards(ahead)} due in the next two days`, () =>
+          onStart({ only: "ahead" }),
+        ),
+      );
+    }
 
     const behind = weakestTopic(stats);
     if (behind) {
@@ -148,11 +160,13 @@ export function practiseScreen({
       );
     }
 
-    offers.push(
-      offer("Recent mistakes", "Cards missed in the last three days", () =>
-        onStart({ only: "lapsed" }),
-      ),
-    );
+    if (lapsed > 0) {
+      offers.push(
+        offer("Recent mistakes", `${cards(lapsed)} missed in the last three days`, () =>
+          onStart({ only: "lapsed" }),
+        ),
+      );
+    }
 
     return [
       el(
@@ -166,10 +180,12 @@ export function practiseScreen({
             "div.next-due",
             {},
             el("span.label", { text: "Next cards due" }),
-            el("span.value.tabular", { text: nextDue }),
+            // Design 10: "28 · tomorrow 06:00". The wording of the time is the
+            // server's, in Tokyo (§8a), not this device's clock.
+            el("span.value.tabular", { text: `${nextDue.count} · ${nextDue.when}` }),
           )
         : null,
-      el("div.offers", {}, offers),
+      offers.length > 0 ? el("div.offers", {}, offers) : null,
       el(
         "div.rule",
         {},

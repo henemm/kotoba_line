@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, queueForUser, setStar, shuffle } from "../src/queue.js";
+import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, outlookForUser, queueForUser, setStar, shuffle, whenInTokyo } from "../src/queue.js";
 import { ingestEvents } from "../src/events.js";
 import { openDatabase } from "../src/db.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
@@ -205,6 +205,19 @@ describe("queueForUser", () => {
     await app.close();
   });
 
+  it("only=ahead returns the cards due within two days, soonest first, and no new ones (#90)", async () => {
+    const { app, db, user } = await fixture();
+    setState(db, user.id, 8, { dueAt: NOW + 2 * DAY - 1 });
+    setState(db, user.id, 9, { dueAt: NOW + 3600 });
+    setState(db, user.id, 10, { dueAt: NOW + 2 * DAY + 1 });            // three days out: not ahead
+    setState(db, user.id, 11, { dueAt: NOW - 60 });                     // already due counts
+    const q = queueForUser(db, user.id, { only: "ahead", limit: 40 }, NOW, () => 0.999);
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [8, 9, 11]);
+    assert.equal(q.available, 3);
+    assert.equal(q.filtered, true, "a chosen session: the daily new-card cap is not its business");
+    await app.close();
+  });
+
   it("caps the session length however large a limit is asked for", async () => {
     const { app, db, user } = await fixture();
     const q = queueForUser(db, user.id, { deck: "kaishi", limit: MAX_SESSION_LENGTH }, NOW, () => 0);
@@ -219,6 +232,47 @@ describe("queueForUser", () => {
 
     const q = queueForUser(db, yuki.id, { only: "starred", limit: 40 }, NOW, () => 0);
     assert.deepEqual(q.cardIds, []);
+    await app.close();
+  });
+});
+
+describe("the nothing-due outlook (design 10; #90, #91)", () => {
+  // NOW is 2025-10-09 17:53:20 in Tokyo.
+  it("says when in Tokyo, by name, by weekday, then by date", () => {
+    assert.equal(whenInTokyo(NOW + 3600, NOW), "today 18:53");
+    const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
+    assert.equal(whenInTokyo(tomorrowSix, NOW), "tomorrow 06:00");
+    assert.equal(whenInTokyo(tomorrowSix + 2 * DAY, NOW), "Sun 06:00");
+    assert.equal(whenInTokyo(tomorrowSix + 20 * DAY, NOW), "30 Oct 06:00");
+  });
+
+  it("counts the offers with the queue's own rules, and finds the next due day", async () => {
+    const { app, db, user } = await fixture();
+    const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
+    setState(db, user.id, 1, { dueAt: tomorrowSix });
+    setState(db, user.id, 2, { dueAt: tomorrowSix + 3600 });
+    setState(db, user.id, 3, { dueAt: tomorrowSix + 17 * 3600, lapses: 1, lastReview: NOW - DAY }); // 23:00, same Tokyo day
+    setState(db, user.id, 4, { dueAt: tomorrowSix + 19 * 3600 });                                    // 01:00 the day after
+    setState(db, user.id, 5, { dueAt: NOW + 10 * DAY });
+
+    const o = outlookForUser(db, user.id, NOW);
+    assert.equal(o.ahead, 4, "cards 1–4 are due within two days");
+    assert.equal(o.lapsed, 1);
+    assert.deepEqual(o.nextDue, { count: 3, at: tomorrowSix, when: "tomorrow 06:00" });
+    await app.close();
+  });
+
+  it("has no next due card for someone who has never reviewed", async () => {
+    const { app, db, user } = await fixture();
+    assert.deepEqual(outlookForUser(db, user.id, NOW), { ahead: 0, lapsed: 0, nextDue: null });
+    await app.close();
+  });
+
+  it("leaves someone else's own words out of the counts (#84)", async () => {
+    const { app, db, user } = await fixture();
+    const yuki = await seedUser(db, { handle: "yuki", pin: "112233" });
+    setState(db, yuki.id, 31, { dueAt: NOW + 3600 }); // card 31 is mira's own word
+    assert.deepEqual(outlookForUser(db, yuki.id, NOW), { ahead: 0, lapsed: 0, nextDue: null });
     await app.close();
   });
 });
@@ -394,6 +448,28 @@ describe("the endpoints", () => {
       await app.inject({ method: "GET", url: `/api/deck?since=${all.latest}`, headers: { cookie } })
     ).json();
     assert.equal(since.cards.length, 0, "nothing has changed since the newest card");
+    await app.close();
+  });
+
+  it("GET /api/queue sends the outlook with an empty day, and accepts only=ahead (#90, #91)", async () => {
+    const { app, db, config, user } = await fixture();
+    const cookie = await signIn(app, config);
+    const now = Math.floor(Date.now() / 1000);
+    // The daily allowance spent, and one card due in an hour.
+    await app.inject({ method: "PATCH", url: "/api/settings", headers: { cookie }, payload: { newPerDay: 5 } });
+    const events = [1, 2, 3, 4, 5].map((id) => ({ id: uid(100 + id), card_id: id, mode: "flip", rating: 4, reviewed_at: now - 60 }));
+    ingestEvents(db, user.id, events, now);
+    setState(db, user.id, 6, { dueAt: now + 3600 });
+
+    const empty = (await app.inject({ method: "GET", url: "/api/queue?limit=60", headers: { cookie } })).json();
+    assert.deepEqual(empty.cardIds, []);
+    assert.equal(empty.outlook.ahead, 1);
+    assert.equal(empty.outlook.nextDue.count, 1);
+
+    const ahead = await app.inject({ method: "GET", url: "/api/queue?only=ahead&limit=20", headers: { cookie } });
+    assert.equal(ahead.statusCode, 200);
+    assert.deepEqual(ahead.json().cardIds, [6]);
+    assert.equal(ahead.json().outlook, undefined, "only an unfiltered empty day carries it");
     await app.close();
   });
 

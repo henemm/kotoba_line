@@ -1,5 +1,15 @@
 [
   {
+    "version": "v38",
+    "summary": "On a day with nothing due, the suggestions work again.",
+    "notes": [
+      "“Practise ahead” and “Recent mistakes” start their cards again. Before, tapping them did nothing.",
+      "“Practise ahead” now really is the cards due in the next two days, and each suggestion says how many cards it has.",
+      "“Next cards due” shows how many come next, and when.",
+      "If your streak ends, the app tells you once, and what you kept: your cards, your level and your schedule."
+    ]
+  },
+  {
     "version": "v37",
     "summary": "A small fix in Settings.",
     "notes": [
