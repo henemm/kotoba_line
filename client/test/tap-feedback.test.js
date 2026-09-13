@@ -12,14 +12,19 @@ import { describe, it } from "node:test";
  * the live API and the live deck's audio, with 300ms added to every media
  * response to stand in for the round trip from Tokyo (2026-09-13):
  *
- *   tap on ♪, read-aloud off     v46 344 ms, one download on the tap
- *                                v47 126 ms, no download on the tap
- *   tap on ♪, read-aloud on      23 ms in both (read-aloud had loaded it)
+ *   tap on ♪, read-aloud off     v46 340–344 ms, one download on the tap
+ *                                v47 126–201 ms, no download on the tap
+ *                                (the rest is the page's first audio start)
+ *   tap on ♪, read-aloud on      23–26 ms in both (read-aloud had loaded it)
  *   a card drawn, read-aloud on  v47 without the worker sharing downloads:
  *                                3 requests (the word twice); with it: 2
+ *   one card answered per mode   fetched on draw = played by the end, and
+ *                                nothing fetched after answering, in all five
  *   120ms after touch-down       class `tapped`, ghost speaker in the line's
- *                                colour, ring 5–6px out at opacity ~0.55;
- *                                class gone again 1s later
+ *                                colour, ring 5–7px out at opacity ~0.5, on
+ *                                the 62px, big and 44px speakers and on
+ *                                "♪ Hear it"; ~16px and faded by 400ms, not
+ *                                clipped; class gone again 1s later
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -50,8 +55,16 @@ describe("♪ acknowledges the tap and plays from the cache (#116)", () => {
     assert.match(css, /\.speaker\.tapped::after[\s\S]*?animation:\s*tap-ring/);
   });
 
-  it("starts a drawn card's recordings downloading", () => {
-    assert.match(bodyOf(session, "drawCard"), /prime\(card\.word_audio, card\.sentence_audio\)/);
+  it("starts downloading exactly the recordings each mode can play", () => {
+    // Not in drawCard for every mode: 聞く never plays the word, 書く never the
+    // sentence, and on metered data a file nobody hears costs her.
+    assert.doesNotMatch(bodyOf(session, "drawCard"), /\bprime\(card/);
+    const primes = (fn) => bodyOf(session, fn).match(/prime\(([^;]*)\);/)?.[1];
+    assert.equal(primes("drawChoose"), "card.word_audio, card.sentence && card.sentence_audio");
+    assert.equal(primes("drawListen"), "card.sentence_audio");
+    assert.equal(primes("drawSpeak"), "useSentence ? card.sentence_audio : card.word_audio");
+    assert.equal(primes("drawType"), "card.word_audio");
+    assert.equal(primes("drawFlip"), "card.word_audio, card.sentence && card.sentence_audio");
   });
 
   it("never makes say() wait before play()", () => {

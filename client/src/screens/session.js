@@ -409,11 +409,12 @@ export function sessionScreen({
     // §7: iOS produces no sound from speech synthesis until a user gesture has
     // happened, and every mode here may reach for it.
     unlock();
-    // #116: the card's recordings start downloading as soon as it is on
-    // screen, so a tap on ♪ does not wait on the network. Only this card's
-    // own files — about 25 KB each — never the deck (§7).
-    prime(card.word_audio, card.sentence_audio);
 
+    // #116: each mode calls `prime()` with the recordings it can play, as
+    // soon as the card is on screen, so a tap on ♪ does not wait on the
+    // network. Per mode rather than here, because the modes differ: 聞く never
+    // plays the word and 書く never plays the sentence, and on metered data a
+    // file nobody hears is not free (§1). About 25 KB a file.
     ({ choose: drawChoose, listen: drawListen, speak: drawSpeak, type: drawType, flip: drawFlip }[mode] ??
       drawChoose)(card, area, answers);
   }
@@ -648,6 +649,7 @@ export function sessionScreen({
     // "Read cards aloud" governs what happens on its own. The ♪ button still
     // works with it off — tapping it is an explicit request, and a setting
     // about automatic sound should not disable a control just pressed.
+    prime(card.word_audio, card.sentence && card.sentence_audio);
     if (readAloud) say(card.word, card.word_audio);
 
     chooseFrom(card, "word_meaning", null, area, answers, [
@@ -675,6 +677,7 @@ export function sessionScreen({
    * be unanswerable.
    */
   function drawListen(card, area, answers) {
+    prime(card.sentence_audio);
     const play = () => say(card.sentence, card.sentence_audio, { rate: 0.85 });
     play();
 
@@ -710,6 +713,7 @@ export function sessionScreen({
     // Decided once per card, at the prompt — not re-rolled at reveal, or a
     // "random" card could ask about the word and then reveal the sentence.
     const useSentence = speakUsesSentence(card, speakSource);
+    prime(useSentence ? card.sentence_audio : card.word_audio);
     const prompt = useSentence ? card.sentence_meaning : card.word_meaning;
 
     /**
@@ -846,6 +850,7 @@ export function sessionScreen({
    * would be a button she cannot see. Return on the keyboard checks too.
    */
   function drawType(card, area, answers) {
+    prime(card.word_audio);
     const input = el("input.field-input.jp.type-input", {
       type: "text",
       lang: "ja",
@@ -1040,6 +1045,7 @@ export function sessionScreen({
 
   /** めくる — the classic flashcard, and the only mode with four ratings. */
   function drawFlip(card, area, answers) {
+    prime(card.word_audio, card.sentence && card.sentence_audio);
     render(
       area,
       el("h2.word.jp", { text: card.word }),

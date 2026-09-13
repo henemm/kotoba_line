@@ -69,21 +69,28 @@ export function render(container, ...children) {
  * highlight. So the button takes a `tapped` class on `pointerdown` and keeps
  * it until its animation ends — a ring that grows past the fingertip and
  * outlasts the lift. `click` covers activation without a pointer (a keyboard,
- * VoiceOver); after a real tap the class is still on, so it does not restart.
+ * VoiceOver); after a pointer it does not flash again, even when a long press
+ * has outlasted the ring.
  *
  * Pass the button's own `onclick`; the returned props go straight into `el()`.
  */
 export function acknowledged(onclick) {
+  let pressed = false;
   const flash = (node) => {
     node.classList.remove("tapped");
     void node.offsetWidth; // restart the animation on a second quick tap
     node.classList.add("tapped");
   };
   return {
-    onpointerdown: (e) => flash(e.currentTarget),
+    onpointerdown: (e) => {
+      pressed = true;
+      flash(e.currentTarget);
+    },
+    onpointercancel: () => (pressed = false),
     onanimationend: (e) => e.currentTarget.classList.remove("tapped"),
     onclick: (e) => {
-      if (!e.currentTarget.classList.contains("tapped")) flash(e.currentTarget);
+      if (!pressed) flash(e.currentTarget);
+      pressed = false;
       onclick(e);
     },
   };
