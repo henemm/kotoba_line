@@ -67,7 +67,7 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn }) {
       // their own.
       shown.length
         ? el(
-            "div.missed",
+            "div.missed-list",
             {},
             el("span.mono-label", { text: "Worth another look" }),
             shown.map((card) =>
