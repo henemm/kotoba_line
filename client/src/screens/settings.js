@@ -2,6 +2,7 @@ import { ApiError, OfflineError, api } from "../api.js";
 import { cardCount } from "../store.js";
 import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
+import { versionNumber } from "../whats-new.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -37,8 +38,13 @@ async function shellVersion() {
       .map((name) => name.replace("kotoba-shell-", ""));
     if (ready.length === 0) return `${SHELL_VERSION} · not installed`;
     if (ready.length === 1 && ready[0] === SHELL_VERSION) return SHELL_VERSION;
-    const waiting = ready.filter((v) => v !== SHELL_VERSION).sort();
-    return `${SHELL_VERSION} running · ${waiting.join(" ")} ready to update`;
+    // Only the newest. A version that waited and was overtaken by a later one
+    // leaves its cache behind until the next takeover clears it, and listing
+    // it would name a version that can no longer be installed. Compared as
+    // numbers: as strings, "v100" sorts before "v99".
+    const newest = ready.reduce((a, b) => (versionNumber(b) > versionNumber(a) ? b : a));
+    if (newest === SHELL_VERSION) return SHELL_VERSION;
+    return `${SHELL_VERSION} running · ${newest} ready to update`;
   } catch {
     return SHELL_VERSION;
   }
