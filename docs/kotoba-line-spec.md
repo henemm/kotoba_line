@@ -338,7 +338,9 @@ the card simply shows up in a slightly odd session.
 
 **Second deck, later.** Personal cards — words she meets at school or with her
 host family — go into the same `cards` table with `deck = 'personal'` and no
-audio (speech synthesis covers those). The UI should let her filter a session
+audio (speech synthesis covers those). Each belongs to the account that wrote
+it (`owner_id`): nobody else meets it in a list, a queue, a topic or a synced
+deck, and she can edit or delete her own (#84, #85). The UI should let her filter a session
 by deck or tag. This is the part of the app that will matter most after the
 first month, so leave room for it in the queue logic now.
 
