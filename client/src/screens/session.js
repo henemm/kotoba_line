@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { say, stop, unlock } from "../audio.js";
-import { loadDeck, pickDistractors, shuffle } from "../deck.js";
+import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
@@ -159,18 +159,33 @@ export function sessionScreen({
   begin();
 
   async function begin() {
+    // The summary's "before" figures (XP, level, jokers). Not waited for
+    // (#106): on a stalled connection it held the first card back for the
+    // whole timeout, and the summary already copes without it. A snapshot
+    // that lands after the first answer is not used — it might count that
+    // answer, and the summary would then understate what the session earned.
+    // The price is a summary without XP, level-up or design 11's joker badge
+    // for that one session — the same as when this request fails outright,
+    // and better than a figure that is wrong. Keep the guard.
+    api.stats().then(
+      (snapshot) => {
+        if (answered === 0) before = snapshot;
+      },
+      () => {},
+    );
     try {
-      const [loaded, q, snapshot] = await Promise.all([
+      const [loaded, q] = await Promise.all([
         loadDeck(),
         // Resuming still asks, for めくる's intervals — but the card ids it
         // returns are ignored in favour of the ones she was already working
         // through. Re-composing the queue would silently swap her session for
         // a different one under the same name.
         sessionQueue({ ...filters, mode, limit }),
-        api.stats().catch(() => undefined),
       ]);
+      // A fresh queue can name a card the cached deck does not have yet; the
+      // deck's difference is then worth its wait (deck.js).
+      if (!q.stale && q.cardIds.some((id) => !loaded.has(id))) await deckCatchingUp();
       deck = loaded;
-      before = snapshot;
       // Wrong answers are drawn from the whole deck, not from the session —
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];

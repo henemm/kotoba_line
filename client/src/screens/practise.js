@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { answerSoon } from "../api.js";
 import { MODES, modeByKey } from "../modes.js";
 import { describe } from "../resume.js";
 import { isDefault, summaryLine } from "./choose-set.js";
@@ -40,61 +40,101 @@ export function practiseScreen({
   sessionLength,
   onSessionLength,
   readAloud = true,
-  onStats,
+  // #106: `{ due, outlook, stats }` from `/api/queue` and `/api/stats`, as a
+  // promise the shell owns. The shell asks once and hands the same promise to
+  // every rebuild of this tab; building the tab used to ask again itself, and
+  // a normal start asked three times.
+  numbers,
 }) {
   const root = el("div.practise");
   render(root, el("div.loading", { text: "…" }));
 
+  // #65: the resume card sits on top of an already-tight layout, and only
+  // this state needs the extra room below tightened further — see the
+  // media-query rule this class gates in screens.css.
+  const hasResume = Boolean(resumable && onResume);
+  root.classList.toggle("has-resume", hasResume);
+
+  // What the numbers change, and nothing else: the slot above the chooser
+  // holds 15's nothing-due block, the one above the lines holds the due line.
+  const top = el("div.due-slot");
+  const above = el("div.due-slot");
+
   load();
 
+  /**
+   * #106. The numbers are waited for only briefly. When they come in time the
+   * tab is drawn once, whole — on a nothing-due day the block goes above the
+   * lines, and drawing the lines first would move them under her thumb. When
+   * they do not, the lines are drawn without them and the line above them is
+   * filled in when the answer arrives — only that line, see `fill`. On a
+   * stalled connection that answer is a timeout ten seconds later, and the
+   * lines were hidden behind "…" for all of it.
+   */
   async function load() {
-    let due = 0;
-    let outlook;
-    let stats;
-
-    try {
-      const [queue, s] = await Promise.all([api.queue({ limit: 60 }), api.stats()]);
-      due = queue.cardIds.length;
-      // #91: this used to be a `let nextDue` nothing ever assigned, so the
-      // design's "Next cards due" row could not appear. The server sends it
-      // with an empty day's queue, along with the offers' counts (#90).
-      outlook = queue.outlook;
-      stats = s;
-      // #86: the joker notice is decided from these same numbers, so the
-      // tab does not fetch them twice.
-      onStats?.(stats);
-    } catch {
-      // Offline: the shell shows the strip; the tab still offers the lines.
-      due = 0;
-    }
-
-    // #65: the resume card sits on top of an already-tight layout, and only
-    // this state needs the extra room below tightened further — see the
-    // media-query rule this class gates in screens.css.
-    const hasResume = Boolean(resumable && onResume);
-    root.classList.toggle("has-resume", hasResume);
-
+    const soon = await answerSoon(numbers);
     render(
       root,
-      // #58: on a normal day the due-line sentence is the instruction and the
-      // four lines are its only answer — so it sits right above them, below
-      // the chooser, not above it where the WHAT TO PRACTISE block used to
-      // read as what the sentence was introducing.
-      //
-      // #70: "nothing due" and "carry on where you left off" both answer
-      // "what do you do now", and stacked together they push the four lines
-      // themselves below the fold. Carry on is the more specific answer, so
-      // when it's on offer the generic suggestions step aside for it.
-      ...(due > 0 || hasResume ? [] : nothingDue(outlook, stats)),
+      top,
       resumeRow(),
       setLine(),
-      ...(due > 0 ? normalDay(due) : []),
+      above,
       linesBlock(),
       lengthPicker(),
       soundNote(),
       browseRow(),
       addWordRow(),
     );
+    fill(soon);
+    // Bounded without a timer of its own: every request gives up at
+    // REQUEST_TIMEOUT_MS (api.js), so this settles one way or the other.
+    if (!soon) fill(await numbers.then((value) => ({ value }), (error) => ({ error })), { late: true });
+  }
+
+  /**
+   * Three states, not two. A count that could not be had is not zero: this
+   * used to fall back to `due = 0`, which drew "おつかれさま · Nothing due
+   * today" on a train with cards due. And on a stalled connection
+   * `navigator.onLine` is still true, so no Offline strip explains a missing
+   * count — the slot has to say it.
+   */
+  function fill(outcome, { late = false } = {}) {
+    if (late && outcome?.value?.due === 0) {
+      // Once the lines are on screen, nothing goes in above them. 15's block
+      // arriving late — it came to 365 px with three buttons in it, measured
+      // in WebKit — moved all four lines out from under a thumb already on
+      // its way to one. So a late nothing-due is one line in the place the
+      // "Checking" line held, and the offers wait for the next build of the
+      // tab: after a session, or on coming back to it.
+      render(top);
+      render(above, el("p.due-line", { text: "Nothing due today." }));
+      return;
+    }
+    if (!outcome || outcome.error) {
+      render(top);
+      // Both fit on one line at her phone's width, so the lines do not move
+      // when one becomes the other (measured in WebKit at 394 px; a longer
+      // sentence wrapped and pushed them down by 24 px).
+      render(
+        above,
+        el("p.due-line", { text: outcome ? "Couldn't check what's due." : "Checking what's due…" }),
+      );
+      return;
+    }
+    // #91: `outlook` carries the design's "Next cards due" row and the offers'
+    // counts (#90); the server sends it with an empty day's queue.
+    const { due, outlook, stats } = outcome.value;
+    // #58: on a normal day the due-line sentence is the instruction and the
+    // four lines are its only answer — so it sits right above them, below
+    // the chooser, not above it where the WHAT TO PRACTISE block used to
+    // read as what the sentence was introducing.
+    //
+    // #70: "nothing due" and "carry on where you left off" both answer
+    // "what do you do now", and stacked together they push the four lines
+    // themselves below the fold. Carry on is the more specific answer, so
+    // when it's on offer the generic suggestions step aside for it.
+    render(top, ...(due > 0 || hasResume ? [] : nothingDue(outlook, stats)));
+    render(above, ...(due > 0 ? normalDay(due) : []));
   }
 
   /**

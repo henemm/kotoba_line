@@ -350,6 +350,13 @@
   color: var(--ink-muted);
 }
 
+/* #106: the two places the due numbers go, filled in when they arrive. Not a
+   box of their own — the tab's column lays out what is inside them as if
+   the wrapper were not there, so every rule below applies unchanged. */
+.practise .due-slot {
+  display: contents;
+}
+
 /* On a normal day this replaces the heading block with a single line. */
 .practise .due-line {
   padding: 24px var(--gutter) 20px;

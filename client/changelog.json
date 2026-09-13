@@ -1,5 +1,15 @@
 [
   {
+    "version": "v42",
+    "summary": "On a bad connection, you can start practising straight away.",
+    "notes": [
+      "With weak signal, tapping a line used to show “…” for about ten seconds before the first card. Now the app uses the cards it already has after a moment.",
+      "The Practise tab shows the lines at once, even when the count of cards due is still loading.",
+      "If the app can’t check what’s due, it now says so, instead of “Nothing due today”.",
+      "When the app uses its saved cards, it leaves out the ones you already answered."
+    ]
+  },
+  {
     "version": "v41",
     "summary": "On a bad connection, the app opens straight away.",
     "notes": [

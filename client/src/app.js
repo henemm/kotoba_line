@@ -151,6 +151,9 @@ function tabBar() {
               state.jokerBadge = false;
               setMeta("joker.badge", false);
             }
+            // #106: coming back to the tab is a moment to recount — the day
+            // may have turned while she was on Stats.
+            if (tab.key === "practise" && state.tab !== "practise") numbersChanged();
             state.tab = tab.key;
             state.browse = undefined;
             state.overlay = undefined;
@@ -198,7 +201,7 @@ function currentScreen() {
       onOwnDeck: openOwnDeck,
       resumable: state.resumable,
       onResume: resumeSession,
-      onStats: considerJokerNotice,
+      numbers: practiseNumbers(),
     });
   }
   if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
@@ -210,6 +213,7 @@ function currentScreen() {
     },
     onSignOut: async () => {
       state.user = undefined;
+      numbersChanged();
       state.tab = "practise";
       state.session = undefined;
       state.summary = undefined;
@@ -223,6 +227,48 @@ function currentScreen() {
       renderApp();
     },
   });
+}
+
+/**
+ * The practise tab's numbers — the day's queue and the stats — asked once and
+ * shared by every rebuild of the tab (#106).
+ *
+ * The tab is rebuilt by nearly everything: the settings arriving, the own-deck
+ * count arriving, the outbox, the Synced strip clearing itself. It used to ask
+ * `/api/queue` and `/api/stats` each time, so a normal start sent both three
+ * times (measured on the live app, v41), on metered data, and every rebuild
+ * showed "…" until they came back.
+ *
+ * Asked again when something that changes them has happened —
+ * `numbersChanged()` — or when the answer is a minute old, so a tab rebuilt
+ * much later does not show a count from earlier in the day. A failed answer is
+ * not kept, so the next rebuild tries again; one still in flight is, so a
+ * rebuild on a stalled connection does not start a second wait (v41's
+ * `replaceOfflineBar()` exists for the same reason).
+ */
+const NUMBERS_KEPT_MS = 60 * 1000;
+let numbers;
+
+function practiseNumbers() {
+  if (numbers && Date.now() - numbers.at < NUMBERS_KEPT_MS) return numbers.promise;
+  const entry = {
+    at: Date.now(),
+    promise: Promise.all([api.queue({ limit: 60 }), api.stats()]).then(([queue, stats]) => {
+      // #86: the joker notice is decided from these same numbers, so they are
+      // not fetched twice.
+      considerJokerNotice(stats);
+      return { due: queue.cardIds.length, outlook: queue.outlook, stats };
+    }),
+  };
+  entry.promise.catch(() => {
+    if (numbers === entry) numbers = undefined;
+  });
+  numbers = entry;
+  return entry.promise;
+}
+
+function numbersChanged() {
+  numbers = undefined;
 }
 
 /**
@@ -362,6 +408,7 @@ function openEditWord(card) {
  * the change until the app is restarted (#85).
  */
 function ownWordsChanged() {
+  numbersChanged();
   loadOwnDeck();
   state.topics = [];
   loadTopics();
@@ -377,6 +424,9 @@ function closeOverlay() {
 async function loadOwnDeck() {
   try {
     const { cards } = await api.cards();
+    // Only a changed count is worth a redraw: the redraw rebuilds whatever
+    // screen is up, and on a start this arrives when nothing has changed.
+    if (state.ownWords === cards.length) return;
     state.ownWords = cards.length;
     renderApp();
   } catch {
@@ -546,6 +596,7 @@ async function signInAgain(pin) {
   state.user = user;
   await setMeta("user", user);
   clearSignedOut();
+  numbersChanged();
   renderApp();
   loadSettings();
   loadOwnDeck();
@@ -559,6 +610,7 @@ function renderApp() {
       state.user = user;
       state.tab = "practise";
       clearSignedOut();
+      numbersChanged();
       setMeta("user", user);
       checkDeck();
       loadSettings();
@@ -659,6 +711,8 @@ function renderApp() {
       speakSource: state.settings.speakSource,
       onExit: () => {
         state.session = undefined;
+        // Her answers change the count (#106).
+        numbersChanged();
         renderApp();
         // 51 is not only for coming back tomorrow: she taps × and the offer
         // should be there when the tab redraws, not after a restart.
@@ -666,6 +720,7 @@ function renderApp() {
       },
       onFinish: (result) => {
         state.session = undefined;
+        numbersChanged();
         state.resumable = undefined;
         state.summary = result.empty ? undefined : result;
         // Design 11. This used to read `state.jokerBadge || false` on a level
@@ -775,6 +830,7 @@ function closeUpdate() {
 
 window.addEventListener("online", () => {
   state.online = true;
+  numbersChanged();
   renderApp();
 });
 window.addEventListener("offline", () => {
@@ -801,6 +857,8 @@ subscribe(({ waiting, sent, status }) => {
   // Design 25: "Synced · N reviews sent" is a confirmation, not a state — it
   // shows what just went up and then removes itself after two seconds.
   if (sent > 0) {
+    // What went up is now in the server's count (#106).
+    numbersChanged();
     state.justSent = sent;
     clearTimeout(clearBarTimer);
     clearBarTimer = setTimeout(() => {
@@ -830,8 +888,10 @@ async function checkDeck() {
 async function loadSettings() {
   try {
     const { settings } = await api.settings();
+    const changed = JSON.stringify(settings) !== JSON.stringify(state.settings);
     state.settings = settings;
-    renderApp();
+    // Same as the own-deck count: most starts bring back what is already here.
+    if (changed) renderApp();
   } catch {
     /* keep the defaults */
   }
