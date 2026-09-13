@@ -1,5 +1,13 @@
 [
   {
+    "version": "v41",
+    "summary": "On a bad connection, the app opens straight away.",
+    "notes": [
+      "With weak signal, for example on a train, the app used to stay dark for about ten seconds before it opened. Now it opens at once.",
+      "If the connection breaks off in the middle of loading, the app no longer gets stuck. After ten seconds it carries on offline."
+    ]
+  },
+  {
     "version": "v40",
     "summary": "A small fix: the red marks in the progress line sit on the line again.",
     "notes": [
