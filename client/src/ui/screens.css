@@ -1220,6 +1220,60 @@
   transform: scale(0.92);
 }
 
+/* #116: the tap is acknowledged the moment the finger lands. A ring grows out
+   past the fingertip and fades, and a ghost speaker takes the line's colour
+   while it does. Both outlast the ~80ms a tap takes, under a thumb that
+   covers the button — which `:active` alone did not. `acknowledged()` in
+   ui/dom.js sets and clears the class. */
+.speaker,
+.add-speak {
+  position: relative;
+  transition: background-color 0.15s, color 0.15s;
+}
+.speaker::after,
+.add-speak::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+.speaker.tapped::after,
+.add-speak.tapped::after {
+  animation: tap-ring 0.45s ease-out;
+}
+.speaker.ghost.tapped {
+  background: var(--rail);
+  color: #fff;
+}
+.add-speak.tapped {
+  background: var(--ink-dim);
+}
+@keyframes tap-ring {
+  from {
+    box-shadow: 0 0 0 0 var(--rail, var(--ink-muted));
+    opacity: 0.9;
+  }
+  to {
+    box-shadow: 0 0 0 16px var(--rail, var(--ink-muted));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No growing ring; the colour change and a fading outline still say it. */
+  @keyframes tap-ring {
+    from {
+      box-shadow: 0 0 0 4px var(--rail, var(--ink-muted));
+      opacity: 0.9;
+    }
+    to {
+      box-shadow: 0 0 0 4px var(--rail, var(--ink-muted));
+      opacity: 0;
+    }
+  }
+}
+
 /* On a revealed card the speaker sits beside the thing it plays rather than
    under it, so it stays clear of the reading she is there to check. 44px is a
    comfortable target on a phone without competing with the word, which at

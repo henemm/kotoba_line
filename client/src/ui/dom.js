@@ -61,6 +61,34 @@ export function render(container, ...children) {
   return container;
 }
 
+/**
+ * Show that a tap arrived, the moment the finger lands (#116).
+ *
+ * `:active` is not enough on a phone: a tap lasts about 80ms, the thumb covers
+ * the button for all of it, and base.css has switched off iOS's own grey
+ * highlight. So the button takes a `tapped` class on `pointerdown` and keeps
+ * it until its animation ends — a ring that grows past the fingertip and
+ * outlasts the lift. `click` covers activation without a pointer (a keyboard,
+ * VoiceOver); after a real tap the class is still on, so it does not restart.
+ *
+ * Pass the button's own `onclick`; the returned props go straight into `el()`.
+ */
+export function acknowledged(onclick) {
+  const flash = (node) => {
+    node.classList.remove("tapped");
+    void node.offsetWidth; // restart the animation on a second quick tap
+    node.classList.add("tapped");
+  };
+  return {
+    onpointerdown: (e) => flash(e.currentTarget),
+    onanimationend: (e) => e.currentTarget.classList.remove("tapped"),
+    onclick: (e) => {
+      if (!e.currentTarget.classList.contains("tapped")) flash(e.currentTarget);
+      onclick(e);
+    },
+  };
+}
+
 /** A station dot — the circle used for lines, offers and the active tab. */
 export function station(colour, size = 30, border = 5) {
   return el("span.station", {

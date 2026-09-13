@@ -2,7 +2,7 @@ import { OfflineError, api } from "../api.js";
 import { say, unlock } from "../audio.js";
 import { toRomaji } from "../romaji.js";
 import { maturityBand } from "./browse.js";
-import { el, num, render } from "../ui/dom.js";
+import { acknowledged, el, num, render } from "../ui/dom.js";
 
 /**
  * Her own words — designs 28, 29 and 30.
@@ -238,12 +238,12 @@ export function addWordScreen({ tags = [], initialWord = "", card, onSaved, onDe
         ? el("button.add-speak", {
             type: "button",
             text: "♪ Hear it",
-            onclick: () => {
+            ...acknowledged(() => {
               unlock();
               say(draft.sentence.trim() || draft.reading.trim() || draft.word.trim(), null, {
                 rate: 0.85,
               });
-            },
+            }),
           })
         : null,
     );

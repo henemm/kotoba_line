@@ -47,6 +47,29 @@ export function unlock() {
   unlocked = true;
 }
 
+/**
+ * Download a card's recordings before anyone asks to hear them (#116).
+ *
+ * Called when a card is drawn, so ♪ plays from the cache instead of starting a
+ * download on the tap. Through the service worker this lands in the media
+ * cache; without one, nginx marks the files immutable for a year, so the
+ * browser's own cache keeps them. The body is read to the end because the
+ * browser only keeps a response that was fully received.
+ *
+ * Deliberately not awaited by `say()`: on iOS, `play()` after an `await` is
+ * no longer inside the tap and may be refused. The worker makes the playback
+ * request join this download rather than start a second one.
+ */
+export function prime(...files) {
+  if (typeof fetch === "undefined") return;
+  for (const file of files) {
+    if (!file) continue;
+    fetch(mediaUrl(file))
+      .then((res) => res.arrayBuffer())
+      .catch(() => {}); // offline or a weak signal: the tap will simply try again
+  }
+}
+
 let current;
 
 /**

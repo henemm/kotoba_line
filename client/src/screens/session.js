@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { say, stop, unlock } from "../audio.js";
+import { prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
@@ -9,7 +9,7 @@ import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
-import { el, render } from "../ui/dom.js";
+import { acknowledged, el, render } from "../ui/dom.js";
 
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
@@ -409,6 +409,10 @@ export function sessionScreen({
     // §7: iOS produces no sound from speech synthesis until a user gesture has
     // happened, and every mode here may reach for it.
     unlock();
+    // #116: the card's recordings start downloading as soon as it is on
+    // screen, so a tap on ♪ does not wait on the network. Only this card's
+    // own files — about 25 KB each — never the deck (§7).
+    prime(card.word_audio, card.sentence_audio);
 
     ({ choose: drawChoose, listen: drawListen, speak: drawSpeak, type: drawType, flip: drawFlip }[mode] ??
       drawChoose)(card, area, answers);
@@ -573,7 +577,7 @@ export function sessionScreen({
       type: "button",
       "aria-label": label,
       text: "♪",
-      onclick: () => say(text, file, rate ? { rate } : undefined),
+      ...acknowledged(() => say(text, file, rate ? { rate } : undefined)),
     });
   }
 
