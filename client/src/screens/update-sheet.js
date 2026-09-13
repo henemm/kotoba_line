@@ -1,4 +1,5 @@
 import { el, render } from "../ui/dom.js";
+import { sheetSummary } from "../whats-new.js";
 
 /**
  * "A new version is ready" and "Updated" (#93).
@@ -21,7 +22,6 @@ import { el, render } from "../ui/dom.js";
 export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
   let open = false;
   let busy = false;
-  const newest = entries[0];
   const dismiss = kind === "ready" ? onLater : onDone;
 
   const root = el("div.sheet-scrim.update-scrim", {
@@ -29,8 +29,10 @@ export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
   });
 
   function draw() {
-    const summary =
-      newest?.summary ?? (kind === "ready" ? "Small fixes and improvements." : undefined);
+    // #114: with several versions waiting, every summary — not the newest
+    // standing in for all of them.
+    const { text, items, more } = sheetSummary(entries);
+    const summary = text ?? (kind === "ready" ? "Small fixes and improvements." : undefined);
     render(
       root,
       el(
@@ -41,6 +43,14 @@ export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
           text: kind === "ready" ? "A new version is ready" : "Updated",
         }),
         summary ? el("p.sheet-body", { text: summary }) : null,
+        items.length > 0
+          ? el(
+              "ul.update-summaries",
+              {},
+              items.map((line) => el("li", { text: line })),
+              more > 0 ? el("li", { text: `and ${more} more, under More info` }) : null,
+            )
+          : null,
         entries.length > 0
           ? el("button.update-more", {
               type: "button",

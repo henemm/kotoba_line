@@ -793,8 +793,13 @@ export function sessionScreen({
     const text = useSentence ? card.sentence : card.word;
     const audio = useSentence ? card.sentence_audio : card.word_audio;
 
+    // #113: the question stays at the top, where she read it, and the answer
+    // comes in under it — so the English is no longer repeated at the bottom.
+    const settle = holdInPlace(area, ".prompt-label");
     render(
       area,
+      el("span.prompt-label", { text: "Say it in Japanese" }),
+      el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
       useSentence
         ? revealedSentence(card)
         : el(
@@ -807,9 +812,6 @@ export function sessionScreen({
             speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
           ),
       useSentence ? null : romajiLine(card),
-      el("p.sentence-en.reveal", {
-        text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "",
-      }),
     );
     if (readAloud) say(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
@@ -824,6 +826,7 @@ export function sessionScreen({
         ratingButton("Had it", RATING_GOOD, () => grade(card, RATING_GOOD)),
       ),
     );
+    settle();
   }
 
   /**
@@ -925,13 +928,20 @@ export function sessionScreen({
     // The keyboard goes, or it covers the answer and the buttons — and with it
     // the reason to sit high on the screen.
     document.activeElement?.blur?.();
-    area.classList.remove("typing");
 
     const given = typed === undefined ? undefined : judge(typed, typingAnswers(card, pool));
     const correct = given !== undefined;
 
+    // #113: the meaning she was asked for stays where it was, at the top, and
+    // the answer comes in under it — not re-centred with the English moved to
+    // the bottom. `holdInPlace` measures it while `.typing` still places it,
+    // so the class can go with the keyboard.
+    const settle = holdInPlace(area, ".prompt-label");
+    area.classList.remove("typing");
     render(
       area,
+      el("span.prompt-label", { text: "Type it in Japanese" }),
+      el("p.meaning", { text: card.word_meaning ?? "" }),
       typed === undefined
         ? null
         : el(
@@ -957,7 +967,6 @@ export function sessionScreen({
             text: `${given.word} means that too. This card is ${card.word}.`,
           })
         : null,
-      el("p.sentence-en.reveal", { text: card.word_meaning ?? "" }),
     );
     // The word, not the sentence: the sound of what she just tried to write
     // is the thing worth hearing here.
@@ -981,6 +990,7 @@ export function sessionScreen({
           }),
         ),
       );
+      settle();
       return;
     }
 
@@ -993,6 +1003,7 @@ export function sessionScreen({
         el("button.btn.primary", { type: "button", text: "Continue", onclick: () => next() }),
       ),
     );
+    settle();
   }
 
   /** The four intervals for this card, already formatted. Empty when unknown. */
@@ -1050,10 +1061,13 @@ export function sessionScreen({
   }
 
   function revealFlip(card, area, answers) {
+    // #113: the word stays where the front showed it.
+    const settle = holdInPlace(area, ".word");
     render(
       area,
       el(
-        "div.word-line.reveal",
+        // Not `.reveal`: this is the front, staying — it does not rise in.
+        "div.word-line",
         {},
         el("h2.word.jp", { text: card.word }),
         // The front of the card carries this button; before #32 the flip took
@@ -1090,6 +1104,7 @@ export function sessionScreen({
         ratingButton("Easy", RATING_EASY, () => grade(card, RATING_EASY), intervals[RATING_EASY]),
       ),
     );
+    settle();
   }
 
   // ── 話す's microphone (43–46) ────────────────────────────────────
@@ -1153,6 +1168,59 @@ export function sessionScreen({
     } catch {
       redraw("heard", "");
     }
+  }
+
+  /**
+   * #113: turn the card over without moving what she was asked.
+   *
+   * `.card-area` centres its column, so the reveal — which adds a reading, a
+   * sentence, a meaning — used to re-centre everything and move the question
+   * up the screen (measured: めくる's word 345 → 273), or, in 話す and 書く,
+   * replace it outright. Call this while the front is still drawn: it notes
+   * where the element matching `selector` sits. Call the function it returns
+   * once the answer *and* its buttons are drawn: it pins that element back
+   * there, by starting the column at the top with the padding that puts it
+   * where it was. The front stays centred as designed; only the answer grows,
+   * downward, the way a flashcard is turned over.
+   *
+   * If the answer does not fit below, the padding gives way first: the
+   * question moves up just as far as needed, rather than the buttons being
+   * pushed off the bottom.
+   */
+  function holdInPlace(area, selector) {
+    // Layout offsets, not getBoundingClientRect: the answer rises in with an
+    // 8px transform (`.reveal`), and measuring mid-animation left めくる's
+    // word 8px above where the front had it.
+    const offset = () => {
+      const anchor = area.querySelector(selector);
+      if (!anchor) return undefined;
+      let top = 0;
+      for (let node = anchor; node && node !== area.offsetParent; node = node.offsetParent) top += node.offsetTop;
+      for (let node = area; node && node !== area.offsetParent; node = node.offsetParent) top -= node.offsetTop;
+      return top;
+    };
+    // The session's height with the front up is the height of the screen it
+    // has. `.card-area` does not overflow, it grows, and the session with it,
+    // pushing the buttons off the bottom — so the session growing is the
+    // measure of "does not fit". (Not innerHeight: in the installed app it is
+    // 62px short, see base.css.) Settled after the buttons are drawn, because
+    // めくる's rating row is taller than the Flip button it replaces: measured
+    // before it, a card at 375 × 500 still ran 22px off the bottom.
+    const screen = area.parentElement;
+    const fits = screen.offsetHeight;
+    const before = offset();
+
+    return () => {
+      if (before === undefined) return;
+      area.classList.add("held");
+      area.style.paddingTop = "0px";
+      const natural = offset();
+      if (natural === undefined) return;
+      const wanted = Math.max(before - natural, 0);
+      area.style.paddingTop = `${wanted}px`;
+      const over = screen.offsetHeight - fits;
+      if (over > 0) area.style.paddingTop = `${Math.max(wanted - over, 0)}px`;
+    };
   }
 
   function revealedSentence(card) {

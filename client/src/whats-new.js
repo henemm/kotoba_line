@@ -32,6 +32,27 @@ export function notesSince(changelog, from, to) {
     .sort((a, b) => versionNumber(b.version) - versionNumber(a.version));
 }
 
+/** Past this many summaries the sheet stops listing and counts (#114). */
+export const SUMMARIES_SHOWN = 4;
+
+/**
+ * What the sheet says above "More info" (#114).
+ *
+ * One entry: its summary, as before. Several: every summary, newest first —
+ * the newest one alone used to stand for all of them, so a phone updating
+ * from v42 to v45 read about a fix to three buttons and not about the tab bar
+ * that had changed shape two versions earlier. Past `SUMMARIES_SHOWN` the rest
+ * are counted rather than listed, because a sheet that scrolls before it
+ * reaches "Update" is not a sheet any more; every one is still under "More
+ * info".
+ */
+export function sheetSummary(entries) {
+  const summaries = (entries ?? []).map((entry) => entry?.summary).filter(Boolean);
+  if (summaries.length <= 1) return { text: summaries[0], items: [], more: 0 };
+  const items = summaries.slice(0, SUMMARIES_SHOWN);
+  return { text: `${summaries.length} updates in one:`, items, more: summaries.length - items.length };
+}
+
 /**
  * Which shell to count from when this device has never recorded one.
  *

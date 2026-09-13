@@ -1,5 +1,14 @@
 [
   {
+    "version": "v46",
+    "summary": "When you show the answer, the question stays where it was.",
+    "notes": [
+      "In 話す and 書く, the English you were answering used to disappear when you tapped “Show answer”, and came back small at the bottom. Now it stays at the top, and the Japanese appears under it.",
+      "In めくる, the word no longer jumps up when you flip the card.",
+      "When several updates arrive at once, this message now lists all of them, not just the newest."
+    ]
+  },
+  {
     "version": "v45",
     "summary": "A small fix: 10, 20 and All on the Practise screen show your choice every time.",
     "notes": [
