@@ -1,5 +1,12 @@
 [
   {
+    "version": "v37",
+    "summary": "A small fix in Settings.",
+    "notes": [
+      "Settings → Diagnostics now names the right version when an update is waiting."
+    ]
+  },
+  {
     "version": "v36",
     "summary": "Updates now tell you when they are ready.",
     "notes": [
