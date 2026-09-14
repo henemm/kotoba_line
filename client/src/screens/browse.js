@@ -1,9 +1,7 @@
 import { OfflineError, api } from "../api.js";
 import { loadDeck } from "../deck.js";
-import { toRomaji } from "../romaji.js";
-import { showsScript, shownWord } from "../script.js";
+import { showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
-import { kanaReading } from "./session.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -90,7 +88,7 @@ export function byFrequencyThenId(a, b) {
  * were kana and produce nothing for every card she typed a reading for.
  */
 function romajiSpan(card) {
-  const text = toRomaji(kanaReading(card.word_furigana) ?? card.word_reading ?? card.word);
+  const text = wordRomaji(card);
   return text ? el("span.row-romaji", { text }) : null;
 }
 

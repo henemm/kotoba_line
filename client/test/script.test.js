@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MODES } from "../src/modes.js";
+import { toRomaji } from "../src/romaji.js";
 import { appName, modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
 import { canVoice, flipsMeaningFirst, meaningPool, showsSentence } from "../src/screens/session.js";
 
@@ -14,6 +15,16 @@ describe("Japanese script off (#135)", () => {
     assert.equal(shownWord(kaishi, false), "daijoubu");
     assert.equal(shownWord(ownWithReading, false), "taberu");
     assert.equal(showsScript(kaishi, false), false);
+  });
+
+  it("keeps a word's two readings apart (v67)", () => {
+    const nani = { word: "何", word_furigana: "何[なに・なん]", word_reading: "なに・なん" };
+    assert.equal(shownWord(nani, false), "nani / nan");
+    assert.equal(wordRomaji({ word: "七", word_furigana: "七[なな・しち]" }), "nana / shichi");
+    // One reading that cannot be read makes the whole line a guess: none.
+    assert.equal(wordRomaji({ word: "何", word_furigana: null, word_reading: "なに・何" }), undefined);
+    // A ・ that is part of the word itself is a word break, not a choice.
+    assert.equal(wordRomaji({ word: "コーヒー・ショップ", word_furigana: null, word_reading: null }), toRomaji("コーヒー・ショップ"));
   });
 
   it("shows the Japanese rather than a guess where no reading exists", () => {

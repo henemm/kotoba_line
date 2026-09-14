@@ -1,5 +1,12 @@
 [
   {
+    "version": "v67",
+    "summary": "A word with two pronunciations shows both, clearly apart.",
+    "notes": [
+      "何 (“Was”) said “nani nan”, as if that were one phrase. It says “nani / nan” now: both are right, as in “Nani?” and “Nan desu ka?”. The same for 四 (“yon / shi”) and 七 (“nana / shichi”)."
+    ]
+  },
+  {
     "version": "v66",
     "summary": "Cards from your lists are quieter and fairer, and a deck's page no longer cuts off its numbers.",
     "notes": [

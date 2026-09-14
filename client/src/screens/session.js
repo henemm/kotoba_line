@@ -7,7 +7,7 @@ import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
-import { inScript, modeName, showsScript, shownWord } from "../script.js";
+import { inScript, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
@@ -564,8 +564,7 @@ export function sessionScreen({
     // under it says nothing.
     if (!japanese) return null;
     if (!romaji && !always) return null;
-    const kana = kanaReading(card.word_furigana) ?? card.word_reading ?? card.word;
-    const text = toRomaji(kana);
+    const text = wordRomaji(card);
     if (!text) return null;
     return el("div.romaji.reveal", { text });
   }
