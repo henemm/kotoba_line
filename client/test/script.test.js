@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MODES } from "../src/modes.js";
+import { toRomaji } from "../src/romaji.js";
 import { appName, modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
-import { canVoice, flipsMeaningFirst, meaningPool, showsSentence } from "../src/screens/session.js";
+import { canVoice, flipsMeaningFirst, isInHerDeck, meaningPool, showsSentence } from "../src/screens/session.js";
+import { cardsOfDeck } from "../src/screens/deck-cards.js";
 
 describe("Japanese script off (#135)", () => {
   const kaishi = { word: "大丈夫", word_furigana: "大丈夫[だいじょうぶ]", word_reading: "だいじょうぶ" };
@@ -14,6 +16,16 @@ describe("Japanese script off (#135)", () => {
     assert.equal(shownWord(kaishi, false), "daijoubu");
     assert.equal(shownWord(ownWithReading, false), "taberu");
     assert.equal(showsScript(kaishi, false), false);
+  });
+
+  it("keeps a word's two readings apart (v67)", () => {
+    const nani = { word: "何", word_furigana: "何[なに・なん]", word_reading: "なに・なん" };
+    assert.equal(shownWord(nani, false), "nani / nan");
+    assert.equal(wordRomaji({ word: "七", word_furigana: "七[なな・しち]" }), "nana / shichi");
+    // One reading that cannot be read makes the whole line a guess: none.
+    assert.equal(wordRomaji({ word: "何", word_furigana: null, word_reading: "なに・何" }), undefined);
+    // A ・ that is part of the word itself is a word break, not a choice.
+    assert.equal(wordRomaji({ word: "コーヒー・ショップ", word_furigana: null, word_reading: null }), toRomaji("コーヒー・ショップ"));
   });
 
   it("shows the Japanese rather than a guess where no reading exists", () => {
@@ -121,5 +133,38 @@ describe("what a card plays and shows (v66)", () => {
     assert.equal(showsSentence(kore, true), true);
     assert.equal(showsSentence({ ...kore, sentence_meaning: "This is a Japanese book." }, false), true);
     assert.equal(showsSentence({ sentence: null, sentence_meaning: "x" }, true), false);
+  });
+});
+
+describe("the cards on a deck's page (#137, v68)", () => {
+  const kaishi = (id, word, meaning, rank) => ({ id, word, word_meaning: meaning, deck: "kaishi", frequency_rank: rank });
+  const hers = (id, word, meaning, deckId, extra = {}) => ({ id, word, word_meaning: meaning, deck: "personal", deck_id: deckId, ...extra });
+  const cards = [
+    kaishi(2, "食べる", "to eat", 20),
+    kaishi(1, "する", "to do", 1),
+    hers(-100, "Eki wa doko desu ka", "Wo ist der Bahnhof", 3),
+    hers(-300, "Densha", "Zug", 3),
+    hers(-200, "Basu", "Bus", 4),
+    hers(-400, "Kuruma", "Auto", 3, { deleted_at: 5 }),
+    // Cached before migration 016 reached this phone: no deck_id yet.
+    hers(-500, "Yomu", "Lesen", undefined, { list_name: "1000" }),
+  ];
+  const imZug = { key: "deck:3", id: 3, name: "Im Zug" };
+
+  it("lists Kaishi most common first, and one of hers newest first", () => {
+    assert.deepEqual(cardsOfDeck({ key: "kaishi" }, cards).map((c) => c.id), [1, 2]);
+    assert.deepEqual(cardsOfDeck(imZug, cards).map((c) => c.id), [-300, -100]);
+  });
+
+  it("finds a card by its German or its romaji", () => {
+    assert.deepEqual(cardsOfDeck(imZug, cards, "bahnhof").map((c) => c.id), [-100]);
+    assert.deepEqual(cardsOfDeck(imZug, cards, "densha").map((c) => c.id), [-300]);
+  });
+
+  it("finds a card cached before its deck had a number by the list it came from", () => {
+    assert.deepEqual(cardsOfDeck({ key: "deck:9", id: 9, name: "1000" }, cards).map((c) => c.id), [-500]);
+    assert.equal(isInHerDeck(cards[6]), true);
+    assert.equal(isInHerDeck(cards[0]), false);
+    assert.equal(flipsMeaningFirst(hers(-1, "Densha", "Zug", 3)), true);
   });
 });

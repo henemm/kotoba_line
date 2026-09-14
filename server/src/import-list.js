@@ -23,6 +23,8 @@
  * afterwards is never undone by re-running an import.
  */
 
+import { deckIdFor } from "./decks.js";
+
 const FLAGS = new Set(["meaning", "spelling", "reversed", "inflected", "sentence"]);
 
 export function importList(db, userId, rows, { source = "noji", now = Date.now() } = {}) {
@@ -39,8 +41,8 @@ export function importList(db, userId, rows, { source = "noji", now = Date.now()
        (id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
         sentence, sentence_furigana, sentence_meaning, sentence_audio,
         frequency_rank, deck, owner_id, updated_at,
-        list_name, import_ref, import_flag, import_source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'personal', ?, ?, ?, ?, ?, ?)`,
+        list_name, import_ref, import_flag, import_source, deck_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'personal', ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   const result = { imported: 0, skipped: 0, enriched: 0, flagged: 0 };
@@ -97,6 +99,8 @@ export function importList(db, userId, rows, { source = "noji", now = Date.now()
           kaishiId: row.kaishiId ?? null,
           check: row.check ?? null,
         }),
+        // The list is a deck of hers (migration 016), made on its first row.
+        deckIdFor(db, userId, list, now),
       );
       id += 1;
       result.imported += 1;

@@ -167,6 +167,10 @@ export const api = {
   decks: () => request("/decks"),
   updateDeckSettings: (deckKey, patch) =>
     request("/decks/settings", { method: "PATCH", body: { deckKey, ...patch } }),
+  // #137: her own decks, made, renamed and deleted from the app.
+  createDeck: (name) => request("/decks", { method: "POST", body: { name } }),
+  renameDeck: (id, name) => request(`/decks/${id}`, { method: "PATCH", body: { name } }),
+  deleteDeck: (id) => request(`/decks/${id}`, { method: "DELETE" }),
   browse: (opts) => request(`/browse${query(opts)}`),
   star: (cardId, starred, changedAt) =>
     request("/stars", { method: "POST", body: { cardId, starred, changedAt } }),

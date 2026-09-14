@@ -1,5 +1,6 @@
 import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 import { deckSettings } from "./deck-settings.js";
+import { MY_WORDS, ownDecks } from "./decks.js";
 import { nextDay, tokyoDay } from "./stats.js";
 
 /**
@@ -75,20 +76,27 @@ export function isFiltered({ tag, only }) {
 }
 
 /**
- * A deck as the practise tab names it (#137): `kaishi`, `mine` (her own words
- * that came from no list) or `list:<name>` (one of her imported lists). The
- * key is what the client sends and, later, what per-deck settings are stored
- * under. Anything else is not a deck.
+ * A deck as the practise tab names it (#137): `kaishi`, or `deck:<id>` for one
+ * of her own (migration 016). The key is what the client sends and what
+ * per-deck settings are stored under. `list:<name>` and `mine` are how v60–v67
+ * named her decks, and resolve by name for a phone that has not updated.
+ * Anything else is not a deck.
  */
-export const DECK_KEY_PATTERN = "^(kaishi|mine|list:.{1,100})$";
+export const DECK_KEY_PATTERN = "^(kaishi|deck:[0-9]{1,15}|mine|list:.{1,100})$";
 
 export function parseDeckKey(key) {
   if (key === "kaishi") return { deck: "kaishi" };
-  if (key === "mine") return { deck: "personal", unlisted: true };
-  if (typeof key === "string" && key.startsWith("list:") && key.length > 5) {
-    return { deck: "personal", list: key.slice(5) };
-  }
+  if (typeof key !== "string") return undefined;
+  if (/^deck:\d{1,15}$/.test(key)) return { deck: "personal", deckId: Number(key.slice(5)) };
+  if (key === "mine") return { deck: "personal", deckName: MY_WORDS };
+  if (key.startsWith("list:") && key.length > 5) return { deck: "personal", deckName: key.slice(5) };
   return undefined;
+}
+
+/** One of her decks by name, as SQL: the old keys, and v60–v62's `list`. */
+function byDeckName(name, params, userId) {
+  params.push(userId, name);
+  return " AND c.deck_id = (SELECT d.id FROM decks d WHERE d.owner_id = ? AND d.name = ? AND d.deleted_at IS NULL)";
 }
 
 /**
@@ -110,21 +118,21 @@ function filterClause({ deckKey, deck, list, tag }, params, userId) {
   if (scope) {
     sql += " AND c.deck = ?";
     params.push(scope.deck);
-    if (scope.list) {
-      sql += " AND c.list_name = ?";
-      params.push(scope.list);
+    if (scope.deckId !== undefined) {
+      sql += " AND c.deck_id = ?";
+      params.push(scope.deckId);
     }
-    if (scope.unlisted) sql += " AND c.list_name IS NULL";
+    if (scope.deckName !== undefined) sql += byDeckName(scope.deckName, params, userId);
   }
   if (deck) {
     sql += " AND c.deck = ?";
     params.push(deck);
   }
-  // One of her imported lists (#137). Only her own cards carry a list name,
-  // and visibleTo() keeps them hers.
+  // One of her imported lists (#137), from a v60–v62 phone: the deck that
+  // list became. visibleTo() keeps the cards hers.
   if (list) {
-    sql += " AND c.list_name = ?";
-    params.push(list);
+    sql += " AND c.deck = 'personal'";
+    sql += byDeckName(list, params, userId);
   }
   if (tag) {
     sql +=
@@ -285,36 +293,32 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
             sum(c.word_reading IS NOT NULL OR c.word_furigana IS NOT NULL) AS type
        FROM cards c LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       WHERE c.deleted_at IS NULL AND c.deck = ? AND (c.deck <> 'personal' OR c.owner_id = ?)
-        AND (? IS NULL OR c.list_name = ?) AND (? = 0 OR c.list_name IS NULL)`,
+        AND (? IS NULL OR c.deck_id = ?)`,
   );
-  const lists = db
-    .prepare(
-      `SELECT list_name FROM cards
-        WHERE owner_id = ? AND deck = 'personal' AND deleted_at IS NULL AND list_name IS NOT NULL
-        GROUP BY list_name ORDER BY min(id)`,
-    )
-    .all(userId)
-    .map((r) => r.list_name);
 
+  // Kaishi, then her decks oldest first (migration 016 made her lists decks
+  // in the order this list showed them). One of hers is listed empty: a deck
+  // she just made is where she adds its first card.
   const candidates = [
-    { key: "kaishi", name: "Kaishi" },
-    ...lists.map((list) => ({ key: `list:${list}`, name: list })),
-    { key: "mine", name: "My words" },
+    { key: "kaishi", name: "Kaishi", own: false },
+    ...ownDecks(db, userId).map((d) => ({ key: `deck:${d.id}`, id: d.id, name: d.name, own: true })),
   ];
 
   return candidates
-    .map(({ key, name }) => {
+    .map(({ key, id, name, own }) => {
       const scope = parseDeckKey(key);
-      const row = count.get(userId, scope.deck, userId, scope.list ?? null, scope.list ?? null, scope.unlisted ? 1 : 0);
-      if (row.cards === 0) return undefined;
+      const row = count.get(userId, scope.deck, userId, id ?? null, id ?? null);
+      if (row.cards === 0 && !own) return undefined;
       const { today } = queueForUser(db, userId, { deckKey: key }, now);
       return {
         key,
+        id,
+        own,
         name,
         cards: row.cards,
         seen: row.seen,
         today,
-        ways: { choose: row.cards, listen: row.listen, speak: row.cards, type: row.type, flip: row.cards },
+        ways: { choose: row.cards, listen: row.listen ?? 0, speak: row.cards, type: row.type ?? 0, flip: row.cards },
         settings: deckSettings(db, userId, key),
       };
     })
@@ -454,12 +458,14 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   const cards = db
     .prepare(
       `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning,
-              c.deck, c.frequency_rank,
+              c.deck, c.frequency_rank, c.deck_id, d.name AS deck_name,
               COALESCE(st.starred, 0) AS starred,
               s.due_at, s.reps, s.last_review
          FROM cards c
          LEFT JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?
          LEFT JOIN card_state  s ON s.card_id  = c.id AND s.user_id  = ?
+         -- Which of her decks a card of hers is in, for Search's label (#137).
+         LEFT JOIN decks d ON d.id = c.deck_id
          ${where}
         ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC
         LIMIT ? OFFSET ?`,

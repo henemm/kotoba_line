@@ -21,6 +21,7 @@ import {
 } from "../queue.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
 import { updateDeckSettings } from "../deck-settings.js";
+import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 
 /**
@@ -83,7 +84,7 @@ export default async function deckRoutes(app) {
         .prepare(
           `SELECT id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
                   sentence, sentence_furigana, sentence_meaning, sentence_audio,
-                  frequency_rank, deck, owner_id, updated_at, deleted_at, list_name
+                  frequency_rank, deck, owner_id, updated_at, deleted_at, list_name, deck_id
              FROM cards
             WHERE updated_at > ?
             ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC
@@ -224,9 +225,57 @@ export default async function deckRoutes(app) {
       },
       preHandler: app.requireUser,
     },
-    async (req) => {
+    async (req, reply) => {
       const { deckKey, ...patch } = req.body;
-      return { settings: updateDeckSettings(db, req.user.id, deckKey, patch) };
+      const settings = updateDeckSettings(db, req.user.id, deckKey, patch);
+      if (!settings) return reply.code(404).send({ error: "not_found" });
+      return { settings };
+    },
+  );
+
+  // ── Her own decks (#137, migration 016) ────────────────────────────
+  const deckName = { type: "string", minLength: 1, maxLength: DECK_NAME_MAX };
+  const deckParams = { type: "object", properties: { id: { type: "integer", minimum: 1 } } };
+  // What went wrong, as a status: a name she already uses is a conflict.
+  const failed = (reply, reason) =>
+    reply.code(reason === "not_found" ? 404 : reason === "name_taken" ? 409 : 400).send({ error: reason });
+
+  app.post(
+    "/api/decks",
+    {
+      schema: { body: { type: "object", additionalProperties: false, required: ["name"], properties: { name: deckName } } },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const result = createDeck(db, req.user.id, req.body.name);
+      if (!result.ok) return failed(reply, result.reason);
+      return reply.code(201).send({ deck: result.deck });
+    },
+  );
+
+  app.patch(
+    "/api/decks/:id",
+    {
+      schema: {
+        params: deckParams,
+        body: { type: "object", additionalProperties: false, required: ["name"], properties: { name: deckName } },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const result = renameDeck(db, req.user.id, req.params.id, req.body.name);
+      if (!result.ok) return failed(reply, result.reason);
+      return { deck: result.deck };
+    },
+  );
+
+  app.delete(
+    "/api/decks/:id",
+    { schema: { params: deckParams }, preHandler: app.requireUser },
+    async (req, reply) => {
+      const result = deleteDeck(db, req.user.id, req.params.id);
+      if (!result.ok) return failed(reply, result.reason);
+      return { ok: true, cards: result.cards };
     },
   );
 
@@ -338,6 +387,8 @@ const cardBody = {
     meaning: { type: "string", minLength: 1, maxLength: 200 },
     sentence: { type: "string", maxLength: 300 },
     sentenceMeaning: { type: "string", maxLength: 300 },
+    // Which of her decks (#137). Optional: a phone from before decks sends none.
+    deckId: { type: "integer", minimum: 1 },
     tags: {
       type: "array",
       maxItems: MAX_TAGS,

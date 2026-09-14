@@ -22,6 +22,8 @@ export function decksScreen({
   // reasoning as the practise tab's numbers (#106).
   decks,
   onOpen,
+  // #137: "New deck", at the end of the list, as in the mockup Henning chose.
+  onNewDeck,
   resumable,
   onResume,
   japanese = true,
@@ -66,6 +68,14 @@ export function decksScreen({
           el("span.chevron", { "aria-hidden": "true", text: "›" }),
         ),
       ),
+      onNewDeck
+        ? el(
+            "button.deck-row.deck-new",
+            { type: "button", onclick: onNewDeck },
+            el("span.deck-new-plus", { "aria-hidden": "true", text: "+" }),
+            el("span.copy", {}, el("span.name", { text: "New deck" })),
+          )
+        : null,
       rows.length > 0 ? el("p.deck-hint", { text: "The number is how many cards are waiting today." }) : null,
     );
   }

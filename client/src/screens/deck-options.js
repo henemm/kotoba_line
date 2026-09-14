@@ -22,7 +22,7 @@ const CANNOT = {
   type: "Not possible here: no words with a reading to check against",
 };
 
-export function deckOptionsSheet({ deck, japanese = true, onChange, onClose }) {
+export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, onDelete, onClose }) {
   let settings = { hiddenModes: [], ...(deck.settings ?? {}) };
   const ways = deck.ways ?? {};
 
@@ -101,6 +101,47 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onClose }) {
             onclick: () => n !== settings.newPerDay && change({ newPerDay: n }),
           }),
         ),
+      ),
+      // #137: a deck of hers can be renamed and deleted here, where Noji keeps
+      // a deck's menu. Kaishi is everyone's and cannot.
+      deck.own && (onRename || onDelete)
+        ? el(
+            "div.options-deck",
+            {},
+            el("span.options-label", { text: "This deck" }),
+            onRename ? el("button.action", { type: "button", text: "Rename", onclick: () => onRename() }) : null,
+            onDelete ? el("button.action.danger", { type: "button", text: "Delete deck", onclick: () => askToDelete() }) : null,
+          )
+        : null,
+    );
+  }
+
+  /** Asked first, with what goes: every card in it. The safe choice is the solid one. */
+  function askToDelete() {
+    const n = deck.cards ?? 0;
+    render(
+      sheet,
+      el("h2.sheet-title", { text: `Delete “${deck.name}”?` }),
+      el("p.sheet-body", {
+        text:
+          n > 0
+            ? `Its ${num(n)} ${n === 1 ? "card goes" : "cards go"} too. What you have already practised still counts towards your streak and XP.`
+            : "It has no cards.",
+      }),
+      el(
+        "div.sheet-actions",
+        {},
+        el("button.btn", {
+          type: "button",
+          text: "Delete",
+          onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            // A sentence when it did not happen — offline, say — shown here.
+            const problem = await onDelete();
+            if (problem) sheet.append(el("p.add-problem", { text: problem }));
+          },
+        }),
+        el("button.btn.solid", { type: "button", text: "Keep it", onclick: () => draw() }),
       ),
     );
   }

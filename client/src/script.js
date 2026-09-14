@@ -33,9 +33,21 @@ import { kanaReading } from "./screens/session.js";
  * and Settings does not offer them.
  */
 
-/** The word in romaji, or undefined where no reading can be produced. */
+/**
+ * The word in romaji, or undefined where no reading can be produced.
+ *
+ * Two readings stay two (v67): the deck writes 何 as なに・なん, and `toRomaji`
+ * turns ・ into a space, so the card said "nani nan" as if that were one
+ * phrase (Henning, 2026-09-14). They are "nani / nan" now. Three Kaishi words
+ * list alternatives this way — 何, 四 and 七 — and no word has ・ in the word
+ * itself (both measured 2026-09-14), but a ・ inside the word would be part of
+ * it and keeps its space.
+ */
 export function wordRomaji(card) {
-  return toRomaji(kanaReading(card.word_furigana) ?? card.word_reading ?? card.word);
+  const kana = kanaReading(card.word_furigana) ?? card.word_reading ?? card.word;
+  if (!kana?.includes("・") || card.word?.includes("・")) return toRomaji(kana);
+  const each = kana.split("・").filter(Boolean).map(toRomaji);
+  return each.every(Boolean) ? each.join(" / ") : undefined;
 }
 
 /** What to show for a card's word. */

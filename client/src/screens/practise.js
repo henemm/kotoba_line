@@ -88,6 +88,10 @@ export function practiseScreen({
   japanese = true,
   // The ways of practising switched off for this deck (#137, Deck options).
   hiddenModes = [],
+  // The deck's cards, under everything else (deck-cards.js), and the way to add
+  // one — only in a deck of hers (#137).
+  cardsBlock,
+  onAddCard,
 }) {
   const root = el("div.practise.deck-page");
   render(root, el("div.loading", { text: "…" }));
@@ -109,6 +113,12 @@ export function practiseScreen({
    * lines were hidden behind "…" for all of it.
    */
   async function load() {
+    // A deck of hers with nothing in it yet has nothing to practise: the page
+    // is the way to its first card (#137).
+    if (deck?.own && deck.cards === 0) {
+      render(root, header(), emptyDeck(), addButton());
+      return;
+    }
     const soon = await answerSoon(numbers);
     // What was chosen on the deck list comes first, then the two questions
     // in the order she answers them — how long, how — and the answer to the
@@ -123,6 +133,8 @@ export function practiseScreen({
       linesBlock(),
       setLine(),
       soundNote(),
+      cardsBlock ?? null,
+      addButton(),
     );
     fill(soon);
     // Once the rows are in: before, there is nothing to scroll and it clamps
@@ -167,6 +179,26 @@ export function practiseScreen({
     // (measured in WebKit, 365 px). They wait for the next build of the page.
     if (late) return;
     render(top, ...(total > 0 ? [] : nothingDue(outlook, stats)));
+  }
+
+  /**
+   * Noji's floating "Karten hinzufügen" (#137): over the page, above the tab
+   * bar, wherever she has scrolled to. Kaishi has none — its cards are the
+   * deck's, not hers to add to.
+   */
+  function addButton() {
+    if (!deck?.own || !onAddCard) return null;
+    return el("button.deck-add-card", { type: "button", onclick: onAddCard, text: "+ Add card" });
+  }
+
+  function emptyDeck() {
+    return el(
+      "div.deck-empty",
+      {},
+      el("p.deck-empty-title", { text: "No cards in this deck yet." }),
+      el("p.deck-empty-body", { text: "Write the German on the front and the Japanese on the back, like in Noji." }),
+      onAddCard ? el("button.deck-start", { type: "button", onclick: onAddCard, text: "Add the first card" }) : null,
+    );
   }
 
   function part(n, label) {

@@ -150,22 +150,21 @@ describe("her decks, for the practise tab (#137)", () => {
       decks.map((d) => [d.key, d.name, d.cards, d.seen, d.today.total, d.today.fresh, d.today.review]),
       [
         ["kaishi", "Kaishi", 1, 0, 1, 1, 0],
-        ["list:list a", "list a", 2, 0, 2, 2, 0],
-        ["list:list b", "list b", 2, 0, 2, 2, 0],
+        ["deck:1", "list a", 2, 0, 2, 2, 0],
+        ["deck:2", "list b", 2, 0, 2, 2, 0],
       ],
       "no \"My words\": every word of hers came from a list",
     );
+    assert.deepEqual(decks.map((d) => d.own), [false, true, true]);
     await app.close();
   });
 
-  it("adds her own words outside any list as a deck of their own", async () => {
-    const { app, db, user, json } = await imported();
-    db.prepare("UPDATE cards SET list_name = NULL WHERE import_ref = 'noji:list b:n4-0'").run();
-    const { decks } = await json("/api/decks");
-    assert.deepEqual(decks.map((d) => [d.key, d.cards]), [["kaishi", 1], ["list:list a", 2], ["list:list b", 1], ["mine", 1]]);
-    const mine = await json("/api/queue?deckKey=mine&limit=20");
-    const [only] = db.prepare("SELECT id FROM cards WHERE owner_id = ? AND list_name IS NULL").all(user.id);
-    assert.deepEqual(mine.cardIds, [only.id]);
+  it("still runs a deck by the name a phone from before decks sends (migration 016)", async () => {
+    const { app, json } = await imported();
+    const byName = await json(`/api/queue?deckKey=${encodeURIComponent("list:list b")}&limit=20`);
+    const byId = await json("/api/queue?deckKey=deck:2&limit=20");
+    assert.deepEqual([...byName.cardIds].sort(), [...byId.cardIds].sort());
+    assert.equal(byId.cardIds.length, 2);
     await app.close();
   });
 
@@ -202,21 +201,21 @@ describe("settings of one deck (#137, migration 014)", () => {
     const { app, db, user, json } = await signedIn();
     db.prepare("UPDATE user_settings SET new_per_day = 20 WHERE user_id = ?").run(user.id);
     const { decks } = await json("/api/decks");
-    const byKey = Object.fromEntries(decks.map((d) => [d.key, d]));
-    assert.deepEqual(byKey.kaishi.settings, { hiddenModes: [], newPerDay: 20 });
-    assert.deepEqual(byKey["list:long"].settings, { hiddenModes: [], newPerDay: 10 });
-    assert.equal(byKey["list:long"].today.fresh, 10, "a list of 14 new words offers 10 today");
+    const byName = Object.fromEntries(decks.map((d) => [d.name, d]));
+    assert.deepEqual(byName.Kaishi.settings, { hiddenModes: [], newPerDay: 20 });
+    assert.deepEqual(byName.long.settings, { hiddenModes: [], newPerDay: 10 });
+    assert.equal(byName.long.today.fresh, 10, "a list of 14 new words offers 10 today");
     await app.close();
   });
 
   it("says which ways of practising a deck can do", async () => {
     const { app, json } = await signedIn();
     const { decks } = await json("/api/decks");
-    const byKey = Object.fromEntries(decks.map((d) => [d.key, d]));
+    const byName = Object.fromEntries(decks.map((d) => [d.name, d]));
     // Kaishi's card has a translated sentence and a reading; the imported
     // "Lesen" took the sentence without its English, the others have neither.
-    assert.deepEqual(byKey.kaishi.ways, { choose: 1, listen: 1, speak: 1, type: 1, flip: 1 });
-    assert.deepEqual(byKey["list:list a"].ways, { choose: 2, listen: 0, speak: 2, type: 1, flip: 2 });
+    assert.deepEqual(byName.Kaishi.ways, { choose: 1, listen: 1, speak: 1, type: 1, flip: 1 });
+    assert.deepEqual(byName["list a"].ways, { choose: 2, listen: 0, speak: 2, type: 1, flip: 2 });
     await app.close();
   });
 

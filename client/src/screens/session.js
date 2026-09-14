@@ -7,7 +7,7 @@ import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
-import { inScript, modeName, showsScript, shownWord } from "../script.js";
+import { inScript, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
@@ -564,8 +564,7 @@ export function sessionScreen({
     // under it says nothing.
     if (!japanese) return null;
     if (!romaji && !always) return null;
-    const kana = kanaReading(card.word_furigana) ?? card.word_reading ?? card.word;
-    const text = toRomaji(kana);
+    const text = wordRomaji(card);
     if (!text) return null;
     return el("div.romaji.reveal", { text });
   }
@@ -1577,7 +1576,13 @@ export function sentenceKana(sentenceFurigana) {
  * setting, so one session over both decks asks each card the way it was
  * written.
  */
-export const flipsMeaningFirst = (card) => Boolean(card?.list_name);
+export const flipsMeaningFirst = (card) => isInHerDeck(card);
+
+/**
+ * A card of hers in one of her decks (#137, migration 016) — all of hers are.
+ * `list_name` answers for a card cached before this phone was sent `deck_id`.
+ */
+export const isInHerDeck = (card) => Boolean(card?.deck_id ?? card?.list_name);
 
 /**
  * Whether a card's example sentence is offered at all (#137, v66).
@@ -1609,9 +1614,9 @@ const isPhrase = (text) => (text ?? "").trim().split(/\s+/).length >= 3;
 
 export function meaningPool(card, pool, japanese = true) {
   const shown = shownWord(card, japanese);
-  const fromList = Boolean(card.list_name);
+  const fromList = isInHerDeck(card);
   const candidates = pool.filter(
-    (c) => Boolean(c.list_name) === fromList && shownWord(c, japanese) !== shown,
+    (c) => isInHerDeck(c) === fromList && shownWord(c, japanese) !== shown,
   );
   // #137, v66: on her lists a whole sentence among single words is the right
   // answer at a glance, whatever the Japanese said — "Es ist sehr lecker"

@@ -1,5 +1,22 @@
 [
   {
+    "version": "v68",
+    "summary": "Your decks hold their cards now, like in Noji. Add a card while you are in a deck.",
+    "notes": [
+      "On a deck's page, scroll down to see its cards, with a search. Tap + Add card to write a new one: German first, then the Japanese. “Save and add next” keeps going.",
+      "Tap one of your cards to edit it, move it to another deck, or delete it.",
+      "“New deck” at the bottom of your decks starts an empty one. Rename or delete a deck under Options on its page.",
+      "The tabs are called Decks and Search now. Search finds a word in all your decks and says which deck it is in; your stars are there too."
+    ]
+  },
+  {
+    "version": "v67",
+    "summary": "A word with two pronunciations shows both, clearly apart.",
+    "notes": [
+      "何 (“Was”) said “nani nan”, as if that were one phrase. It says “nani / nan” now: both are right, as in “Nani?” and “Nan desu ka?”. The same for 四 (“yon / shi”) and 七 (“nana / shichi”)."
+    ]
+  },
+  {
     "version": "v66",
     "summary": "Cards from your lists are quieter and fairer, and a deck's page no longer cuts off its numbers.",
     "notes": [

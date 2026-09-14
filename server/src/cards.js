@@ -20,6 +20,8 @@
  * account added was in every account's deck.
  */
 
+import { MY_WORDS, deckIdFor, ownDeck } from "./decks.js";
+
 /**
  * The SQL condition for "this user may see this card", with its parameter.
  *
@@ -86,6 +88,12 @@ function replaceTags(db, cardId, tags) {
  */
 export function createCard(db, userId, input, now = Date.now()) {
   const f = cleanFields(input);
+  // In the deck she is adding to (#137). A phone from before decks sends
+  // none, and its "Add a word" card goes where such words always were.
+  const deckId = input.deckId === undefined ? deckIdFor(db, userId, MY_WORDS, now) : input.deckId;
+  if (!ownDeck(db, userId, deckId)) {
+    throw Object.assign(new Error("no such deck"), { status: 404 });
+  }
 
   // Negative, and unique even when two cards are added in the same
   // millisecond — which a test does, and an impatient thumb might.
@@ -99,9 +107,9 @@ export function createCard(db, userId, input, now = Date.now()) {
       `INSERT INTO cards
          (id, word, word_furigana, word_reading, word_meaning, word_audio,
           sentence, sentence_furigana, sentence_meaning, sentence_audio,
-          frequency_rank, deck, owner_id, updated_at)
-       VALUES (?, ?, NULL, ?, ?, NULL, ?, NULL, ?, NULL, NULL, 'personal', ?, ?)`,
-    ).run(id, f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, userId, seconds);
+          frequency_rank, deck, owner_id, updated_at, deck_id)
+       VALUES (?, ?, NULL, ?, ?, NULL, ?, NULL, ?, NULL, NULL, 'personal', ?, ?, ?)`,
+    ).run(id, f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, userId, seconds, deckId);
     replaceTags(db, id, f.tags);
   })();
 
@@ -130,14 +138,20 @@ export function updateCard(db, userId, id, input, now = Date.now()) {
   if (card.deck !== "personal") return { ok: false, reason: "not_yours" };
 
   const f = cleanFields(input);
+  // "Move to another deck" (#137) is this, with `deckId`. Left out — a phone
+  // from before decks — the card stays where it is.
+  if (input.deckId !== undefined && !ownDeck(db, userId, input.deckId)) {
+    return { ok: false, reason: "not_found" };
+  }
   const seconds = Math.floor(now / 1000);
   db.transaction(() => {
     db.prepare(
       `UPDATE cards
           SET word = ?, word_reading = ?, word_meaning = ?,
-              sentence = ?, sentence_meaning = ?, updated_at = ?
+              sentence = ?, sentence_meaning = ?, updated_at = ?,
+              deck_id = coalesce(?, deck_id)
         WHERE id = ?`,
-    ).run(f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, seconds, id);
+    ).run(f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, seconds, input.deckId ?? null, id);
     replaceTags(db, id, f.tags);
   })();
 
@@ -149,7 +163,7 @@ export function getCard(db, id) {
     .prepare(
       `SELECT id, word, word_furigana, word_reading, word_meaning, word_audio,
               sentence, sentence_furigana, sentence_meaning, sentence_audio,
-              frequency_rank, deck, updated_at
+              frequency_rank, deck, updated_at, deck_id, list_name
          FROM cards WHERE id = ?`,
     )
     .get(id);
@@ -171,7 +185,7 @@ export function personalCards(db, userId) {
   const rows = db
     .prepare(
       `SELECT c.id, c.word, c.word_reading, c.word_meaning, c.sentence, c.sentence_meaning,
-              c.updated_at, s.due_at, s.reps, s.last_review
+              c.updated_at, c.deck_id, s.due_at, s.reps, s.last_review
          FROM cards c
          LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
         WHERE c.deck = 'personal' AND c.owner_id = ? AND c.deleted_at IS NULL
