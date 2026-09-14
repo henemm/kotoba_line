@@ -492,8 +492,13 @@
   color: var(--ink-muted);
 }
 
-.practise .length {
+.practise .length-block {
   padding: 6px var(--gutter) 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.practise .length {
   display: flex;
   gap: 8px;
 }
@@ -547,7 +552,7 @@
   .practise .line-row {
     padding: 7px 0;
   }
-  .practise .length {
+  .practise .length-block {
     padding-bottom: 16px;
   }
   .practise .sound-note {

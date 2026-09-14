@@ -304,9 +304,15 @@ export function practiseScreen({
    * never on screen. So only the first tap moved the highlight; every later
    * one was saved (measured: a PATCH per tap) and showed nothing, until a tab
    * change rebuilt the screen.
+   *
+   * The label came back after #123: in Settings the row sat under "Session
+   * length", and moved here it was three bare buttons that neither she nor
+   * Henning could read. It asks the question the way "What to practise" does,
+   * in her words rather than the setting's name. "All" stays: it is capped at
+   * 60, which only matters on a day with more than 60 due.
    */
   function lengthPicker() {
-    const picker = el("div.length");
+    const picker = el("div.length", { role: "group", "aria-labelledby": "length-label" });
     const draw = () =>
       render(
         picker,
@@ -324,7 +330,12 @@ export function practiseScreen({
         ),
       );
     draw();
-    return picker;
+    return el(
+      "div.length-block",
+      {},
+      el("span.set-label", { id: "length-label", text: "How many cards" }),
+      picker,
+    );
   }
 
   function soundNote() {

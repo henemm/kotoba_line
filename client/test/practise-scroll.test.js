@@ -64,6 +64,15 @@ describe("the Words tab (#123)", () => {
     assert.match(practise, /SESSION_LENGTHS/);
   });
 
+  // Reads the source. Moving the picker here lost the "Session length" label
+  // it had in Settings, and three bare buttons told nobody what they were for.
+  // The browser run for v51 measured the label at 394 × 852 with the Carry-on
+  // card showing: the tab still does not scroll, last element 716, fade 740.
+  it("gives the session length buttons a heading", () => {
+    assert.match(practise, /"aria-labelledby": "length-label"/);
+    assert.match(practise, /id: "length-label", text: "How many cards"/);
+  });
+
   it("drops the #118 workarounds that rested on a disproven theory", () => {
     assert.doesNotMatch(css, /overscroll-behavior: contain/);
     const viewport = readFileSync(join(__dirname, "..", "src", "viewport.js"), "utf8");
