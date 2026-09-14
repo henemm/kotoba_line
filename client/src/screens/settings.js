@@ -1,6 +1,4 @@
 import { ApiError, OfflineError, api } from "../api.js";
-import { MODES } from "../modes.js";
-import { modeName, visibleModes } from "../script.js";
 import { cardCount } from "../store.js";
 import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
@@ -76,14 +74,6 @@ async function countCachedAudio() {
  * looked saved and was not would change how many cards arrive tomorrow.
  */
 
-/**
- * The stepper moves in fives. The range is 5–40 (§12, and the floor is the
- * product owner's ruling — see docs/phase-0-plan.md §3.1 E), and a step of one
- * would be thirty-five taps to cross it on a phone.
- */
-const NEW_PER_DAY_STEP = 5;
-const NEW_PER_DAY_MIN = 5;
-const NEW_PER_DAY_MAX = 40;
 
 /** What 話す ("Say it aloud") can draw its prompt from (#77). */
 const SPEAK_SOURCES = [
@@ -127,7 +117,6 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       // #123: only what configures the app. The Deck group (names and counts,
       // each leading to Browse) and session length went to the Words and
       // Practise tabs, where she is when she needs them.
-      dailyLoad(),
       sound(),
       script(),
       practice(),
@@ -184,40 +173,8 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
     draw();
   }
 
-  // ── Daily load ──────────────────────────────────────────────────
-
-  function dailyLoad() {
-    const { newPerDay } = data.settings;
-
-    return group(
-      "Daily load",
-      row(
-        "New cards per day",
-        // #123: asked on the phone what this is, next to session length. It is
-        // the pace of new words, not the size of a sitting, so say that.
-        "Words you have not seen before. Reviews of the rest come on top.",
-        el(
-          "div.stepper",
-          {},
-          stepButton("−", "Fewer new cards", newPerDay - NEW_PER_DAY_STEP),
-          el("span.value.tabular", { text: String(newPerDay) }),
-          stepButton("+", "More new cards", newPerDay + NEW_PER_DAY_STEP),
-        ),
-      ),
-    );
-  }
-
-  function stepButton(glyph, label, target) {
-    const clamped = Math.min(Math.max(target, NEW_PER_DAY_MIN), NEW_PER_DAY_MAX);
-    const disabled = clamped === data.settings.newPerDay;
-    return el("button.step", {
-      type: "button",
-      text: glyph,
-      "aria-label": label,
-      disabled,
-      onclick: () => write({ newPerDay: clamped }),
-    });
-  }
+  // New cards per day and the ways of practising belong to a deck since
+  // #137: the deck page's Options. What is left here is about her.
 
   // ── Sound ───────────────────────────────────────────────────────
 
@@ -298,31 +255,9 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
    * until they touch it: the default stays "Sentence".
    */
   function practice() {
-    const { speakSource, japaneseScript } = data.settings;
-    const hidden = data.settings.hiddenModes ?? [];
-    const shown = visibleModes(hidden);
+    const { speakSource } = data.settings;
     return group(
       "Practice",
-      // #133: one switch per line. The last line still on cannot be switched
-      // off — the server refuses to store all five hidden, and a practise tab
-      // with nothing to tap is not a setting anyone wants.
-      MODES.map((mode) => {
-        const on = !hidden.includes(mode.key);
-        const last = on && shown.length === 1;
-        return row(
-          modeName(mode, japaneseScript),
-          japaneseScript ? mode.en : null,
-          toggle(
-            on,
-            `Show ${mode.en}`,
-            (show) =>
-              write({
-                hiddenModes: show ? hidden.filter((k) => k !== mode.key) : [...hidden, mode.key],
-              }),
-            { disabled: last },
-          ),
-        );
-      }),
       el(
         "div.field",
         {},

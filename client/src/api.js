@@ -165,6 +165,8 @@ export const api = {
   queue: (opts) => request(`/queue${query(opts)}`),
   // #137: her decks with their cards for today, for the practise tab.
   decks: () => request("/decks"),
+  updateDeckSettings: (deckKey, patch) =>
+    request("/decks/settings", { method: "PATCH", body: { deckKey, ...patch } }),
   browse: (opts) => request(`/browse${query(opts)}`),
   star: (cardId, starred, changedAt) =>
     request("/stars", { method: "POST", body: { cardId, starred, changedAt } }),

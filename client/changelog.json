@@ -1,5 +1,14 @@
 [
   {
+    "version": "v64",
+    "summary": "Each deck has its own ways of practising and its own new cards per day.",
+    "notes": [
+      "On a deck's page, tap Options: switch the ways of practising on or off for that deck, and choose how many new cards it brings a day.",
+      "Your lists start at 10 new cards a day each, like in Noji. Kaishi keeps the number you had.",
+      "New cards in one deck no longer use up another deck's. Settings no longer has these two, since they belong to a deck now."
+    ]
+  },
+  {
     "version": "v63",
     "summary": "Practise starts with your decks now, like in Noji.",
     "notes": [

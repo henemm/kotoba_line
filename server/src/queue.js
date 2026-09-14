@@ -1,4 +1,5 @@
 import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
+import { deckSettings } from "./deck-settings.js";
 import { nextDay, tokyoDay } from "./stats.js";
 
 /**
@@ -61,14 +62,13 @@ export function composeQueue({ due, lapsed, fresh }, limit) {
  * proposed. §5a: "when a filter is active, the scheduler advises rather than
  * decides", and the daily new-card cap applies to unfiltered sessions only.
  *
- * A deck or one of her lists is not such a filter any more (#137), a
- * deviation from §5a. Since the choice stays put across app starts, it is
- * *where* she learns rather than a narrowing for one session: with "Mine"
- * chosen for good, an uncapped queue would bring 20 new words every session,
- * several times a day, and the reviews those make would pile up within the
- * week. So the scheduler still decides inside a deck or a list — daily cap,
- * due count, the nothing-due outlook — and only a topic or an `only` hands
- * the decision to her.
+ * A deck is not such a filter (#137), a deviation from §5a. The practise tab
+ * starts with her decks, so a deck is *where* she learns rather than a
+ * narrowing for one session: uncapped, every session in one of her lists
+ * would bring 20 new words, several times a day, and the reviews those make
+ * would pile up within the week. So the scheduler still decides inside a deck
+ * — its own daily cap, due count, the nothing-due outlook — and only a topic
+ * or an `only` hands the decision to her.
  */
 export function isFiltered({ tag, only }) {
   return Boolean(tag || only);
@@ -143,22 +143,28 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   const requested = Number.isInteger(opts.limit) ? opts.limit : MAX_SESSION_LENGTH;
   const limit = Math.min(Math.max(requested, 1), MAX_SESSION_LENGTH);
 
-  const settings =
-    db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId) ?? {};
-  const newPerDay = settings.new_per_day ?? 15;
+  // A deck has its own daily limit (#137, migration 014), as each deck had in
+  // Noji: new cards in "1000" no longer use up the day's new cards in Kaishi.
+  // Without a deck — a phone still on v62 — the overall limit covers everything.
+  const inDeck = parseDeckKey(deckKey) !== undefined;
+  const newPerDay = inDeck
+    ? deckSettings(db, userId, deckKey).newPerDay
+    : (db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15);
 
-  // How many new cards were introduced today, so the daily cap is a cap on the
-  // day rather than on the session.
+  // How many new cards were introduced today — in this deck, when there is
+  // one — so the daily cap is a cap on the day rather than on the session.
+  const scopeParams = [];
+  const scopeSql = inDeck ? filterClause({ deckKey }, scopeParams, userId) : "";
   const introducedToday = db
     .prepare(
-      `SELECT count(DISTINCT card_id) n
-         FROM review_events
-        WHERE user_id = ? AND reviewed_at >= ?
-          AND card_id NOT IN (
+      `SELECT count(DISTINCT e.card_id) n
+         FROM review_events e JOIN cards c ON c.id = e.card_id
+        WHERE e.user_id = ? AND e.reviewed_at >= ?
+          AND e.card_id NOT IN (
             SELECT card_id FROM review_events
-             WHERE user_id = ? AND reviewed_at < ?)`,
+             WHERE user_id = ? AND reviewed_at < ?)${scopeSql}`,
     )
-    .get(userId, now - DAY, userId, now - DAY).n;
+    .get(userId, now - DAY, userId, now - DAY, ...scopeParams).n;
 
   const starredOnly = only === "starred";
 
@@ -269,8 +275,14 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
  * always the session the deck page then starts.
  */
 export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
+  // What each way of practising can ask in this deck, the rule playableIn
+  // (client/src/screens/session.js) applies card by card: 聞く needs a sentence
+  // with a translation, 書く a reading. Counted so the deck's options can say
+  // "not possible here" instead of opening a session with nothing in it.
   const count = db.prepare(
-    `SELECT count(*) AS cards, count(s.card_id) AS seen
+    `SELECT count(*) AS cards, count(s.card_id) AS seen,
+            sum(c.sentence IS NOT NULL AND c.sentence_meaning IS NOT NULL) AS listen,
+            sum(c.word_reading IS NOT NULL OR c.word_furigana IS NOT NULL) AS type
        FROM cards c LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       WHERE c.deleted_at IS NULL AND c.deck = ? AND (c.deck <> 'personal' OR c.owner_id = ?)
         AND (? IS NULL OR c.list_name = ?) AND (? = 0 OR c.list_name IS NULL)`,
@@ -293,10 +305,18 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
   return candidates
     .map(({ key, name }) => {
       const scope = parseDeckKey(key);
-      const { cards, seen } = count.get(userId, scope.deck, userId, scope.list ?? null, scope.list ?? null, scope.unlisted ? 1 : 0);
-      if (cards === 0) return undefined;
+      const row = count.get(userId, scope.deck, userId, scope.list ?? null, scope.list ?? null, scope.unlisted ? 1 : 0);
+      if (row.cards === 0) return undefined;
       const { today } = queueForUser(db, userId, { deckKey: key }, now);
-      return { key, name, cards, seen, today };
+      return {
+        key,
+        name,
+        cards: row.cards,
+        seen: row.seen,
+        today,
+        ways: { choose: row.cards, listen: row.listen, speak: row.cards, type: row.type, flip: row.cards },
+        settings: deckSettings(db, userId, key),
+      };
     })
     .filter(Boolean);
 }
