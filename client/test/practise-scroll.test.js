@@ -35,8 +35,38 @@ describe("the practise tab keeps its place (#118)", () => {
     assert.match(practise, /if \(scrollTop\) root\.scrollTop = scrollTop;/);
   });
 
-  it("keeps a swipe inside the tab", () => {
-    const rule = css.slice(css.indexOf("\n.practise {"), css.indexOf("}", css.indexOf("\n.practise {")));
-    assert.match(rule, /overscroll-behavior: contain/);
+});
+
+/**
+ * #123 — the practise tab is short enough not to need scrolling at all.
+ *
+ * v48 kept the scroll position, and on Henning's iPhone the tab still took
+ * one swipe and then stuck; the device reported `moved 0 of 0`. What settled
+ * it was the layout rather than the scroller: "Find and star words" and "Add
+ * a word" moved to a Words tab, and session length is set on this tab only.
+ */
+const settings = readFileSync(join(__dirname, "..", "src", "screens", "settings.js"), "utf8");
+const browse = readFileSync(join(__dirname, "..", "src", "screens", "browse.js"), "utf8");
+
+describe("the Words tab (#123)", () => {
+  it("is a tab, between Practise and Stats", () => {
+    const tabs = app.slice(app.indexOf("const TABS = ["), app.indexOf("];", app.indexOf("const TABS = [")));
+    assert.deepEqual([...tabs.matchAll(/key: "(\w+)"/g)].map((m) => m[1]), ["practise", "words", "stats", "settings"]);
+  });
+
+  it("takes search and her own words off the practise tab", () => {
+    assert.doesNotMatch(practise, /button\.add-word-row|onAddWord|onBrowse|onOwnDeck/);
+    assert.match(browse, /"Add a word"/);
+  });
+
+  it("leaves session length to the practise tab alone", () => {
+    assert.doesNotMatch(settings, /Session length|sessionLength/);
+    assert.match(practise, /SESSION_LENGTHS/);
+  });
+
+  it("drops the #118 workarounds that rested on a disproven theory", () => {
+    assert.doesNotMatch(css, /overscroll-behavior: contain/);
+    const viewport = readFileSync(join(__dirname, "..", "src", "viewport.js"), "utf8");
+    assert.doesNotMatch(viewport, /watchList|"List"|"Scroll"/);
   });
 });

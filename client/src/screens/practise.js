@@ -4,14 +4,17 @@ import { describe } from "../resume.js";
 import { isDefault, summaryLine } from "./choose-set.js";
 import { el, render, station } from "../ui/dom.js";
 
-/**
- * The same three the Settings screen offers, and the same values: 60 is
- * MAX_SESSION_LENGTH on the server, and the screen calls it "All". Both
- * places write the one stored setting, so picking 10 here shows 10 there.
- */
 /** "1 card", "20 cards" — design 10's offers lead with the count. */
 const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
 
+/**
+ * 60 is MAX_SESSION_LENGTH on the server, and the screen calls it "All".
+ *
+ * The only place session length is set (#123). Settings offered the same
+ * three and wrote the same stored value, which read as two different
+ * settings; it is a choice made when she sits down to practise, so it lives
+ * where she does that.
+ */
 const SESSION_LENGTHS = [
   { value: 10, label: "10" },
   { value: 20, label: "20" },
@@ -30,12 +33,8 @@ export function practiseScreen({
   onStart,
   onDrillTopic,
   onChooseSet,
-  onAddWord,
-  onOwnDeck,
-  onBrowse,
   onResume,
   resumable,
-  ownWords,
   filters = {},
   sessionLength,
   onSessionLength,
@@ -84,8 +83,9 @@ export function practiseScreen({
       linesBlock(),
       lengthPicker(),
       soundNote(),
-      browseRow(),
-      addWordRow(),
+      // #123: "Find and star words" and "Add a word" were the last two rows
+      // here. They are the Words tab now, which is also what lets this tab fit
+      // on the screen with the Carry-on card showing, rather than scrolling.
     );
     fill(soon);
     // Once the rows are in: before, there is nothing to scroll and it clamps
@@ -140,39 +140,6 @@ export function practiseScreen({
     // when it's on offer the generic suggestions step aside for it.
     render(top, ...(due > 0 || hasResume ? [] : nothingDue(outlook, stats)));
     render(above, ...(due > 0 ? normalDay(due) : []));
-  }
-
-  /**
-   * The way into Browse from the tab she is actually on (#35).
-   *
-   * Browse is where a card gets starred, and it was reachable only from Stats
-   * and from Settings — two tabs that are about looking back and about
-   * configuration, neither of which is where anyone goes to find a word. So
-   * "star some cards, then practise exactly those" had a first step nobody
-   * would find.
-   *
-   * Beside "Add a word" and sharing its class rather than getting one of its
-   * own, because they are the same kind of thing and should not look like two:
-   * both are what to do when the word she wants is not the one the scheduler
-   * is offering. Looking one up comes first; adding one is what happens when
-   * looking it up fails (33), which is the order they sit in.
-   */
-  function browseRow() {
-    if (!onBrowse) return null;
-    return el(
-      // Deliberately `.add-word-row` — see above. A second class carrying the
-      // same rules would be two things to keep in step.
-      "button.add-word-row",
-      { type: "button", onclick: () => onBrowse() },
-      el("span.dashed-station", { text: "★" }),
-      el(
-        "span.copy",
-        {},
-        el("span.title", { text: "Find and star words" }),
-        el("span.detail", { text: "Search the deck, then practise just the ones you picked" }),
-      ),
-      el("span.chevron", { "aria-hidden": "true", text: "›" }),
-    );
   }
 
   function normalDay(due) {
@@ -358,42 +325,6 @@ export function practiseScreen({
       );
     draw();
     return picker;
-  }
-
-  /**
-   * 27 — "a dashed station below the last stop: on the network, not part of
-   * it". Under the four lines rather than in a header, because it is used far
-   * less than starting a session and must never be what a thumb hits by
-   * accident. Not a floating button; nothing in this design floats.
-   */
-  function addWordRow() {
-    if (!onAddWord) return null;
-    return el(
-      "button.add-word-row",
-      // Called with no argument: `onclick: onAddWord` would hand the click
-      // event to it as the word to prefill, which is where 33 passes the
-      // search query.
-      { type: "button", onclick: () => onAddWord() },
-      el("span.dashed-station", { text: "+" }),
-      el(
-        "span.copy",
-        {},
-        el("span.title", { text: "Add a word" }),
-        el("span.detail", {
-          text: ownWords ? `${ownWords} in your own deck` : "nothing in your own deck yet",
-        }),
-      ),
-      // The count doubles as the way into the list (27's note).
-      ownWords && onOwnDeck
-        ? el("span.chevron", {
-            text: "›",
-            onclick: (e) => {
-              e.stopPropagation();
-              onOwnDeck();
-            },
-          })
-        : null,
-    );
   }
 
   function soundNote() {

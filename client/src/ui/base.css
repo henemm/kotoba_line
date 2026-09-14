@@ -302,17 +302,21 @@ input:focus-visible {
    8px (#86, the first time the badge could light at all) — so 28px.
    In the capsule (#102) `top` moved from 16px to 7px to keep it level with
    the dot and label; measured at 394 × 852 the diamond clears the "s" by 8px
-   and stays inside the capsule top and bottom. */
+   and stays inside the capsule top and bottom.
+   With four tabs (#123) each is about 85px wide, and that diamond ran 17px
+   into Settings (measured at 402 × 874). So it is smaller and sits by the dot,
+   where an iOS badge sits by its icon, clear of the label below. */
 .tabbar .joker-badge {
   position: absolute;
-  top: 7px;
+  top: 5px;
   left: 50%;
-  margin-left: 28px;
-  width: 26px;
-  height: 26px;
+  margin-left: 11px;
+  width: 14px;
+  height: 14px;
   background: var(--ink);
   transform: rotate(45deg);
-  border-radius: 5px;
+  /* 5px on a 14px square draws a circle, and a circle is a station. */
+  border-radius: 3px;
   display: block;
 }
 

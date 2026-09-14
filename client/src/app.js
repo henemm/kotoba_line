@@ -19,12 +19,16 @@ import { syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
-import { watchList, watchViewport } from "./viewport.js";
+import { watchViewport } from "./viewport.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 
+// #123: four, where design 11 draws three. Words is where she searches, stars
+// and adds words; each of those used to be reached from somewhere else, and
+// Browse from three places. Settings keeps only what configures the app.
 const TABS = [
   { key: "practise", label: "Practise" },
+  { key: "words", label: "Words" },
   { key: "stats", label: "Stats" },
   { key: "settings", label: "Settings" },
 ];
@@ -34,7 +38,6 @@ const app = document.getElementById("app");
 // Before the first render: the shell's height depends on `--viewport-h`, and a
 // first paint at the wrong height is the bug this fixes.
 watchViewport();
-watchList();
 
 const state = {
   user: undefined,
@@ -43,21 +46,20 @@ const state = {
   // covered and the tab bar never competes with an answer.
   session: undefined,
   summary: undefined,
-  // Browse (31) is not a tab — it is reached from Stats and from Settings, and
-  // it replaces the tab screens while it is open. Held as a node rather than a
-  // flag for the same reason the session is: rebuilding it on an unrelated
-  // redraw would throw away her search, her scroll position and the page of
-  // results underneath it.
-  browse: undefined,
+  // The Words tab (#123; Browse, 31). Held as a node rather than rebuilt with
+  // the other tabs, for the same reason the session is: rebuilding it on an
+  // unrelated redraw would throw away her search, her scroll position and the
+  // page of results underneath it. Built fresh each time she comes to the tab.
+  words: undefined,
   // What the "Choose a set" sheet last held (36). Kept here rather than in the
   // practise tab because it outlives it: tapping a line starts a session with
   // these, and the session that runs says so (39).
   filters: { ...DEFAULT_FILTERS },
   topics: [],
   sheet: undefined,
-  // Her own deck (27–30). `ownWords` is the count on the practise tab's
-  // dashed station; `overlay` is the add screen or the list, which take the
-  // screen the way browse does.
+  // Her own deck (27–30). `ownWords` is the count on the Words tab's own-words
+  // row; `overlay` is the add screen, the list or the card-topics sheet, which
+  // take the screen.
   ownWords: 0,
   overlay: undefined,
   // 51: an unfinished session, if there is one worth offering.
@@ -148,19 +150,7 @@ function tabBar() {
         {
           type: "button",
           "aria-current": state.tab === tab.key ? "page" : undefined,
-          onclick: () => {
-            if (tab.key === "stats" && state.jokerBadge) {
-              state.jokerBadge = false;
-              setMeta("joker.badge", false);
-            }
-            // #106: coming back to the tab is a moment to recount — the day
-            // may have turned while she was on Stats.
-            if (tab.key === "practise" && state.tab !== "practise") numbersChanged();
-            state.tab = tab.key;
-            state.browse = undefined;
-            state.overlay = undefined;
-            renderApp();
-          },
+          onclick: () => goToTab(tab.key),
         },
         el("span.dot"),
         el("span.label", { text: tab.label }),
@@ -168,6 +158,21 @@ function tabBar() {
       ),
     ),
   );
+}
+
+function goToTab(key) {
+  if (key === "stats" && state.jokerBadge) {
+    state.jokerBadge = false;
+    setMeta("joker.badge", false);
+  }
+  // #106: coming back to the tab is a moment to recount — the day may have
+  // turned while she was on Stats.
+  if (key === "practise" && state.tab !== "practise") numbersChanged();
+  // Arriving at Words starts from its idle list; staying on it keeps her search.
+  if (key === "words" && state.tab !== "words") state.words = undefined;
+  state.tab = key;
+  state.overlay = undefined;
+  renderApp();
 }
 
 function currentScreen() {
@@ -195,12 +200,6 @@ function currentScreen() {
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
-      // #35: Browse is where a card gets starred, and the practise tab is
-      // where she is when she wants to.
-      onBrowse: openBrowse,
-      ownWords: state.ownWords,
-      onAddWord: openAddWord,
-      onOwnDeck: openOwnDeck,
       resumable: state.resumable,
       onResume: resumeSession,
       numbers: practiseNumbers(),
@@ -210,10 +209,11 @@ function currentScreen() {
       scrollTop: app.querySelector(":scope > .practise")?.scrollTop ?? 0,
     });
   }
-  if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
+  if (state.tab === "words") return (state.words ??= wordsScreen());
+  // "Cards seen" leads to the words behind the number.
+  if (state.tab === "stats") return statsScreen({ onBrowse: () => goToTab("words") });
   return settingsScreen({
     user: state.user,
-    onBrowse: openBrowse,
     onSettings: (settings) => {
       state.settings = settings;
     },
@@ -299,7 +299,7 @@ async function considerJokerNotice(stats) {
   }
   // Only over the practise tab as it stands: never over a session, a summary,
   // an open sheet or a form she is typing into.
-  if (state.tab !== "practise" || state.session || state.summary || state.overlay || state.browse || state.sheet) {
+  if (state.tab !== "practise" || state.session || state.summary || state.overlay || state.sheet) {
     return;
   }
   state.jokerNotice = { stats, kind, key, metaKey, lastDay: gap.lastDay };
@@ -364,10 +364,12 @@ function openAddWord(initialWord = "") {
     initialWord,
     onCancel: closeOverlay,
     onSaved: () => {
-      // 29: "saving returns to the practise tab with the count incremented,
-      // no confirmation screen."
+      // 29: "saving returns … with the count incremented, no confirmation
+      // screen." To the Words tab now rather than the practise tab (#123):
+      // that is where she added it from, and built fresh, the word is in it.
       state.overlay = undefined;
-      state.tab = "practise";
+      state.tab = "words";
+      state.words = undefined;
       ownWordsChanged();
       renderApp();
     },
@@ -426,38 +428,32 @@ function closeOverlay() {
   renderApp();
 }
 
-/** The count on 27's dashed station. */
+/** The count on the Words tab's own-words row (27's dashed station). */
 async function loadOwnDeck() {
   try {
     const { cards } = await api.cards();
-    // Only a changed count is worth a redraw: the redraw rebuilds whatever
-    // screen is up, and on a start this arrives when nothing has changed.
+    // Only a changed count is worth a redraw, and only the Words tab shows it.
     if (state.ownWords === cards.length) return;
     state.ownWords = cards.length;
-    renderApp();
+    state.words?.refresh();
   } catch {
     /* the row still offers to add one */
   }
 }
 
-function openBrowse() {
-  state.browse = browseScreen({
+/** The Words tab (#123): Browse, and her own words at the top of it. */
+function wordsScreen() {
+  return browseScreen({
     romaji: state.settings.romaji,
-    onBack: closeBrowse,
-    onPractiseStarred: () => {
-      closeBrowse();
-      startSession({ only: "starred" });
-    },
+    onPractiseStarred: () => startSession({ only: "starred" }),
     // 33: "a word she cannot find is usually a word she should add, so the
     // empty result leads straight into 28 with the query carried over."
-    onAddWord: (query) => {
-      closeBrowse();
-      openAddWord(query);
-    },
+    onAddWord: (query = "") => openAddWord(query),
+    onOwnDeck: openOwnDeck,
+    ownWords: () => state.ownWords,
     // #35: tapping a row files it under one of her own topics.
     onTopics: openCardTopics,
   });
-  renderApp();
 }
 
 /**
@@ -494,11 +490,6 @@ function openCardTopics(card, onChanged) {
       renderApp();
     },
   });
-  renderApp();
-}
-
-function closeBrowse() {
-  state.browse = undefined;
   renderApp();
 }
 
@@ -742,18 +733,10 @@ function renderApp() {
     return;
   }
 
-  // Browse (31) has its own back arrow and its own footer button, and the
-  // drawn frame carries no tab bar — it takes the screen the way a session
-  // does rather than sitting inside a tab.
-  // Her own deck's screens take the whole screen, like browse: 28 is a form,
-  // and a tab bar under a keyboard is noise.
+  // Her own deck's screens take the whole screen: 28 is a form, and a tab bar
+  // under a keyboard is noise. The card-topics sheet too, over the Words tab.
   if (state.overlay) {
     render(app, state.overlay);
-    return;
-  }
-
-  if (state.browse) {
-    render(app, state.browse);
     return;
   }
 
