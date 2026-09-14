@@ -24,6 +24,13 @@ import { describe, it } from "node:test";
  *   選ぶ    front 0 (no recording, 48)  → reveal 1  [sentence]
  *   聞く    front 1 (the prompt)        → reveal 2  [prompt, sentence]
  *   話す    front 0                     → reveal 1  [sentence]
+ *
+ * v66 (#137) narrows "always" to "whenever something honest can be played".
+ * A speaker for a text with no recording and no Japanese characters — the
+ * romaji of her Noji lists — is left out, and so is the automatic reading of
+ * it: a Japanese voice guesses at Latin letters. And a sentence with nothing
+ * to read beside it (script off, no translation) is not revealed at all.
+ * Measured in WebKit at 402 × 812 against the live server; see the commit.
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,7 +41,8 @@ const css = readFileSync(join(__dirname, "..", "src", "ui", "screens.css"), "utf
 function bodyOf(name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `${name} not found in session.js`);
-  const open = source.indexOf("{", start);
+  // After the parameter list: `speaker` destructures its options in braces.
+  const open = source.indexOf(") {", start) + 2;
   let depth = 0;
   for (let i = open; i < source.length; i++) {
     if (source[i] === "{") depth++;
@@ -60,6 +68,21 @@ describe("a revealed card can be heard again (#32)", () => {
     // 話す reveals the sentence when there is one and the bare word when there
     // is not; the second branch is the one that had nothing to play.
     assert.match(bodyOf("revealSpeak"), /speaker\(\s*card\.word/);
+  });
+
+  it("leaves the speaker out where nothing honest could play (v66)", () => {
+    assert.match(bodyOf("speaker"), /if \(!canVoice\(text, file\)\) return null;/);
+    assert.match(bodyOf("revealedSentence"), /if \(!showsSentence\(card, japanese\)\) return null;/);
+  });
+
+  it("reads 選ぶ's word aloud only from the recording its speaker plays (v66)", () => {
+    // 48 leaves the speaker out on a card with no recording; the automatic
+    // reading used to go ahead with the phone's voice anyway.
+    assert.match(bodyOf("drawChoose"), /if \(readAloud && card\.word_audio\) say\(card\.word, card\.word_audio\);/);
+    // Everywhere else the reading goes through the same rule as the speaker.
+    for (const fn of ["revealSpeak", "revealType", "drawFlip", "revealFlip"]) {
+      assert.doesNotMatch(bodyOf(fn), /\bsay\(/, fn);
+    }
   });
 
   it("styles the reveal's speaker smaller than the prompt's", () => {

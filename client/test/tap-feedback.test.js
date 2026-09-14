@@ -60,11 +60,12 @@ describe("♪ acknowledges the tap and plays from the cache (#116)", () => {
     // sentence, and on metered data a file nobody hears costs her.
     assert.doesNotMatch(bodyOf(session, "drawCard"), /\bprime\(card/);
     const primes = (fn) => bodyOf(session, fn).match(/prime\(([^;]*)\);/)?.[1];
-    assert.equal(primes("drawChoose"), "card.word_audio, card.sentence && card.sentence_audio");
+    // v66: and not a sentence the card will not offer (`showsSentence`).
+    assert.equal(primes("drawChoose"), "card.word_audio, showsSentence(card, japanese) && card.sentence_audio");
     assert.equal(primes("drawListen"), "card.sentence_audio");
     assert.equal(primes("drawSpeak"), "useSentence ? card.sentence_audio : card.word_audio");
     assert.equal(primes("drawType"), "card.word_audio");
-    assert.equal(primes("drawFlip"), "card.word_audio, card.sentence && card.sentence_audio");
+    assert.equal(primes("drawFlip"), "card.word_audio, showsSentence(card, japanese) && card.sentence_audio");
   });
 
   it("never makes say() wait before play()", () => {

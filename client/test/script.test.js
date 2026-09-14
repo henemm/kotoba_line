@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MODES } from "../src/modes.js";
 import { appName, modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
-import { flipsMeaningFirst, meaningPool } from "../src/screens/session.js";
+import { canVoice, flipsMeaningFirst, meaningPool, showsSentence } from "../src/screens/session.js";
 
 describe("Japanese script off (#135)", () => {
   const kaishi = { word: "大丈夫", word_furigana: "大丈夫[だいじょうぶ]", word_reading: "だいじょうぶ" };
@@ -86,5 +86,40 @@ describe("選ぶ's wrong answers (#135, #137)", () => {
   it("keeps her German lists and the English deck apart", () => {
     assert.deepEqual(meaningPool(densha, pool, false).map((c) => c.id), [-2]);
     assert.ok(!meaningPool(taberu, pool, true).some((c) => c.list_name));
+  });
+  it("gives a sentence sentences and a word words, on her lists (v66)", () => {
+    const lecker = mine(-10, "Totemo oishii desu", "Es ist sehr lecker");
+    const phrases = [
+      mine(-11, "Nihongo o benkyou shiteimasu", "Ich lerne Japanisch"),
+      mine(-12, "Shashin o totte mo ii desu ka?", "Darf ich ein Foto machen?"),
+      mine(-13, "Kimi to hanasu no tanoshii", "Es macht Spaß mit dir zu reden"),
+    ];
+    const words = [mine(-20, "Kore dake", "Nur das"), mine(-21, "Kata", "Schulter"), mine(-22, "Naze", "Warum")];
+    const lists = [lecker, ...phrases, ...words, densha, basu];
+    assert.deepEqual(meaningPool(lecker, lists, false).map((c) => c.id), [-11, -12, -13]);
+    // Two words is still a word: "Nur das" gets "Zug", not "Ich lerne Japanisch".
+    assert.ok(meaningPool(words[0], lists, false).every((c) => c.word_meaning.split(" ").length < 3));
+    // Fewer than three alike: the whole list, rather than too few wrong answers.
+    assert.equal(meaningPool(lecker, [lecker, phrases[0], ...words], false).length, 4);
+    // Kaishi keeps its pool whatever the length of a gloss.
+    const long = kaishi(4, "なる", "なる", "なる", "to become, to result in");
+    assert.deepEqual(meaningPool(long, [long, iru, taberu], true).map((c) => c.id), [1, 3]);
+  });
+});
+
+describe("what a card plays and shows (v66)", () => {
+  it("synthesises Japanese, never romaji", () => {
+    assert.equal(canVoice("Totemo oishii desu", null), false);
+    assert.equal(canVoice("これ", null), true);
+    assert.equal(canVoice("Totemo oishii desu", "x.mp3"), true);
+    assert.equal(canVoice(null, null), false);
+  });
+
+  it("offers a sentence only with something to read beside it", () => {
+    const kore = { sentence: "<b>これ</b>は日本語の本です。", sentence_meaning: null };
+    assert.equal(showsSentence(kore, false), false);
+    assert.equal(showsSentence(kore, true), true);
+    assert.equal(showsSentence({ ...kore, sentence_meaning: "This is a Japanese book." }, false), true);
+    assert.equal(showsSentence({ sentence: null, sentence_meaning: "x" }, true), false);
   });
 });

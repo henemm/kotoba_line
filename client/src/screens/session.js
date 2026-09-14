@@ -7,7 +7,7 @@ import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
-import { modeName, showsScript, shownWord } from "../script.js";
+import { inScript, modeName, showsScript, shownWord } from "../script.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
@@ -596,12 +596,19 @@ export function sessionScreen({
   }
 
   function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false, small = false } = {}) {
+    // Absent rather than inert, and never a guess (#137, v66): see `canVoice`.
+    if (!canVoice(text, file)) return null;
     return el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`, {
       type: "button",
       "aria-label": label,
       text: "♪",
       ...acknowledged(() => say(text, file, rate ? { rate } : undefined)),
     });
+  }
+
+  /** Read aloud, the same rule as `speaker`: a recording, or Japanese to synthesise. */
+  function voice(text, file, options) {
+    if (canVoice(text, file)) say(text, file, options);
   }
 
   /**
@@ -648,8 +655,8 @@ export function sessionScreen({
               rightButton?.classList.add("right");
             }
 
-            if (card.sentence) {
-              if (readAloud) say(card.sentence, card.sentence_audio, { rate: 0.85 });
+            if (showsSentence(card, japanese)) {
+              if (readAloud) voice(card.sentence, card.sentence_audio, { rate: 0.85 });
               area.append(revealedSentence(card));
             }
 
@@ -678,8 +685,11 @@ export function sessionScreen({
     // "Read cards aloud" governs what happens on its own. The ♪ button still
     // works with it off — tapping it is an explicit request, and a setting
     // about automatic sound should not disable a control just pressed.
-    prime(card.word_audio, card.sentence && card.sentence_audio);
-    if (readAloud) say(card.word, card.word_audio);
+    prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio);
+    // Only a recording, like the speaker below. Until v66 a card without one
+    // was read by the phone's voice with no button to hear it again — on her
+    // Noji lists, a Japanese voice reading romaji (Henning, 2026-09-14).
+    if (readAloud && card.word_audio) say(card.word, card.word_audio);
 
     chooseFrom(card, "word_meaning", null, area, answers, [
       el("span.prompt-label", { text: "What does this mean?" }),
@@ -707,7 +717,7 @@ export function sessionScreen({
    */
   function drawListen(card, area, answers) {
     prime(card.sentence_audio);
-    const play = () => say(card.sentence, card.sentence_audio, { rate: 0.85 });
+    const play = () => voice(card.sentence, card.sentence_audio, { rate: 0.85 });
     play();
 
     chooseFrom(card, "sentence_meaning", null, area, answers, [
@@ -850,7 +860,7 @@ export function sessionScreen({
           ),
       useSentence ? null : romajiLine(card),
     );
-    if (readAloud) say(text, audio, useSentence ? { rate: 0.85 } : undefined);
+    if (readAloud) voice(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
     // 42: same height and tints as めくる's row, half the count and no
     // intervals — 話す asks whether she could produce it, a yes-or-no question.
@@ -1009,7 +1019,7 @@ export function sessionScreen({
     );
     // The word, not the sentence: the sound of what she just tried to write
     // is the thing worth hearing here.
-    if (readAloud) say(card.word, card.word_audio);
+    if (readAloud) voice(card.word, card.word_audio);
 
     if (typed !== undefined && !correct) {
       render(
@@ -1075,7 +1085,7 @@ export function sessionScreen({
 
   /** めくる — the classic flashcard, and the only mode with four ratings. */
   function drawFlip(card, area, answers) {
-    prime(card.word_audio, card.sentence && card.sentence_audio);
+    prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio);
     if (flipsMeaningFirst(card)) {
       // No speaker and no reading aloud: the word is the answer.
       render(
@@ -1092,7 +1102,7 @@ export function sessionScreen({
         // "what does it say" — a romaji line here does not spoil the flip.
         romajiLine(card),
       );
-      if (readAloud) say(card.word, card.word_audio);
+      if (readAloud) voice(card.word, card.word_audio);
     }
 
     render(
@@ -1127,10 +1137,10 @@ export function sessionScreen({
         ),
         reading(card.word_furigana || card.word_reading, card.word, card),
         romajiLine(card),
-        card.sentence ? revealedSentence(card) : null,
+        revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );
-      if (readAloud) say(card.word, card.word_audio);
+      if (readAloud) voice(card.word, card.word_audio);
     } else {
       render(
         area,
@@ -1152,10 +1162,10 @@ export function sessionScreen({
         reading(card.word_furigana || card.word_reading, card.word, card),
         romajiLine(card),
         el("div.meaning.reveal", { text: card.word_meaning }),
-        card.sentence ? revealedSentence(card) : null,
+        revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );
-      if (readAloud && card.sentence) say(card.sentence, card.sentence_audio, { rate: 0.85 });
+      if (readAloud && showsSentence(card, japanese)) voice(card.sentence, card.sentence_audio, { rate: 0.85 });
     }
 
     // §6 and screen 41: hard and easy are offered here and nowhere else,
@@ -1294,6 +1304,7 @@ export function sessionScreen({
   }
 
   function revealedSentence(card) {
+    if (!showsSentence(card, japanese)) return null;
     // #135: with the script off the sentence is its recording, labelled, and
     // no text — its romaji is not good enough to stand alone (script.js). The
     // translation still follows wherever a mode shows one.
@@ -1568,10 +1579,49 @@ export function sentenceKana(sentenceFurigana) {
  */
 export const flipsMeaningFirst = (card) => Boolean(card?.list_name);
 
+/**
+ * Whether a card's example sentence is offered at all (#137, v66).
+ *
+ * Only with something to read beside the sound: the Japanese, or a
+ * translation. With the script off, a card from her Noji lists has neither —
+ * its sentence came from Kaishi, and its English was taken off at Henning's
+ * request (v62) — so it was a six-second recording and the words "Example
+ * sentence", which he heard as a voice not saying the word at all. Like Noji,
+ * such a card is its word and nothing else.
+ */
+export function showsSentence(card, japanese) {
+  return Boolean(card?.sentence) && (Boolean(japanese) || Boolean(card.sentence_meaning));
+}
+
+/**
+ * Whether anything may be played for a text (#137, v66): its recording, or
+ * speech synthesis — but synthesis only of Japanese characters. Her Noji words
+ * are romaji ("Totemo oishii desu"), and a Japanese voice reading Latin letters
+ * guesses at the pronunciation. Henning: "lieber stumm als falsch". 339 of the
+ * 551 cards in her two lists have no recording (measured 2026-09-14).
+ */
+export function canVoice(text, file) {
+  return Boolean(file) || inScript(text);
+}
+
+/** "Es ist sehr lecker" is a sentence; "Zug" and "Nur das" are not. */
+const isPhrase = (text) => (text ?? "").trim().split(/\s+/).length >= 3;
+
 export function meaningPool(card, pool, japanese = true) {
   const shown = shownWord(card, japanese);
   const fromList = Boolean(card.list_name);
-  return pool.filter((c) => Boolean(c.list_name) === fromList && shownWord(c, japanese) !== shown);
+  const candidates = pool.filter(
+    (c) => Boolean(c.list_name) === fromList && shownWord(c, japanese) !== shown,
+  );
+  // #137, v66: on her lists a whole sentence among single words is the right
+  // answer at a glance, whatever the Japanese said — "Es ist sehr lecker"
+  // against "Schulclub", "Schulter" and "Warum". So a sentence gets sentences
+  // and a word gets words, while there are three to choose from (101 of the
+  // 551 meanings are three words or more). Kaishi's English glosses are not
+  // sentences, and keep the pool they had.
+  if (!fromList) return candidates;
+  const alike = candidates.filter((c) => isPhrase(c.word_meaning) === isPhrase(card.word_meaning));
+  return alike.length >= 3 ? alike : candidates;
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */
@@ -1599,7 +1649,7 @@ export function playableIn(mode, cards, speaks = canSpeak()) {
   if (mode === "type") return cards.filter((c) => readingsOf(c).length > 0);
   if (mode !== "listen") return cards;
   return cards.filter(
-    (c) => c.sentence && c.sentence_meaning && (c.sentence_audio || speaks),
+    (c) => c.sentence && c.sentence_meaning && (c.sentence_audio || (speaks && inScript(c.sentence))),
   );
 }
 

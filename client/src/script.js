@@ -46,6 +46,9 @@ export function shownWord(card, japanese) {
 
 const SCRIPT = /[぀-ヿ㐀-鿿々]/;
 
+/** Whether a text has Japanese characters in it at all. */
+export const inScript = (text) => SCRIPT.test(text ?? "");
+
 /**
  * Whether `shownWord` gave Japanese script — for the font class.
  *
@@ -55,7 +58,7 @@ const SCRIPT = /[぀-ヿ㐀-鿿々]/;
  * missing romaji says what is actually on the card.
  */
 export function showsScript(card, japanese) {
-  return SCRIPT.test(shownWord(card, japanese) ?? "");
+  return inScript(shownWord(card, japanese));
 }
 
 /** The app's name as a heading (#139): the Latin one Henning chose, with the script off. */
