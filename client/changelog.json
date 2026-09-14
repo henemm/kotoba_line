@@ -1,5 +1,12 @@
 [
   {
+    "version": "v56",
+    "summary": "The tab bar at the bottom is now made of glass.",
+    "notes": [
+      "You can see your words move behind the bar, a little blurred, and around it at the bottom of the screen. Nothing else about the bar has changed."
+    ]
+  },
+  {
     "version": "v55",
     "summary": "Reset under “What to practise” now really resets.",
     "notes": [

@@ -191,8 +191,8 @@ input:focus-visible {
    Design 11 draws a bar joined to the bottom edge. #102 (Henning's call)
    makes it float, the way iOS 26 draws its tab bar: a capsule held off the
    sides and the bottom, the screen scrolling on underneath it, the active tab
-   in a pill of its own. Only the floating was asked for — iOS 26's glass was
-   explicitly not, so the capsule is opaque and uses the app's own colours.
+   in a pill of its own. Only the floating was asked for then; the glass came
+   later (#131, Henning's call again) and is further down.
    Do not join it back to the edge as a "fix" for design 11.
 
    Absolute inside #app, never `position: fixed`: in the installed app a fixed
@@ -209,12 +209,18 @@ input:focus-visible {
   --tabbar-space: calc(var(--tabbar-h) + var(--tabbar-gap) + 24px);
 }
 
-/* The screen fades out into the page just above the capsule, as iOS 26 does
-   at a scroll edge. Without it the top few pixels of whichever row sat under
-   the bar showed as a sliver between the capsule and the row above — on the
-   practise tab, the edge of a dashed station (measured at 852). Same height
-   as the space a screen keeps clear, so a row scrolled to the end is never
-   faded. */
+/* The screen dims towards the bottom edge, as iOS 26 does at a scroll edge.
+   Same height as the space a screen keeps clear, so a row scrolled to the end
+   is never dimmed.
+
+   It used to go solid 24px below its top — a band of page colour ~88px high
+   on an iPhone, with the capsule sitting on it. That hid the sliver of a row
+   showing between capsule and row above (a dashed station on the practise
+   tab, measured at 852), and it also meant nothing was ever seen beside or
+   below the bar: Henning's "the space around it is not transparent either"
+   (#131). Under glass a row showing through is the point, so the band only
+   dims now. The solid gradient stays as the fallback for a browser without
+   color-mix(). */
 #app:has(> nav.tabbar)::after {
   content: "";
   position: absolute;
@@ -224,6 +230,11 @@ input:focus-visible {
   bottom: 0;
   height: var(--tabbar-space);
   background: linear-gradient(to bottom, transparent, var(--night) 24px);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--night) 70%, transparent)
+  );
   pointer-events: none;
 }
 
@@ -263,6 +274,39 @@ input:focus-visible {
 
 .tabbar [aria-current="page"] {
   background: var(--surface-hi);
+}
+
+/* #131: frosted glass, the part of iOS 26's Liquid Glass a web page can have.
+   The refraction at the edges cannot be had: it needs an SVG displacement map
+   inside backdrop-filter, which only Chromium draws — WebKit, and so every
+   browser on her iPhone, ignores it. What remains is a translucent capsule
+   that blurs what scrolls under it, and a light rim instead of a border in
+   the page's own colours.
+
+   Behind @supports so a browser without backdrop-filter keeps the opaque
+   capsule above: a translucent bar that does not blur puts text straight on
+   top of text. The -webkit- prefix is what Safari before 18 understands.
+
+   Henning chose these values from screenshots (variant B, 2026-09-14): 35%
+   and blur(8px) let a word under the bar show as a soft glow; 55% and
+   blur(20px) blurred it away until the glass was hard to notice at all.
+   Judge them in Chromium or on the phone — Playwright's Linux WebKit reports
+   backdrop-filter as supported and draws no blur (measured: a striped page
+   under blur(20px) kept its hard stripes), so a screenshot from it shows
+   sharp text through the bar that the phone does not. */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .tabbar {
+    background: color-mix(in srgb, var(--surface) 35%, transparent);
+    -webkit-backdrop-filter: blur(8px) saturate(170%);
+    backdrop-filter: blur(8px) saturate(170%);
+    border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--ink) 10%, transparent),
+      0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  .tabbar [aria-current="page"] {
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+  }
 }
 
 /* The tab screens run to the bottom edge now, under the capsule. */
