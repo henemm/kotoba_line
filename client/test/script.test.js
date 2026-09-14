@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MODES } from "../src/modes.js";
 import { modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
+import { meaningPool } from "../src/screens/session.js";
 
 describe("Japanese script off (#135)", () => {
   const kaishi = { word: "大丈夫", word_furigana: "大丈夫[だいじょうぶ]", word_reading: "だいじょうぶ" };
@@ -45,5 +46,26 @@ describe("hidden practice lines (#133)", () => {
   it("shows every line rather than none", () => {
     assert.equal(visibleModes(MODES.map((m) => m.key)).length, MODES.length);
     assert.equal(visibleModes(undefined).length, MODES.length);
+  });
+});
+
+describe("選ぶ's wrong answers (#135, #137)", () => {
+  // Furigana the way the deck writes it: the bracket follows the kanji only.
+  const kaishi = (id, word, furigana, reading, meaning) => ({ id, word, word_furigana: furigana, word_reading: reading, word_meaning: meaning });
+  const iru = kaishi(1, "居る", "居[い]る", "いる", "to exist");
+  const iruNeed = kaishi(2, "要る", "要[い]る", "いる", "to need");
+  const taberu = kaishi(3, "食べる", "食[た]べる", "たべる", "to eat");
+  const mine = (id, word, meaning) => ({ id, word, word_reading: null, word_meaning: meaning, list_name: "100 vokabeln" });
+  const densha = mine(-3, "Densha", "Zug");
+  const basu = mine(-2, "Basu", "Bus");
+  const pool = [iru, iruNeed, taberu, densha, basu];
+
+  it("never offers a look-alike word's meaning with the script off", () => {
+    assert.deepEqual(meaningPool(iru, pool, false).map((c) => c.id), [3]);
+  });
+
+  it("keeps her German lists and the English deck apart", () => {
+    assert.deepEqual(meaningPool(densha, pool, false).map((c) => c.id), [-2]);
+    assert.ok(!meaningPool(taberu, pool, true).some((c) => c.list_name));
   });
 });

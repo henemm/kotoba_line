@@ -158,7 +158,9 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
       ? []
       : run(
           "AND s.card_id IS NULL",
-          "ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC LIMIT ?",
+          // Personal cards have no rank; among them, ascending id — the order
+          // of an imported list (#137), and newest first for words she added.
+          "ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC LIMIT ?",
           [newAllowance],
         );
 

@@ -625,9 +625,7 @@ export function sessionScreen({
     // are both "iru", 帰る and 変える both "kaeru". With it on, the 24 words the
     // deck carries twice (聞く "to hear" and "to ask") had the same problem.
     // Only in 選ぶ, where the word is the question; 聞く asks about a sentence.
-    const shown = shownWord(card, japanese);
-    const candidates =
-      field === "word_meaning" ? pool.filter((c) => shownWord(c, japanese) !== shown) : pool;
+    const candidates = field === "word_meaning" ? meaningPool(card, pool, japanese) : pool;
     const options = shuffle([card, ...pickDistractors(card, candidates, 3, Math.random, field)]);
     render(
       answers,
@@ -1516,6 +1514,22 @@ export function sentenceKana(sentenceFurigana) {
     kana += text;
   });
   return kana;
+}
+
+/**
+ * The cards 選ぶ may draw a word's wrong answers from.
+ *
+ * Not one that looks exactly like this card — its meaning would be right too,
+ * and marked wrong (see `chooseFrom`). And not one whose meaning is in another
+ * language (#137): her imported lists carry the German she wrote, the deck
+ * carries English, and three English options around one German answer give the
+ * answer away. A card from one of her lists draws from her lists; any other
+ * card draws from everything else.
+ */
+export function meaningPool(card, pool, japanese = true) {
+  const shown = shownWord(card, japanese);
+  const fromList = Boolean(card.list_name);
+  return pool.filter((c) => Boolean(c.list_name) === fromList && shownWord(c, japanese) !== shown);
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */

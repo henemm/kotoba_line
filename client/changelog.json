@@ -1,5 +1,15 @@
 [
   {
+    "version": "v58",
+    "summary": "Your two Noji lists are in the app now, as your own words.",
+    "notes": [
+      "“100 vokabeln” and “1000” are under Words → your own words: German as you wrote it, romaji as you wrote it. A word that is in both lists is there twice, like in Noji.",
+      "Where a word is also in the Kaishi deck, your card has its recording and example sentence too.",
+      "To practise them: What to practise → Deck: Mine.",
+      "In “Pick the meaning”, your German words only get German wrong answers, so the language no longer gives the answer away."
+    ]
+  },
+  {
     "version": "v57",
     "summary": "You can switch off the Japanese characters, and hide the ways of practising you don't use.",
     "notes": [
