@@ -1,5 +1,12 @@
 [
   {
+    "version": "v61",
+    "summary": "The card counter at the top stays on screen when you practise one of your lists.",
+    "notes": [
+      "With a long set name like “Your set · 100 vokabeln · New”, the “1/10” at the top right was pushed off the screen. The name is now shortened with “…” instead."
+    ]
+  },
+  {
     "version": "v60",
     "summary": "Practise one of your Noji lists, and the app remembers which.",
     "notes": [
