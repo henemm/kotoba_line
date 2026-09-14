@@ -133,5 +133,14 @@ export function viewportReport() {
         app ? Math.round(app.getBoundingClientRect().height) : 0
       }`,
     ],
+    // #118: `page 812 · app 874` means the page itself can scroll by 62px,
+    // underneath the tab that is meant to. This says whether it has.
+    [
+      "Scroll",
+      (() => {
+        const root = document.scrollingElement ?? document.documentElement;
+        return `page moved ${Math.round(root.scrollTop)} of ${root.scrollHeight - root.clientHeight}`;
+      })(),
+    ],
   ];
 }

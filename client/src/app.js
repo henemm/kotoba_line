@@ -128,12 +128,13 @@ function offlineBar() {
  * the screen under it. Anywhere else the next redraw picks it up.
  */
 function replaceOfflineBar() {
-  if (!app.querySelector(":scope > nav.tabbar, :scope > .signed-out")) return;
+  if (!app.querySelector(":scope > nav.tabbar, :scope > .signed-out")) return false;
   const current = app.querySelector(":scope > .offline-bar");
   const next = offlineBar();
   if (current && next) current.replaceWith(next);
   else if (current) current.remove();
   else if (next) app.prepend(next);
+  return true;
 }
 
 function tabBar() {
@@ -202,6 +203,10 @@ function currentScreen() {
       resumable: state.resumable,
       onResume: resumeSession,
       numbers: practiseNumbers(),
+      // #118: a rebuild used to put her back at the top — under her finger,
+      // mid-swipe, whenever the settings, the own-deck count or a sync
+      // arrived. Read before render() replaces the old tab.
+      scrollTop: app.querySelector(":scope > .practise")?.scrollTop ?? 0,
     });
   }
   if (state.tab === "stats") return statsScreen({ onBrowse: openBrowse });
@@ -863,12 +868,19 @@ subscribe(({ waiting, sent, status }) => {
     clearTimeout(clearBarTimer);
     clearBarTimer = setTimeout(() => {
       state.justSent = 0;
-      renderApp();
+      // #118: only the strip changes, so only the strip is swapped. This used
+      // to rebuild the practise tab two seconds after every sync, which threw
+      // her back to the top of it while she was scrolling.
+      if (!replaceOfflineBar()) renderApp();
     }, 2000);
   }
   // Design 25: the strip belongs to the tab screens. During a session there is
   // nothing on screen for this to change, so it does not ask for a redraw.
-  if (!state.session) renderApp();
+  if (state.session) return;
+  // Reviews that went up change the due count, which the tab has to be
+  // rebuilt to show. A count of waiting ones changes the strip and nothing
+  // else (#118).
+  if (sent > 0 || !replaceOfflineBar()) renderApp();
 });
 
 // §7 and #93: registers the worker, and asks her when a newer one is waiting.

@@ -45,6 +45,8 @@ export function practiseScreen({
   // every rebuild of this tab; building the tab used to ask again itself, and
   // a normal start asked three times.
   numbers,
+  // #118: where the tab this one replaces was scrolled to.
+  scrollTop = 0,
 }) {
   const root = el("div.practise");
   render(root, el("div.loading", { text: "…" }));
@@ -86,6 +88,9 @@ export function practiseScreen({
       addWordRow(),
     );
     fill(soon);
+    // Once the rows are in: before, there is nothing to scroll and it clamps
+    // to 0. By now renderApp() has put this tab on the page.
+    if (scrollTop) root.scrollTop = scrollTop;
     // Bounded without a timer of its own: every request gives up at
     // REQUEST_TIMEOUT_MS (api.js), so this settles one way or the other.
     if (!soon) fill(await numbers.then((value) => ({ value }), (error) => ({ error })), { late: true });
