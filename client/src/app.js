@@ -186,6 +186,12 @@ function currentScreen() {
         // and a session started offline should not be blocked by it.
         api.updateSettings({ sessionLength: len }).catch(() => {});
       },
+      // The same best effort for the sound switch under the lines: muting on
+      // a train with no signal should still mute this session.
+      onReadAloud: (on) => {
+        state.settings = { ...state.settings, readAloud: on };
+        api.updateSettings({ readAloud: on }).catch(() => {});
+      },
       // 36: "tapping a line still starts a session with whatever the sheet
       // last held, so the two-tap path survives."
       // A line carries only its mode, and runs whatever the sheet last held.

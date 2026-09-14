@@ -1,5 +1,14 @@
 [
   {
+    "version": "v52",
+    "summary": "The Practise screen asks three questions, in order: what, how long, how.",
+    "notes": [
+      "“How long” now comes before the lines, so you choose it before you start. The buttons say Quick (10 cards), Normal (20 cards) and Long (up to 60).",
+      "The lines have their own heading, “How to practise”, with the number of cards due beside it.",
+      "The sound line at the bottom has a “Turn off” button, so you can mute the cards right there, for example on a quiet train. It is the same switch as in Settings."
+    ]
+  },
+  {
     "version": "v51",
     "summary": "The 10 / 20 / All buttons on the Practise screen have a heading.",
     "notes": [
