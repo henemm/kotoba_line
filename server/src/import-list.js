@@ -11,7 +11,8 @@
  *
  * Where the row names a Kaishi card (`kaishiId`), her card takes that card's
  * spelling, reading, pitch, recording and example sentence, and keeps her
- * German. The Kaishi card itself is not touched, and neither list is mixed
+ * German. Not the sentence's translation: Kaishi's is English, and on a German
+ * card it was a third language (migration 013). The Kaishi card itself is not touched, and neither list is mixed
  * into the other: a word in both of her lists is two cards, as it was in Noji.
  * Which rows may name a Kaishi card is decided before this runs, by rule
  * (see #137) — this only refuses a name that does not point at a live Kaishi
@@ -30,7 +31,7 @@ export function importList(db, userId, rows, { source = "noji", now = Date.now()
   const taken = db.prepare("SELECT 1 FROM cards WHERE id = ?");
   const kaishi = db.prepare(
     `SELECT word, word_furigana, word_reading, word_pitch, word_audio,
-            sentence, sentence_furigana, sentence_meaning, sentence_audio
+            sentence, sentence_furigana, sentence_audio
        FROM cards WHERE id = ? AND deck = 'kaishi' AND deleted_at IS NULL`,
   );
   const insert = db.prepare(
@@ -78,7 +79,7 @@ export function importList(db, userId, rows, { source = "noji", now = Date.now()
         k?.word_audio ?? null,
         k?.sentence ?? null,
         k?.sentence_furigana ?? null,
-        k?.sentence_meaning ?? null,
+        null,
         k?.sentence_audio ?? null,
         userId,
         seconds,

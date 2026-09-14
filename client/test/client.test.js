@@ -460,6 +460,8 @@ describe("which cards a mode can actually ask about", () => {
     // A card with nothing to choose between never asks the coin at all — it
     // would have said "sentence" here if it had, which is the bug this guards.
     assert.equal(speakUsesSentence(card({ sentence: null }), "random", wouldPickSentence), false);
+    // A sentence with no translation has no prompt to show (#137).
+    assert.equal(speakUsesSentence(card({ sentence_meaning: null }), "sentence"), false);
     const wouldPickWord = () => 0.9; // >= 0.5
     assert.equal(speakUsesSentence(card(), "random", wouldPickWord), false);
   });
