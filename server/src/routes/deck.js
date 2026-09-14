@@ -148,6 +148,8 @@ export default async function deckRoutes(app) {
             mode: { type: "string", enum: VALID_MODES },
             limit: { type: "integer", minimum: 1, maximum: MAX_SESSION_LENGTH },
             deck: { type: "string", maxLength: 32 },
+            // One of her lists (#137), named the way Noji named it.
+            list: { type: "string", minLength: 1, maxLength: 100 },
             tag: { type: "string", maxLength: 32 },
             only: { type: "string", enum: ONLY_MODES },
           },
@@ -181,7 +183,7 @@ export default async function deckRoutes(app) {
       // tab draws "Next cards due" and the counted offers, so they come with
       // that answer rather than costing the tab another request.
       if (!answer.filtered && answer.cardIds.length === 0) {
-        answer.outlook = outlookForUser(db, req.user.id);
+        answer.outlook = outlookForUser(db, req.user.id, undefined, req.query);
       }
       return answer;
     },

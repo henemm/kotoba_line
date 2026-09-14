@@ -1076,15 +1076,24 @@ export function sessionScreen({
   /** めくる — the classic flashcard, and the only mode with four ratings. */
   function drawFlip(card, area, answers) {
     prime(card.word_audio, card.sentence && card.sentence_audio);
-    render(
-      area,
-      wordHeading(card),
-      speaker(card.word, card.word_audio),
-      // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
-      // "what does it say" — a romaji line here does not spoil the flip.
-      romajiLine(card),
-    );
-    if (readAloud) say(card.word, card.word_audio);
+    if (flipsMeaningFirst(card)) {
+      // No speaker and no reading aloud: the word is the answer.
+      render(
+        area,
+        el("span.prompt-label", { text: "In Japanese" }),
+        el("p.meaning", { text: card.word_meaning ?? "" }),
+      );
+    } else {
+      render(
+        area,
+        wordHeading(card),
+        speaker(card.word, card.word_audio),
+        // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
+        // "what does it say" — a romaji line here does not spoil the flip.
+        romajiLine(card),
+      );
+      if (readAloud) say(card.word, card.word_audio);
+    }
 
     render(
       answers,
@@ -1101,32 +1110,53 @@ export function sessionScreen({
   }
 
   function revealFlip(card, area, answers) {
-    // #113: the word stays where the front showed it.
-    const settle = holdInPlace(area, ".word");
-    render(
-      area,
-      el(
-        // Not `.reveal`: this is the front, staying — it does not rise in.
-        "div.word-line",
-        {},
-        wordHeading(card),
-        // The front of the card carries this button; before #32 the flip took
-        // it away, so the one gesture that had worked a second earlier stopped
-        // working exactly when the reading was finally on screen to check it
-        // against.
-        speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
-      ),
-      // `word_reading` for her own words (#85): `word_furigana` is Anki's
-      // bracket notation and is always NULL on a card she wrote, so the
-      // reading she typed was stored and never shown. Plain kana passes
-      // through `kanaReading` unchanged.
-      reading(card.word_furigana || card.word_reading, card.word, card),
-      romajiLine(card),
-      el("div.meaning.reveal", { text: card.word_meaning }),
-      card.sentence ? revealedSentence(card) : null,
-      card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
-    );
-    if (readAloud && card.sentence) say(card.sentence, card.sentence_audio, { rate: 0.85 });
+    const meaningFirst = flipsMeaningFirst(card);
+    // #113: the word stays where the front showed it — or, with the meaning on
+    // the front (#137), the meaning does, and the word comes in under it.
+    const settle = holdInPlace(area, meaningFirst ? ".prompt-label" : ".word");
+    if (meaningFirst) {
+      render(
+        area,
+        el("span.prompt-label", { text: "In Japanese" }),
+        el("p.meaning", { text: card.word_meaning ?? "" }),
+        el(
+          "div.word-line.reveal",
+          {},
+          wordHeading(card),
+          speaker(card.word, card.word_audio, { small: true, label: "Hear the word" }),
+        ),
+        reading(card.word_furigana || card.word_reading, card.word, card),
+        romajiLine(card),
+        card.sentence ? revealedSentence(card) : null,
+        card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
+      );
+      if (readAloud) say(card.word, card.word_audio);
+    } else {
+      render(
+        area,
+        el(
+          // Not `.reveal`: this is the front, staying — it does not rise in.
+          "div.word-line",
+          {},
+          wordHeading(card),
+          // The front of the card carries this button; before #32 the flip took
+          // it away, so the one gesture that had worked a second earlier stopped
+          // working exactly when the reading was finally on screen to check it
+          // against.
+          speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+        ),
+        // `word_reading` for her own words (#85): `word_furigana` is Anki's
+        // bracket notation and is always NULL on a card she wrote, so the
+        // reading she typed was stored and never shown. Plain kana passes
+        // through `kanaReading` unchanged.
+        reading(card.word_furigana || card.word_reading, card.word, card),
+        romajiLine(card),
+        el("div.meaning.reveal", { text: card.word_meaning }),
+        card.sentence ? revealedSentence(card) : null,
+        card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
+      );
+      if (readAloud && card.sentence) say(card.sentence, card.sentence_audio, { rate: 0.85 });
+    }
 
     // §6 and screen 41: hard and easy are offered here and nowhere else,
     // because this is the one mode where she is already making a judgement —
@@ -1526,6 +1556,18 @@ export function sentenceKana(sentenceFurigana) {
  * answer away. A card from one of her lists draws from her lists; any other
  * card draws from everything else.
  */
+/**
+ * Whether めくる shows the meaning first (#137).
+ *
+ * Her Noji lists were learned that way round — German on the front, the
+ * Japanese on the back — and a card from them keeps it. The Kaishi deck keeps
+ * the word on the front: its meanings are English, and those cards were never
+ * asked the other way. Decided by where a card came from rather than by a
+ * setting, so one session over both decks asks each card the way it was
+ * written.
+ */
+export const flipsMeaningFirst = (card) => Boolean(card?.list_name);
+
 export function meaningPool(card, pool, japanese = true) {
   const shown = shownWord(card, japanese);
   const fromList = Boolean(card.list_name);

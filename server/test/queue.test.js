@@ -77,9 +77,10 @@ describe("shuffle", () => {
 });
 
 describe("what counts as a chosen session (§5a)", () => {
-  it("is any filter at all", () => {
+  it("is a topic or an only — not the deck or list she practises in (#137)", () => {
     assert.equal(isFiltered({}), false);
-    assert.equal(isFiltered({ deck: "personal" }), true);
+    assert.equal(isFiltered({ deck: "personal" }), false);
+    assert.equal(isFiltered({ deck: "personal", list: "100 vokabeln" }), false);
     assert.equal(isFiltered({ tag: "food" }), true);
     assert.equal(isFiltered({ only: "starred" }), true);
     assert.equal(isFiltered({ mode: "choose" }), false, "a mode is not a filter");
@@ -156,9 +157,27 @@ describe("queueForUser", () => {
       "the daily limit is spent",
     );
 
-    const chosen = queueForUser(db, user.id, { deck: "personal", limit: 40 }, NOW, () => 0);
+    const chosen = queueForUser(db, user.id, { only: "new", limit: 40 }, NOW, () => 0);
     assert.ok(chosen.cardIds.length > 0, "a chosen session still has cards");
     assert.equal(chosen.filtered, true);
+    await app.close();
+  });
+
+  it("keeps the daily limit inside a deck she practises in (#137)", async () => {
+    const { app, db, user } = await fixture();
+    const events = Array.from({ length: 15 }, (_, i) => ({
+      id: uid(i), card_id: i + 1, mode: "choose", rating: 3, reviewed_at: NOW - 3600,
+    }));
+    ingestEvents(db, user.id, events, NOW);
+
+    const mine = queueForUser(db, user.id, { deck: "personal", limit: 40 }, NOW, () => 0);
+    assert.equal(mine.cardIds.length, 0, "her own words wait for tomorrow like the rest");
+    assert.equal(mine.filtered, false);
+    assert.equal(mine.newCapReached, true, "and the answer says why the set is empty");
+    assert.equal(
+      queueForUser(db, user.id, { deck: "personal", only: "new", limit: 40 }, NOW, () => 0).newCapReached,
+      false,
+    );
     await app.close();
   });
 

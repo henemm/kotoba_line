@@ -1,5 +1,14 @@
 [
   {
+    "version": "v60",
+    "summary": "Practise one of your Noji lists, and the app remembers which.",
+    "notes": [
+      "What to practise → Deck: Mine → List: pick “100 vokabeln” or “1000”. The app opens on that list again next time, until you change it or tap Reset.",
+      "The cards due, the new words per day and “Nothing due today” count only that list.",
+      "In “Flip the card”, words from your lists show the German first, like in Noji. Flip to see the Japanese."
+    ]
+  },
+  {
     "version": "v59",
     "summary": "With the Japanese characters switched off, the app's name is in Latin letters too.",
     "notes": [

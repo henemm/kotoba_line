@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MODES } from "../src/modes.js";
 import { appName, modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
-import { meaningPool } from "../src/screens/session.js";
+import { flipsMeaningFirst, meaningPool } from "../src/screens/session.js";
 
 describe("Japanese script off (#135)", () => {
   const kaishi = { word: "大丈夫", word_furigana: "大丈夫[だいじょうぶ]", word_reading: "だいじょうぶ" };
@@ -74,6 +74,13 @@ describe("選ぶ's wrong answers (#135, #137)", () => {
 
   it("never offers a look-alike word's meaning with the script off", () => {
     assert.deepEqual(meaningPool(iru, pool, false).map((c) => c.id), [3]);
+  });
+
+  it("asks めくる from her Noji lists German first, and the Kaishi deck word first (#137)", () => {
+    assert.equal(flipsMeaningFirst(densha), true);
+    assert.equal(flipsMeaningFirst(taberu), false);
+    // A word she added in the app herself belongs to no list.
+    assert.equal(flipsMeaningFirst({ ...taberu, list_name: null }), false);
   });
 
   it("keeps her German lists and the English deck apart", () => {

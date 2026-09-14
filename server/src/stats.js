@@ -287,6 +287,19 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     .all(userId, ...visible.params, userId)
     .map((t) => ({ ...t, own: Boolean(t.own) }));
 
+  // Her imported lists (#137), each with its cards, in the order they came
+  // in — the set sheet offers them beside the decks. A list lives on her own
+  // cards only, so `owner_id` alone decides whose they are.
+  const lists = db
+    .prepare(
+      `SELECT list_name AS list, count(*) AS total
+         FROM cards
+        WHERE owner_id = ? AND deleted_at IS NULL AND list_name IS NOT NULL
+        GROUP BY list_name
+        ORDER BY min(id)`,
+    )
+    .all(userId);
+
   return {
     xp,
     level,
@@ -309,5 +322,6 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     cardsSeen: seenCardIds.size,
     maturity,
     topics,
+    lists,
   };
 }
