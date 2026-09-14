@@ -1,3 +1,4 @@
+import { canonicalDeckKey } from "./decks.js";
 import { MODE_KEYS } from "./settings.js";
 
 /**
@@ -14,7 +15,9 @@ import { MODE_KEYS } from "./settings.js";
  */
 export const LIST_NEW_PER_DAY = 10;
 
-export function deckSettings(db, userId, deckKey) {
+export function deckSettings(db, userId, key) {
+  // An old spelling ('list:<name>') reads the same row as 'deck:<id>' (migration 016).
+  const deckKey = canonicalDeckKey(db, userId, key) ?? key;
   const row = db
     .prepare("SELECT hidden_modes, new_per_day FROM deck_settings WHERE user_id = ? AND deck_key = ?")
     .get(userId, deckKey);
@@ -28,8 +31,13 @@ export function deckSettings(db, userId, deckKey) {
   };
 }
 
-/** A partial update, like the overall settings: only the keys that were sent. */
-export function updateDeckSettings(db, userId, deckKey, patch, now = Date.now()) {
+/**
+ * A partial update, like the overall settings: only the keys that were sent.
+ * Undefined for a deck that is not hers or no longer exists.
+ */
+export function updateDeckSettings(db, userId, key, patch, now = Date.now()) {
+  const deckKey = canonicalDeckKey(db, userId, key);
+  if (!deckKey) return undefined;
   const current = db
     .prepare("SELECT hidden_modes, new_per_day FROM deck_settings WHERE user_id = ? AND deck_key = ?")
     .get(userId, deckKey);
