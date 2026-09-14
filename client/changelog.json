@@ -1,5 +1,12 @@
 [
   {
+    "version": "v51",
+    "summary": "The 10 / 20 / All buttons on the Practise screen have a heading.",
+    "notes": [
+      "The three buttons under the lines now say “How many cards” above them. They choose how many cards you practise in one go: 10, 20, or all that are due."
+    ]
+  },
+  {
     "version": "v50",
     "summary": "A new tab, Words, for finding, starring and adding words.",
     "notes": [
