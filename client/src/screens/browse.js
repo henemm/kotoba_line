@@ -1,6 +1,7 @@
 import { OfflineError, api } from "../api.js";
 import { loadDeck } from "../deck.js";
 import { toRomaji } from "../romaji.js";
+import { setStar } from "../stars.js";
 import { kanaReading } from "./session.js";
 import { el, num, render } from "../ui/dom.js";
 
@@ -18,7 +19,12 @@ import { el, num, render } from "../ui/dom.js";
  * The point of the screen is the starred set, not the search: starring is how
  * she builds a session out of exactly the cards she wants, and everything else
  * here exists to help her find one. So idle is not empty (31) — it opens on
- * what she has already starred, with the practise button already live.
+ * what she has already starred.
+ *
+ * Design 34's "Practise N starred" footer is gone (Henning, 2026-09-14): a
+ * session is started from the Practise tab, where "What to practise" offers
+ * ★ Starred alongside the other sets, and a second start button here was one
+ * more place that looked like the way in.
  */
 
 /** 32: "the list renders 50 rows and pages on scroll". */
@@ -88,7 +94,6 @@ function romajiSpan(card) {
 }
 
 export function browseScreen({
-  onPractiseStarred,
   onAddWord,
   onOwnDeck,
   onTopics,
@@ -142,7 +147,7 @@ export function browseScreen({
   // ── chrome ──────────────────────────────────────────────────────
 
   function draw() {
-    render(root, chrome(), list, footer());
+    render(root, chrome(), list);
     drawList();
   }
 
@@ -209,7 +214,6 @@ export function browseScreen({
     // The input node is reused, so its value and caret survive the redraw;
     // only focus itself needs restoring, since detaching it blurred it.
     if (hadFocus) search.focus();
-    root.replaceChild(footer(), root.lastChild);
   }
 
   function countLabel() {
@@ -235,10 +239,13 @@ export function browseScreen({
     render(
       list,
       idle ? ownBlock() : null,
-      // 31: idle opens on the starred set, and says so.
-      !state.q && !state.starredOnly && state.starred
-        ? el("span.browse-section", { text: "Starred recently" })
-        : null,
+      // 31 has idle open on the starred set, under "Starred recently". The
+      // idle list has only ever been the whole deck, most common first — the
+      // request sends no `starred` — so that heading sat over する and 事 as
+      // soon as one card anywhere was starred (seen 2026-09-14 with 食べる
+      // starred). The heading says what the list is; the ★ chip above is the
+      // starred set.
+      idle ? el("span.browse-section", { text: "All words, most common first" }) : null,
       el("div.rows", {}, state.cards.map(row)),
       !state.q && !state.starredOnly
         ? el("p.browse-note", {
@@ -268,27 +275,25 @@ export function browseScreen({
       text: hasLiveData && card.starred ? "★" : "☆",
     });
 
-    // 32: "one tap on the star writes immediately and the footer count changes
-    // under her hand — that is the whole confirmation."
+    // 32: "one tap on the star writes immediately and the count changes under
+    // her hand — that is the whole confirmation."
+    //
+    // Through `setStar`, the one way a star reaches the server. This used to
+    // call the API's star request itself, and #83 made the server require the
+    // `changedAt` that only `setStar` sends: every star tapped here since came
+    // back 400 and was put back, so starring on this tab did nothing (measured
+    // on the live server, 2026-09-14). `setStar` never throws — a star with no
+    // connection waits in its queue — so there is nothing to undo here.
     if (hasLiveData) {
-      star.addEventListener("click", async () => {
+      star.addEventListener("click", () => {
         const wanted = !card.starred;
         card.starred = wanted;
         state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
         star.textContent = wanted ? "★" : "☆";
+        star.setAttribute("aria-label", `${wanted ? "Unstar" : "Star"} ${card.word}`);
         star.setAttribute("aria-pressed", String(wanted));
         drawChrome();
-
-        try {
-          await api.star(card.id, wanted);
-        } catch {
-          // Put it back rather than leave a star that is not on the server.
-          card.starred = !wanted;
-          state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? -1 : 1));
-          star.textContent = card.starred ? "★" : "☆";
-          star.setAttribute("aria-pressed", String(card.starred));
-          drawChrome();
-        }
+        setStar(card.id, wanted);
       });
     }
 
@@ -394,23 +399,6 @@ export function browseScreen({
           )
         : null,
     ];
-  }
-
-  // ── footer ──────────────────────────────────────────────────────
-
-  function footer() {
-    // 34: "at zero starred the button goes inert."
-    const n = state.starred ?? 0;
-    return el(
-      "div.browse-foot",
-      {},
-      el("button.btn-primary", {
-        type: "button",
-        disabled: n === 0,
-        text: n === 0 ? "Practise starred" : `Practise ${num(n)} starred`,
-        onclick: () => onPractiseStarred?.(),
-      }),
-    );
   }
 
   // ── loading ─────────────────────────────────────────────────────
