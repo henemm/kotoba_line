@@ -95,6 +95,8 @@ const state = {
     speakSource: "sentence",
     japaneseScript: true,
     hiddenModes: [],
+    // #137, v65: the default Henning chose, and what index.html drew with.
+    appearance: "light",
   },
   online: navigator.onLine,
   // 52: the server is reachable and the cookie is not. Two flags, because the
@@ -1035,7 +1037,22 @@ function keepSettings(settings) {
   state.settings = settings;
   state.signInScript = settings.japaneseScript;
   nameTheDocument(settings.japaneseScript);
+  applyAppearance(settings.appearance);
   setMeta("settings", settings).catch(() => {});
+}
+
+/**
+ * Light or dark (#137, v65), now and at the next start. index.html reads the
+ * copy kept here before the page draws; IndexedDB, where the rest of the
+ * settings are kept, cannot be read that early.
+ */
+function applyAppearance(appearance = "light") {
+  document.documentElement.setAttribute("data-appearance", appearance);
+  try {
+    localStorage.setItem("appearance", appearance);
+  } catch {
+    /* private mode: the next start is light, which is the default anyway */
+  }
 }
 
 /** The tab and app-switcher title follow the script switch too (#139). */

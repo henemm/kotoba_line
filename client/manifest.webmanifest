@@ -6,8 +6,8 @@
   "display": "standalone",
   "start_url": "/kotoba/",
   "scope": "/kotoba/",
-  "theme_color": "#141824",
-  "background_color": "#141824",
+  "theme_color": "#F3F4F7",
+  "background_color": "#F3F4F7",
   "orientation": "any",
   "icons": [
     { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },

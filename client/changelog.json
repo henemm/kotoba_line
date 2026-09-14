@@ -1,5 +1,13 @@
 [
   {
+    "version": "v65",
+    "summary": "The app is light now. Dark is still there in Settings.",
+    "notes": [
+      "Settings → Appearance: Light, Dark, or Like iPhone, which follows your iPhone's own light or dark setting.",
+      "The bar at the very top with the time and battery changes the next time you open the app."
+    ]
+  },
+  {
     "version": "v64",
     "summary": "Each deck has its own ways of practising and its own new cards per day.",
     "notes": [
