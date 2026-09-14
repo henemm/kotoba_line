@@ -22,6 +22,7 @@ import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from 
 import { watchViewport } from "./viewport.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
+import { appName } from "./script.js";
 
 // #123: four, where design 11 draws three. Words is where she searches, stars
 // and adds words; each of those used to be reached from somewhere else, and
@@ -55,6 +56,9 @@ const state = {
   // practise tab because it outlives it: tapping a line starts a session with
   // these, and the session that runs says so (39).
   filters: { ...DEFAULT_FILTERS },
+  // The sign-in screen's name for the app, from the settings this device last
+  // saw (#139). Set at boot and by keepSettings.
+  signInScript: true,
   topics: [],
   sheet: undefined,
   // Her own deck (27–30). `ownWords` is the count on the Words tab's own-words
@@ -634,7 +638,7 @@ async function signInAgain(pin) {
 
 function renderApp() {
   if (!state.user) {
-    render(app, signInScreen({ onSignedIn: (user) => {
+    render(app, signInScreen({ japanese: state.signInScript, onSignedIn: (user) => {
       state.user = user;
       state.tab = "practise";
       clearSignedOut();
@@ -681,6 +685,7 @@ function renderApp() {
   // 49: before anything else, because without a deck there is nothing to do.
   if (state.firstRun) {
     state.firstRunNode ??= firstRunScreen({
+      japanese: state.settings.japaneseScript,
       onReady: () => {
         state.firstRun = false;
         state.firstRunNode = undefined;
@@ -917,7 +922,14 @@ async function checkDeck() {
 /** The settings as they now stand, in memory and on the device for offline starts. */
 function keepSettings(settings) {
   state.settings = settings;
+  state.signInScript = settings.japaneseScript;
+  nameTheDocument(settings.japaneseScript);
   setMeta("settings", settings).catch(() => {});
+}
+
+/** The tab and app-switcher title follow the script switch too (#139). */
+function nameTheDocument(japanese) {
+  document.title = appName(japanese);
 }
 
 async function loadSettings() {
@@ -968,10 +980,13 @@ const sessionCheck = checkSession();
 // #133/#135: the settings this device last saw stand in until the server's
 // arrive, so an offline start keeps her script and her lines. Laid over the
 // defaults, so a setting newer than the copy on the device still has a value.
-if (remembered) {
-  const kept = await getMeta("settings");
-  if (kept) state.settings = { ...state.settings, ...kept };
-}
+const kept = await getMeta("settings");
+if (remembered && kept) state.settings = { ...state.settings, ...kept };
+// #139: the sign-in screen names the app the way this device last showed it.
+// Only the name — whoever signs in next may have other settings, and theirs
+// arrive with them.
+state.signInScript = kept?.japaneseScript ?? true;
+nameTheDocument(state.settings.japaneseScript);
 
 if (remembered) {
   state.user = remembered;

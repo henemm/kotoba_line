@@ -320,7 +320,7 @@ export function sessionScreen({
     const button = el("button.session-star", {
       type: "button",
       class: on ? "on" : undefined,
-      "aria-label": on ? `Unstar ${card.word}` : `Star ${card.word}`,
+      "aria-label": on ? `Unstar ${shownWord(card, japanese)}` : `Star ${shownWord(card, japanese)}`,
       "aria-pressed": String(on),
       text: on ? "★" : "☆",
     });
@@ -344,7 +344,7 @@ export function sessionScreen({
       button.textContent = on ? "★" : "☆";
       button.classList.toggle("on", on);
       button.setAttribute("aria-pressed", String(on));
-      button.setAttribute("aria-label", `${on ? "Unstar" : "Star"} ${card.word}`);
+      button.setAttribute("aria-label", `${on ? "Unstar" : "Star"} ${shownWord(card, japanese)}`);
     }
 
     return button;

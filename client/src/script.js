@@ -44,9 +44,23 @@ export function shownWord(card, japanese) {
   return wordRomaji(card) ?? card.word;
 }
 
-/** Whether `shownWord` gave Japanese script — for the font class. */
+const SCRIPT = /[぀-ヿ㐀-鿿々]/;
+
+/**
+ * Whether `shownWord` gave Japanese script — for the font class.
+ *
+ * Read off the characters rather than off the switch: the words from her Noji
+ * lists that Kaishi could not fill in are romaji already ("Densha", #137), and
+ * `toRomaji` leaves a macron like "Ōkii" undone, so neither the switch nor a
+ * missing romaji says what is actually on the card.
+ */
 export function showsScript(card, japanese) {
-  return japanese || wordRomaji(card) === undefined;
+  return SCRIPT.test(shownWord(card, japanese) ?? "");
+}
+
+/** The app's name as a heading (#139): the Latin one Henning chose, with the script off. */
+export function appName(japanese) {
+  return japanese ? "ことばライン" : "Kotoba Line";
 }
 
 /** A mode's name: 選ぶ, or "Pick the meaning". */

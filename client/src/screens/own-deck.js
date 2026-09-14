@@ -180,7 +180,7 @@ export function addWordScreen({
       el(
         "div.sheet",
         {},
-        el("h2.sheet-title", { text: `Delete ${card.word}?` }),
+        el("h2.sheet-title", { text: `Delete ${shownWord(card, japanese)}?` }),
         el("p.sheet-body", {
           text: "It leaves your deck and your sessions. What you have already practised still counts towards your streak and XP.",
         }),

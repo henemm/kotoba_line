@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { el, num, render } from "../ui/dom.js";
 import { getMeta, putCards, setMeta } from "../store.js";
+import { appName } from "../script.js";
 
 /**
  * Getting the deck — design 49.
@@ -34,7 +35,7 @@ export async function needsDeck(cardCount) {
   return cardCount === 0;
 }
 
-export function firstRunScreen({ onReady }) {
+export function firstRunScreen({ onReady, japanese = true }) {
   const root = el("div.first-run");
   const state = { got: 0, total: undefined, paused: false, failed: false };
 
@@ -104,7 +105,7 @@ export function firstRunScreen({ onReady }) {
       el(
         "div.first-body",
         {},
-        el("h1.first-title.jp", { text: "ことばライン" }),
+        el(japanese ? "h1.first-title.jp" : "h1.first-title", { text: appName(japanese) }),
         el(
           "div.first-progress",
           {},

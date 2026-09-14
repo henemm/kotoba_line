@@ -1,5 +1,13 @@
 [
   {
+    "version": "v59",
+    "summary": "With the Japanese characters switched off, the app's name is in Latin letters too.",
+    "notes": [
+      "Settings → Japanese → Japanese script. Off: the app is called “Kotoba Line” on the sign-in screen, and no Japanese characters are left anywhere on the screens.",
+      "Words from your Noji lists that are written in romaji now use the same typeface as the rest of the romaji."
+    ]
+  },
+  {
     "version": "v58",
     "summary": "Your two Noji lists are in the app now, as your own words.",
     "notes": [
