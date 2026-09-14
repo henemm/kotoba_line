@@ -1,9 +1,7 @@
 import { answerSoon } from "../api.js";
-import { modeByKey } from "../modes.js";
 import { modeName, visibleModes } from "../script.js";
-import { describe } from "../resume.js";
-import { isDefault, summaryLine } from "./choose-set.js";
-import { el, render, station } from "../ui/dom.js";
+import { activeLabel, isDefault } from "./choose-set.js";
+import { el, num, render } from "../ui/dom.js";
 
 /** "1 card", "20 cards" — design 10's offers lead with the count. */
 const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
@@ -38,19 +36,41 @@ const SESSION_LENGTHS = [
 ];
 
 /**
- * Designs 10 and 15. One tab, two moods.
+ * What the one button on a deck page says (#137), when only one way of
+ * practising is switched on: what the session will do, as Noji's "Karten
+ * lernen" does, rather than the name of a setting.
+ */
+const START_LABELS = {
+  choose: "Pick the meanings",
+  listen: "Listen to the cards",
+  speak: "Say the cards aloud",
+  type: "Type the words",
+  flip: "Flip the cards",
+};
+
+function startLabel(mode) {
+  return START_LABELS[mode.key] ?? mode.en;
+}
+
+/**
+ * A deck's page (#137) — designs 10 and 15, inside one deck.
  *
- * On a normal day: a single line of due count, then the four lines. When
- * nothing is due, a block goes *on top* rather than replacing the screen —
- * the four lines stay one tap away, so a session is never more than one tap
- * from here.
+ * Reached from the deck list (decks.js), the way Noji's deck page is: the
+ * cards for today as one large number, what they are made of, then how long
+ * and how to practise. With one way of practising switched on, that is one
+ * button, like Noji's "Karten lernen"; with several, one plain row each. The
+ * metro-line stations are gone from here — Henning: the red circles "kamen
+ * nicht gut an" — and so is the rail between them.
+ *
+ * When nothing is due, the offers of design 15 sit under the number, inside
+ * this deck: the queue's outlook is counted with the same deck key.
  */
 export function practiseScreen({
+  deck,
+  onBack,
   onStart,
   onDrillTopic,
   onChooseSet,
-  onResume,
-  resumable,
   filters = {},
   sessionLength,
   onSessionLength,
@@ -68,20 +88,13 @@ export function practiseScreen({
   // #133: the lines she has switched off in Settings.
   hiddenModes = [],
 }) {
-  const root = el("div.practise");
+  const root = el("div.practise.deck-page");
   render(root, el("div.loading", { text: "…" }));
 
-  // #65: the resume card sits on top of an already-tight layout, and only
-  // this state needs the extra room below tightened further — see the
-  // media-query rule this class gates in screens.css.
-  const hasResume = Boolean(resumable && onResume);
-  root.classList.toggle("has-resume", hasResume);
-
-  // What the numbers change, and nothing else: the slot above the chooser
-  // holds 15's nothing-due block, the one beside the lines' heading holds the
-  // due count.
+  // What the numbers change, and nothing else: the large number and its
+  // parts, and under them 15's offers on a day with nothing due.
+  const today = el("div.deck-today");
   const top = el("div.due-slot");
-  const above = el("span.due-slot");
 
   load();
 
@@ -103,16 +116,13 @@ export function practiseScreen({
     // on a phone is where the thumb already is.
     render(
       root,
+      header(),
+      today,
       top,
-      resumeRow(),
-      setLine(),
       lengthPicker(),
-      linesHead(),
       linesBlock(),
+      setLine(),
       soundNote(),
-      // #123: "Find and star words" and "Add a word" were the last two rows
-      // here. They are the Words tab now, which is also what lets this tab fit
-      // on the screen with the Carry-on card showing, rather than scrolling.
     );
     fill(soon);
     // Once the rows are in: before, there is nothing to scroll and it clamps
@@ -131,38 +141,49 @@ export function practiseScreen({
    * count — the slot has to say it.
    */
   function fill(outcome, { late = false } = {}) {
-    if (late && outcome?.value?.due === 0) {
-      // Once the lines are on screen, nothing goes in above them. 15's block
-      // arriving late — it came to 365 px with three buttons in it, measured
-      // in WebKit — moved all four lines out from under a thumb already on
-      // its way to one. So a late nothing-due is one line in the place the
-      // "Checking" line held, and the offers wait for the next build of the
-      // tab: after a session, or on coming back to it.
-      render(top);
-      render(above, "Nothing due today");
-      return;
-    }
     if (!outcome || outcome.error) {
       render(top);
-      // Beside the heading, on its one line, so the lines do not move when
-      // one becomes the other.
-      render(above, outcome ? "Couldn't check" : "Checking…");
+      // In the number's place, so nothing below moves when one becomes the
+      // other. A count that could not be had is not zero.
+      render(today, el("div.deck-today-state", { text: outcome ? "Couldn't check" : "Checking…" }));
       return;
     }
-    // #91: `outlook` carries the design's "Next cards due" row and the offers'
-    // counts (#90); the server sends it with an empty day's queue.
-    const { due, outlook, stats } = outcome.value;
-    // #58: the due count sits right above the lines, not above the chooser,
-    // where WHAT TO PRACTISE read as what it was introducing. Since the three
-    // headings it is no longer the instruction — "How to practise" is — just
-    // the count beside it.
-    //
-    // #70: "nothing due" and "carry on where you left off" both answer
-    // "what do you do now", and stacked together they push the four lines
-    // themselves below the fold. Carry on is the more specific answer, so
-    // when it's on offer the generic suggestions step aside for it.
-    render(top, ...(due > 0 || hasResume ? [] : nothingDue(outlook, stats)));
-    render(above, ...(due > 0 ? [`${cards(due)} due`] : []));
+    const { due, today: counts, outlook, stats } = outcome.value;
+    const total = counts?.total ?? due;
+    render(
+      today,
+      el("span.deck-today-n.tabular", { text: num(total) }),
+      el("span.deck-today-label", { text: total === 1 ? "card for today" : "cards for today" }),
+      counts
+        ? el(
+            "div.deck-today-split",
+            {},
+            part(counts.fresh, "new"),
+            part(counts.review, "to review"),
+          )
+        : null,
+    );
+    // Once the lines are on screen, nothing goes in above them: 15's offers
+    // arriving late moved the lines out from under a thumb on its way to one
+    // (measured in WebKit, 365 px). They wait for the next build of the page.
+    if (late) return;
+    render(top, ...(total > 0 ? [] : nothingDue(outlook, stats)));
+  }
+
+  function part(n, label) {
+    return el("span.deck-today-part", {}, el("b.tabular", { text: num(n ?? 0) }), el("span", { text: label }));
+  }
+
+  /** The deck's name, and the way back to the list. */
+  function header() {
+    return el(
+      "div.deck-head",
+      {},
+      onBack
+        ? el("button.deck-back", { type: "button", "aria-label": "Your decks", onclick: onBack, text: "‹ Decks" })
+        : null,
+      el("h1.deck-name", { text: deck?.name ?? "" }),
+    );
   }
 
   function nothingDue(outlook, stats) {
@@ -180,7 +201,9 @@ export function practiseScreen({
       );
     }
 
-    const behind = weakestTopic(stats);
+    // Only in Kaishi: the topics are the deck's, and in one of her lists the
+    // topic furthest behind would start a session of Kaishi cards.
+    const behind = deck?.key === "kaishi" ? weakestTopic(stats) : undefined;
     if (behind) {
       offers.push(
         offer("Drill a topic", `${behind.tag} is furthest behind, ${behind.seen} of ${behind.total}`, () =>
@@ -198,13 +221,6 @@ export function practiseScreen({
     }
 
     return [
-      el(
-        "div.head",
-        {},
-        // #135: おつかれさま is decoration; "Well done" is what it says.
-        japanese ? el("h1.jp", { text: "おつかれさま" }) : el("h1", { text: "Well done" }),
-        el("p", { text: "Nothing due today." }),
-      ),
       nextDue
         ? el(
             "div.next-due",
@@ -216,13 +232,6 @@ export function practiseScreen({
           )
         : null,
       offers.length > 0 ? el("div.offers", {}, offers) : null,
-      el(
-        "div.rule",
-        {},
-        el("span.line"),
-        el("span.text", { text: "Or pick a line" }),
-        el("span.line"),
-      ),
     ];
   }
 
@@ -230,100 +239,58 @@ export function practiseScreen({
     return el(
       "button.offer",
       { type: "button", onclick: onClick },
-      station("var(--ink)", 22, 4),
       el("span.copy", {}, el("span.title", { text: title }), el("span.detail", { text: detail })),
+      el("span.chevron", { "aria-hidden": "true", text: "›" }),
     );
   }
 
   /**
-   * 36 opens from here, "never in the way of them": one line above the four,
-   * so tapping a line still starts a session with whatever the sheet last
-   * held. On an ordinary day it says what the scheduler chose, which is also
-   * how she learns the sheet exists.
+   * 36's sheet, now for what is left to narrow inside a deck: a topic, starred
+   * cards, recent mistakes, new cards only. Below the lines rather than above
+   * them — the deck is the choice that matters, and it was made on the list.
+   * What is chosen is said on the row, so a narrowed session is never a
+   * surprise.
    */
   function setLine() {
     if (!onChooseSet) return null;
     const chosen = !isDefault(filters);
     return el(
-      "div.set-block",
-      {},
-      // #34: the summary alone reads as a fact about the session — "Both decks
-      // · any topic · due today" is a sentence, not an offer. The label is
-      // what says there is a choice here at all, and it is needed precisely
-      // when nothing has been chosen, which is every first look.
-      el("span.set-label", { text: "What to practise" }),
-      el(
-        "button.set-line",
-        { type: "button", onclick: onChooseSet },
-        el("span", { class: chosen ? "chosen" : undefined, text: summaryLine(filters) }),
-        el("span.chevron", { "aria-hidden": "true", text: "›" }),
-      ),
+      "button.deck-more",
+      { type: "button", onclick: onChooseSet },
+      el("span", { text: chosen ? `Only: ${activeLabel({ tag: filters.tag, only: filters.only })}` : "More options" }),
+      el("span.chevron", { "aria-hidden": "true", text: "›" }),
     );
   }
 
   /**
-   * 51 — the unfinished session as one card above the four lines, carrying the
-   * mode colour it belongs to. The lines stay exactly where they were: this is
-   * an offer, not a detour.
+   * How to practise (#137). One way switched on: one button that says what it
+   * does, like Noji's "Karten lernen". Several: a plain row each. A session
+   * she left in a line is still offered on the deck list.
    */
-  function resumeRow() {
-    if (!resumable || !onResume) return null;
-    const mode = modeByKey(resumable.mode) ?? modeByKey("choose");
-    return el(
-      "div.resume-block",
-      {},
-      el(
-        "button.resume-row",
-        { type: "button", onclick: () => onResume(resumable) },
-        station(mode.colour, 26, 5),
-        el(
-          "span.copy",
-          {},
-          el("span.title", { text: `Carry on with ${modeName(mode, japanese)}` }),
-          el("span.detail", { text: describe(resumable) }),
-        ),
-        el("span.chevron", { text: "›" }),
-      ),
-      el(
-        "div.rule",
-        {},
-        el("span.line"),
-        el("span.text", { text: "Or start fresh" }),
-        el("span.line"),
-      ),
-    );
-  }
-
-  function linesHead() {
-    return el(
-      "div.lines-head",
-      {},
-      el("span.set-label", { text: "How to practise" }),
-      el("span.due-count", {}, above),
-    );
-  }
-
   function linesBlock() {
+    const modes = visibleModes(hiddenModes);
+    if (modes.length === 1) {
+      const [mode] = modes;
+      return el(
+        "div.deck-start-block",
+        {},
+        el("button.deck-start", { type: "button", onclick: () => onStart({ mode: mode.key }), text: startLabel(mode) }),
+      );
+    }
     return el(
-      "div.lines",
+      "div.deck-ways",
       {},
-      el("div.rail"),
-      // #133: a hidden line is not drawn. A session she left in one is still
-      // offered above (resumeRow) — hiding a line does not throw that away.
-      visibleModes(hiddenModes).map((mode) =>
-        el(
-          "button.line-row",
-          { type: "button", onclick: () => onStart({ mode: mode.key }) },
-          station(mode.colour, 30, 5),
+      el("span.set-label", { text: "Practise by" }),
+      el(
+        "div.deck-ways-list",
+        {},
+        modes.map((mode) =>
           el(
-            "span.copy",
-            {},
-            // #135: with the script off the English becomes the name, in the
-            // Japanese name's place, so a line stays one bold word and a hint.
-            japanese
-              ? el("span.jp", { text: mode.jp })
-              : el("span.name", { text: mode.en }),
+            "button.deck-way",
+            { type: "button", onclick: () => onStart({ mode: mode.key }) },
+            el(japanese ? "span.name.jp" : "span.name", { text: modeName(mode, japanese) }),
             japanese ? el("span.en", { text: mode.en }) : null,
+            el("span.chevron", { "aria-hidden": "true", text: "›" }),
           ),
         ),
       ),

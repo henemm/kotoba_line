@@ -163,6 +163,8 @@ export const api = {
 
   deck: (since = 0, page) => request(`/deck${query({ since, ...page })}`),
   queue: (opts) => request(`/queue${query(opts)}`),
+  // #137: her decks with their cards for today, for the practise tab.
+  decks: () => request("/decks"),
   browse: (opts) => request(`/browse${query(opts)}`),
   star: (cardId, starred, changedAt) =>
     request("/stars", { method: "POST", body: { cardId, starred, changedAt } }),

@@ -142,6 +142,46 @@ describe("migration 013: no English on her lists (#137)", () => {
   });
 });
 
+describe("her decks, for the practise tab (#137)", () => {
+  it("lists Kaishi, then her lists in the order they came in, each with its cards for today", async () => {
+    const { app, json } = await imported();
+    const { decks } = await json("/api/decks");
+    assert.deepEqual(
+      decks.map((d) => [d.key, d.name, d.cards, d.seen, d.today.total, d.today.fresh, d.today.review]),
+      [
+        ["kaishi", "Kaishi", 1, 0, 1, 1, 0],
+        ["list:list a", "list a", 2, 0, 2, 2, 0],
+        ["list:list b", "list b", 2, 0, 2, 2, 0],
+      ],
+      "no \"My words\": every word of hers came from a list",
+    );
+    await app.close();
+  });
+
+  it("adds her own words outside any list as a deck of their own", async () => {
+    const { app, db, user, json } = await imported();
+    db.prepare("UPDATE cards SET list_name = NULL WHERE import_ref = 'noji:list b:n4-0'").run();
+    const { decks } = await json("/api/decks");
+    assert.deepEqual(decks.map((d) => [d.key, d.cards]), [["kaishi", 1], ["list:list a", 2], ["list:list b", 1], ["mine", 1]]);
+    const mine = await json("/api/queue?deckKey=mine&limit=20");
+    const [only] = db.prepare("SELECT id FROM cards WHERE owner_id = ? AND list_name IS NULL").all(user.id);
+    assert.deepEqual(mine.cardIds, [only.id]);
+    await app.close();
+  });
+
+  it("runs a deck's queue by its key, and refuses a key that is not a deck", async () => {
+    const { app, json } = await imported();
+    const listB = await json(`/api/queue?deckKey=${encodeURIComponent("list:list b")}&limit=20`);
+    assert.equal(listB.cardIds.length, 2);
+    assert.deepEqual(listB.today, { total: 2, fresh: 2, review: 0 });
+    const kaishi = await json("/api/queue?deckKey=kaishi&limit=20");
+    assert.deepEqual(kaishi.cardIds, [100]);
+    const refused = await json("/api/queue?deckKey=personal");
+    assert.equal(refused.statusCode, 400);
+    await app.close();
+  });
+});
+
 describe("practising one of her lists (#137)", () => {
   it("runs only that list's cards", async () => {
     const { app, json } = await imported();

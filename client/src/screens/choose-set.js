@@ -20,12 +20,6 @@ const THIN_TOPIC = 5;
 /** 36: six topics fit before the row needs a "+3". */
 const TOPICS_SHOWN = 6;
 
-const DECKS = [
-  { value: undefined, label: "Both" },
-  { value: "kaishi", label: "Kaishi" },
-  { value: "personal", label: "Mine" },
-];
-
 const ONLY = [
   { value: undefined, label: "Due today" },
   { value: "starred", label: "★ Starred" },
@@ -34,18 +28,23 @@ const ONLY = [
 ];
 
 /** The defaults are the scheduler's own answer, so opening and closing changes nothing. */
-export const DEFAULT_FILTERS = { deck: undefined, list: undefined, tag: undefined, only: undefined };
+export const DEFAULT_FILTERS = { deckKey: undefined, tag: undefined, only: undefined };
 
+/**
+ * Whether anything was narrowed inside the deck. The deck itself is not a
+ * narrowing (#137): every session is in one, chosen on the deck list, and a
+ * session labelled "Your set · 1000" every time would say nothing.
+ *
+ * `deck` and `list` are what a session saved by v60–v62 may still carry.
+ */
 export const isDefault = (f) => !f.deck && !f.list && !f.tag && !f.only;
 
 /**
- * Where she practises: a deck, or one of her lists (#137).
- *
- * The part of the set that stays put — across sessions, "Carry on" and app
- * starts — because it is a choice about what she learns rather than about
- * this session. A topic or an `only` is for the moment and goes with it.
+ * The deck a set belongs to (#137): the part that stays put across "Carry
+ * on", "Again" and the nothing-due offers. A topic or an `only` is for the
+ * moment and goes with it.
  */
-export const scopeOf = (f = {}) => ({ deck: f.deck, list: f.list });
+export const scopeOf = (f = {}) => ({ deckKey: f.deckKey });
 
 /** What the deck part of a set is called: a list by its own name. */
 function deckLabel({ deck, list }) {
@@ -65,17 +64,18 @@ function onlyLabel(only) {
 }
 
 /**
- * 36's summary line: "Both decks · any topic · due today".
+ * 36's summary line, inside a deck (#137): "any topic · due today".
  *
- * With three filters active it truncates from the left, "because the last-set
- * filter is the one she is thinking about".
+ * With more filters than fit it truncates from the left, "because the
+ * last-set filter is the one she is thinking about". A set saved by v60–v62
+ * still names its deck or list in front.
  */
 export function summaryLine({ deck, list, tag, only }, { max = 3 } = {}) {
   const parts = [
-    deckLabel({ deck, list }) ?? "Both decks",
+    deckLabel({ deck, list }),
     tag ?? "any topic",
     only ? onlyLabel(only).toLowerCase() : "due today",
-  ];
+  ].filter(Boolean);
   if (parts.length <= max) return parts.join(" · ");
   return `… · ${parts.slice(-max).join(" · ")}`;
 }
@@ -98,8 +98,9 @@ export function activeLabel({ deck, list, tag, only }) {
 export function chooseSetScreen({
   filters,
   topics = [],
-  // Her imported lists, `{ list, total }` (#137).
-  lists = [],
+  // Topics are the Kaishi deck's (#137): in one of her lists a topic chip
+  // would only ever count zero.
+  showTopics = true,
   sessionLength = 20,
   onChange,
   onApply,
@@ -138,14 +139,13 @@ export function chooseSetScreen({
           text: "Reset",
           disabled: isDefault(chosen),
           onclick: () => {
-            Object.assign(chosen, DEFAULT_FILTERS);
+            // The deck stays: Reset is about what was narrowed inside it (#137).
+            Object.assign(chosen, DEFAULT_FILTERS, scopeOf(chosen));
             changed();
           },
         }),
       ),
-      deckGroup(),
-      listGroup(),
-      topicGroup(),
+      showTopics ? topicGroup() : null,
       onlyGroup(),
       foot(),
     );
@@ -178,63 +178,6 @@ export function chooseSetScreen({
     onChange?.({ ...chosen });
     draw();
     recount();
-  }
-
-  function deckGroup() {
-    return group(
-      "Deck",
-      el(
-        "div.segmented",
-        {},
-        DECKS.map(({ value, label }) =>
-          el("button", {
-            type: "button",
-            text: label,
-            "aria-pressed": String(chosen.deck === value),
-            onclick: () => {
-              chosen.deck = value;
-              // A list is part of her own deck; any other deck leaves it.
-              chosen.list = undefined;
-              changed();
-            },
-          }),
-        ),
-      ),
-    );
-  }
-
-  /**
-   * Her lists, under "Mine" (#137): "100 vokabeln" and "1000" as she named
-   * them in Noji, each its own set, never mixed. Shown once "Mine" is
-   * chosen, because a list is a part of her deck — the row does not stand
-   * for a fourth deck beside the three.
-   */
-  function listGroup() {
-    if (lists.length === 0 || chosen.deck !== "personal") return null;
-    return group(
-      "List",
-      el(
-        "div.chips.set-chips",
-        {},
-        el("button.chip", {
-          type: "button",
-          text: "All",
-          "aria-pressed": String(!chosen.list),
-          onclick: () => {
-            chosen.list = undefined;
-            changed();
-          },
-        }),
-        lists.map((l) =>
-          el("button.chip", {
-            type: "button",
-            text: `${l.list} ${num(l.total)}`,
-            "aria-pressed": String(chosen.list === l.list),
-            onclick: () => set("list", l.list),
-          }),
-        ),
-      ),
-    );
   }
 
   function topicGroup() {
@@ -333,7 +276,7 @@ export function chooseSetScreen({
         ? el("p.set-note", {
             text: capReached
               ? "Today's new words are done. Choose New for more."
-              : "Nothing matches all three. Change one, or reset.",
+              : "Nothing matches. Change a choice, or reset.",
           })
         : null,
       el("button.btn-primary", {

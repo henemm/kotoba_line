@@ -1,5 +1,14 @@
 [
   {
+    "version": "v63",
+    "summary": "Practise starts with your decks now, like in Noji.",
+    "notes": [
+      "The Practise tab lists Kaishi, “100 vokabeln” and “1000”, each with the number of cards waiting today. Tap one to open it.",
+      "A deck's page shows its cards for today and how to practise. With only one way of practising switched on, it's one button.",
+      "Topic, starred cards and the rest are under “More options” on the deck's page. Tap Practise at the bottom to get back to your decks."
+    ]
+  },
+  {
     "version": "v62",
     "summary": "No more English on the cards from your Noji lists.",
     "notes": [

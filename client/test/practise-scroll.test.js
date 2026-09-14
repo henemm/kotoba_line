@@ -68,15 +68,17 @@ describe("the Words tab (#123)", () => {
   // it had in Settings, and three bare buttons told nobody what they were for.
   // The browser run for v52 measured the reordered tab at 394 × 852 with the
   // Carry-on card showing: it does not scroll, last element 697, fade 740.
-  it("asks what, how long and how, in that order", () => {
+  // #137: the deck is chosen on the list before this page opens, so the page
+  // asks how long and how, and what is left to narrow comes last.
+  it("shows the deck and its cards for today, then asks how long and how", () => {
     assert.match(practise, /"aria-labelledby": "length-label"/);
-    const order = ["setLine(),", "lengthPicker(),", "linesHead(),", "linesBlock(),", "soundNote(),"].map((call) =>
+    const order = ["header(),", "today,", "lengthPicker(),", "linesBlock(),", "setLine(),", "soundNote(),"].map((call) =>
       practise.indexOf(call),
     );
     assert.ok(order.every((at) => at > 0), "every block is rendered");
     assert.deepEqual([...order].sort((a, b) => a - b), order);
-    for (const heading of ["What to practise", "How long", "How to practise"]) {
-      assert.match(practise, new RegExp(`text: "${heading}"`));
+    for (const heading of ["How long", "Practise by", "More options"]) {
+      assert.match(practise, new RegExp(`"${heading}"`));
     }
   });
 

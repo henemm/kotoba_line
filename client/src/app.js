@@ -3,6 +3,7 @@ import { signInScreen } from "./screens/signin.js";
 import { signedOutScreen } from "./screens/signed-out.js";
 import { updateSheet } from "./screens/update-sheet.js";
 import { practiseScreen } from "./screens/practise.js";
+import { decksScreen } from "./screens/decks.js";
 import { jokerSpentScreen, statsScreen, streakResetScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
@@ -56,9 +57,10 @@ const state = {
   // practise tab because it outlives it: tapping a line starts a session with
   // these, and the session that runs says so (39).
   filters: { ...DEFAULT_FILTERS },
-  // Her imported lists with their counts, for the sheet (#137). From
-  // /api/stats, like the topics.
-  lists: [],
+  // The deck whose page is open, `{ key, name }` from /api/decks (#137), or
+  // undefined on the deck list. Not kept across starts: like Noji, the app
+  // opens on the list of decks.
+  deck: undefined,
   // The sign-in screen's name for the app, from the settings this device last
   // saw (#139). Set at boot and by keepSettings.
   signInScript: true,
@@ -189,6 +191,9 @@ function goToTab(key) {
   // #106: coming back to the tab is a moment to recount — the day may have
   // turned while she was on Stats.
   if (key === "practise" && state.tab !== "practise") numbersChanged();
+  // Tapping Practise on a deck page goes back to the decks, the way a tab bar
+  // does on iOS.
+  else if (key === "practise") closeDeck();
   // Arriving at Words starts from its idle list; staying on it keeps her search.
   if (key === "words" && state.tab !== "words") state.words = undefined;
   state.tab = key;
@@ -197,8 +202,20 @@ function goToTab(key) {
 }
 
 function currentScreen() {
+  if (state.tab === "practise" && !state.deck) {
+    return decksScreen({
+      decks: deckList(),
+      onOpen: openDeck,
+      resumable: state.resumable,
+      onResume: resumeSession,
+      japanese: state.settings.japaneseScript,
+      scrollTop: app.querySelector(":scope > .practise")?.scrollTop ?? 0,
+    });
+  }
   if (state.tab === "practise") {
     return practiseScreen({
+      deck: state.deck,
+      onBack: closeDeck,
       sessionLength: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
       japanese: state.settings.japaneseScript,
@@ -236,8 +253,6 @@ function currentScreen() {
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
-      resumable: state.resumable,
-      onResume: resumeSession,
       numbers: practiseNumbers(),
       // #118: a rebuild used to put her back at the top — under her finger,
       // mid-swipe, whenever the settings, the own-deck count or a sync
@@ -253,9 +268,9 @@ function currentScreen() {
     onSettings: keepSettings,
     onSignOut: async () => {
       state.user = undefined;
-      // Her deck or list is hers (#137); whoever signs in next starts on both.
+      // Her decks are hers (#137); whoever signs in next starts on the list.
       state.filters = { ...DEFAULT_FILTERS };
-      state.lists = [];
+      state.deck = undefined;
       numbersChanged();
       state.tab = "practise";
       state.session = undefined;
@@ -296,14 +311,12 @@ function practiseNumbers() {
   if (numbers && Date.now() - numbers.at < NUMBERS_KEPT_MS) return numbers.promise;
   const entry = {
     at: Date.now(),
-    // Inside the deck or list she practises in (#137), which is what a line
-    // would run: counted over both decks, "3 cards due" and "Nothing due
-    // today" described sessions her lines never start.
+    // Inside the open deck (#137), which is what a line runs.
     promise: Promise.all([api.queue({ limit: 60, ...scopeOf(state.filters) }), api.stats()]).then(([queue, stats]) => {
       // #86: the joker notice is decided from these same numbers, so they are
       // not fetched twice.
       considerJokerNotice(stats);
-      return { due: queue.cardIds.length, outlook: queue.outlook, stats };
+      return { due: queue.cardIds.length, today: queue.today, outlook: queue.outlook, stats };
     }),
   };
   entry.promise.catch(() => {
@@ -315,6 +328,54 @@ function practiseNumbers() {
 
 function numbersChanged() {
   numbers = undefined;
+  decks = undefined;
+}
+
+/**
+ * The deck list's numbers (#137), asked and kept like the deck page's. The
+ * last answer is kept on the device, so a start without signal still lists
+ * her decks — with yesterday's counts rather than none.
+ */
+let decks;
+
+function deckList() {
+  if (decks && Date.now() - decks.at < NUMBERS_KEPT_MS) return decks.promise;
+  const entry = {
+    at: Date.now(),
+    promise: api.decks().then(
+      (answer) => {
+        setMeta("decks", answer).catch(() => {});
+        return answer;
+      },
+      async (error) => {
+        const kept = await getMeta("decks");
+        if (kept) return kept;
+        throw error;
+      },
+    ),
+  };
+  entry.promise.catch(() => {
+    if (decks === entry) decks = undefined;
+  });
+  decks = entry;
+  return entry.promise;
+}
+
+/** Into a deck's page (#137). Anything narrowed in another deck is left behind. */
+function openDeck(deck) {
+  state.deck = { key: deck.key, name: deck.name };
+  state.filters = { ...DEFAULT_FILTERS, deckKey: deck.key };
+  numbersChanged();
+  renderApp();
+}
+
+function closeDeck() {
+  if (!state.deck) return;
+  state.deck = undefined;
+  state.filters = { ...DEFAULT_FILTERS };
+  state.sheet = undefined;
+  numbersChanged();
+  renderApp();
 }
 
 /**
@@ -362,7 +423,7 @@ function openSheet() {
   state.sheet = chooseSetScreen({
     filters: state.filters,
     topics: state.topics,
-    lists: state.lists,
+    showTopics: state.deck?.key === "kaishi",
     sessionLength: state.settings.sessionLength,
     // #120: what the sheet holds is the set, Start or no Start. Written here
     // on every tap rather than on close, because loadTopics() below rebuilds
@@ -380,18 +441,9 @@ function openSheet() {
   loadTopics();
 }
 
-/**
- * What the sheet holds becomes the set (#120). The deck or list in it is also
- * kept on this device (#137), so the app opens on her list again tomorrow
- * rather than on both decks. The practise tab's due count and its nothing-due
- * block are counted inside that deck or list, so a change asks for them anew.
- */
+/** What the sheet holds becomes the set (#120), inside the open deck (#137). */
 function keepFilters(filters) {
-  const scopeChanged = JSON.stringify(scopeOf(filters)) !== JSON.stringify(scopeOf(state.filters));
-  state.filters = filters;
-  if (!scopeChanged) return;
-  setMeta("practiseScope", scopeOf(filters)).catch(() => {});
-  numbersChanged();
+  state.filters = { ...filters, ...scopeOf(state.filters) };
 }
 
 function closeSheet() {
@@ -405,7 +457,6 @@ async function loadTopics() {
   try {
     const stats = await api.stats();
     state.topics = stats.topics ?? [];
-    state.lists = stats.lists ?? [];
     if (state.sheet) {
       // Redraw the sheet now that the chips have something to show.
       openSheet();
@@ -580,6 +631,10 @@ async function offerResume() {
 /** 51. A chosen set resumes with its filter intact, dashed rule and all. */
 function resumeSession(saved) {
   state.filters = saved.filters ?? { ...DEFAULT_FILTERS };
+  // Back to the deck it belongs to when it ends (#137). A session saved
+  // before decks had one ends on the deck list.
+  const key = state.filters.deckKey;
+  state.deck = key ? { key, name: key === "kaishi" ? "Kaishi" : key === "mine" ? "My words" : key.slice(5) } : undefined;
   state.session = { mode: saved.mode, filters: state.filters, resuming: saved };
   state.summary = undefined;
   state.resumable = undefined;
@@ -1015,12 +1070,6 @@ const sessionCheck = checkSession();
 // defaults, so a setting newer than the copy on the device still has a value.
 const kept = await getMeta("settings");
 if (remembered && kept) state.settings = { ...state.settings, ...kept };
-// #137: the deck or list she last chose. Kept with the device rather than on
-// the server — one phone, and a choice that has to be there offline.
-if (remembered) {
-  const scope = await getMeta("practiseScope");
-  if (scope) state.filters = { ...DEFAULT_FILTERS, ...scopeOf(scope) };
-}
 // #139: the sign-in screen names the app the way this device last showed it.
 // Only the name — whoever signs in next may have other settings, and theirs
 // arrive with them.
