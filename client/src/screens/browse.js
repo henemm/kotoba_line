@@ -5,7 +5,15 @@ import { kanaReading } from "./session.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
- * Browse — screens 31 to 34. §5a's "browse and star".
+ * The Words tab — Browse, screens 31 to 34, and the way into her own words.
+ * §5a's "browse and star".
+ *
+ * #123: Browse used to take the screen with a back arrow, and it was reached
+ * from the practise tab, from Stats and from Settings. It is a tab of its own
+ * now: searching, starring and adding words are work with the deck, and none
+ * of them had a single home. So there is no back arrow, the title is the
+ * tab's name, and her own words (27, 30) sit at the top of the idle list,
+ * where the practise tab used to carry them.
  *
  * The point of the screen is the starred set, not the search: starring is how
  * she builds a session out of exactly the cards she wants, and everything else
@@ -79,8 +87,17 @@ function romajiSpan(card) {
   return text ? el("span.row-romaji", { text }) : null;
 }
 
-export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, romaji = false }) {
-  const root = el("div.browse");
+export function browseScreen({
+  onPractiseStarred,
+  onAddWord,
+  onOwnDeck,
+  onTopics,
+  // A function, because the count arrives after the tab is built and the tab
+  // is kept across redraws; `root.refresh()` redraws with the new one.
+  ownWords = () => 0,
+  romaji = false,
+}) {
+  const root = el("div.browse.words");
 
   const state = {
     q: "",
@@ -136,13 +153,7 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
       el(
         "div.browse-head",
         {},
-        el("button.browse-back", {
-          type: "button",
-          "aria-label": "Back",
-          text: "←",
-          onclick: onBack,
-        }),
-        el("span.browse-title", { text: "Browse" }),
+        el("span.browse-title", { text: "Words" }),
         el("span.browse-count.tabular", { text: countLabel() }),
       ),
       el(
@@ -220,8 +231,10 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
     }
     if (state.cards.length === 0) return render(list, ...nothingMatches());
 
+    const idle = !state.q && !state.starredOnly;
     render(
       list,
+      idle ? ownBlock() : null,
       // 31: idle opens on the starred set, and says so.
       !state.q && !state.starredOnly && state.starred
         ? el("span.browse-section", { text: "Starred recently" })
@@ -312,6 +325,46 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
           : null,
       ),
       star,
+    );
+  }
+
+  /**
+   * Her own words, at the top of the idle list (#123). Two rows, where the
+   * practise tab had one: that one hid the way into the list behind a
+   * chevron inside the add button, so one tap target meant two things.
+   */
+  function ownBlock() {
+    const n = ownWords();
+    return el(
+      "div.own-block",
+      {},
+      el("span.browse-section", { text: "Your own words" }),
+      el(
+        "button.add-word-row",
+        // No argument: the click event is not a word to prefill.
+        { type: "button", onclick: () => onAddWord?.() },
+        el("span.dashed-station", { text: "+" }),
+        el(
+          "span.copy",
+          {},
+          el("span.title", { text: "Add a word" }),
+          el("span.detail", { text: "Type it in with its reading and meaning" }),
+        ),
+      ),
+      n > 0
+        ? el(
+            "button.add-word-row",
+            { type: "button", onclick: () => onOwnDeck?.() },
+            el("span.dashed-station", { text: num(n) }),
+            el(
+              "span.copy",
+              {},
+              el("span.title", { text: n === 1 ? "1 word of your own" : `${num(n)} words of your own` }),
+              el("span.detail", { text: "Edit or delete them" }),
+            ),
+            el("span.chevron", { "aria-hidden": "true", text: "›" }),
+          )
+        : null,
     );
   }
 
@@ -453,6 +506,15 @@ export function browseScreen({ onBack, onPractiseStarred, onAddWord, onTopics, r
     state.page += 1;
     fetchPage();
   }
+
+  /**
+   * Redraw with fresh numbers, keeping her search (#123). For an own-words
+   * count that changed while the tab was kept. The star count is asked
+   * again too: a session run from here may have starred or unstarred cards.
+   */
+  root.refresh = () => {
+    countStarred();
+  };
 
   return root;
 }

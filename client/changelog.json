@@ -1,5 +1,14 @@
 [
   {
+    "version": "v50",
+    "summary": "A new tab, Words, for finding, starring and adding words.",
+    "notes": [
+      "“Find and star words” and “Add a word” have moved from the Practise screen to the new Words tab. Search is at the top, and your own words come first in the list.",
+      "The Practise screen is shorter now, so it fits on your phone without scrolling, even with the “Carry on” card.",
+      "You now choose how many cards to practise (10, 20 or All) on the Practise screen only. It used to be in Settings as well, which made it look like two different things."
+    ]
+  },
+  {
     "version": "v49",
     "summary": "Nothing new to see: a line in Settings to help find the scrolling problem.",
     "notes": [

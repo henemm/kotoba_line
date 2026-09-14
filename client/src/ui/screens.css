@@ -327,11 +327,6 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  /* #118: a swipe that reaches the end of the tab stays in the tab. In the
-     installed app on Henning's phone the page underneath is scrollable too —
-     Settings → Diagnostics read `page 812 · app 874` — and a gesture handed
-     on to it moves the whole app instead of the list. */
-  overscroll-behavior: contain;
 }
 
 .practise .head {
@@ -558,29 +553,12 @@
   .practise .sound-note {
     padding-bottom: 18px;
   }
-  .practise .add-word-row {
-    padding-top: 14px;
-  }
 
-  /* #65: the resume card (51) sits on top of this already-tight layout, and
-     pushes "Find and star words" so that the fold — the tab bar's top edge —
-     lands *inside* that row rather than above or below it, on both of the
-     real heights this was measured against (852pt, Charlotte's own phone,
-     confirmed from a screenshot; 859pt, this project's usual test rig — see
-     reference_device_testing.md). The two only differ by 7px, but that is
-     enough: closing the gap by exactly the 33px needed to clear the row at
-     852pt reopens it 4px into the *next* row at 859pt, because the margin
-     between the two add-word-rows (4px) is narrower than the 7px the fold
-     itself moves. No single amount of tightening threads that needle, so
-     this widens the target instead of aiming more precisely at it: tighten
-     the resume card enough that "Find and star words" clears the fold at
-     the shorter height (with room to spare at the taller one), then widen
-     the row below it past the 7px the fold can move, so wherever the fold
-     falls near that boundary, it falls in the gap and never inside a row.
-     Since the fifth line (#97) that no longer holds, and #109 does not try to
-     restore it: with the card showing the tab is 93px too tall at 852 and
-     scrolls, and the row cut under the floating tab bar's fade is what says
-     there is more. These rules still keep that scroll short. */
+  /* #65: the resume card (51) sits on top of this already-tight layout, so
+     that state is tightened a little further. The rows that used to follow
+     the sound note, and the fold that kept landing inside them (#65, #109,
+     #118), are the Words tab since #123: with them gone the tab fits under
+     the capsule with the card showing, at 852 and at 874. */
   .practise.has-resume .resume-row {
     padding: 9px 16px;
   }
@@ -590,9 +568,6 @@
   .practise.has-resume .due-line {
     padding-top: 12px;
     padding-bottom: 10px;
-  }
-  .practise.has-resume .add-word-row + .add-word-row {
-    margin-top: 20px;
   }
 }
 
@@ -2456,6 +2431,33 @@
 .browse-foot .btn-primary {
   width: 100%;
   height: 56px;
+}
+
+/* #123: Browse as the Words tab. The list scrolls inside its own box and ends
+   at the footer, so nothing runs under the capsule, and the fade that hides
+   rows scrolling beneath it would only dim "Practise starred". The footer
+   keeps the capsule's height and gap clear, plus a little air. */
+#app:has(> .words)::after {
+  display: none;
+}
+.words .browse-foot {
+  padding-bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 14px);
+}
+
+/* Her own words at the top of the idle list. The list already carries the
+   gutter, so the rows drop the one they bring from the practise tab. */
+.own-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+.own-block .add-word-row {
+  margin: 0;
+  padding: 14px 0 0;
+}
+.own-block .dashed-station {
+  font-size: 14px;
 }
 
 /* 35: a list of one-line rows is the one thing in 7a that wants the width. */

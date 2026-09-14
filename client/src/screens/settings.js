@@ -83,13 +83,6 @@ const NEW_PER_DAY_STEP = 5;
 const NEW_PER_DAY_MIN = 5;
 const NEW_PER_DAY_MAX = 40;
 
-/** 60 is MAX_SESSION_LENGTH on the server; the screen calls it "All". */
-const SESSION_LENGTHS = [
-  { value: 10, label: "10" },
-  { value: 20, label: "20" },
-  { value: 60, label: "All" },
-];
-
 /** What 話す ("Say it aloud") can draw its prompt from (#77). */
 const SPEAK_SOURCES = [
   { value: "word", label: "Word" },
@@ -97,7 +90,7 @@ const SPEAK_SOURCES = [
   { value: "random", label: "Random" },
 ];
 
-export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
+export function settingsScreen({ user, onSignOut, onSettings }) {
   const root = el("div.settings");
   render(root, el("div.loading", { text: "…" }));
 
@@ -129,8 +122,10 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
     render(
       root,
       header(),
+      // #123: only what configures the app. The Deck group (names and counts,
+      // each leading to Browse) and session length went to the Words and
+      // Practise tabs, where she is when she needs them.
       dailyLoad(),
-      deckGroup(),
       sound(),
       practice(),
       account(),
@@ -189,36 +184,21 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
   // ── Daily load ──────────────────────────────────────────────────
 
   function dailyLoad() {
-    const { newPerDay, sessionLength } = data.settings;
+    const { newPerDay } = data.settings;
 
     return group(
       "Daily load",
       row(
         "New cards per day",
-        "Reviews are scheduled on top of this.",
+        // #123: asked on the phone what this is, next to session length. It is
+        // the pace of new words, not the size of a sitting, so say that.
+        "Words you have not seen before. Reviews of the rest come on top.",
         el(
           "div.stepper",
           {},
           stepButton("−", "Fewer new cards", newPerDay - NEW_PER_DAY_STEP),
           el("span.value.tabular", { text: String(newPerDay) }),
           stepButton("+", "More new cards", newPerDay + NEW_PER_DAY_STEP),
-        ),
-      ),
-      el(
-        "div.field",
-        {},
-        el("span.field-label", { text: "Session length" }),
-        el(
-          "div.choice",
-          {},
-          SESSION_LENGTHS.map(({ value, label }) =>
-            el("button", {
-              type: "button",
-              text: label,
-              "aria-pressed": String(value === sessionLength),
-              onclick: () => value !== sessionLength && write({ sessionLength: value }),
-            }),
-          ),
         ),
       ),
     );
@@ -234,53 +214,6 @@ export function settingsScreen({ user, onSignOut, onSettings, onBrowse }) {
       disabled,
       onclick: () => write({ newPerDay: clamped }),
     });
-  }
-
-  // ── Deck ────────────────────────────────────────────────────────
-
-  /**
-   * Names and counts, no toggles — decided, not deferred (#20).
-   *
-   * Design 22 draws a switch beside each deck. The original reason for leaving
-   * it out was that there was only one deck, so the switch could only turn the
-   * app off. That reason is gone: her own deck exists. The row stays out
-   * anyway, for a better one.
-   *
-   * "Which decks does this session use" is already a question the choose-set
-   * sheet answers — Both / Kaishi / Mine, per session, right where she starts
-   * one. A standing switch here would be a second way to ask the same thing,
-   * and the two would disagree the first time she used both.
-   *
-   * It is also the more dangerous of the two. A per-session filter is visible
-   * in the summary line above the four lines; a setting turned off weeks ago
-   * is not. She would add a word, never be shown it, and have nothing on the
-   * screen to explain why.
-   *
-   * The row for the personal deck stays at zero cards, exactly as the design
-   * intends — so the second import has somewhere to land.
-   */
-  function deckGroup() {
-    return group(
-      "Deck",
-      ...data.decks.map((deck) => {
-        const detail =
-          deck.cards === 0 ? "0 cards, nothing imported yet" : `${num(deck.cards)} cards`;
-        // 31: browse is reached from Stats → Cards seen and from here. A deck
-        // with nothing in it has nothing to browse.
-        if (!onBrowse || deck.cards === 0) return row(deck.label, detail);
-        return el(
-          "button.row.tappable",
-          { type: "button", onclick: onBrowse },
-          el(
-            "span.row-copy",
-            {},
-            el("span.row-title", { text: deck.label }),
-            el("span.row-detail", { text: detail }),
-          ),
-          el("span.row-chevron", { text: "›" }),
-        );
-      }),
-    );
   }
 
   // ── Sound ───────────────────────────────────────────────────────
