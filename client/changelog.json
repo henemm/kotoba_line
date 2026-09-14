@@ -1,5 +1,12 @@
 [
   {
+    "version": "v55",
+    "summary": "Reset under “What to practise” now really resets.",
+    "notes": [
+      "Before, Reset and closing the sheet without tapping Start changed nothing: a topic you had picked stayed picked. Now whatever the sheet shows when you close it is what you practise next — Reset included."
+    ]
+  },
+  {
     "version": "v54",
     "summary": "Stars on the Words tab work again, and the Practise screen has room to breathe.",
     "notes": [

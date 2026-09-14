@@ -329,6 +329,13 @@ function openSheet() {
     filters: state.filters,
     topics: state.topics,
     sessionLength: state.settings.sessionLength,
+    // #120: what the sheet holds is the set, Start or no Start. Written here
+    // on every tap rather than on close, because loadTopics() below rebuilds
+    // the sheet from state.filters — a tap made before the topics arrived
+    // would otherwise be undone by the redraw.
+    onChange: (filters) => {
+      state.filters = filters;
+    },
     onClose: closeSheet,
     onApply: (filters) => {
       state.filters = filters;

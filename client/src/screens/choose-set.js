@@ -79,7 +79,14 @@ export function activeLabel({ deck, tag, only }) {
   return parts.join(" · ");
 }
 
-export function chooseSetScreen({ filters, topics = [], sessionLength = 20, onApply, onClose }) {
+export function chooseSetScreen({
+  filters,
+  topics = [],
+  sessionLength = 20,
+  onChange,
+  onApply,
+  onClose,
+}) {
   const chosen = { ...DEFAULT_FILTERS, ...filters };
   let available;
   let counting = false;
@@ -111,8 +118,7 @@ export function chooseSetScreen({ filters, topics = [], sessionLength = 20, onAp
           disabled: isDefault(chosen),
           onclick: () => {
             Object.assign(chosen, DEFAULT_FILTERS);
-            draw();
-            recount();
+            changed();
           },
         }),
       ),
@@ -134,6 +140,20 @@ export function chooseSetScreen({ filters, topics = [], sessionLength = 20, onAp
 
   function set(key, value) {
     chosen[key] = chosen[key] === value ? undefined : value;
+    changed();
+  }
+
+  /**
+   * Every tap is handed out as it happens, not only on Start (#120). 36 says a
+   * line "starts a session with whatever the sheet last held" — so closing the
+   * sheet keeps what it holds. Keeping `chosen` to itself until Start meant
+   * that a Reset, or any other tap, vanished with the scrim: after a set of
+   * "grammar", Reset and close left the practise line still reading grammar,
+   * and the next line she tapped still practised it (measured on the live
+   * app, 2026-09-14, for all three filters alike).
+   */
+  function changed() {
+    onChange?.({ ...chosen });
     draw();
     recount();
   }
@@ -151,8 +171,7 @@ export function chooseSetScreen({ filters, topics = [], sessionLength = 20, onAp
             "aria-pressed": String(chosen.deck === value),
             onclick: () => {
               chosen.deck = value;
-              draw();
-              recount();
+              changed();
             },
           }),
         ),
@@ -176,8 +195,7 @@ export function chooseSetScreen({ filters, topics = [], sessionLength = 20, onAp
           "aria-pressed": String(!chosen.tag),
           onclick: () => {
             chosen.tag = undefined;
-            draw();
-            recount();
+            changed();
           },
         }),
         shown.map((t) =>
@@ -218,8 +236,7 @@ export function chooseSetScreen({ filters, topics = [], sessionLength = 20, onAp
             "aria-pressed": String(chosen.only === value),
             onclick: () => {
               chosen.only = value;
-              draw();
-              recount();
+              changed();
             },
           }),
         ),
