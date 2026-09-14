@@ -9,9 +9,11 @@ import {
   userTags,
 } from "../cards.js";
 import {
+  DECK_KEY_PATTERN,
   MAX_SESSION_LENGTH,
   ONLY_MODES,
   browseCards,
+  decksForUser,
   outlookForUser,
   queueForUser,
   setStar,
@@ -147,6 +149,8 @@ export default async function deckRoutes(app) {
           properties: {
             mode: { type: "string", enum: VALID_MODES },
             limit: { type: "integer", minimum: 1, maximum: MAX_SESSION_LENGTH },
+            // The practise tab's deck (#137).
+            deckKey: { type: "string", pattern: DECK_KEY_PATTERN },
             deck: { type: "string", maxLength: 32 },
             // One of her lists (#137), named the way Noji named it.
             list: { type: "string", minLength: 1, maxLength: 100 },
@@ -188,6 +192,11 @@ export default async function deckRoutes(app) {
       return answer;
     },
   );
+
+  /** #137: her decks with their cards for today — the practise tab's first screen. */
+  app.get("/api/decks", { preHandler: app.requireUser }, async (req) => ({
+    decks: decksForUser(db, req.user.id),
+  }));
 
   /** §5a: the browse screen — search, filter, and see what is starred. */
   app.get(

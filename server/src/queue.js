@@ -75,6 +75,23 @@ export function isFiltered({ tag, only }) {
 }
 
 /**
+ * A deck as the practise tab names it (#137): `kaishi`, `mine` (her own words
+ * that came from no list) or `list:<name>` (one of her imported lists). The
+ * key is what the client sends and, later, what per-deck settings are stored
+ * under. Anything else is not a deck.
+ */
+export const DECK_KEY_PATTERN = "^(kaishi|mine|list:.{1,100})$";
+
+export function parseDeckKey(key) {
+  if (key === "kaishi") return { deck: "kaishi" };
+  if (key === "mine") return { deck: "personal", unlisted: true };
+  if (typeof key === "string" && key.startsWith("list:") && key.length > 5) {
+    return { deck: "personal", list: key.slice(5) };
+  }
+  return undefined;
+}
+
+/**
  * The deck's topics and hers are one namespace to a filter (#35).
  *
  * A topic is a topic: when she picks one she means "cards under this", and
@@ -85,8 +102,20 @@ export function isFiltered({ tag, only }) {
  * That also means she can put a card into a topic the deck already has, rather
  * than being locked out of `food` because the import owns the name.
  */
-function filterClause({ deck, list, tag }, params, userId) {
+function filterClause({ deckKey, deck, list, tag }, params, userId) {
   let sql = "";
+  // The practise tab's deck (#137). `deck` and `list` below are what v60–v62
+  // clients send, and keep working for a phone that has not updated yet.
+  const scope = parseDeckKey(deckKey);
+  if (scope) {
+    sql += " AND c.deck = ?";
+    params.push(scope.deck);
+    if (scope.list) {
+      sql += " AND c.list_name = ?";
+      params.push(scope.list);
+    }
+    if (scope.unlisted) sql += " AND c.list_name IS NULL";
+  }
   if (deck) {
     sql += " AND c.deck = ?";
     params.push(deck);
@@ -108,7 +137,7 @@ function filterClause({ deck, list, tag }, params, userId) {
 }
 
 export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() / 1000), random = Math.random) {
-  const { mode, deck, list, tag, only } = opts;
+  const { mode, deckKey, deck, list, tag, only } = opts;
   const filtered = isFiltered({ tag, only });
 
   const requested = Number.isInteger(opts.limit) ? opts.limit : MAX_SESSION_LENGTH;
@@ -140,7 +169,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ? AND st.starred = 1" : ""}
-      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deck, list, tag }, params, userId)} ${extra}`;
+      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deckKey, deck, list, tag }, params, userId)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
@@ -212,6 +241,13 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   const queue = composeQueue(groups, limit);
 
+  // Today's cards in the deck, without the session cap: #137's deck page,
+  // "10 cards for today · 10 new · 0 to review". A due card can also be a
+  // recent lapse, so those two are counted as a set; a fresh card has no
+  // scheduler row and can be neither.
+  const reviews = new Set([...groups.due, ...groups.lapsed]).size;
+  const today = { total: reviews + groups.fresh.length, fresh: groups.fresh.length, review: reviews };
+
   // How many cards these filters match, before the session cap. Design 36
   // watches this number change on every tap — "she is watching a number, not
   // filling a form" — and its button reads "Start 20 of 34", which needs both.
@@ -220,7 +256,49 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // §5: shuffle within the session so the same cards do not always come in the
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
-  return { mode: mode ?? null, filtered, available, newCapReached, cardIds: shuffle(queue, random) };
+  return { mode: mode ?? null, filtered, available, today, newCapReached, cardIds: shuffle(queue, random) };
+}
+
+/**
+ * The practise tab's deck list (#137): her decks, the way Noji starts — each
+ * with its cards for today.
+ *
+ * Kaishi first, then her lists in the order they came in, then the words she
+ * added herself outside any list. A deck with no cards is left out. "For
+ * today" is the queue's own count for that deck, so a number on the list is
+ * always the session the deck page then starts.
+ */
+export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
+  const count = db.prepare(
+    `SELECT count(*) AS cards, count(s.card_id) AS seen
+       FROM cards c LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
+      WHERE c.deleted_at IS NULL AND c.deck = ? AND (c.deck <> 'personal' OR c.owner_id = ?)
+        AND (? IS NULL OR c.list_name = ?) AND (? = 0 OR c.list_name IS NULL)`,
+  );
+  const lists = db
+    .prepare(
+      `SELECT list_name FROM cards
+        WHERE owner_id = ? AND deck = 'personal' AND deleted_at IS NULL AND list_name IS NOT NULL
+        GROUP BY list_name ORDER BY min(id)`,
+    )
+    .all(userId)
+    .map((r) => r.list_name);
+
+  const candidates = [
+    { key: "kaishi", name: "Kaishi" },
+    ...lists.map((list) => ({ key: `list:${list}`, name: list })),
+    { key: "mine", name: "My words" },
+  ];
+
+  return candidates
+    .map(({ key, name }) => {
+      const scope = parseDeckKey(key);
+      const { cards, seen } = count.get(userId, scope.deck, userId, scope.list ?? null, scope.list ?? null, scope.unlisted ? 1 : 0);
+      if (cards === 0) return undefined;
+      const { today } = queueForUser(db, userId, { deckKey: key }, now);
+      return { key, name, cards, seen, today };
+    })
+    .filter(Boolean);
 }
 
 const tokyoTime = new Intl.DateTimeFormat("en-GB", {
@@ -261,17 +339,17 @@ export function whenInTokyo(at, now) {
  * cards the scheduler has seen: new cards are not "due", they are allowed, and
  * the allowance is a different sentence.
  */
-export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), { deck, list } = {}) {
+export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), { deckKey, deck, list } = {}) {
   // Within the deck or list she practises in (#137), like the queue it stands
   // in for: an offer counted over every card would promise a session of cards
   // her lines never show.
-  const ahead = queueForUser(db, userId, { deck, list, only: "ahead" }, now).available;
-  const lapsed = queueForUser(db, userId, { deck, list, only: "lapsed" }, now).available;
+  const ahead = queueForUser(db, userId, { deckKey, deck, list, only: "ahead" }, now).available;
+  const lapsed = queueForUser(db, userId, { deckKey, deck, list, only: "lapsed" }, now).available;
 
   const visible = visibleTo(userId);
   const scope = [];
   const scheduled = `FROM card_state s JOIN cards c ON c.id = s.card_id
-     WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}${filterClause({ deck, list }, scope, userId)}`;
+     WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}${filterClause({ deckKey, deck, list }, scope, userId)}`;
   const { at } = db.prepare(`SELECT min(s.due_at) AS at ${scheduled} AND s.due_at > ?`).get(userId, ...visible.params, ...scope, now);
 
   let nextDue = null;

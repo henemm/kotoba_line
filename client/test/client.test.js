@@ -722,10 +722,11 @@ describe("sentence romaji's word-boundary guess (#75)", () => {
 });
 
 describe("what a chosen set is called (36, 39)", () => {
-  it("names every dimension on the practise tab, defaults included", () => {
-    // The line above the four lines is how she learns the sheet exists, so it
-    // states what the scheduler chose rather than going blank.
-    assert.equal(summaryLine({}), "Both decks · any topic · due today");
+  it("names every dimension inside a deck, defaults included (#137)", () => {
+    // The sheet's own line states what the scheduler chose rather than going
+    // blank. The deck is not one of them: it was chosen on the deck list.
+    assert.equal(summaryLine({ deckKey: "kaishi" }), "any topic · due today");
+    // A set saved by v60–v62 still says where it was.
     assert.equal(
       summaryLine({ deck: "personal", tag: "konbini", only: "starred" }),
       "my deck · konbini · starred",
@@ -749,9 +750,8 @@ describe("what a chosen set is called (36, 39)", () => {
 
   it("names a session of cards due in the next two days, which the sheet cannot choose (#90)", () => {
     assert.equal(activeLabel({ only: "ahead" }), "Due in two days");
-    assert.equal(summaryLine({ only: "ahead" }), "Both decks · any topic · due in two days");
-    assert.equal(summaryLine({ only: "lapsed" }), "Both decks · any topic · lapsed");
-    assert.equal(summaryLine({}), "Both decks · any topic · due today");
+    assert.equal(summaryLine({ only: "ahead" }), "any topic · due in two days");
+    assert.equal(summaryLine({ only: "lapsed" }), "any topic · lapsed");
   });
 
   it("knows when nothing was chosen at all", () => {
@@ -766,11 +766,9 @@ describe("what a chosen set is called (36, 39)", () => {
     assert.equal(activeLabel({ ...list, only: "new" }), "100 vokabeln · New");
   });
 
-  it("keeps the deck and the list, and lets the topic and the only go (#137)", () => {
-    assert.deepEqual(
-      scopeOf({ deck: "personal", list: "1000", tag: "food", only: "starred" }),
-      { deck: "personal", list: "1000" },
-    );
+  it("keeps the deck, and lets the topic and the only go (#137)", () => {
+    assert.deepEqual(scopeOf({ deckKey: "list:1000", tag: "food", only: "starred" }), { deckKey: "list:1000" });
+    assert.equal(isDefault({ deckKey: "list:1000" }), true, "being in a deck is not a narrowing");
   });
 });
 

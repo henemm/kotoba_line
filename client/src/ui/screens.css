@@ -572,6 +572,231 @@
   font: 600 13px/1 var(--ui);
 }
 
+/* ── #137: decks first, as in Noji ────────────────────────────────────
+   The deck list is the tab's first screen, and a deck's page is the old tab
+   inside one deck. Plain rows on a surface instead of stations on a rail:
+   Henning, 2026-09-14, the metro-line circles "kamen nicht gut an". */
+
+.decks-title,
+.deck-name {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.decks-title {
+  padding: 28px var(--gutter) 18px;
+}
+.deck-list {
+  margin: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+}
+.deck-row,
+.deck-resume,
+.deck-way,
+.deck-more {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+}
+.deck-row {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--night);
+}
+.deck-row:first-child {
+  border-radius: 16px 16px 0 0;
+}
+.deck-row:last-of-type {
+  border-radius: 0 0 16px 16px;
+  border-bottom: 0;
+}
+.deck-row:only-of-type {
+  border-radius: 16px;
+}
+.deck-row:active,
+.deck-resume:active,
+.deck-way:active,
+.deck-more:active {
+  background: var(--surface-hi);
+}
+.deck-row .copy,
+.deck-resume .copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.deck-row .name,
+.deck-resume .name {
+  font-size: 20px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.deck-row .sub,
+.deck-resume .sub {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.deck-row .today {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.decks .chevron,
+.deck-page .chevron {
+  flex: none;
+  color: var(--ink-muted);
+  font-size: 20px;
+  line-height: 1;
+}
+.deck-hint,
+.deck-problem {
+  margin: 12px 0 24px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  text-align: center;
+}
+.deck-resume {
+  margin: 0 var(--gutter) 18px;
+  width: auto;
+  padding: 14px 18px;
+  border-radius: 16px;
+}
+
+.deck-head {
+  padding: 14px var(--gutter) 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.deck-back {
+  border: 0;
+  background: none;
+  padding: 6px 0;
+  color: var(--ink-muted);
+  font: 600 16px/1 var(--ui);
+}
+
+.deck-today {
+  margin: 0 var(--gutter);
+  padding: 22px 18px;
+  border-radius: 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 150px;
+  justify-content: center;
+}
+.deck-today-n {
+  font-size: 80px;
+  font-weight: 800;
+  line-height: 1;
+}
+.deck-today-label,
+.deck-today-state {
+  font-size: 16px;
+  color: var(--ink-muted);
+}
+.deck-today-split {
+  display: flex;
+  gap: 48px;
+  margin-top: 14px;
+}
+.deck-today-part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.deck-today-part b {
+  font-size: 20px;
+  color: var(--ink);
+}
+.deck-page .next-due {
+  margin-top: 14px;
+}
+.deck-page .offers {
+  padding-top: 0;
+}
+.deck-page .offer .copy {
+  min-width: 0;
+}
+.deck-page .length-block {
+  padding-top: 28px;
+}
+
+.deck-start-block {
+  padding: 24px var(--gutter) 0;
+}
+.deck-start {
+  width: 100%;
+  height: 58px;
+  border: 0;
+  border-radius: 29px;
+  background: var(--ink);
+  color: var(--night);
+  font: 700 18px/1 var(--ui);
+}
+.deck-start:active {
+  opacity: 0.85;
+}
+.deck-ways {
+  padding: 28px var(--gutter) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.deck-ways-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--night);
+}
+.deck-way {
+  padding: 16px 18px;
+}
+.deck-way .name {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+}
+.deck-way .name.jp {
+  flex: none;
+  font-family: var(--jp);
+  font-size: 20px;
+}
+.deck-way .en {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.deck-more {
+  margin: 14px var(--gutter) 0;
+  width: auto;
+  padding: 14px 18px;
+  border-radius: 14px;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+}
+
 /* The tab scrolls, and is spaced to read rather than to fit (Henning,
    2026-09-14: "sehr gedrängt, nur um scrollen zu verhindern"). A phone-only
    block used to take space back from every gap here so the whole tab stayed
