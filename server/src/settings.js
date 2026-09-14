@@ -43,16 +43,25 @@ const COLUMNS = {
   pitchAccent: "pitch_accent",
   romaji: "romaji",
   speakSource: "speak_source",
+  japaneseScript: "japanese_script",
+  hiddenModes: "hidden_modes",
 };
 
 /** The three 話す can draw a prompt from (#77). Same list as the CHECK in the schema. */
 export const SPEAK_SOURCES = ["word", "sentence", "random"];
 
+/**
+ * The practice lines, by key — the same five as `client/src/modes.js` and the
+ * `mode` of every review event. `hiddenModes` may name at most four of them
+ * (#133): hiding the last one would leave a practise tab with nothing to tap.
+ */
+export const MODE_KEYS = ["choose", "listen", "speak", "type", "flip"];
 /** The row as the client sees it: camelCase, and 0/1 as booleans. */
 export function settingsForUser(db, userId) {
   const row = db
     .prepare(
-      `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji, speak_source
+      `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji, speak_source,
+              japanese_script, hidden_modes
          FROM user_settings WHERE user_id = ?`,
     )
     .get(userId);
@@ -68,6 +77,8 @@ export function settingsForUser(db, userId) {
     pitchAccent: row.pitch_accent === 1,
     romaji: row.romaji === 1,
     speakSource: row.speak_source,
+    japaneseScript: row.japanese_script === 1,
+    hiddenModes: JSON.parse(row.hidden_modes),
   };
 }
 
@@ -83,7 +94,12 @@ export function updateSettings(db, userId, patch) {
   for (const [key, column] of Object.entries(COLUMNS)) {
     if (!(key in patch) || patch[key] === undefined) continue;
     assignments.push(`${column} = ?`);
-    values.push(typeof patch[key] === "boolean" ? (patch[key] ? 1 : 0) : patch[key]);
+    const value = patch[key];
+    if (typeof value === "boolean") values.push(value ? 1 : 0);
+    // The one list among the settings, stored as JSON — in the order of the
+    // lines themselves, and each key once, whatever order it was sent in.
+    else if (Array.isArray(value)) values.push(JSON.stringify(MODE_KEYS.filter((k) => value.includes(k))));
+    else values.push(value);
   }
 
   if (assignments.length > 0) {

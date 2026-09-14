@@ -1,4 +1,6 @@
 import { ApiError, OfflineError, api } from "../api.js";
+import { MODES } from "../modes.js";
+import { modeName, visibleModes } from "../script.js";
 import { cardCount } from "../store.js";
 import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
@@ -127,6 +129,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       // Practise tabs, where she is when she needs them.
       dailyLoad(),
       sound(),
+      script(),
       practice(),
       account(),
       diagnostics(),
@@ -224,11 +227,9 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
    * a setting about what happens on its own should not disable a control the
    * user just pressed.
    *
-   * Pitch accent used to be missing from this group. The deck carries it on
-   * 1,500 of its 1,501 notes, but as a drawing, and nothing mapped it — so the
-   * switch would have written a value nothing read. The import now reduces
-   * that drawing to the mora the pitch drops after (#21) and the reveal draws
-   * the contour, so the switch has something to govern.
+   * Pitch accent and romaji lived in this group until #135 and are under
+   * Japanese now (`script()`), with the switch that decides whether there is
+   * any script for them to annotate.
    */
   function sound() {
     return group(
@@ -240,21 +241,48 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
           write({ readAloud: on }),
         ),
       ),
+    );
+  }
+
+  // ── Script ──────────────────────────────────────────────────────
+
+  /**
+   * #135: the Japanese script switch, and under it the two settings that
+   * annotate the script. They sat under Sound before; they are about what a
+   * card shows. With the script off they have nothing to annotate — the word
+   * is already romaji and there is no kana line to draw a contour over — so
+   * they are not offered rather than offered and ignored.
+   */
+  function script() {
+    const { japaneseScript } = data.settings;
+    return group(
+      "Japanese",
       row(
-        "Show pitch accent",
-        // Says what it is for rather than what it is: 花 and 鼻 are both はな
-        // and both low-high, and the only thing telling them apart is what the
-        // particle after them does.
-        "A line over the high part when a card is revealed. 花 and 鼻 are both はな, and sound different.",
-        toggle(data.settings.pitchAccent, "Show pitch accent", (on) =>
-          write({ pitchAccent: on }),
-        ),
+        "Japanese script",
+        japaneseScript
+          ? "Words and buttons in Japanese characters."
+          : "Off: words in romaji, example sentences as sound only, buttons in English.",
+        toggle(japaneseScript, "Japanese script", (on) => write({ japaneseScript: on })),
       ),
-      row(
-        "Show romaji",
-        "The word written in latin letters under the kana, for reading it back without a dictionary.",
-        toggle(data.settings.romaji, "Show romaji", (on) => write({ romaji: on })),
-      ),
+      japaneseScript
+        ? row(
+            "Show pitch accent",
+            // Says what it is for rather than what it is: 花 and 鼻 are both
+            // はな and both low-high, and the only thing telling them apart is
+            // what the particle after them does.
+            "A line over the high part when a card is revealed. 花 and 鼻 are both はな, and sound different.",
+            toggle(data.settings.pitchAccent, "Show pitch accent", (on) =>
+              write({ pitchAccent: on }),
+            ),
+          )
+        : null,
+      japaneseScript
+        ? row(
+            "Show romaji",
+            "The word written in latin letters under the kana, for reading it back without a dictionary.",
+            toggle(data.settings.romaji, "Show romaji", (on) => write({ romaji: on })),
+          )
+        : null,
     );
   }
 
@@ -270,9 +298,31 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
    * until they touch it: the default stays "Sentence".
    */
   function practice() {
-    const { speakSource } = data.settings;
+    const { speakSource, japaneseScript } = data.settings;
+    const hidden = data.settings.hiddenModes ?? [];
+    const shown = visibleModes(hidden);
     return group(
       "Practice",
+      // #133: one switch per line. The last line still on cannot be switched
+      // off — the server refuses to store all five hidden, and a practise tab
+      // with nothing to tap is not a setting anyone wants.
+      MODES.map((mode) => {
+        const on = !hidden.includes(mode.key);
+        const last = on && shown.length === 1;
+        return row(
+          modeName(mode, japaneseScript),
+          japaneseScript ? mode.en : null,
+          toggle(
+            on,
+            `Show ${mode.en}`,
+            (show) =>
+              write({
+                hiddenModes: show ? hidden.filter((k) => k !== mode.key) : [...hidden, mode.key],
+              }),
+            { disabled: last },
+          ),
+        );
+      }),
       el(
         "div.field",
         {},
@@ -408,12 +458,13 @@ function row(title, detail, control) {
   );
 }
 
-function toggle(on, label, onChange) {
+function toggle(on, label, onChange, { disabled = false } = {}) {
   return el("button.toggle", {
     type: "button",
     role: "switch",
     "aria-checked": String(on),
     "aria-label": label,
+    disabled,
     onclick: () => onChange(!on),
   }, el("span.knob"));
 }

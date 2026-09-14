@@ -1,4 +1,5 @@
 import { OfflineError, api } from "../api.js";
+import { showsScript, shownWord } from "../script.js";
 import { el, render } from "../ui/dom.js";
 
 /**
@@ -22,7 +23,7 @@ import { el, render } from "../ui/dom.js";
 /** The same ceiling the personal deck uses, and the server enforces. */
 const MAX_TAGS = 5;
 
-export function cardTopicsSheet({ card, topics = [], onSaved, onClose }) {
+export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese = true }) {
   const root = el("div.sheet-scrim", {
     onclick: (e) => e.target === root && onClose?.(),
   });
@@ -55,7 +56,8 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose }) {
           el(
             "span.topics-title",
             {},
-            el("span.jp", { text: card.word }),
+            // #135
+            el(showsScript(card, japanese) ? "span.jp" : "span", { text: shownWord(card, japanese) }),
             el("span.topics-gloss", { text: card.word_meaning ?? "" }),
           ),
           el("button.topics-close", {

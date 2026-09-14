@@ -1,4 +1,5 @@
 import { modeByKey } from "../modes.js";
+import { showsScript, shownWord } from "../script.js";
 import { el, num, render } from "../ui/dom.js";
 
 /** The missed list caps at five and says how many are behind it. */
@@ -17,7 +18,7 @@ export const mmss = (seconds) =>
  * mode colour for cleared, red for missed. A session is modal, so there is no
  * tab bar underneath.
  */
-export function summaryScreen(result, { onDone, onAgain, onCarryOn }) {
+export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = true }) {
   const line = modeByKey(result.mode) ?? modeByKey("choose");
   const root = el("div.summary", { style: { "--rail": line.colour } });
 
@@ -49,7 +50,9 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn }) {
     el(
       "div.summary-body",
       {},
-      el("span.summary-jp.jp", { text: greeting(result) }),
+      japanese
+        ? el("span.summary-jp.jp", { text: greeting(result) })
+        : el("span.summary-jp", { text: greetingInEnglish(result) }),
       el(
         "div.score",
         {},
@@ -74,7 +77,9 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn }) {
               el(
                 "div.missed-row",
                 {},
-                el("span.missed-jp.jp", { text: card.word }),
+                el(showsScript(card, japanese) ? "span.missed-jp.jp" : "span.missed-jp", {
+                  text: shownWord(card, japanese),
+                }),
                 el("span.missed-en", { text: card.word_meaning }),
               ),
             ),
@@ -145,6 +150,13 @@ function greeting({ right, total }) {
   const share = total > 0 ? right / total : 0;
   if (share === 1) return "完璧！";
   return share >= 0.7 ? "おつかれさま！" : "また明日！";
+}
+
+/** #135: the same three, for the script switched off. */
+function greetingInEnglish({ right, total }) {
+  const share = total > 0 ? right / total : 0;
+  if (share === 1) return "Perfect!";
+  return share >= 0.7 ? "Well done!" : "See you tomorrow!";
 }
 
 function figure(value, label) {

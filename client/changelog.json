@@ -1,5 +1,14 @@
 [
   {
+    "version": "v57",
+    "summary": "You can switch off the Japanese characters, and hide the ways of practising you don't use.",
+    "notes": [
+      "Settings → Japanese → Japanese script. Off: every word is written in romaji, and the buttons are in English instead of 選ぶ or ちょっと.",
+      "With the characters off, example sentences are there as sound only — tap ♪ to hear them. Their romaji isn't reliable enough to learn from.",
+      "Settings → Practice: switch off any line you don't want on the Practise screen. One always stays."
+    ]
+  },
+  {
     "version": "v56",
     "summary": "The tab bar at the bottom is now made of glass.",
     "notes": [

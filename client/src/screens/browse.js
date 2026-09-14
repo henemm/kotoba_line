@@ -1,6 +1,7 @@
 import { OfflineError, api } from "../api.js";
 import { loadDeck } from "../deck.js";
 import { toRomaji } from "../romaji.js";
+import { showsScript, shownWord } from "../script.js";
 import { setStar } from "../stars.js";
 import { kanaReading } from "./session.js";
 import { el, num, render } from "../ui/dom.js";
@@ -101,6 +102,7 @@ export function browseScreen({
   // is kept across redraws; `root.refresh()` redraws with the new one.
   ownWords = () => 0,
   romaji = false,
+  japanese = true,
 }) {
   const root = el("div.browse.words");
 
@@ -316,8 +318,12 @@ export function browseScreen({
               onclick: () => onTopics(card, drawList),
             }
           : {},
-        el("span.row-word.jp", { text: card.word }),
-        romaji ? romajiSpan(card) : null,
+        // #135: with the script off the word is its romaji, and the romaji
+        // line under it would repeat it.
+        el(showsScript(card, japanese) ? "span.row-word.jp" : "span.row-word", {
+          text: shownWord(card, japanese),
+        }),
+        romaji && japanese ? romajiSpan(card) : null,
         el("span.row-gloss", { text: card.word_meaning }),
         // Her topics, on the row that carries them, so the list shows what she
         // has organised without her opening anything.

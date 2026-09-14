@@ -71,7 +71,21 @@ const state = {
   // note agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
   // Settings tab has ever been opened.
-  settings: { newPerDay: 15, sessionLength: 20, readAloud: true, pitchAccent: false, romaji: false, speakSource: "sentence" },
+  //
+  // Also kept on the device (`keepSettings`), since #133/#135: an offline
+  // start used to fall back to these defaults, which was invisible while the
+  // settings were about sound — and would put back the Japanese script and
+  // every line she had hidden, on exactly the train with no signal.
+  settings: {
+    newPerDay: 15,
+    sessionLength: 20,
+    readAloud: true,
+    pitchAccent: false,
+    romaji: false,
+    speakSource: "sentence",
+    japaneseScript: true,
+    hiddenModes: [],
+  },
   online: navigator.onLine,
   // 52: the server is reachable and the cookie is not. Two flags, because the
   // state and the screen have different lifetimes — she can put the screen
@@ -180,8 +194,10 @@ function currentScreen() {
     return practiseScreen({
       sessionLength: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
+      japanese: state.settings.japaneseScript,
+      hiddenModes: state.settings.hiddenModes,
       onSessionLength: (len) => {
-        state.settings = { ...state.settings, sessionLength: len };
+        keepSettings({ ...state.settings, sessionLength: len });
         // Best effort: the picker is a shortcut into the same stored setting,
         // and a session started offline should not be blocked by it.
         api.updateSettings({ sessionLength: len }).catch(() => {});
@@ -189,7 +205,7 @@ function currentScreen() {
       // The same best effort for the sound switch under the lines: muting on
       // a train with no signal should still mute this session.
       onReadAloud: (on) => {
-        state.settings = { ...state.settings, readAloud: on };
+        keepSettings({ ...state.settings, readAloud: on });
         api.updateSettings({ readAloud: on }).catch(() => {});
       },
       // 36: "tapping a line still starts a session with whatever the sheet
@@ -220,9 +236,7 @@ function currentScreen() {
   if (state.tab === "stats") return statsScreen({ onBrowse: () => goToTab("words") });
   return settingsScreen({
     user: state.user,
-    onSettings: (settings) => {
-      state.settings = settings;
-    },
+    onSettings: keepSettings,
     onSignOut: async () => {
       state.user = undefined;
       numbersChanged();
@@ -375,6 +389,7 @@ function openAddWord(initialWord = "") {
   state.overlay = addWordScreen({
     tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
     initialWord,
+    japanese: state.settings.japaneseScript,
     onCancel: closeOverlay,
     onSaved: () => {
       // 29: "saving returns … with the count incremented, no confirmation
@@ -398,6 +413,7 @@ function openOwnDeck() {
     onAdd: () => openAddWord(),
     onEdit: openEditWord,
     romaji: state.settings.romaji,
+    japanese: state.settings.japaneseScript,
   });
   renderApp();
 }
@@ -414,6 +430,7 @@ function openEditWord(card) {
   state.overlay = addWordScreen({
     tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
     card,
+    japanese: state.settings.japaneseScript,
     onCancel: openOwnDeck,
     onSaved: backToList,
     onDeleted: backToList,
@@ -458,6 +475,7 @@ async function loadOwnDeck() {
 function wordsScreen() {
   return browseScreen({
     romaji: state.settings.romaji,
+    japanese: state.settings.japaneseScript,
     // 33: "a word she cannot find is usually a word she should add, so the
     // empty result leads straight into 28 with the query carried over."
     onAddWord: (query = "") => openAddWord(query),
@@ -482,6 +500,7 @@ function openCardTopics(card, onChanged) {
   state.overlay = cardTopicsSheet({
     card,
     topics: state.topics,
+    japanese: state.settings.japaneseScript,
     onClose: () => {
       state.topicsFor = undefined;
       closeOverlay();
@@ -676,6 +695,7 @@ function renderApp() {
     render(
       app,
       summaryScreen(state.summary, {
+        japanese: state.settings.japaneseScript,
         onDone: () => {
           state.summary = undefined;
           renderApp();
@@ -716,6 +736,7 @@ function renderApp() {
       pitchAccent: state.settings.pitchAccent,
       // #73: same reasoning as pitchAccent above.
       romaji: state.settings.romaji,
+      japanese: state.settings.japaneseScript,
       // #77: same reasoning — read here so every setting lives in one place.
       speakSource: state.settings.speakSource,
       onExit: () => {
@@ -893,11 +914,17 @@ async function checkDeck() {
   if (state.firstRun) renderApp();
 }
 
+/** The settings as they now stand, in memory and on the device for offline starts. */
+function keepSettings(settings) {
+  state.settings = settings;
+  setMeta("settings", settings).catch(() => {});
+}
+
 async function loadSettings() {
   try {
     const { settings } = await api.settings();
     const changed = JSON.stringify(settings) !== JSON.stringify(state.settings);
-    state.settings = settings;
+    keepSettings(settings);
     // Same as the own-deck count: most starts bring back what is already here.
     if (changed) renderApp();
   } catch {
@@ -938,6 +965,13 @@ async function checkSession() {
 
 const remembered = await getMeta("user");
 const sessionCheck = checkSession();
+// #133/#135: the settings this device last saw stand in until the server's
+// arrive, so an offline start keeps her script and her lines. Laid over the
+// defaults, so a setting newer than the copy on the device still has a value.
+if (remembered) {
+  const kept = await getMeta("settings");
+  if (kept) state.settings = { ...state.settings, ...kept };
+}
 
 if (remembered) {
   state.user = remembered;
