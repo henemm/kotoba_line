@@ -23,6 +23,11 @@ import { kanaReading } from "./screens/session.js";
  * - characters used as **decoration** — 選ぶ, ちょっと, おつかれさま — give way
  *   to the English beside them.
  *
+ * The price: 116 of the 1,500 Kaishi cards share their romaji with a
+ * different word (いる "to exist" and 要る "to need" are both "iru"; measured
+ * 2026-09-14). 選ぶ keeps those out of each other's wrong answers
+ * (`chooseFrom`); on めくる's front "iru" can simply mean either.
+ *
  * This switch outranks "Show romaji" and "Show pitch accent": both annotate
  * Japanese script, so with the script off neither has anything to annotate,
  * and Settings does not offer them.

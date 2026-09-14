@@ -619,7 +619,16 @@ export function sessionScreen({
   function chooseFrom(card, field, prompt, area, answers, promptNodes) {
     render(area, ...promptNodes);
 
-    const options = shuffle([card, ...pickDistractors(card, pool, 3, Math.random, field)]);
+    // A wrong answer may not belong to a card that looks exactly like this
+    // one — its meaning would be right too, and marked wrong. With the script
+    // off (#135) that is 116 of the 1,500 Kaishi cards (measured): いる and 要る
+    // are both "iru", 帰る and 変える both "kaeru". With it on, the 24 words the
+    // deck carries twice (聞く "to hear" and "to ask") had the same problem.
+    // Only in 選ぶ, where the word is the question; 聞く asks about a sentence.
+    const shown = shownWord(card, japanese);
+    const candidates =
+      field === "word_meaning" ? pool.filter((c) => shownWord(c, japanese) !== shown) : pool;
+    const options = shuffle([card, ...pickDistractors(card, candidates, 3, Math.random, field)]);
     render(
       answers,
       options.map((option) =>
