@@ -415,7 +415,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 26px var(--gutter) 6px;
+  padding: 32px var(--gutter) 28px;
 }
 .practise .rule .line {
   flex: 1;
@@ -486,10 +486,10 @@
 
 /* The second of the three questions, laid out like the first (.set-block). */
 .practise .length-block {
-  padding: 20px var(--gutter) 0;
+  padding: 40px var(--gutter) 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 12px;
 }
 .practise .length {
   display: flex;
@@ -528,7 +528,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 24px var(--gutter) 0;
+  padding: 44px var(--gutter) 0;
 }
 .practise .due-count {
   font-size: 13px;
@@ -541,8 +541,8 @@
 /* A status line, not a question: smaller, set apart by a hairline, with its
    switch beside it. */
 .practise .sound-note {
-  margin: 0 var(--gutter) 24px;
-  padding-top: 4px;
+  margin: 16px var(--gutter) 24px;
+  padding-top: 8px;
   border-top: 1px solid var(--surface);
   display: flex;
   align-items: center;
@@ -562,56 +562,12 @@
   font: 600 13px/1 var(--ui);
 }
 
-/* #56: on a phone with real safe-area insets the screen is 53px taller than
-   the space it has, and the fold lands mid-row on the last two lines. Tighten
-   the rhythm between the four mode lines and the length picker — the tallest,
-   most repeated spacing on the screen — rather than hide or shrink content. */
-/* #109: the fifth line (書く, #97) added 67px and pushed "Add a word" out
-   from under the tab bar again — measured at 394 × 852, 59px past the fade
-   above the floating capsule (#102); at 402 × 874, 37px. Two more cuts, the
-   ones with the least to lose: the due line's paragraph margins, which were
-   never meant — a browser's default 16px above and below one line of text,
-   32px in all — and 3px off each mode line, 30px over five. What the screen
-   does not fit after that (a resume card, a smaller phone), it scrolls. */
-@media (max-width: 699px) {
-  .practise .lines-head {
-    padding-top: 18px;
-  }
-  .practise .lines {
-    padding: 6px var(--gutter) 14px;
-  }
-  .practise .lines .rail {
-    top: calc(6px + 7px + 15px);
-    bottom: calc(14px + 7px + 15px);
-  }
-  .practise .line-row {
-    padding: 7px 0;
-  }
-  .practise .length-block {
-    padding-top: 16px;
-  }
-  .practise .sound-note {
-    margin-bottom: 18px;
-  }
-
-  /* #65: the resume card (51) sits on top of this already-tight layout, so
-     that state is tightened a little further. The rows that used to follow
-     the sound note, and the fold that kept landing inside them (#65, #109,
-     #118), are the Words tab since #123: with them gone the tab fits under
-     the capsule with the card showing, at 852 and at 874. */
-  .practise.has-resume .resume-row {
-    padding: 9px 16px;
-  }
-  .practise.has-resume .resume-block .rule {
-    padding-top: 6px;
-  }
-  .practise.has-resume .length-block {
-    padding-top: 12px;
-  }
-  .practise.has-resume .lines-head {
-    padding-top: 14px;
-  }
-}
+/* The tab scrolls, and is spaced to read rather than to fit (Henning,
+   2026-09-14: "sehr gedrängt, nur um scrollen zu verhindern"). A phone-only
+   block used to take space back from every gap here so the whole tab stayed
+   above the capsule — #56, #109, #65 — until the headings sat on the controls
+   above them. Do not tighten it back to avoid a scroll: the lines are a
+   thumb's reach below the questions, and scrolling to them is fine. */
 
 @media (min-width: 700px) {
   .practise .head h1 {
@@ -620,17 +576,14 @@
   .practise .head p {
     font-size: 17px;
   }
-  /* The two headings the lines gained (How long, How to practise) made the
-     nothing-due tab scroll by 47px at 1024 × 1366, measured. 6px off each of
-     the five rows' padding takes that back (4px still left 7px to scroll). */
   .practise .lines .rail {
     left: calc(var(--gutter) + 16px);
-    top: calc(8px + 14px + 18px);
-    bottom: calc(20px + 14px + 18px);
+    top: calc(8px + 20px + 18px);
+    bottom: calc(20px + 20px + 18px);
   }
   .practise .line-row {
     gap: 22px;
-    padding: 14px 0;
+    padding: 20px 0;
   }
   .practise .line-row .jp {
     font-size: 28px;
@@ -2106,10 +2059,16 @@
   font-weight: 800;
 }
 
+/* Also matches the global `.field` further down — the add-word form's input
+   box — which is where the surface, `align-items: center` and a padding with
+   no top or bottom come from. So the box drew its title on its top edge and
+   the chosen button on its bottom one; the padding here is what gives both
+   room (Henning, 2026-09-14). */
 .settings .field {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+  padding: 20px 18px;
 }
 .settings .field-label {
   font-size: 16px;
@@ -2469,24 +2428,12 @@
   color: var(--ink-muted);
 }
 
-.browse-foot {
-  flex: none;
-  padding: 16px var(--gutter) 30px;
-}
-.browse-foot .btn-primary {
-  width: 100%;
-  height: 56px;
-}
-
-/* #123: Browse as the Words tab. The list scrolls inside its own box and ends
-   at the footer, so nothing runs under the capsule, and the fade that hides
-   rows scrolling beneath it would only dim "Practise starred". The footer
-   keeps the capsule's height and gap clear, plus a little air. */
-#app:has(> .words)::after {
-  display: none;
-}
-.words .browse-foot {
-  padding-bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 14px);
+/* #123: Browse as the Words tab. The list scrolls inside its own box. With
+   the "Practise starred" footer gone it runs under the capsule like the other
+   tabs, fade included, and keeps the same space clear at its end so the last
+   row can be scrolled out from under it. */
+.words .browse-list {
+  padding-bottom: var(--tabbar-space);
 }
 
 /* Her own words at the top of the idle list. The list already carries the
@@ -2509,8 +2456,7 @@
 @media (min-width: 700px) {
   .browse-head,
   .browse-search,
-  .chips,
-  .browse-foot {
+  .chips {
     width: var(--column);
     margin-left: auto;
     margin-right: auto;
@@ -2689,9 +2635,9 @@
 .practise .set-block {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 12px;
   padding: 0 var(--gutter);
-  margin: 0 0 4px;
+  margin: 0;
 }
 .practise .set-label {
   font: 600 11px/1 var(--mono);
@@ -3139,7 +3085,7 @@
    practise" — 0px between them, the two labels drawn over each other —
    since the set block moved up under the resume card (#58). */
 .resume-block .rule {
-  padding: 18px var(--gutter) 14px;
+  padding: 32px var(--gutter) 28px;
 }
 
 /* ══ 49 First run ═════════════════════════════════════════════════

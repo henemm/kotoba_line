@@ -451,7 +451,6 @@ async function loadOwnDeck() {
 function wordsScreen() {
   return browseScreen({
     romaji: state.settings.romaji,
-    onPractiseStarred: () => startSession({ only: "starred" }),
     // 33: "a word she cannot find is usually a word she should add, so the
     // empty result leads straight into 28 with the query carried over."
     onAddWord: (query = "") => openAddWord(query),

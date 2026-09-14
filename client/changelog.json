@@ -1,5 +1,15 @@
 [
   {
+    "version": "v54",
+    "summary": "Stars on the Words tab work again, and the Practise screen has room to breathe.",
+    "notes": [
+      "Tapping ☆ on the Words tab did nothing for the last few days: the star jumped back. It stays now. To practise your starred words, choose ★ Starred under “What to practise”.",
+      "The “Practise starred” button at the bottom of the Words tab is gone.",
+      "The Practise screen has more space between its parts. It scrolls a little now, and that is on purpose.",
+      "In Settings, the “Say it aloud asks about” box has more room inside."
+    ]
+  },
+  {
     "version": "v53",
     "summary": "“How long” now asks in Japanese: ちょっと, ふつう or いっぱい.",
     "notes": [
