@@ -1,5 +1,15 @@
 [
   {
+    "version": "v66",
+    "summary": "Cards from your lists are quieter and fairer, and a deck's page no longer cuts off its numbers.",
+    "notes": [
+      "A card with no recording stays silent. Before, the phone's voice read the romaji, and got the pronunciation wrong.",
+      "With the Japanese characters off, a card from your lists shows no example sentence. It was only a recording, with nothing to read beside it.",
+      "In “Pick the meaning”, a card that asks about a whole sentence now gets whole sentences as wrong answers, so the length no longer gives the answer away.",
+      "On a deck's page, the big number and “new / to review” were cut off on some iPhones. The page scrolls a little further instead."
+    ]
+  },
+  {
     "version": "v65",
     "summary": "The app is light now. Dark is still there in Settings.",
     "notes": [

@@ -689,6 +689,12 @@
 }
 
 .deck-today {
+  /* Never squeezed: the page scrolls instead. `min-height` lets a flex item
+     shrink down to it, and with the light status bar the page starts under
+     the bar on an iPhone, 812pt tall instead of 874 — the box went to 150 of
+     the 155 its content needs, the number over its top edge and "new / to
+     review" under its bottom (measured in WebKit at 402 × 812, v65). */
+  flex: none;
   margin: 0 var(--gutter);
   padding: 22px 18px;
   border-radius: 20px;

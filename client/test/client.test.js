@@ -506,6 +506,11 @@ describe("which cards a mode can actually ask about", () => {
     // …and drops it on a device that cannot speak either.
     assert.equal(playableIn("listen", noAudio, false).length, 0);
   });
+
+  it("drops a 聞く card whose only sound would be a voice reading romaji (v66)", () => {
+    const romaji = card({ sentence: "Totemo oishii desu", sentence_audio: null });
+    assert.equal(playableIn("listen", [romaji], true).length, 0);
+  });
 });
 
 describe("browsing the deck cached on the device (#22)", () => {
