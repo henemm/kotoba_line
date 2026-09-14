@@ -1,5 +1,12 @@
 [
   {
+    "version": "v48",
+    "summary": "The Practise screen scrolls down to “Add a word” again.",
+    "notes": [
+      "When the “Carry on” card is showing, the Practise screen is a little longer than your phone. Swiping down to see the rest sometimes jumped back to the top and then stopped working. It stays where you scrolled now."
+    ]
+  },
+  {
     "version": "v47",
     "summary": "The ♪ button shows that you tapped it.",
     "notes": [
