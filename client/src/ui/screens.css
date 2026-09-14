@@ -497,7 +497,7 @@
 }
 .practise .length button {
   flex: 1;
-  height: 52px;
+  height: 56px;
   border-radius: 12px;
   background: var(--surface);
   border: 2px solid transparent;
@@ -514,7 +514,7 @@
   color: var(--ink);
 }
 .practise .length-word {
-  font: 600 15px/1 var(--ui);
+  font: 700 17px/1.1 var(--jp);
 }
 .practise .length-count {
   font: 400 12px/1 var(--ui);
@@ -781,7 +781,7 @@
 }
 .stats .slot {
   flex: 1;
-  height: 52px;
+  height: 56px;
   border-radius: 12px;
   box-sizing: border-box;
   display: grid;

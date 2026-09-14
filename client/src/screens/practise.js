@@ -20,13 +20,20 @@ const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
  * promises more than it does. No minutes: there is not yet enough of her own
  * practice to say how long a card takes (measured 2026-09-14: no answers on
  * her account, nine on Henning's, from 9 to 98 seconds apart), and a guess
- * would be wrong on the first 書く session. "Long" is "up to 60" rather than
+ * would be wrong on the first 書く session. The last is "up to 60" rather than
  * "all", because on a day with more than 60 due it is not all.
+ *
+ * The words are Japanese, drawn like the lines below them: the modes are
+ * 選ぶ and 聞く with English underneath, and "Quick / Normal / Long" read
+ * as a form (Henning: "etwas langweilig"). All three are words she is
+ * learning — ちょっと is rank 93 in the deck, 普通 293, いっぱい 683 — so the
+ * choice is also a small reading exercise. ふつう is written in kana, as she
+ * would read it before the kanji. `en` is what VoiceOver says.
  */
 const SESSION_LENGTHS = [
-  { value: 10, label: "Quick", detail: "10 cards" },
-  { value: 20, label: "Normal", detail: "20 cards" },
-  { value: 60, label: "Long", detail: "up to 60" },
+  { value: 10, label: "ちょっと", en: "A little", detail: "10 cards" },
+  { value: 20, label: "ふつう", en: "Normal", detail: "20 cards" },
+  { value: 60, label: "いっぱい", en: "A lot", detail: "up to 60" },
 ];
 
 /**
@@ -329,11 +336,12 @@ export function practiseScreen({
     const draw = () =>
       render(
         picker,
-        SESSION_LENGTHS.map(({ value, label, detail }) =>
+        SESSION_LENGTHS.map(({ value, label, en, detail }) =>
           el(
             "button",
             {
               type: "button",
+              "aria-label": `${en}, ${detail}`,
               "aria-pressed": String(value === sessionLength),
               onclick: () => {
                 sessionLength = value;
@@ -341,7 +349,7 @@ export function practiseScreen({
                 draw();
               },
             },
-            el("span.length-word", { text: label }),
+            el("span.length-word", { lang: "ja", text: label }),
             el("span.length-count", { text: detail }),
           ),
         ),
