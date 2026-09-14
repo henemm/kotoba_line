@@ -1,5 +1,12 @@
 [
   {
+    "version": "v53",
+    "summary": "“How long” now asks in Japanese: ちょっと, ふつう or いっぱい.",
+    "notes": [
+      "The three buttons are ちょっと (a little, 10 cards), ふつう (normal, 20 cards) and いっぱい (a lot, up to 60). All three are words from your deck."
+    ]
+  },
+  {
     "version": "v52",
     "summary": "The Practise screen asks three questions, in order: what, how long, how.",
     "notes": [
