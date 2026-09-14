@@ -1,5 +1,14 @@
 [
   {
+    "version": "v69",
+    "summary": "Search finds a word by its romaji now, and a card you find there does something.",
+    "notes": [
+      "Type a word the way the app shows it, like “naru” or “kore”, and Search finds it. Before, many words were only found by their Japanese.",
+      "Tap one of your own cards in Search to edit it, move it or delete it. Tap a Kaishi word to hear it or give it your own topic.",
+      "The Kaishi deck's page no longer lists all 1,500 cards. Your own decks still list theirs, with a search."
+    ]
+  },
+  {
     "version": "v68",
     "summary": "Your decks hold their cards now, like in Noji. Add a card while you are in a deck.",
     "notes": [

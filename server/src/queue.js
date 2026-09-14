@@ -2,6 +2,9 @@ import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 import { deckSettings } from "./deck-settings.js";
 import { MY_WORDS, ownDecks } from "./decks.js";
 import { nextDay, tokyoDay } from "./stats.js";
+// The client's own module, not a copy (v69): the image puts client/src/romaji.js
+// and pitch.js at /client/src, the same place relative to src/ as in the repo.
+import { romajiQuery, searchRomaji } from "../../client/src/romaji.js";
 
 /**
  * Building a session's queue (§5, §5a).
@@ -403,6 +406,15 @@ function normalisedGloss(column) {
   return `' ' || ${expr} || ' '`;
 }
 
+/** Databases that already know `search_romaji()`; registered on first use. */
+const romajiReady = new WeakSet();
+
+function withSearchRomaji(db) {
+  if (romajiReady.has(db)) return;
+  db.function("search_romaji", { deterministic: true }, (word, reading) => searchRomaji(word, reading));
+  romajiReady.add(db);
+}
+
 /**
  * §5a's browse screen: search by Japanese or by English gloss, filter by deck
  * and tag, and see what is starred.
@@ -416,6 +428,7 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   const visible = visibleTo(userId);
   const whereParams = [...visible.params];
   let where = `WHERE c.deleted_at IS NULL AND ${visible.sql}`;
+  let romajiKey;
 
   if (q) {
     // Japanese has no word boundaries, so a substring match is right for the
@@ -429,10 +442,19 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     // The reading is searched through `word_reading`, the plain kana, and not
     // through `word_furigana`: that one is Anki's `食[た]べる`, where たべ is
     // split around the bracket and can never match (migration 003).
+    //
+    // v69: and by its romaji, through the very function the phone searches
+    // with offline (`searchRomaji`), so the two cannot find different cards.
+    // Matched where a word starts, as the gloss is, and a card that is exactly
+    // the search comes first (`exactFirst` in browse.js).
+    romajiKey = romajiQuery(q);
+    if (romajiKey) withSearchRomaji(db);
     where +=
       " AND (c.word LIKE ? OR c.word_reading LIKE ? OR c.word_furigana LIKE ? OR " +
-      `${normalisedGloss("c.word_meaning")} LIKE ?)`;
-    whereParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`);
+      `${normalisedGloss("c.word_meaning")} LIKE ?` +
+      (romajiKey ? " OR instr(search_romaji(c.word, c.word_reading), ?) > 0" : "") +
+      ")";
+    whereParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`, ...(romajiKey ? [` ${romajiKey}`] : []));
   }
   if (deck) {
     where += " AND c.deck = ?";
@@ -454,10 +476,11 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
 
   const size = Math.min(Math.max(pageSize, 1), 200);
   const offset = Math.max(page, 0) * size;
+  const exactFirst = romajiKey ? "instr(search_romaji(c.word, c.word_reading), ?) = 0, " : "";
 
   const cards = db
     .prepare(
-      `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning,
+      `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning, c.word_audio,
               c.deck, c.frequency_rank, c.deck_id, d.name AS deck_name,
               COALESCE(st.starred, 0) AS starred,
               s.due_at, s.reps, s.last_review
@@ -467,10 +490,10 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
          -- Which of her decks a card of hers is in, for Search's label (#137).
          LEFT JOIN decks d ON d.id = c.deck_id
          ${where}
-        ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC
+        ORDER BY ${exactFirst}c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC
         LIMIT ? OFFSET ?`,
     )
-    .all(userId, userId, ...whereParams, size, offset)
+    .all(userId, userId, ...whereParams, ...(romajiKey ? [` ${romajiKey}|`] : []), size, offset)
     .map((r) => ({ ...r, starred: Boolean(r.starred) }));
 
   // Both halves of a card's topics, per row (#35): the deck's, which she

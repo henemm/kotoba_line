@@ -1,6 +1,6 @@
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { showsScript, shownWord } from "../script.js";
-import { byFrequencyThenId, matchesQuery } from "./browse.js";
+import { exactFirst, matchesQuery } from "./browse.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -13,24 +13,25 @@ import { el, num, render } from "../ui/dom.js";
  * the rule Browse follows offline (#22).
  */
 
-/** Rows drawn before "Show more". Kaishi has 1,500; a page should not draw them all. */
+/** Rows drawn before "Show more". Her 1000 list has 232; a page should not draw them all. */
 export const ROWS_PER_PAGE = 50;
 
 /**
- * Which cached cards belong to a deck, in its order: Kaishi most common first,
- * one of hers in the order of her list with the newest card on top (own ids
- * are negative epoch milliseconds, so ascending id is exactly that).
+ * Which cached cards belong to one of her decks, in the order of her list with
+ * the newest card on top (own ids are negative epoch milliseconds, so
+ * ascending id is exactly that). A search puts an exact romaji match first.
+ *
+ * Her decks only (v69): Kaishi's page has no card list. Its 1,500 cards are
+ * not hers to edit, so a row there led nowhere (Henning, 2026-09-14), and
+ * finding a Kaishi word is what Search is for.
  *
  * `list_name` stands in for `deck_id` on a card cached before migration 016
  * reached this phone; the next sync replaces it.
  */
 export function cardsOfDeck(deck, cards, q = "") {
-  const inDeck =
-    deck.key === "kaishi"
-      ? (c) => c.deck === "kaishi"
-      : (c) => c.deck === "personal" && (c.deck_id === deck.id || (c.deck_id == null && c.list_name === deck.name));
+  const inDeck = (c) => c.deck === "personal" && (c.deck_id === deck.id || (c.deck_id == null && c.list_name === deck.name));
   const found = cards.filter((c) => !c.deleted_at && inDeck(c) && matchesQuery(c, q));
-  return found.sort(deck.key === "kaishi" ? byFrequencyThenId : (a, b) => a.id - b.id);
+  return found.sort(exactFirst(q, (a, b) => a.id - b.id));
 }
 
 export function deckCardsBlock({ deck, japanese = true, onCard }) {
@@ -83,7 +84,7 @@ export function deckCardsBlock({ deck, japanese = true, onCard }) {
     const matching = q ? cardsOfDeck(deck, all, q) : cards;
     heading.textContent = `Cards in this deck · ${num(cards.length)}`;
     if (cards.length === 0) {
-      render(list, el("p.deck-cards-note", { text: deck.own ? "No cards yet. Tap + Add card to write the first one." : "This deck's cards are still on their way to this phone." }));
+      render(list, el("p.deck-cards-note", { text: "No cards yet. Tap + Add card to write the first one." }));
       return;
     }
     if (matching.length === 0) {
@@ -106,21 +107,13 @@ export function deckCardsBlock({ deck, japanese = true, onCard }) {
     );
   }
 
-  /**
-   * Her cards lead with the German she wrote, as on the front in Noji; a
-   * Kaishi card with its word, as the deck asks it. Only her own open a menu:
-   * Kaishi's cards are not hers to edit.
-   */
+  /** Her cards lead with the German she wrote, as on the front in Noji. */
   function row(card) {
-    const own = card.deck === "personal";
     const word = el(showsScript(card, japanese) ? "span.deck-card-word.jp" : "span.deck-card-word", {
       text: shownWord(card, japanese),
     });
     const meaning = el("span.deck-card-meaning", { text: card.word_meaning ?? "" });
-    const copy = own ? [meaning, word] : [word, meaning];
-    return own && onCard
-      ? el("button.deck-card", { type: "button", onclick: () => onCard(card) }, el("span.copy", {}, ...copy))
-      : el("div.deck-card", {}, el("span.copy", {}, ...copy));
+    return el("button.deck-card", { type: "button", onclick: () => onCard?.(card) }, el("span.copy", {}, meaning, word));
   }
 
   return root;

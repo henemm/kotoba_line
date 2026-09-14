@@ -327,6 +327,30 @@ describe("browse (§5a)", () => {
     await app.close();
   });
 
+  // v69: "naru" found nothing while the app showed "naru" (Henning). The same
+  // `searchRomaji` as the phone's offline search; client/test/search.test.js
+  // covers the folding.
+  it("finds a card by its romaji, exact match first, from a word's start", async () => {
+    const { app, db, user } = await fixture();
+    const add = db.prepare(
+      `INSERT INTO cards (id, word, word_reading, word_meaning, frequency_rank, deck, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'kaishi', 0)`,
+    );
+    add.run(201, "なるほど", "なるほど", "I see", 201);
+    add.run(202, "鳴る", "なる", "to ring", 202);
+    add.run(203, "無くなる", "なくなる", "to be lost", 203);
+    add.run(204, "大きい", "おおきい", "big", 204);
+    add.run(205, "手", "て", "hand", 205);
+
+    const ids = (q) => browseCards(db, user.id, { q }).cards.map((c) => c.id);
+    assert.deepEqual(ids("naru"), [202, 201], "鳴る is exactly naru and comes first; nakunaru is not a match");
+    assert.deepEqual(ids("okii"), [204]);
+    assert.ok(!ids("tee").includes(205), "a German word keeps its doubled vowel");
+    assert.equal(browseCards(db, user.id, { q: "naru" }).total, 2);
+    assert.ok(browseCards(db, user.id, { q: "naru" }).cards[0].word_audio !== undefined, "rows carry their recording");
+    await app.close();
+  });
+
   it("matches a gloss that starts with the term", async () => {
     const { app, db, user } = await fixture();
     db.prepare(

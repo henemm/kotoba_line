@@ -151,9 +151,9 @@ describe("the cards on a deck's page (#137, v68)", () => {
   ];
   const imZug = { key: "deck:3", id: 3, name: "Im Zug" };
 
-  it("lists Kaishi most common first, and one of hers newest first", () => {
-    assert.deepEqual(cardsOfDeck({ key: "kaishi" }, cards).map((c) => c.id), [1, 2]);
+  it("lists one of her decks newest first, and never a Kaishi card (v69)", () => {
     assert.deepEqual(cardsOfDeck(imZug, cards).map((c) => c.id), [-300, -100]);
+    assert.ok(cardsOfDeck(imZug, cards, "suru").every((c) => c.deck === "personal"));
   });
 
   it("finds a card by its German or its romaji", () => {

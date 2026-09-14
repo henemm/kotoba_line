@@ -1,5 +1,6 @@
 import { OfflineError, api } from "../api.js";
 import { loadDeck } from "../deck.js";
+import { romajiQuery, searchRomaji } from "../romaji.js";
 import { showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
 import { el, num, render } from "../ui/dom.js";
@@ -69,8 +70,23 @@ export function matchesQuery(card, q) {
   if (card.word?.toLowerCase().includes(needle)) return true;
   if (card.word_reading?.toLowerCase().includes(needle)) return true;
   if (card.word_furigana?.toLowerCase().includes(needle)) return true;
+  // v69: by the romaji the app shows with the script off, from a word's start.
+  const key = romajiQuery(q);
+  if (key && searchRomaji(card.word, card.word_reading).includes(` ${key}`)) return true;
   const gloss = ` ${(card.word_meaning ?? "").toLowerCase().replace(/[,;()[\]/.!?'"-]/g, " ")} `;
   return gloss.includes(` ${needle}`);
+}
+
+/**
+ * v69: a card whose romaji is exactly the search comes first — "eki" puts 駅
+ * above ekimae — and the list keeps its own order after that. The server
+ * sorts the same way.
+ */
+export function exactFirst(q, then) {
+  const key = romajiQuery(q);
+  if (!key) return then;
+  const exact = (c) => (searchRomaji(c.word, c.word_reading).includes(` ${key}|`) ? 0 : 1);
+  return (a, b) => exact(a) - exact(b) || then(a, b);
 }
 
 /** The server's ORDER BY, so an offline list reads the same as an online one. */
@@ -99,6 +115,7 @@ function romajiSpan(card) {
 
 export function browseScreen({
   onTopics,
+  onOwnCard,
   romaji = false,
   japanese = true,
 }) {
@@ -296,23 +313,29 @@ export function browseScreen({
       });
     }
 
+    // v69: one of her cards opens edit, move and delete, as in its deck; a
+    // Kaishi card its topics, with its recording to hear. A tap that did
+    // nothing was the complaint (Henning, 2026-09-14).
+    const own = card.deck === "personal" && onOwnCard;
+    const tap = own ? () => onOwnCard(card, keepSearch) : onTopics ? () => onTopics(card, drawList) : undefined;
+
     return el(
       "div.row",
       {},
       el("span.band", { class: hasLiveData ? maturityBand(card) : undefined }),
-      // #35: the word and its gloss open her topics for this card. The star is
-      // a sibling, not inside — one tap must not mean two things, and the star
-      // is the one gesture on this screen that has to stay a single tap.
+      // #35: the word and its gloss open the card. The star is a sibling, not
+      // inside — one tap must not mean two things, and the star is the one
+      // gesture on this screen that has to stay a single tap.
       el(
-        onTopics ? "button.row-copy" : "span.row-copy",
-        onTopics
+        tap ? "button.row-copy" : "span.row-copy",
+        tap
           ? {
               type: "button",
-              "aria-label": `Topics for ${shownWord(card, japanese)}`,
+              "aria-label": own ? `Edit, move or delete ${shownWord(card, japanese)}` : `Topics for ${shownWord(card, japanese)}`,
               // The redraw is handed over rather than left to the caller:
               // the row is drawn from this card object, and app.js has no
               // way to repaint one row of a list it does not own.
-              onclick: () => onTopics(card, drawList),
+              onclick: tap,
             }
           : {},
         // #135: with the script off the word is its romaji, and the romaji
@@ -351,7 +374,7 @@ export function browseScreen({
       el("p.browse-note", {
         // Called out because typing "yakitori" on an English keyboard is the
         // likeliest way to arrive here.
-        text: "Search covers each word as it is written, its reading and its meaning. Kaishi's words are not found by their romaji.",
+        text: "Search covers each word as it is written, in romaji, its reading and its meaning.",
       }),
       // 33 led from here into adding the word. Adding is in a deck now (#137),
       // which is where the card has to go.
@@ -372,6 +395,15 @@ export function browseScreen({
     }
     drawChrome();
     drawList();
+  }
+
+  /**
+   * The same search again after one of her cards changed (v69). A repaint is
+   * not enough: a moved card has a new deck label and a deleted one is gone.
+   */
+  function keepSearch() {
+    reload();
+    countStarred();
   }
 
   async function reload() {
@@ -436,7 +468,9 @@ export function browseScreen({
       state.error = "Offline, and nothing has been cached to browse yet.";
       return;
     }
-    const matches = [...deck.values()].filter((c) => matchesQuery(c, state.q)).sort(byFrequencyThenId);
+    const matches = [...deck.values()]
+      .filter((c) => !c.deleted_at && matchesQuery(c, state.q))
+      .sort(exactFirst(state.q, byFrequencyThenId));
     state.total = matches.length;
     state.cards = matches.slice(0, (page + 1) * PAGE_SIZE);
     state.more = state.cards.length < matches.length;
