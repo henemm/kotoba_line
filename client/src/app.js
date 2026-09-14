@@ -689,7 +689,10 @@ function openAddCard() {
     onSaved: async (_, { next = false } = {}) => {
       if (!next) state.overlay = undefined;
       await cardsChanged();
-      await refreshOpenDeck({ redraw: !next });
+      // Redraws only once the form is closed: after "Save and add next" she may
+      // tap Cancel before the count arrives, and the page under it must not
+      // stay the empty deck it was.
+      await refreshOpenDeck();
     },
   });
   loadTopics();
