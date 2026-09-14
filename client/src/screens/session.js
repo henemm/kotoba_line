@@ -1576,7 +1576,13 @@ export function sentenceKana(sentenceFurigana) {
  * setting, so one session over both decks asks each card the way it was
  * written.
  */
-export const flipsMeaningFirst = (card) => Boolean(card?.list_name);
+export const flipsMeaningFirst = (card) => isInHerDeck(card);
+
+/**
+ * A card of hers in one of her decks (#137, migration 016) — all of hers are.
+ * `list_name` answers for a card cached before this phone was sent `deck_id`.
+ */
+export const isInHerDeck = (card) => Boolean(card?.deck_id ?? card?.list_name);
 
 /**
  * Whether a card's example sentence is offered at all (#137, v66).
@@ -1608,9 +1614,9 @@ const isPhrase = (text) => (text ?? "").trim().split(/\s+/).length >= 3;
 
 export function meaningPool(card, pool, japanese = true) {
   const shown = shownWord(card, japanese);
-  const fromList = Boolean(card.list_name);
+  const fromList = isInHerDeck(card);
   const candidates = pool.filter(
-    (c) => Boolean(c.list_name) === fromList && shownWord(c, japanese) !== shown,
+    (c) => isInHerDeck(c) === fromList && shownWord(c, japanese) !== shown,
   );
   // #137, v66: on her lists a whole sentence among single words is the right
   // answer at a glance, whatever the Japanese said — "Es ist sehr lecker"

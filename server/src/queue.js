@@ -458,12 +458,14 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   const cards = db
     .prepare(
       `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning,
-              c.deck, c.frequency_rank,
+              c.deck, c.frequency_rank, c.deck_id, d.name AS deck_name,
               COALESCE(st.starred, 0) AS starred,
               s.due_at, s.reps, s.last_review
          FROM cards c
          LEFT JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?
          LEFT JOIN card_state  s ON s.card_id  = c.id AND s.user_id  = ?
+         -- Which of her decks a card of hers is in, for Search's label (#137).
+         LEFT JOIN decks d ON d.id = c.deck_id
          ${where}
         ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC
         LIMIT ? OFFSET ?`,

@@ -15,6 +15,11 @@ import { el, num, render } from "../ui/dom.js";
  * tab's name, and her own words (27, 30) sit at the top of the idle list,
  * where the practise tab used to carry them.
  *
+ * #137: the tab is "Search" now. Her own words moved into her decks, where she
+ * adds a card while she is in the deck (as in Noji), so this is where a word is
+ * found across all of them — each of hers labelled with its deck — and where
+ * the stars are.
+ *
  * The point of the screen is the starred set, not the search: starring is how
  * she builds a session out of exactly the cards she wants, and everything else
  * here exists to help her find one. So idle is not empty (31) — it opens on
@@ -93,12 +98,7 @@ function romajiSpan(card) {
 }
 
 export function browseScreen({
-  onAddWord,
-  onOwnDeck,
   onTopics,
-  // A function, because the count arrives after the tab is built and the tab
-  // is kept across redraws; `root.refresh()` redraws with the new one.
-  ownWords = () => 0,
   romaji = false,
   japanese = true,
 }) {
@@ -126,8 +126,8 @@ export function browseScreen({
     autocapitalize: "none",
     autocorrect: "off",
     spellcheck: "false",
-    placeholder: "Japanese or English",
-    "aria-label": "Search the deck",
+    placeholder: "Search all decks",
+    "aria-label": "Search all decks",
   });
 
   // Typing is not a request per keystroke. 200ms is long enough to swallow a
@@ -158,7 +158,7 @@ export function browseScreen({
       el(
         "div.browse-head",
         {},
-        el("span.browse-title", { text: "Words" }),
+        el("span.browse-title", { text: "Search" }),
         el("span.browse-count.tabular", { text: countLabel() }),
       ),
       el(
@@ -238,7 +238,6 @@ export function browseScreen({
     const idle = !state.q && !state.starredOnly;
     render(
       list,
-      idle ? ownBlock() : null,
       // 31 has idle open on the starred set, under "Starred recently". The
       // idle list has only ever been the whole deck, most common first — the
       // request sends no `starred` — so that heading sat over する and 事 as
@@ -249,7 +248,7 @@ export function browseScreen({
       el("div.rows", {}, state.cards.map(row)),
       !state.q && !state.starredOnly
         ? el("p.browse-note", {
-            text: "Type to search the whole deck, or star cards here to build a set you can practise on its own.",
+            text: "Type to search all your decks, or star cards here to build a set you can practise on its own.",
           })
         : null,
     );
@@ -323,6 +322,8 @@ export function browseScreen({
         }),
         romaji && japanese ? romajiSpan(card) : null,
         el("span.row-gloss", { text: card.word_meaning }),
+        // Which of her decks, for a card of hers (#137); Kaishi's need no label.
+        card.deck_name ? el("span.row-deck", { text: card.deck_name }) : null,
         // Her topics, on the row that carries them, so the list shows what she
         // has organised without her opening anything.
         card.myTags?.length
@@ -337,46 +338,6 @@ export function browseScreen({
     );
   }
 
-  /**
-   * Her own words, at the top of the idle list (#123). Two rows, where the
-   * practise tab had one: that one hid the way into the list behind a
-   * chevron inside the add button, so one tap target meant two things.
-   */
-  function ownBlock() {
-    const n = ownWords();
-    return el(
-      "div.own-block",
-      {},
-      el("span.browse-section", { text: "Your own words" }),
-      el(
-        "button.add-word-row",
-        // No argument: the click event is not a word to prefill.
-        { type: "button", onclick: () => onAddWord?.() },
-        el("span.dashed-station", { text: "+" }),
-        el(
-          "span.copy",
-          {},
-          el("span.title", { text: "Add a word" }),
-          el("span.detail", { text: "Type it in with its reading and meaning" }),
-        ),
-      ),
-      n > 0
-        ? el(
-            "button.add-word-row",
-            { type: "button", onclick: () => onOwnDeck?.() },
-            el("span.dashed-station", { text: num(n) }),
-            el(
-              "span.copy",
-              {},
-              el("span.title", { text: n === 1 ? "1 word of your own" : `${num(n)} words of your own` }),
-              el("span.detail", { text: "Edit or delete them" }),
-            ),
-            el("span.chevron", { "aria-hidden": "true", text: "›" }),
-          )
-        : null,
-    );
-  }
-
   /** 33. Not an error state — the frame is the same screen, minus the list. */
   function nothingMatches() {
     if (state.starredOnly && !state.q) {
@@ -386,22 +347,14 @@ export function browseScreen({
       ];
     }
     return [
-      el("p.browse-empty-title", { text: `Nothing in the deck matches “${state.q}”.` }),
+      el("p.browse-empty-title", { text: `Nothing in your decks matches “${state.q}”.` }),
       el("p.browse-note", {
         // Called out because typing "yakitori" on an English keyboard is the
         // likeliest way to arrive here.
-        text: "Search covers Japanese, the reading and the English gloss — but not romaji.",
+        text: "Search covers each word as it is written, its reading and its meaning. Kaishi's words are not found by their romaji.",
       }),
-      // 33: not an error state — a word she cannot find is usually a word she
-      // should add, so it leads straight into 28 with the query carried over.
-      onAddWord
-        ? el(
-            "button.browse-add",
-            { type: "button", onclick: () => onAddWord(state.q) },
-            el("span.dashed-station", { text: "+" }),
-            el("span", { text: "Add it as your own word" }),
-          )
-        : null,
+      // 33 led from here into adding the word. Adding is in a deck now (#137),
+      // which is where the card has to go.
     ];
   }
 

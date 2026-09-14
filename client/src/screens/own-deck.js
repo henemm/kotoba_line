@@ -1,9 +1,7 @@
 import { OfflineError, api } from "../api.js";
 import { say, unlock } from "../audio.js";
-import { toRomaji } from "../romaji.js";
-import { showsScript, shownWord } from "../script.js";
-import { maturityBand } from "./browse.js";
-import { acknowledged, el, num, render } from "../ui/dom.js";
+import { inScript, shownWord } from "../script.js";
+import { acknowledged, el, render } from "../ui/dom.js";
 
 /**
  * Her own words — designs 28, 29 and 30.
@@ -17,17 +15,25 @@ import { acknowledged, el, num, render } from "../ui/dom.js";
 const MAX_TAGS = 5;
 
 /**
- * Add a word (28, 29).
+ * Add a card to a deck, or change one (28, 29; #137).
  *
  * The word and the meaning are what make it savable; the reading and the
  * example sentence are what make it good. The sentence is behind a disclosure
  * "because on a train she will not write one, and an empty sentence field
  * would only reproach her".
+ *
+ * #137: laid out the way she writes a card in Noji — the German first, as the
+ * front, then the Japanese, as the back, in romaji or kana (Henning agreed the
+ * two fields on 2026-09-14). The reading, the example sentence and the topic
+ * are one disclosure below them. "Save and add next" keeps the form open on
+ * the same deck, for a list typed in one go.
  */
 export function addWordScreen({
   tags = [],
   initialWord = "",
   card,
+  // The deck the card goes into: `{ id, name }` (#137).
+  deck,
   onSaved,
   onDeleted,
   onCancel,
@@ -55,16 +61,20 @@ export function addWordScreen({
         sentence: "",
         sentenceMeaning: "",
       };
-  const chosen = new Set(editing ? card.tags ?? [] : []);
+  let chosen = new Set(editing ? card.tags ?? [] : []);
   // A topic on the card that the list does not carry still has to be a chip,
   // or saving would silently take it off.
   for (const tag of chosen) {
     if (!tags.some((t) => t.tag === tag)) tags = [...tags, { tag, n: 1 }];
   }
-  let sentenceOpen = editing && Boolean(draft.sentence || draft.sentenceMeaning);
+  let moreOpen = editing && Boolean(draft.reading || draft.sentence || draft.sentenceMeaning || chosen.size);
   let coining = false;
   let saving = false;
   let problem;
+  // "Saved: Wo ist der Bahnhof" after Save and add next, so a cleared form is
+  // not mistaken for a card that was lost.
+  let lastSaved;
+  let focusAsked = false;
 
   const fields = {};
 
@@ -75,7 +85,7 @@ export function addWordScreen({
       value: draft[key],
       rows: big ? "2" : undefined,
       type: big ? undefined : "text",
-      autocapitalize: lang === "en" ? "sentences" : "none",
+      autocapitalize: lang === "de" ? "sentences" : "none",
       autocorrect: "off",
       spellcheck: "false",
     });
@@ -97,11 +107,17 @@ export function addWordScreen({
   const canSave = () => draft.word.trim() && draft.meaning.trim() && !saving;
 
   const header = el("div.add-head");
+  const nextButton = el("button.btn-primary.add-next", {
+    type: "button",
+    text: "Save and add next",
+    onclick: () => save({ next: true }),
+  });
   function refreshHeader() {
+    nextButton.disabled = !canSave();
     render(
       header,
       el("button.add-cancel", { type: "button", text: "Cancel", onclick: onCancel }),
-      el("span.add-title", { text: editing ? "Edit word" : "Add a word" }),
+      el("span.add-title", { text: editing ? "Edit card" : "Add a card" }),
       // 28: "Save stays #3D465C until word and meaning both have content."
       el("button.add-save", {
         type: "button",
@@ -124,17 +140,24 @@ export function addWordScreen({
       el(
         "div.add-body",
         {},
-        group("Word", el("div.field.big", {}, field("word", { placeholder: japanese ? "日本語" : "Japanese", big: true }))),
+        deck && !editing ? el("p.add-deck", { text: `Adding to “${deck.name}”` }) : null,
+        lastSaved ? el("p.add-saved", { text: `Saved: ${lastSaved}` }) : null,
+        group("German", el("div.field", {}, field("meaning", { placeholder: "The front of the card", lang: "de" }))),
         group(
-          "Reading · optional",
-          el("div.field", {}, field("reading", { placeholder: japanese ? "かな" : "Kana" })),
+          "Japanese",
+          el("div.field.big", {}, field("word", { placeholder: japanese ? "日本語" : "Romaji or kana", big: true, lang: japanese ? "ja" : "romaji" })),
+          el("p.add-hint", { text: "In romaji or kana, the way you would write it in Noji." }),
         ),
-        group(
-          "Meaning",
-          el("div.field", {}, field("meaning", { placeholder: "In English", lang: "en" })),
-        ),
-        sentenceOpen ? sentenceGroup() : disclosure(),
-        topicGroup(),
+        ...(moreOpen
+          ? [
+              group(
+                "Reading · optional",
+                el("div.field", {}, field("reading", { placeholder: japanese ? "かな" : "Kana" })),
+              ),
+              sentenceGroup(),
+              topicGroup(),
+            ]
+          : [disclosure()]),
         problem ? el("p.add-problem", { text: problem }) : null,
       ),
       editing
@@ -144,11 +167,11 @@ export function addWordScreen({
             el("p.add-note", {
               // Said because it is the question she would have: correcting a
               // word does not throw away what she already knows of it.
-              text: "Changing a word keeps its progress.",
+              text: "Changing a card keeps its progress.",
             }),
             el("button.btn-secondary.add-delete", {
               type: "button",
-              text: "Delete this word",
+              text: "Delete this card",
               disabled: saving,
               onclick: askToDelete,
             }),
@@ -156,15 +179,21 @@ export function addWordScreen({
         : el(
             "div.add-foot",
             {},
+            nextButton,
             el("p.add-note", {
-              // The same fact 47's caption states, said before she commits rather
-              // than after: her own cards never have a recording.
-              text: "No recording — your own words are read by the phone's Japanese voice. The card enters the queue as new, tomorrow.",
+              // Said before she commits rather than after: a card she writes has
+              // no recording, and since v66 romaji is never read by a guessing voice.
+              text: "Cards you add have no recording. A word in kana or kanji is read by the phone's Japanese voice; romaji stays silent.",
             }),
           ),
     );
-    // Coming from an empty browse search, the word is already typed.
-    if (initialWord && !draft.meaning) fields.meaning?.focus();
+    // The German first, once per empty form: after the page is on screen, since
+    // focusing a detached field does nothing, and not on every redraw, which
+    // would pull the keyboard away from the field she is in.
+    if (!editing && !focusAsked) {
+      focusAsked = true;
+      setTimeout(() => fields.meaning?.focus(), 50);
+    }
   }
 
   /**
@@ -213,7 +242,7 @@ export function addWordScreen({
     } catch (err) {
       problem =
         err instanceof OfflineError
-          ? "Deleting a word needs a connection — it is on the server, not just this phone."
+          ? "Deleting a card needs a connection — it is on the server, not just this phone."
           : "That did not delete.";
     }
     saving = false;
@@ -226,12 +255,12 @@ export function addWordScreen({
       {
         type: "button",
         onclick: () => {
-          sentenceOpen = true;
+          moreOpen = true;
           draw();
-          fields.sentence?.focus();
+          fields.reading?.focus();
         },
       },
-      el("span", { text: "Add an example sentence" }),
+      el("span", { text: "Reading, example sentence, topic" }),
       el("span.chevron", { text: "›" }),
     );
   }
@@ -244,7 +273,8 @@ export function addWordScreen({
       // 29: the speaker reads it back, which is the only honest way to check
       // the synthesis got the reading right — and if it did not, the reading
       // field is what fixes it.
-      draft.word.trim()
+      // Only what the phone's voice can read honestly (v66): Japanese characters.
+      inScript(draft.sentence.trim() || draft.reading.trim() || draft.word.trim())
         ? el("button.add-speak", {
             type: "button",
             text: "♪ Hear it",
@@ -336,7 +366,7 @@ export function addWordScreen({
     return input;
   }
 
-  async function save() {
+  async function save({ next = false } = {}) {
     if (!canSave()) return;
     saving = true;
     problem = undefined;
@@ -349,21 +379,34 @@ export function addWordScreen({
       sentence: draft.sentence.trim() || undefined,
       sentenceMeaning: draft.sentenceMeaning.trim() || undefined,
       tags: [...chosen],
+      deckId: deck?.id,
     };
     try {
       // Editing sends the whole card; a field she emptied is left out and the
       // server stores it as empty.
       const { card: saved } = editing ? await api.updateCard(card.id, body) : await api.addCard(body);
-      // 29: "saving returns to the practise tab with the count incremented, no
-      // confirmation screen."
+      if (next) {
+        // The same deck, an empty form, the German field ready for the next card.
+        lastSaved = body.meaning;
+        Object.assign(draft, { word: "", reading: "", meaning: "", sentence: "", sentenceMeaning: "" });
+        chosen = new Set();
+        moreOpen = false;
+        saving = false;
+        focusAsked = false;
+        onSaved?.(saved, { next: true });
+        draw();
+        return;
+      }
+      // 29: "saving returns … with the count incremented, no confirmation
+      // screen." To the deck she added it from (#137).
       onSaved?.(saved);
       return;
     } catch (err) {
       problem =
         err instanceof OfflineError
           ? editing
-            ? "Changing a word needs a connection — it is on the server, not just this phone."
-            : "Adding a word needs a connection — it goes on the server, not just this phone."
+            ? "Changing a card needs a connection — it is on the server, not just this phone."
+            : "Adding a card needs a connection — it goes on the server, not just this phone."
           : "That did not save.";
     }
     saving = false;
@@ -372,108 +415,4 @@ export function addWordScreen({
 
   draw();
   return root;
-}
-
-/**
- * Her list (30).
- *
- * Maturity per row in words rather than a bar: five rows do not need a chart.
- */
-export function ownDeckScreen({ onBack, onAdd, onEdit, romaji = false, japanese = true }) {
-  const root = el("div.own-deck");
-  let cards;
-  let problem;
-
-  load();
-
-  async function load() {
-    try {
-      ({ cards } = await api.cards());
-    } catch (err) {
-      problem =
-        err instanceof OfflineError
-          ? "Your own deck needs a connection. Practice does not."
-          : "Could not load your deck.";
-    }
-    draw();
-  }
-
-  function draw() {
-    render(
-      root,
-      el(
-        "div.own-head",
-        {},
-        el("button.browse-back", { type: "button", "aria-label": "Back", text: "←", onclick: onBack }),
-        el("span.browse-title", { text: "Your own deck" }),
-        el("span.browse-count.tabular", {
-          text: cards ? `${num(cards.length)} ${cards.length === 1 ? "word" : "words"}` : "",
-        }),
-      ),
-      // Design 30 says "Swipe a row to edit or delete." Built as a tap instead
-      // (#85): nothing on a row shows that it can be swiped, no other screen
-      // in the app uses a swipe, and a gesture she never discovers is a
-      // feature she does not have. Tapping opens the word; delete is in there.
-      el("p.own-note", { text: "Scheduled alongside the Kaishi deck. Tap a word to change or delete it." }),
-      problem ? el("p.browse-note", { text: problem }) : body(),
-      el(
-        "div.own-foot",
-        {},
-        el("button.btn-primary", { type: "button", text: "Add a word", onclick: onAdd }),
-      ),
-    );
-  }
-
-  function body() {
-    if (!cards) return el("div.loading", { text: "…" });
-    if (cards.length === 0) {
-      // 30: the empty state keeps the header and the button and replaces the
-      // list with one line.
-      return el("p.browse-note", {
-        text: "Words you add here are scheduled like any other card.",
-      });
-    }
-    return el("div.own-list", {}, cards.map(row));
-  }
-
-  function row(card) {
-    return el(
-      "button.own-row",
-      { type: "button", onclick: () => onEdit?.(card) },
-      el(
-        "span.own-copy",
-        {},
-        // #135: see the same row in browse.js.
-        el(showsScript(card, japanese) ? "span.own-word.jp" : "span.own-word", {
-          text: shownWord(card, japanese),
-        }),
-        romaji && japanese ? romajiSpan(card) : null,
-        el("span.own-gloss", { text: card.word_meaning }),
-      ),
-      el("span.own-band", { text: maturityWord(card) }),
-    );
-  }
-
-  return root;
-}
-
-/**
- * 30 says the band in words rather than as a square.
- *
- * The thresholds live in one place — browse's `maturityBand` — because two
- * copies of "twenty-one days" is two things to change and one to forget.
- */
-export const maturityWord = maturityBand;
-
-/**
- * The word in romaji under it (#75).
- *
- * `word_reading` is already plain kana — she types it straight into the
- * "Reading" field with no bracket notation to parse (contrast the Kaishi
- * deck's `word_furigana` in browse.js) — so this reads it directly rather
- * than going through `kanaReading`.
- */
-function romajiSpan(card) {
-  const text = toRomaji(card.word_reading ?? card.word);
-  return text ? el("span.own-romaji", { text }) : null;
 }

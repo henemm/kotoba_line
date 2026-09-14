@@ -1,4 +1,4 @@
-import { OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js";
+import { ApiError, OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { signedOutScreen } from "./screens/signed-out.js";
 import { updateSheet } from "./screens/update-sheet.js";
@@ -8,7 +8,8 @@ import { deckOptionsSheet } from "./screens/deck-options.js";
 import { jokerSpentScreen, statsScreen, streakResetScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
-import { addWordScreen, ownDeckScreen } from "./screens/own-deck.js";
+import { addWordScreen } from "./screens/own-deck.js";
+import { cardActionsSheet, deckCardsBlock, deckNameSheet } from "./screens/deck-cards.js";
 import { firstRunScreen } from "./screens/first-run.js";
 import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault, scopeOf } from "./screens/choose-set.js";
 import { sessionScreen } from "./screens/session.js";
@@ -30,8 +31,11 @@ import { appName } from "./script.js";
 // and adds words; each of those used to be reached from somewhere else, and
 // Browse from three places. Settings keeps only what configures the app.
 const TABS = [
-  { key: "practise", label: "Practise" },
-  { key: "words", label: "Words" },
+  // #137: named for what they hold now. Practise starts from her decks, and a
+  // deck is also where its cards are added; Words is left with finding a word
+  // across all of them, and the stars.
+  { key: "practise", label: "Decks" },
+  { key: "words", label: "Search" },
   { key: "stats", label: "Stats" },
   { key: "settings", label: "Settings" },
 ];
@@ -67,11 +71,13 @@ const state = {
   signInScript: true,
   topics: [],
   sheet: undefined,
-  // Her own deck (27–30). `ownWords` is the count on the Words tab's own-words
-  // row; `overlay` is the add screen, the list or the card-topics sheet, which
-  // take the screen.
-  ownWords: 0,
+  // `overlay` is the card form or the card-topics sheet, which take the screen.
   overlay: undefined,
+  // The open deck's card list (#137), kept across rebuilds of the page so a
+  // search she is typing is not wiped by a count arriving: `{ key, block }`.
+  deckCards: undefined,
+  // The last deck list, for names: "Move to" and a resumed session's deck.
+  lastDecks: [],
   // 51: an unfinished session, if there is one worth offering.
   resumable: undefined,
   // 49: this device has no deck yet, so the first thing after signing in is
@@ -209,6 +215,7 @@ function currentScreen() {
     return decksScreen({
       decks: deckList(),
       onOpen: openDeck,
+      onNewDeck: openNewDeck,
       resumable: state.resumable,
       onResume: resumeSession,
       japanese: state.settings.japaneseScript,
@@ -224,6 +231,8 @@ function currentScreen() {
       readAloud: state.settings.readAloud,
       japanese: state.settings.japaneseScript,
       hiddenModes: state.deck?.settings?.hiddenModes ?? [],
+      cardsBlock: deckCards(),
+      onAddCard: state.deck?.own ? openAddCard : undefined,
       onSessionLength: (len) => {
         keepSettings({ ...state.settings, sessionLength: len });
         // Best effort: the picker is a shortcut into the same stored setting,
@@ -275,6 +284,8 @@ function currentScreen() {
       // Her decks are hers (#137); whoever signs in next starts on the list.
       state.filters = { ...DEFAULT_FILTERS };
       state.deck = undefined;
+      state.deckCards = undefined;
+      state.lastDecks = [];
       numbersChanged();
       state.tab = "practise";
       state.session = undefined;
@@ -349,11 +360,15 @@ function deckList() {
     promise: api.decks().then(
       (answer) => {
         setMeta("decks", answer).catch(() => {});
+        state.lastDecks = answer.decks ?? [];
         return answer;
       },
       async (error) => {
         const kept = await getMeta("decks");
-        if (kept) return kept;
+        if (kept) {
+          state.lastDecks = kept.decks ?? [];
+          return kept;
+        }
         throw error;
       },
     ),
@@ -368,6 +383,7 @@ function deckList() {
 /** Into a deck's page (#137). Anything narrowed in another deck is left behind. */
 function openDeck(deck) {
   state.deck = deck;
+  state.deckCards = undefined;
   state.filters = { ...DEFAULT_FILTERS, deckKey: deck.key };
   numbersChanged();
   renderApp();
@@ -389,6 +405,168 @@ function openDeckOptions() {
       numbersChanged();
       api.updateDeckSettings(state.deck.key, { hiddenModes: settings.hiddenModes, newPerDay: settings.newPerDay }).catch(() => {});
     },
+    onRename: state.deck.own ? openRenameDeck : undefined,
+    onDelete: state.deck.own ? deleteOpenDeck : undefined,
+    onClose: closeSheet,
+  });
+  renderApp();
+}
+
+/** A deck from `/api/decks`' shape, for one just made and not yet counted. */
+function emptyDeck({ id, name }) {
+  return {
+    key: `deck:${id}`,
+    id,
+    name,
+    own: true,
+    cards: 0,
+    seen: 0,
+    today: { total: 0, fresh: 0, review: 0 },
+    ways: { choose: 0, listen: 0, speak: 0, type: 0, flip: 0 },
+    settings: { hiddenModes: [], newPerDay: 10 },
+  };
+}
+
+/** What a deck request's failure says, in her words (#137). */
+function deckProblem(err, name) {
+  if (err instanceof OfflineError) return "That needs a connection: your decks are on the server, not just this phone.";
+  if (err instanceof ApiError && err.status === 409) return `You already have a deck called “${name}”.`;
+  return "That did not work. Try again in a moment.";
+}
+
+/** "New deck" on the deck list (#137): a name, then straight into the empty deck. */
+function openNewDeck() {
+  state.sheet = deckNameSheet({
+    title: "New deck",
+    action: "Create deck",
+    onSubmit: async (name) => {
+      try {
+        const { deck } = await api.createDeck(name);
+        state.sheet = undefined;
+        openDeck(emptyDeck(deck));
+        return undefined;
+      } catch (err) {
+        return deckProblem(err, name);
+      }
+    },
+    onClose: closeSheet,
+  });
+  renderApp();
+}
+
+function openRenameDeck() {
+  const deck = state.deck;
+  state.sheet = deckNameSheet({
+    title: "Rename deck",
+    name: deck.name,
+    action: "Save",
+    onSubmit: async (name) => {
+      try {
+        const { deck: renamed } = await api.renameDeck(deck.id, name);
+        state.deck = { ...state.deck, name: renamed.name };
+        state.deckCards = undefined;
+        state.sheet = undefined;
+        numbersChanged();
+        renderApp();
+        return undefined;
+      } catch (err) {
+        return deckProblem(err, name);
+      }
+    },
+    onClose: closeSheet,
+  });
+  renderApp();
+}
+
+/** Asked in the options sheet first; returns a sentence when it did not happen. */
+async function deleteOpenDeck() {
+  try {
+    await api.deleteDeck(state.deck.id);
+  } catch (err) {
+    return deckProblem(err, state.deck.name);
+  }
+  state.sheet = undefined;
+  closeDeck();
+  await cardsChanged();
+  renderApp();
+  return undefined;
+}
+
+/**
+ * The open deck's card list (#137), made once per deck and kept across the
+ * page's rebuilds — the page is rebuilt whenever a count or the settings
+ * arrive, and a new list each time would lose her search mid-word.
+ */
+function deckCards() {
+  if (!state.deck) return undefined;
+  if (state.deckCards?.key !== state.deck.key) {
+    state.deckCards = {
+      key: state.deck.key,
+      block: deckCardsBlock({ deck: state.deck, japanese: state.settings.japaneseScript, onCard: openCardActions }),
+    };
+  }
+  return state.deckCards.block;
+}
+
+/** The open deck's counts again, after one of its cards changed. */
+async function refreshOpenDeck({ redraw = true } = {}) {
+  const key = state.deck?.key;
+  if (!key) return;
+  try {
+    const { decks: fresh } = await deckList();
+    const found = fresh.find((d) => d.key === key);
+    if (found && state.deck?.key === key) state.deck = { ...found };
+  } catch {
+    /* the page keeps the counts it had */
+  }
+  if (redraw && !state.overlay) renderApp();
+}
+
+/** A tap on one of her cards in a deck (#137): edit, move, delete. */
+function openCardActions(card) {
+  const bodyOf = (deckId) => ({
+    word: card.word,
+    reading: card.word_reading || undefined,
+    meaning: card.word_meaning,
+    sentence: card.sentence || undefined,
+    sentenceMeaning: card.sentence_meaning || undefined,
+    tags: card.tags ?? [],
+    deckId,
+  });
+  const failed = (err, what) =>
+    err instanceof OfflineError
+      ? `${what} a card needs a connection: it is on the server, not just this phone.`
+      : `That did not work. Try again in a moment.`;
+  state.sheet = cardActionsSheet({
+    card,
+    japanese: state.settings.japaneseScript,
+    decks: state.lastDecks.filter((d) => d.own && d.key !== state.deck?.key),
+    onEdit: () => {
+      state.sheet = undefined;
+      openEditCard(card);
+    },
+    onMove: async (_, deck) => {
+      try {
+        await api.updateCard(card.id, bodyOf(deck.id));
+      } catch (err) {
+        return failed(err, "Moving");
+      }
+      state.sheet = undefined;
+      await cardsChanged();
+      await refreshOpenDeck();
+      return undefined;
+    },
+    onDelete: async () => {
+      try {
+        await api.deleteCard(card.id);
+      } catch (err) {
+        return failed(err, "Deleting");
+      }
+      state.sheet = undefined;
+      await cardsChanged();
+      await refreshOpenDeck();
+      return undefined;
+    },
     onClose: closeSheet,
   });
   renderApp();
@@ -397,6 +575,7 @@ function openDeckOptions() {
 function closeDeck() {
   if (!state.deck) return;
   state.deck = undefined;
+  state.deckCards = undefined;
   state.filters = { ...DEFAULT_FILTERS };
   state.sheet = undefined;
   numbersChanged();
@@ -494,73 +673,62 @@ async function loadTopics() {
   }
 }
 
-/** 28/29. Takes the screen: it is a form, and a tab bar under a keyboard is noise. */
-function openAddWord(initialWord = "") {
+/**
+ * 28/29, inside a deck (#137). Takes the screen: it is a form, and a tab bar
+ * under a keyboard is noise. "Save and add next" keeps it open; Save goes back
+ * to the deck, where the new card is at the top of its list.
+ */
+function openAddCard() {
+  const deck = state.deck;
+  if (!deck?.own) return;
   state.overlay = addWordScreen({
     tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
-    initialWord,
+    deck: { id: deck.id, name: deck.name },
     japanese: state.settings.japaneseScript,
     onCancel: closeOverlay,
-    onSaved: () => {
-      // 29: "saving returns … with the count incremented, no confirmation
-      // screen." To the Words tab now rather than the practise tab (#123):
-      // that is where she added it from, and built fresh, the word is in it.
-      state.overlay = undefined;
-      state.tab = "words";
-      state.words = undefined;
-      ownWordsChanged();
-      renderApp();
+    onSaved: async (_, { next = false } = {}) => {
+      if (!next) state.overlay = undefined;
+      await cardsChanged();
+      await refreshOpenDeck({ redraw: !next });
     },
   });
   loadTopics();
   renderApp();
 }
 
-/** 30. */
-function openOwnDeck() {
-  state.overlay = ownDeckScreen({
-    onBack: closeOverlay,
-    onAdd: () => openAddWord(),
-    onEdit: openEditWord,
-    romaji: state.settings.romaji,
-    japanese: state.settings.japaneseScript,
-  });
-  renderApp();
-}
-
-/**
- * #85: one of her words, opened from her list. Saving or deleting goes back to
- * the list, which is where she came from and where she can see the result.
- */
-function openEditWord(card) {
-  const backToList = () => {
-    ownWordsChanged();
-    openOwnDeck();
+/** #85: one of her cards, opened from its deck. Saving or deleting goes back to the deck. */
+function openEditCard(card) {
+  const back = async () => {
+    state.overlay = undefined;
+    await cardsChanged();
+    await refreshOpenDeck();
   };
   state.overlay = addWordScreen({
     tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
     card,
+    deck: state.deck ? { id: state.deck.id, name: state.deck.name } : undefined,
     japanese: state.settings.japaneseScript,
-    onCancel: openOwnDeck,
-    onSaved: backToList,
-    onDeleted: backToList,
+    onCancel: closeOverlay,
+    onSaved: back,
+    onDeleted: back,
   });
   loadTopics();
   renderApp();
 }
 
 /**
- * After adding, editing or deleting a word: the count on the practise tab, the
- * topic list (a word can bring a new topic or take the last card out of one),
- * and the deck in memory — without that last one the next session cannot see
- * the change until the app is restarted (#85).
+ * After a card was added, changed, moved or deleted: the counts, the topic
+ * list (a card can bring a new topic or take the last card out of one), the
+ * deck list, and the cards on this phone — without that last one the next
+ * session cannot see the change until the app is restarted (#85). Settles once
+ * the phone has the change, so the deck's list is drawn with it.
  */
-function ownWordsChanged() {
+function cardsChanged() {
   numbersChanged();
-  loadOwnDeck();
+  state.deckCards = undefined;
   state.topics = [];
   loadTopics();
-  syncDeck();
+  return syncDeck();
 }
 
 function closeOverlay() {
@@ -568,29 +736,11 @@ function closeOverlay() {
   renderApp();
 }
 
-/** The count on the Words tab's own-words row (27's dashed station). */
-async function loadOwnDeck() {
-  try {
-    const { cards } = await api.cards();
-    // Only a changed count is worth a redraw, and only the Words tab shows it.
-    if (state.ownWords === cards.length) return;
-    state.ownWords = cards.length;
-    state.words?.refresh();
-  } catch {
-    /* the row still offers to add one */
-  }
-}
-
-/** The Words tab (#123): Browse, and her own words at the top of it. */
+/** The Search tab (#123, #137): every deck searched, and the stars. */
 function wordsScreen() {
   return browseScreen({
     romaji: state.settings.romaji,
     japanese: state.settings.japaneseScript,
-    // 33: "a word she cannot find is usually a word she should add, so the
-    // empty result leads straight into 28 with the query carried over."
-    onAddWord: (query = "") => openAddWord(query),
-    onOwnDeck: openOwnDeck,
-    ownWords: () => state.ownWords,
     // #35: tapping a row files it under one of her own topics.
     onTopics: openCardTopics,
   });
@@ -659,7 +809,9 @@ function resumeSession(saved) {
   // Back to the deck it belongs to when it ends (#137). A session saved
   // before decks had one ends on the deck list.
   const key = state.filters.deckKey;
-  state.deck = key ? { key, name: key === "kaishi" ? "Kaishi" : key === "mine" ? "My words" : key.slice(5) } : undefined;
+  const known = state.lastDecks.find((d) => d.key === key);
+  state.deck = key ? (known ?? { key, name: key === "kaishi" ? "Kaishi" : key.startsWith("list:") ? key.slice(5) : "Your deck" }) : undefined;
+  state.deckCards = undefined;
   state.session = { mode: saved.mode, filters: state.filters, resuming: saved };
   state.summary = undefined;
   state.resumable = undefined;
@@ -741,7 +893,6 @@ async function signInAgain(pin) {
   numbersChanged();
   renderApp();
   loadSettings();
-  loadOwnDeck();
   // The whole reason the screen exists: the answers go up now.
   flush().catch(() => {});
 }
@@ -762,7 +913,6 @@ function renderApp() {
       // nothing but "+ new" — every existing topic invisible, and a duplicate
       // one keystroke away.
       loadTopics();
-      loadOwnDeck();
       startFlushing();
       startFlushingStars();
       renderApp();
@@ -1178,7 +1328,6 @@ if (state.user) {
   }
   await checkDeck();
   loadSettings();
-  loadOwnDeck();
   offerResume();
   // §7: flush eagerly rather than batching for hours — iOS evicts storage
   // under pressure, and an event that never left the device is the one thing

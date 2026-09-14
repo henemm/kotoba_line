@@ -54,9 +54,12 @@ describe("the Words tab (#123)", () => {
     assert.deepEqual([...tabs.matchAll(/key: "(\w+)"/g)].map((m) => m[1]), ["practise", "words", "stats", "settings"]);
   });
 
-  it("takes search and her own words off the practise tab", () => {
+  it("keeps search off the deck page, and adding a card on it (#137)", () => {
     assert.doesNotMatch(practise, /button\.add-word-row|onAddWord|onBrowse|onOwnDeck/);
-    assert.match(browse, /"Add a word"/);
+    // #137: a card is added in the deck it goes into, as in Noji, and not from
+    // the Search tab any more.
+    assert.match(practise, /"\+ Add card"/);
+    assert.doesNotMatch(browse, /"Add a word"|onAddWord/);
   });
 
   it("leaves session length to the practise tab alone", () => {

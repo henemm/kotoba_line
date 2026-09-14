@@ -3730,3 +3730,225 @@
 .update-sheet .btn[disabled] {
   color: var(--ink-muted);
 }
+
+/* ══ Her own decks (#137, v68) ════════════════════════════════════
+   Like Noji: the deck list ends in "New deck", a deck's page ends in its
+   cards, and "+ Add card" floats above the tab bar wherever she has scrolled
+   to. Absolute inside #app like the tab bar, never fixed (base.css). */
+
+.deck-new .deck-new-plus {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px dashed var(--ink-dim);
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+  font: 700 17px/1 var(--ui);
+}
+.deck-new .name {
+  font-size: 17px;
+  color: var(--ink-muted);
+}
+
+.deck-cards {
+  padding: 30px var(--gutter) 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.deck-cards .set-label {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.deck-cards-search {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 12px 14px;
+  font: 500 16px/1.2 var(--ui);
+}
+.deck-cards-search::placeholder {
+  color: var(--ink-muted);
+}
+.deck-cards-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--night);
+}
+.deck-card {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 13px 18px;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+}
+button.deck-card:active {
+  background: var(--surface-hi);
+}
+.deck-card .copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.deck-card .copy > :first-child {
+  font-size: 16px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.deck-card .copy > :last-child {
+  font-size: 14px;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.deck-card .deck-card-word.jp {
+  font-family: var(--jp);
+}
+.deck-cards-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+.deck-cards-more {
+  align-self: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 11px 18px;
+  font: 600 15px/1 var(--ui);
+}
+
+.deck-add-card {
+  position: absolute;
+  z-index: 11; /* over the tab bar's dimmed band (9) and beside the bar (10) */
+  right: var(--gutter);
+  bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 14px);
+  border: 0;
+  border-radius: 26px;
+  background: var(--ink);
+  color: var(--night);
+  padding: 14px 20px;
+  font: 700 16px/1 var(--ui);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+}
+.deck-add-card:active {
+  opacity: 0.85;
+}
+
+.deck-empty {
+  margin: 10px var(--gutter) 0;
+  padding: 26px 20px;
+  border-radius: 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.deck-empty-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.deck-empty-body {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+/* The card menu, the deck's name and the options' "This deck": plain rows. */
+.action-list,
+.options-deck {
+  display: flex;
+  flex-direction: column;
+}
+.options-deck {
+  margin-top: 18px;
+  gap: 2px;
+}
+.action {
+  width: 100%;
+  padding: 15px 0;
+  border: 0;
+  border-bottom: 1px solid var(--surface-hi);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  font: 600 17px/1.2 var(--ui);
+}
+.action:last-child {
+  border-bottom: 0;
+}
+.action.danger {
+  color: var(--no);
+}
+.action.quiet {
+  color: var(--ink-muted);
+  border-bottom: 0;
+}
+.sheet-scrim.card-actions,
+.sheet-scrim.deck-name {
+  position: fixed;
+  z-index: 20;
+}
+.deck-name .sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.deck-name-input {
+  width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--night);
+  color: var(--ink);
+  padding: 14px 16px;
+  font: 600 18px/1.2 var(--ui);
+}
+.deck-name-save {
+  width: 100%;
+}
+
+.add-deck,
+.add-saved,
+.add-hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+.add-saved {
+  color: var(--yes);
+  font-weight: 600;
+}
+.add-next {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+/* Search: which of her decks a card is in (#137). */
+.row-deck {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--surface-hi);
+  color: var(--ink-muted);
+  font: 600 12px/1.2 var(--ui);
+}
