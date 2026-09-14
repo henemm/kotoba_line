@@ -23,6 +23,24 @@
 
   --yes: #3DDC84;
   --no:  #FF4B4B;
+  --yes-tint: rgba(61, 220, 132, 0.16);
+  --no-tint:  rgba(255, 75, 75, 0.15);
+
+  /* Behind a sheet, and behind the level-up moment. */
+  --scrim:   rgba(13, 16, 23, 0.78);
+  --overlay: rgba(13, 16, 23, 0.86);
+
+  /* The maturity ramp runs from the ground towards the text: new is the
+     faintest, mature is --ink. `--row-band-*` is the same ramp a step further
+     from the ground, for a 9px square on a list row (Words). */
+  --band-new:      #39415A;
+  --band-learning: #5E6884;
+  --band-young:    #97A0B8;
+  --band-mature:   #F2F4F8;
+  --row-band-new:      #5E6884;
+  --row-band-new-edge: #97A0B8;
+  --row-band-learning: #8A93A8;
+  --row-band-young:    #B9C0D0;
 
   /* Japanese is always noticeably larger than the Latin text beside it. */
   --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
@@ -51,7 +69,10 @@
  * The same names as the dark palette, so no screen knows which one it is on:
  * `--night` is the page and `--ink` the text in both. The metro colours stay
  * — they are the modes' own and read on either ground. `--yes` and `--no`
- * are darker here, because the dark palette's green on white is 1.6:1.
+ * are darker here, because the dark palette's green on white is 1.6:1. The
+ * maturity ramp turns round: on a light ground the faintest band is light.
+ * The level-up moment covers the page in the page's own colour, so its text
+ * (--ink) reads on it.
  *
  * `data-appearance` is set before the stylesheets load (index.html) from the
  * copy of the setting this device keeps, so a light start never flashes dark.
@@ -67,6 +88,18 @@
   --ink-dim:    #B7BECB;
   --yes: #178A4A;
   --no:  #D12F2F;
+  --yes-tint: rgba(23, 138, 74, 0.12);
+  --no-tint:  rgba(209, 47, 47, 0.10);
+  --scrim:   rgba(22, 26, 36, 0.40);
+  --overlay: rgba(243, 244, 247, 0.96);
+  --band-new:      #D5DAE3;
+  --band-learning: #A3ABBC;
+  --band-young:    #6B7489;
+  --band-mature:   #161A24;
+  --row-band-new:      #E1E5EC;
+  --row-band-new-edge: #A3ABBC;
+  --row-band-learning: #A3ABBC;
+  --row-band-young:    #6B7489;
   color-scheme: light;
 }
 
@@ -81,6 +114,18 @@
     --ink-dim:    #B7BECB;
     --yes: #178A4A;
     --no:  #D12F2F;
+    --yes-tint: rgba(23, 138, 74, 0.12);
+    --no-tint:  rgba(209, 47, 47, 0.10);
+    --scrim:   rgba(22, 26, 36, 0.40);
+    --overlay: rgba(243, 244, 247, 0.96);
+    --band-new:      #D5DAE3;
+    --band-learning: #A3ABBC;
+    --band-young:    #6B7489;
+    --band-mature:   #161A24;
+    --row-band-new:      #E1E5EC;
+    --row-band-new-edge: #A3ABBC;
+    --row-band-learning: #A3ABBC;
+    --row-band-young:    #6B7489;
     color-scheme: light;
   }
 }

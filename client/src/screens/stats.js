@@ -8,10 +8,11 @@ const LEVEL_SEGMENTS = 12;
 const TOPICS_BEFORE_TRUNCATION = 5;
 
 const MATURITY = [
-  { key: "new", label: "New", colour: "#39415A" },
-  { key: "learning", label: "Learning", colour: "#5E6884" },
-  { key: "young", label: "Young", colour: "#97A0B8" },
-  { key: "mature", label: "Mature", colour: "#F2F4F8" },
+  // Tokens, not colours: the ramp turns round in the light palette (v65).
+  { key: "new", label: "New", colour: "var(--band-new)" },
+  { key: "learning", label: "Learning", colour: "var(--band-learning)" },
+  { key: "young", label: "Young", colour: "var(--band-young)" },
+  { key: "mature", label: "Mature", colour: "var(--band-mature)" },
 ];
 
 /**
