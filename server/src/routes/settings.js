@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import {
+  APPEARANCES,
   MODE_KEYS,
   NEW_PER_DAY_MAX,
   NEW_PER_DAY_MIN,
@@ -28,6 +29,7 @@ const patchSchema = {
       romaji: { type: "boolean" },
       speakSource: { type: "string", enum: SPEAK_SOURCES },
       japaneseScript: { type: "boolean" },
+      appearance: { type: "string", enum: APPEARANCES },
       // #133: at most four of the five, so one line always remains.
       hiddenModes: {
         type: "array",

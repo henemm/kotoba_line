@@ -27,6 +27,7 @@ describe("the settings row", () => {
       speakSource: "sentence",
       japaneseScript: true,
       hiddenModes: [],
+      appearance: "light",
     });
     db.close();
   });
@@ -105,6 +106,7 @@ describe("GET /api/settings", () => {
       speakSource: "sentence",
       japaneseScript: true,
       hiddenModes: [],
+      appearance: "light",
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -152,6 +154,7 @@ describe("PATCH /api/settings", () => {
       speakSource: "sentence",
       japaneseScript: true,
       hiddenModes: [],
+      appearance: "light",
     });
     await app.close();
   });
@@ -175,6 +178,7 @@ describe("PATCH /api/settings", () => {
       speakSource: "sentence",
       japaneseScript: true,
       hiddenModes: [],
+      appearance: "light",
     });
     await app.close();
   });

@@ -45,7 +45,11 @@ const COLUMNS = {
   speakSource: "speak_source",
   japaneseScript: "japanese_script",
   hiddenModes: "hidden_modes",
+  appearance: "appearance",
 };
+
+/** Light, dark, or the iPhone's own setting (migration 015). Same list as the CHECK. */
+export const APPEARANCES = ["light", "dark", "system"];
 
 /** The three 話す can draw a prompt from (#77). Same list as the CHECK in the schema. */
 export const SPEAK_SOURCES = ["word", "sentence", "random"];
@@ -61,7 +65,7 @@ export function settingsForUser(db, userId) {
   const row = db
     .prepare(
       `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji, speak_source,
-              japanese_script, hidden_modes
+              japanese_script, hidden_modes, appearance
          FROM user_settings WHERE user_id = ?`,
     )
     .get(userId);
@@ -78,6 +82,7 @@ export function settingsForUser(db, userId) {
     romaji: row.romaji === 1,
     speakSource: row.speak_source,
     japaneseScript: row.japanese_script === 1,
+    appearance: row.appearance,
     hiddenModes: JSON.parse(row.hidden_modes),
   };
 }

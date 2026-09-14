@@ -82,6 +82,13 @@ const SPEAK_SOURCES = [
   { value: "random", label: "Random" },
 ];
 
+/** The three appearances (#137, v65): the same list as the server's CHECK. */
+const APPEARANCES = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "Like iPhone" },
+];
+
 export function settingsScreen({ user, onSignOut, onSettings }) {
   const root = el("div.settings");
   render(root, el("div.loading", { text: "…" }));
@@ -117,6 +124,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       // #123: only what configures the app. The Deck group (names and counts,
       // each leading to Browse) and session length went to the Words and
       // Practise tabs, where she is when she needs them.
+      appearance(),
       sound(),
       script(),
       practice(),
@@ -175,6 +183,37 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
 
   // New cards per day and the ways of practising belong to a deck since
   // #137: the deck page's Options. What is left here is about her.
+
+  // ── Appearance ──────────────────────────────────────────────────
+
+  /**
+   * Light, dark, or whatever the iPhone is set to (#137, v65). Light is the
+   * default (Henning, 2026-09-14). The page changes at once; the iPhone's
+   * status bar follows at the next start of the app, because iOS reads its
+   * colour from the page only as the app launches (index.html).
+   */
+  function appearance() {
+    const current = data.settings.appearance ?? "light";
+    return group(
+      "Appearance",
+      el(
+        "div.field",
+        {},
+        el(
+          "div.choice",
+          {},
+          APPEARANCES.map(({ value, label }) =>
+            el("button", {
+              type: "button",
+              text: label,
+              "aria-pressed": String(value === current),
+              onclick: () => value !== current && write({ appearance: value }),
+            }),
+          ),
+        ),
+      ),
+    );
+  }
 
   // ── Sound ───────────────────────────────────────────────────────
 

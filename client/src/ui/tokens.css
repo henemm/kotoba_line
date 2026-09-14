@@ -43,3 +43,44 @@
     --gutter: 40px;
   }
 }
+
+/*
+ * The light palette (#137, v65). Henning, 2026-09-14: a light version of the
+ * app, switchable in Settings, and light by default for Charlotte.
+ *
+ * The same names as the dark palette, so no screen knows which one it is on:
+ * `--night` is the page and `--ink` the text in both. The metro colours stay
+ * — they are the modes' own and read on either ground. `--yes` and `--no`
+ * are darker here, because the dark palette's green on white is 1.6:1.
+ *
+ * `data-appearance` is set before the stylesheets load (index.html) from the
+ * copy of the setting this device keeps, so a light start never flashes dark.
+ * "system" follows the iPhone's own Appearance setting.
+ */
+:root[data-appearance="light"] {
+  --night:      #F3F4F7;
+  --night-deep: #E6E9EF;
+  --surface:    #FFFFFF;
+  --surface-hi: #E1E5EC;
+  --ink:        #161A24;
+  --ink-muted:  #5C6579;
+  --ink-dim:    #B7BECB;
+  --yes: #178A4A;
+  --no:  #D12F2F;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-appearance="system"] {
+    --night:      #F3F4F7;
+    --night-deep: #E6E9EF;
+    --surface:    #FFFFFF;
+    --surface-hi: #E1E5EC;
+    --ink:        #161A24;
+    --ink-muted:  #5C6579;
+    --ink-dim:    #B7BECB;
+    --yes: #178A4A;
+    --no:  #D12F2F;
+    color-scheme: light;
+  }
+}
