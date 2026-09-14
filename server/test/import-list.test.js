@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { importList } from "../src/import-list.js";
 import { seedUser, signIn, testApp } from "./helpers.js";
@@ -66,6 +67,7 @@ describe("importing her lists", () => {
     assert.equal(card.word_audio, "yomu.mp3");
     assert.equal(card.sentence_audio, "yomu-s.mp3");
     assert.equal(card.word_meaning, "Lesen", "her German, not Kaishi's English");
+    assert.equal(card.sentence_meaning, null, "nor the sentence's English");
     const source = JSON.parse(card.import_source);
     assert.equal(source.back, "Yomu", "her own spelling is kept for a later correction");
     assert.equal(source.kaishiId, 100);
@@ -113,6 +115,29 @@ describe("importing her lists", () => {
     assert.deepEqual(q.cardIds.map((id) => byId.get(id).import_ref ?? byId.get(id).word_meaning).sort(), ["Fußball", "Lesen"]);
     const first = q.cardIds.map((id) => byId.get(id).list_name);
     assert.deepEqual(first, ["list a", "list a"], "the first list's first two, not the second list's");
+    await app.close();
+  });
+});
+
+describe("migration 013: no English on her lists (#137)", () => {
+  const sql = readFileSync(new URL("../migrations/013_no_english_on_her_lists.sql", import.meta.url), "utf8");
+
+  it("takes Kaishi's English off the cards it was copied to, and leaves a translation she wrote", async () => {
+    const { app, db, user } = await imported();
+    // What the v58 import left behind: Kaishi's translation on both "Lesen" cards.
+    db.prepare("UPDATE cards SET sentence_meaning = 'I read a book.', updated_at = 1 WHERE owner_id = ? AND word_meaning = 'Lesen'").run(user.id);
+    // …and one she has since corrected by hand.
+    db.prepare("UPDATE cards SET sentence_meaning = 'Ich lese ein Buch.' WHERE import_ref = 'noji:list b:n4-0'").run();
+
+    db.exec(sql);
+
+    const rows = db.prepare("SELECT import_ref, sentence_meaning, sentence_audio, updated_at FROM cards WHERE word_meaning = 'Lesen' ORDER BY import_ref").all();
+    assert.deepEqual(rows.map((r) => [r.import_ref, r.sentence_meaning, r.sentence_audio]), [
+      ["noji:list a:n1-0", null, "yomu-s.mp3"],
+      ["noji:list b:n4-0", "Ich lese ein Buch.", "yomu-s.mp3"],
+    ]);
+    assert.ok(rows[0].updated_at > 1, "stamped, so her phone picks the change up");
+    assert.equal(db.prepare("SELECT sentence_meaning FROM cards WHERE id = 100").get().sentence_meaning, "I read a book.", "the Kaishi card keeps its own");
     await app.close();
   });
 });

@@ -211,7 +211,7 @@ export function sessionScreen({
               text:
                 mode === "type"
                   ? `Nothing here can be typed in ${modeName(line, japanese)}. The cards that are due are your own words with no reading, so there is nothing to check an answer against.`
-                  : `Nothing here can be played in ${modeName(line, japanese)}. The cards that are due have no sentence to listen to.`,
+                  : `Nothing here can be played in ${modeName(line, japanese)}. The cards that are due have no sentence with a translation to listen to.`,
             }),
             el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
           ),
@@ -1636,9 +1636,13 @@ export function typingAnswers(card, pool) {
  * fall back to the word, the same as before this setting existed, so her own
  * cards (which have none) are unaffected by any of the three values. "random"
  * only spends the coin flip where there is a real choice to make.
+ *
+ * Nor is a sentence with no translation (#137): the translation is the prompt.
+ * The cards from her Noji lists keep Kaishi's sentence and recording without
+ * its English, and asked about the sentence they would show an empty prompt.
  */
 export function speakUsesSentence(card, speakSource, random = Math.random) {
-  if (!card.sentence) return false;
+  if (!card.sentence || !card.sentence_meaning) return false;
   if (speakSource === "word") return false;
   if (speakSource === "random") return random() < 0.5;
   return true;

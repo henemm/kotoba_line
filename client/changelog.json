@@ -1,5 +1,13 @@
 [
   {
+    "version": "v62",
+    "summary": "No more English on the cards from your Noji lists.",
+    "notes": [
+      "Cards that got an example sentence from the Kaishi deck showed its English translation under your German. That translation is gone; the Japanese sentence and its recording are still there.",
+      "Because “Listen only” asks for a sentence's translation, cards from your lists don't come up there."
+    ]
+  },
+  {
     "version": "v61",
     "summary": "The card counter at the top stays on screen when you practise one of your lists.",
     "notes": [
