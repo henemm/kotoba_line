@@ -7,6 +7,7 @@ import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
+import { modeName, showsScript, shownWord } from "../script.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
@@ -116,6 +117,9 @@ export function sessionScreen({
   // did before this setting existed — prefer the sentence, fall back to the
   // word — so leaving it untouched changes nothing for anyone.
   speakSource = "sentence",
+  // #135: false shows words in romaji and sentences as sound only — see
+  // `client/src/script.js` for why sentences are not romaji too.
+  japanese = true,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -206,8 +210,8 @@ export function sessionScreen({
             el("p", {
               text:
                 mode === "type"
-                  ? `Nothing here can be typed in ${line.jp}. The cards that are due are your own words with no reading, so there is nothing to check an answer against.`
-                  : `Nothing here can be played in ${line.jp}. The cards that are due have no sentence to listen to.`,
+                  ? `Nothing here can be typed in ${modeName(line, japanese)}. The cards that are due are your own words with no reading, so there is nothing to check an answer against.`
+                  : `Nothing here can be played in ${modeName(line, japanese)}. The cards that are due have no sentence to listen to.`,
             }),
             el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
           ),
@@ -477,6 +481,9 @@ export function sessionScreen({
    * itself, and repeating it says only that the app did not notice.
    */
   function reading(furigana, word, card) {
+    // #135: the kana line, and the pitch contour drawn over it, are Japanese
+    // script — and with the script off the word above is already in romaji.
+    if (!japanese) return null;
     const kana = kanaReading(furigana);
     if (!kana || kana === word) return null;
     return pitchLine(card, kana) ?? el("div.reading.reveal", { text: kana });
@@ -553,6 +560,9 @@ export function sessionScreen({
    * can be produced at all — a kanji word with neither field filled in.
    */
   function romajiLine(card, always = false) {
+    // #135: with the script off the word itself is the romaji; a second copy
+    // under it says nothing.
+    if (!japanese) return null;
     if (!romaji && !always) return null;
     const kana = kanaReading(card.word_furigana) ?? card.word_reading ?? card.word;
     const text = toRomaji(kana);
@@ -567,10 +577,22 @@ export function sessionScreen({
    * `romajiLine`: no reading is better than a wrong one.
    */
   function sentenceRomajiLine(card) {
-    if (!romaji) return null;
+    if (!romaji || !japanese) return null;
     const text = toRomaji(sentenceKana(card.sentence_furigana));
     if (!text) return null;
     return el("p.romaji.sentence-romaji.reveal", { text });
+  }
+
+  /**
+   * The card's word as the heading. #135: in romaji with the script off —
+   * unless no reading exists, and then the Japanese, which keeps its font.
+   * Romaji gets its own class because a word that is two characters in kanji
+   * can be fifteen letters long, and the kanji size would run off the card.
+   */
+  function wordHeading(card) {
+    return el(showsScript(card, japanese) ? "h2.word.jp" : "h2.word.latin", {
+      text: shownWord(card, japanese),
+    });
   }
 
   function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false, small = false } = {}) {
@@ -597,7 +619,16 @@ export function sessionScreen({
   function chooseFrom(card, field, prompt, area, answers, promptNodes) {
     render(area, ...promptNodes);
 
-    const options = shuffle([card, ...pickDistractors(card, pool, 3, Math.random, field)]);
+    // A wrong answer may not belong to a card that looks exactly like this
+    // one — its meaning would be right too, and marked wrong. With the script
+    // off (#135) that is 116 of the 1,500 Kaishi cards (measured): いる and 要る
+    // are both "iru", 帰る and 変える both "kaeru". With it on, the 24 words the
+    // deck carries twice (聞く "to hear" and "to ask") had the same problem.
+    // Only in 選ぶ, where the word is the question; 聞く asks about a sentence.
+    const shown = shownWord(card, japanese);
+    const candidates =
+      field === "word_meaning" ? pool.filter((c) => shownWord(c, japanese) !== shown) : pool;
+    const options = shuffle([card, ...pickDistractors(card, candidates, 3, Math.random, field)]);
     render(
       answers,
       options.map((option) =>
@@ -654,7 +685,7 @@ export function sessionScreen({
 
     chooseFrom(card, "word_meaning", null, area, answers, [
       el("span.prompt-label", { text: "What does this mean?" }),
-      el("h2.word.jp", { text: card.word }),
+      wordHeading(card),
       // 48: in 選ぶ the sound is a bonus, so with no recording the control is
       // absent rather than inert — "an inert button would invite a tap that
       // does nothing". No caption either, because nothing was promised, and no
@@ -813,7 +844,7 @@ export function sessionScreen({
         : el(
             "div.word-line.reveal",
             {},
-            el("h2.word.jp", { text: card.word }),
+            wordHeading(card),
             // 話す is the mode where hearing it back matters most: she has just
             // tried to produce it, and the recording is the only way to find
             // out whether what she said was right (#32).
@@ -862,7 +893,7 @@ export function sessionScreen({
       autocapitalize: "off",
       spellcheck: "false",
       enterkeyhint: "go",
-      placeholder: "romaji or kana",
+      placeholder: japanese ? "romaji or kana" : "romaji",
       "aria-label": "The Japanese word",
     });
     // Kept at its height when empty, so the buttons below do not jump the
@@ -874,7 +905,8 @@ export function sessionScreen({
       // Only while there are letters to turn into kana. Kana from a Japanese
       // keyboard is already in the field, and a second copy under it says
       // nothing.
-      preview.textContent = /[a-z]/i.test(input.value) ? kanaPreview(input.value) : "";
+      // #135: with the script off, what she types is not shown back as kana.
+      preview.textContent = japanese && /[a-z]/i.test(input.value) ? kanaPreview(input.value) : "";
       check.disabled = !normalizeTyped(input.value);
     });
 
@@ -962,7 +994,7 @@ export function sessionScreen({
       el(
         "div.word-line.reveal",
         {},
-        el("h2.word.jp", { text: card.word }),
+        wordHeading(card),
         speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
       ),
       reading(card.word_furigana || card.word_reading, card.word, card),
@@ -973,7 +1005,7 @@ export function sessionScreen({
       // right, just not this card's. It counts, and says which.
       given && given.id !== card.id
         ? el("p.type-note.reveal", {
-            text: `${given.word} means that too. This card is ${card.word}.`,
+            text: `${shownWord(given, japanese)} means that too. This card is ${shownWord(card, japanese)}.`,
           })
         : null,
     );
@@ -1048,7 +1080,7 @@ export function sessionScreen({
     prime(card.word_audio, card.sentence && card.sentence_audio);
     render(
       area,
-      el("h2.word.jp", { text: card.word }),
+      wordHeading(card),
       speaker(card.word, card.word_audio),
       // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
       // "what does it say" — a romaji line here does not spoil the flip.
@@ -1079,7 +1111,7 @@ export function sessionScreen({
         // Not `.reveal`: this is the front, staying — it does not rise in.
         "div.word-line",
         {},
-        el("h2.word.jp", { text: card.word }),
+        wordHeading(card),
         // The front of the card carries this button; before #32 the flip took
         // it away, so the one gesture that had worked a second earlier stopped
         // working exactly when the reading was finally on screen to check it
@@ -1234,6 +1266,21 @@ export function sessionScreen({
   }
 
   function revealedSentence(card) {
+    // #135: with the script off the sentence is its recording, labelled, and
+    // no text — its romaji is not good enough to stand alone (script.js). The
+    // translation still follows wherever a mode shows one.
+    if (!japanese) {
+      return el(
+        "div.sentence-line.reveal",
+        {},
+        el("span.sentence-sound", { text: "Example sentence" }),
+        speaker(card.sentence, card.sentence_audio, {
+          rate: 0.85,
+          small: true,
+          label: "Hear the sentence again",
+        }),
+      );
+    }
     const p = el("p.sentence.jp.reveal");
     // The deck marks the target word with <b>; the prototype guessed at it by
     // stripping a trailing kana, which misfires on conjugations. Rendered as

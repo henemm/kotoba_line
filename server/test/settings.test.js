@@ -25,6 +25,8 @@ describe("the settings row", () => {
       pitchAccent: false,
       romaji: false,
       speakSource: "sentence",
+      japaneseScript: true,
+      hiddenModes: [],
     });
     db.close();
   });
@@ -101,6 +103,8 @@ describe("GET /api/settings", () => {
       pitchAccent: false,
       romaji: false,
       speakSource: "sentence",
+      japaneseScript: true,
+      hiddenModes: [],
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -146,6 +150,8 @@ describe("PATCH /api/settings", () => {
       pitchAccent: false,
       romaji: false,
       speakSource: "sentence",
+      japaneseScript: true,
+      hiddenModes: [],
     });
     await app.close();
   });
@@ -167,6 +173,8 @@ describe("PATCH /api/settings", () => {
       pitchAccent: true,
       romaji: false,
       speakSource: "sentence",
+      japaneseScript: true,
+      hiddenModes: [],
     });
     await app.close();
   });
@@ -212,6 +220,71 @@ describe("PATCH /api/settings", () => {
     assert.equal(res.statusCode, 200);
     assert.equal(res.json().settings.romaji, true);
     await app.close();
+  });
+
+  it("writes and reads back the Japanese script switch (#135)", async () => {
+    const { app, cookie } = await signedIn();
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      headers: { cookie },
+      payload: { japaneseScript: false },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().settings.japaneseScript, false);
+    await app.close();
+  });
+
+  it("stores hidden lines in the lines' own order, each once (#133)", async () => {
+    const { app, cookie } = await signedIn();
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      headers: { cookie },
+      payload: { hiddenModes: ["type", "choose"] },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json().settings.hiddenModes, ["choose", "type"]);
+    // And an empty list shows every line again.
+    const back = await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      headers: { cookie },
+      payload: { hiddenModes: [] },
+    });
+    assert.deepEqual(back.json().settings.hiddenModes, []);
+    await app.close();
+  });
+
+  it("refuses to hide all five lines, an unknown line, or one twice (#133)", async () => {
+    const { app, cookie } = await signedIn();
+    for (const hiddenModes of [
+      ["choose", "listen", "speak", "type", "flip"],
+      ["choose", "draw"],
+      ["flip", "flip"],
+    ]) {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/settings",
+        headers: { cookie },
+        payload: { hiddenModes },
+      });
+      assert.equal(res.statusCode, 400, JSON.stringify(hiddenModes));
+    }
+    await app.close();
+  });
+
+  it("refuses all five hidden at the schema, not just the route (#133)", async () => {
+    const db = openDatabase(":memory:");
+    const user = await seedUser(db);
+    assert.throws(
+      () =>
+        db
+          .prepare("UPDATE user_settings SET hidden_modes = ? WHERE user_id = ?")
+          .run(JSON.stringify(["choose", "listen", "speak", "type", "flip"]), user.id),
+      /CHECK/i,
+    );
+    db.close();
   });
 
   it("writes and reads back what 話す draws its prompt from", async () => {

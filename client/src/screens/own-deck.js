@@ -1,6 +1,7 @@
 import { OfflineError, api } from "../api.js";
 import { say, unlock } from "../audio.js";
 import { toRomaji } from "../romaji.js";
+import { showsScript, shownWord } from "../script.js";
 import { maturityBand } from "./browse.js";
 import { acknowledged, el, num, render } from "../ui/dom.js";
 
@@ -23,7 +24,16 @@ const MAX_TAGS = 5;
  * "because on a train she will not write one, and an empty sentence field
  * would only reproach her".
  */
-export function addWordScreen({ tags = [], initialWord = "", card, onSaved, onDeleted, onCancel }) {
+export function addWordScreen({
+  tags = [],
+  initialWord = "",
+  card,
+  onSaved,
+  onDeleted,
+  onCancel,
+  // #135: the placeholders 日本語, かな and 文を書く are decoration too.
+  japanese = true,
+}) {
   const root = el("div.add-word");
   // #85: the same form edits a word she already has. It is the same five
   // fields and the same rules, and a second form would drift from this one.
@@ -114,10 +124,10 @@ export function addWordScreen({ tags = [], initialWord = "", card, onSaved, onDe
       el(
         "div.add-body",
         {},
-        group("Word", el("div.field.big", {}, field("word", { placeholder: "日本語", big: true }))),
+        group("Word", el("div.field.big", {}, field("word", { placeholder: japanese ? "日本語" : "Japanese", big: true }))),
         group(
           "Reading · optional",
-          el("div.field", {}, field("reading", { placeholder: "かな" })),
+          el("div.field", {}, field("reading", { placeholder: japanese ? "かな" : "Kana" })),
         ),
         group(
           "Meaning",
@@ -229,7 +239,7 @@ export function addWordScreen({ tags = [], initialWord = "", card, onSaved, onDe
   function sentenceGroup() {
     return group(
       "Example sentence",
-      el("div.field", {}, field("sentence", { placeholder: "文を書く", big: false })),
+      el("div.field", {}, field("sentence", { placeholder: japanese ? "文を書く" : "In Japanese", big: false })),
       el("div.field", {}, field("sentenceMeaning", { placeholder: "What it means", lang: "en" })),
       // 29: the speaker reads it back, which is the only honest way to check
       // the synthesis got the reading right — and if it did not, the reading
@@ -369,7 +379,7 @@ export function addWordScreen({ tags = [], initialWord = "", card, onSaved, onDe
  *
  * Maturity per row in words rather than a bar: five rows do not need a chart.
  */
-export function ownDeckScreen({ onBack, onAdd, onEdit, romaji = false }) {
+export function ownDeckScreen({ onBack, onAdd, onEdit, romaji = false, japanese = true }) {
   const root = el("div.own-deck");
   let cards;
   let problem;
@@ -433,8 +443,11 @@ export function ownDeckScreen({ onBack, onAdd, onEdit, romaji = false }) {
       el(
         "span.own-copy",
         {},
-        el("span.own-word.jp", { text: card.word }),
-        romaji ? romajiSpan(card) : null,
+        // #135: see the same row in browse.js.
+        el(showsScript(card, japanese) ? "span.own-word.jp" : "span.own-word", {
+          text: shownWord(card, japanese),
+        }),
+        romaji && japanese ? romajiSpan(card) : null,
         el("span.own-gloss", { text: card.word_meaning }),
       ),
       el("span.own-band", { text: maturityWord(card) }),

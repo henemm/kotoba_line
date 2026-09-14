@@ -473,6 +473,12 @@
   flex-direction: column;
   gap: 3px;
 }
+/* #135: the English name in the Japanese name's place. */
+.practise .line-row .name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
 .practise .line-row .jp {
   font-family: var(--jp);
   font-size: 23px;
@@ -515,6 +521,10 @@
 }
 .practise .length-word {
   font: 700 17px/1.1 var(--jp);
+}
+/* #135: "A little" in ちょっと's place. */
+.practise .length-word.latin {
+  font: 700 16px/1.1 var(--ui);
 }
 .practise .length-count {
   font: 400 12px/1 var(--ui);
@@ -1297,6 +1307,23 @@
   font-size: 22px;
   line-height: 1.6;
   margin: 0;
+}
+/* #135: the sentence as sound only — a label beside its speaker. */
+.sentence-sound {
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+
+/* #135: a word in romaji where the kanji would be. The kanji size is set for
+   two to four characters; romaji of the same word runs to fifteen letters
+   (arigatougozaimasu), so it is smaller, and it may break rather than run off
+   the card. Measured in WebKit at 394px wide over all 1,500 Kaishi words:
+   at 10vw one word still broke mid-word; at 9vw none does. The break stays
+   for her own words, which can be longer. */
+.word.latin {
+  font-size: clamp(30px, 9vw, 56px);
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 /* Kaishi marks the target word itself, so nothing has to be guessed at. */
 .sentence b {
@@ -2107,6 +2134,11 @@
   align-items: center;
   justify-content: flex-start;
   cursor: pointer;
+}
+/* #133: the last practice line still shown cannot be switched off. */
+.settings .toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 .settings .toggle .knob {
   width: 26px;

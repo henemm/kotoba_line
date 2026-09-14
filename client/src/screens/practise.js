@@ -1,5 +1,6 @@
 import { answerSoon } from "../api.js";
-import { MODES, modeByKey } from "../modes.js";
+import { modeByKey } from "../modes.js";
+import { modeName, visibleModes } from "../script.js";
 import { describe } from "../resume.js";
 import { isDefault, summaryLine } from "./choose-set.js";
 import { el, render, station } from "../ui/dom.js";
@@ -62,6 +63,10 @@ export function practiseScreen({
   numbers,
   // #118: where the tab this one replaces was scrolled to.
   scrollTop = 0,
+  // #135: false shows the English beside every Japanese label instead.
+  japanese = true,
+  // #133: the lines she has switched off in Settings.
+  hiddenModes = [],
 }) {
   const root = el("div.practise");
   render(root, el("div.loading", { text: "…" }));
@@ -196,7 +201,8 @@ export function practiseScreen({
       el(
         "div.head",
         {},
-        el("h1.jp", { text: "おつかれさま" }),
+        // #135: おつかれさま is decoration; "Well done" is what it says.
+        japanese ? el("h1.jp", { text: "おつかれさま" }) : el("h1", { text: "Well done" }),
         el("p", { text: "Nothing due today." }),
       ),
       nextDue
@@ -273,7 +279,7 @@ export function practiseScreen({
         el(
           "span.copy",
           {},
-          el("span.title", { text: `Carry on with ${mode.jp}` }),
+          el("span.title", { text: `Carry on with ${modeName(mode, japanese)}` }),
           el("span.detail", { text: describe(resumable) }),
         ),
         el("span.chevron", { text: "›" }),
@@ -302,7 +308,9 @@ export function practiseScreen({
       "div.lines",
       {},
       el("div.rail"),
-      MODES.map((mode) =>
+      // #133: a hidden line is not drawn. A session she left in one is still
+      // offered above (resumeRow) — hiding a line does not throw that away.
+      visibleModes(hiddenModes).map((mode) =>
         el(
           "button.line-row",
           { type: "button", onclick: () => onStart({ mode: mode.key }) },
@@ -310,8 +318,12 @@ export function practiseScreen({
           el(
             "span.copy",
             {},
-            el("span.jp", { text: mode.jp }),
-            el("span.en", { text: mode.en }),
+            // #135: with the script off the English becomes the name, in the
+            // Japanese name's place, so a line stays one bold word and a hint.
+            japanese
+              ? el("span.jp", { text: mode.jp })
+              : el("span.name", { text: mode.en }),
+            japanese ? el("span.en", { text: mode.en }) : null,
           ),
         ),
       ),
@@ -349,7 +361,9 @@ export function practiseScreen({
                 draw();
               },
             },
-            el("span.length-word", { lang: "ja", text: label }),
+            japanese
+              ? el("span.length-word", { lang: "ja", text: label })
+              : el("span.length-word.latin", { text: en }),
             el("span.length-count", { text: detail }),
           ),
         ),
