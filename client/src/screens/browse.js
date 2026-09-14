@@ -270,8 +270,8 @@ export function browseScreen({
       disabled: !hasLiveData,
       "aria-label": hasLiveData
         ? card.starred
-          ? `Unstar ${card.word}`
-          : `Star ${card.word}`
+          ? `Unstar ${shownWord(card, japanese)}`
+          : `Star ${shownWord(card, japanese)}`
         : "Stars need a connection",
       "aria-pressed": String(Boolean(card.starred)),
       text: hasLiveData && card.starred ? "★" : "☆",
@@ -292,7 +292,7 @@ export function browseScreen({
         card.starred = wanted;
         state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
         star.textContent = wanted ? "★" : "☆";
-        star.setAttribute("aria-label", `${wanted ? "Unstar" : "Star"} ${card.word}`);
+        star.setAttribute("aria-label", `${wanted ? "Unstar" : "Star"} ${shownWord(card, japanese)}`);
         star.setAttribute("aria-pressed", String(wanted));
         drawChrome();
         setStar(card.id, wanted);
@@ -311,7 +311,7 @@ export function browseScreen({
         onTopics
           ? {
               type: "button",
-              "aria-label": `Topics for ${card.word}`,
+              "aria-label": `Topics for ${shownWord(card, japanese)}`,
               // The redraw is handed over rather than left to the caller:
               // the row is drawn from this card object, and app.js has no
               // way to repaint one row of a list it does not own.

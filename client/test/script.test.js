@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MODES } from "../src/modes.js";
-import { modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
+import { appName, modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
 import { meaningPool } from "../src/screens/session.js";
 
 describe("Japanese script off (#135)", () => {
@@ -26,6 +26,18 @@ describe("Japanese script off (#135)", () => {
   it("changes nothing with the script on", () => {
     assert.equal(shownWord(kaishi, true), "大丈夫");
     assert.equal(showsScript(kaishi, true), true);
+  });
+
+  it("sets a word from her Noji lists in Latin type, whatever the switch (#139)", () => {
+    // What Kaishi could not fill in arrives as the romaji she typed into Noji.
+    const fromNoji = { word: "Ōkii", word_furigana: null, word_reading: null };
+    assert.equal(showsScript(fromNoji, true), false);
+    assert.equal(showsScript(fromNoji, false), false);
+  });
+
+  it("names the app in Latin letters with the script off (#139)", () => {
+    assert.equal(appName(true), "ことばライン");
+    assert.equal(appName(false), "Kotoba Line");
   });
 
   it("names a mode in English instead of Japanese", () => {

@@ -44,9 +44,9 @@
   top: 8px;
   border: 5px solid var(--line-choose);
 }
+/* The typeface comes from `.jp`, which the Latin name does without (#139). */
 .signin h1 {
   margin: 0;
-  font-family: var(--jp);
   font-size: 42px;
   font-weight: 800;
   letter-spacing: 0.03em;

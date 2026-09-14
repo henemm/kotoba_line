@@ -1,5 +1,6 @@
 import { ApiError, OfflineError, api } from "../api.js";
 import { el, render } from "../ui/dom.js";
+import { appName } from "../script.js";
 
 const PIN_LENGTH = 6;
 
@@ -163,7 +164,7 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
  * There is no sign-up and no reset — accounts are made on the server (§10) —
  * so the screen's whole job is two fields and one action.
  */
-export function signInScreen({ onSignedIn }) {
+export function signInScreen({ onSignedIn, japanese = true }) {
   const root = el("div.screen.signin-screen", {
     style: { flex: "1", display: "flex", flexDirection: "column" },
   });
@@ -201,7 +202,7 @@ export function signInScreen({ onSignedIn }) {
       "div.block.title",
       {},
       el("span.stop"),
-      el("h1.jp", { text: "ことばライン" }),
+      el(japanese ? "h1.jp" : "h1", { text: appName(japanese) }),
       el("p.tagline", { text: "Four practice modes over one Japanese deck." }),
     ),
     el(
