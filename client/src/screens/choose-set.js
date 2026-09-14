@@ -34,9 +34,25 @@ const ONLY = [
 ];
 
 /** The defaults are the scheduler's own answer, so opening and closing changes nothing. */
-export const DEFAULT_FILTERS = { deck: undefined, tag: undefined, only: undefined };
+export const DEFAULT_FILTERS = { deck: undefined, list: undefined, tag: undefined, only: undefined };
 
-export const isDefault = (f) => !f.deck && !f.tag && !f.only;
+export const isDefault = (f) => !f.deck && !f.list && !f.tag && !f.only;
+
+/**
+ * Where she practises: a deck, or one of her lists (#137).
+ *
+ * The part of the set that stays put — across sessions, "Carry on" and app
+ * starts — because it is a choice about what she learns rather than about
+ * this session. A topic or an `only` is for the moment and goes with it.
+ */
+export const scopeOf = (f = {}) => ({ deck: f.deck, list: f.list });
+
+/** What the deck part of a set is called: a list by its own name. */
+function deckLabel({ deck, list }) {
+  if (list) return list;
+  if (deck === "personal") return "my deck";
+  return deck ? "Kaishi" : undefined;
+}
 
 /**
  * What an `only` is called. "ahead" is not one of the sheet's choices — only
@@ -54,9 +70,9 @@ function onlyLabel(only) {
  * With three filters active it truncates from the left, "because the last-set
  * filter is the one she is thinking about".
  */
-export function summaryLine({ deck, tag, only }, { max = 3 } = {}) {
+export function summaryLine({ deck, list, tag, only }, { max = 3 } = {}) {
   const parts = [
-    deck ? (deck === "personal" ? "my deck" : "Kaishi") : "Both decks",
+    deckLabel({ deck, list }) ?? "Both decks",
     tag ?? "any topic",
     only ? onlyLabel(only).toLowerCase() : "due today",
   ];
@@ -71,9 +87,9 @@ export function summaryLine({ deck, tag, only }, { max = 3 } = {}) {
  * still at their default are what an ordinary session would have done, and
  * naming them would make a chosen set look more elaborate than it is.
  */
-export function activeLabel({ deck, tag, only }) {
+export function activeLabel({ deck, list, tag, only }) {
   const parts = [];
-  if (deck) parts.push(deck === "personal" ? "my deck" : "Kaishi");
+  if (deck || list) parts.push(deckLabel({ deck, list }));
   if (tag) parts.push(tag);
   if (only) parts.push(onlyLabel(only));
   return parts.join(" · ");
@@ -82,6 +98,8 @@ export function activeLabel({ deck, tag, only }) {
 export function chooseSetScreen({
   filters,
   topics = [],
+  // Her imported lists, `{ list, total }` (#137).
+  lists = [],
   sessionLength = 20,
   onChange,
   onApply,
@@ -89,6 +107,9 @@ export function chooseSetScreen({
 }) {
   const chosen = { ...DEFAULT_FILTERS, ...filters };
   let available;
+  // The count is zero because today's new words are done, not because the
+  // choices exclude everything (#137).
+  let capReached = false;
   let counting = false;
   let expanded = false;
   // Declared here rather than beside recount(): `let` is not initialised
@@ -123,6 +144,7 @@ export function chooseSetScreen({
         }),
       ),
       deckGroup(),
+      listGroup(),
       topicGroup(),
       onlyGroup(),
       foot(),
@@ -171,8 +193,44 @@ export function chooseSetScreen({
             "aria-pressed": String(chosen.deck === value),
             onclick: () => {
               chosen.deck = value;
+              // A list is part of her own deck; any other deck leaves it.
+              chosen.list = undefined;
               changed();
             },
+          }),
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Her lists, under "Mine" (#137): "100 vokabeln" and "1000" as she named
+   * them in Noji, each its own set, never mixed. Shown once "Mine" is
+   * chosen, because a list is a part of her deck — the row does not stand
+   * for a fourth deck beside the three.
+   */
+  function listGroup() {
+    if (lists.length === 0 || chosen.deck !== "personal") return null;
+    return group(
+      "List",
+      el(
+        "div.chips.set-chips",
+        {},
+        el("button.chip", {
+          type: "button",
+          text: "All",
+          "aria-pressed": String(!chosen.list),
+          onclick: () => {
+            chosen.list = undefined;
+            changed();
+          },
+        }),
+        lists.map((l) =>
+          el("button.chip", {
+            type: "button",
+            text: `${l.list} ${num(l.total)}`,
+            "aria-pressed": String(chosen.list === l.list),
+            onclick: () => set("list", l.list),
           }),
         ),
       ),
@@ -250,8 +308,9 @@ export function chooseSetScreen({
 
     // 38: the button is inert, not hidden, and the chips that produced the
     // empty set are outlined — the cause is marked rather than shouted at.
+    // When the cause is the daily limit, no chip produced it (#137).
     const empty = total === 0;
-    if (empty) sheet.classList.add("empty");
+    if (empty && !capReached) sheet.classList.add("empty");
     else sheet.classList.remove("empty");
 
     return el(
@@ -271,7 +330,11 @@ export function chooseSetScreen({
           })
         : null,
       empty
-        ? el("p.set-note", { text: "Nothing matches all three. Change one, or reset." })
+        ? el("p.set-note", {
+            text: capReached
+              ? "Today's new words are done. Choose New for more."
+              : "Nothing matches all three. Change one, or reset.",
+          })
         : null,
       el("button.btn-primary", {
         type: "button",
@@ -296,9 +359,11 @@ export function chooseSetScreen({
       const answer = await api.queue({ ...chosen, limit: sessionLength });
       if (mine !== generation) return;
       available = answer.available ?? answer.cardIds.length;
+      capReached = Boolean(answer.newCapReached);
     } catch {
       if (mine !== generation) return;
       available = undefined;
+      capReached = false;
     }
     counting = false;
     redrawFoot();

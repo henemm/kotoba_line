@@ -116,3 +116,50 @@ describe("importing her lists", () => {
     await app.close();
   });
 });
+
+describe("practising one of her lists (#137)", () => {
+  it("runs only that list's cards", async () => {
+    const { app, json } = await imported();
+    const deck = await json("/api/deck?since=0");
+    const byId = new Map(deck.cards.map((c) => [c.id, c]));
+    const q = await json(`/api/queue?deck=personal&list=${encodeURIComponent("list b")}&limit=20`);
+    assert.equal(q.cardIds.length, 2);
+    assert.ok(q.cardIds.every((id) => byId.get(id).list_name === "list b"));
+    assert.equal(q.filtered, false, "the scheduler still decides inside a list");
+    await app.close();
+  });
+
+  it("counts the nothing-due offers inside the list", async () => {
+    const { app, db, user, json } = await imported();
+    const [a1, a2] = db.prepare("SELECT id FROM cards WHERE list_name = 'list a' ORDER BY id").all();
+    const [b1, b2] = db.prepare("SELECT id FROM cards WHERE list_name = 'list b' ORDER BY id").all();
+    const now = Math.floor(Date.now() / 1000);
+    const state = db.prepare(
+      "INSERT INTO card_state (user_id, card_id, due_at, stability, difficulty, reps, lapses, last_review) VALUES (?, ?, ?, 1, 5, 1, 0, ?)",
+    );
+    // Every card seen, none due now: the queue is empty, so the answer
+    // carries the outlook. One card of each list falls due within the hour.
+    state.run(user.id, a1.id, now + 3600, now - 7200);
+    state.run(user.id, b1.id, now + 3660, now - 7200);
+    state.run(user.id, a2.id, now + 30 * 86400, now - 7200);
+    state.run(user.id, b2.id, now + 30 * 86400, now - 7200);
+
+    const listA = await json(`/api/queue?deck=personal&list=${encodeURIComponent("list a")}`);
+    assert.equal(listA.cardIds.length, 0);
+    assert.equal(listA.outlook.ahead, 1, "list b's card is not list a's offer");
+    assert.equal(listA.outlook.nextDue.count, 1);
+    const mine = await json("/api/queue?deck=personal");
+    assert.equal(mine.outlook.ahead, 2, "all her own words count both");
+    await app.close();
+  });
+
+  it("names her lists with their counts, for the set sheet", async () => {
+    const { app, json } = await imported();
+    const stats = await json("/api/stats");
+    assert.deepEqual(stats.lists, [
+      { list: "list a", total: 2 },
+      { list: "list b", total: 2 },
+    ]);
+    await app.close();
+  });
+});

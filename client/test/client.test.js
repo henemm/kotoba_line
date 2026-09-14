@@ -14,7 +14,7 @@ import { byFrequencyThenId, matchesQuery } from "../src/screens/browse.js";
 import { offlineStatus } from "../src/outbox.js";
 import { unwrap } from "../src/store.js";
 import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
-import { activeLabel, isDefault, summaryLine } from "../src/screens/choose-set.js";
+import { activeLabel, isDefault, scopeOf, summaryLine } from "../src/screens/choose-set.js";
 import { accentLabel, accentsOf, contour } from "../src/pitch.js";
 import { signedOutCopy } from "../src/screens/signed-out.js";
 import { fold } from "../src/viewport.js";
@@ -755,6 +755,20 @@ describe("what a chosen set is called (36, 39)", () => {
   it("knows when nothing was chosen at all", () => {
     assert.equal(isDefault({}), true);
     assert.equal(isDefault({ tag: "food" }), false);
+    assert.equal(isDefault({ deck: "personal", list: "100 vokabeln" }), false);
+  });
+
+  it("calls one of her lists by its own name (#137)", () => {
+    const list = { deck: "personal", list: "100 vokabeln" };
+    assert.equal(summaryLine(list), "100 vokabeln · any topic · due today");
+    assert.equal(activeLabel({ ...list, only: "new" }), "100 vokabeln · New");
+  });
+
+  it("keeps the deck and the list, and lets the topic and the only go (#137)", () => {
+    assert.deepEqual(
+      scopeOf({ deck: "personal", list: "1000", tag: "food", only: "starred" }),
+      { deck: "personal", list: "1000" },
+    );
   });
 });
 

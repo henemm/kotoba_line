@@ -60,9 +60,18 @@ export function composeQueue({ due, lapsed, fresh }, limit) {
  * Whether the session is one the user chose rather than one the scheduler
  * proposed. §5a: "when a filter is active, the scheduler advises rather than
  * decides", and the daily new-card cap applies to unfiltered sessions only.
+ *
+ * A deck or one of her lists is not such a filter any more (#137), a
+ * deviation from §5a. Since the choice stays put across app starts, it is
+ * *where* she learns rather than a narrowing for one session: with "Mine"
+ * chosen for good, an uncapped queue would bring 20 new words every session,
+ * several times a day, and the reviews those make would pile up within the
+ * week. So the scheduler still decides inside a deck or a list — daily cap,
+ * due count, the nothing-due outlook — and only a topic or an `only` hands
+ * the decision to her.
  */
-export function isFiltered({ deck, tag, only }) {
-  return Boolean(deck || tag || only);
+export function isFiltered({ tag, only }) {
+  return Boolean(tag || only);
 }
 
 /**
@@ -76,11 +85,17 @@ export function isFiltered({ deck, tag, only }) {
  * That also means she can put a card into a topic the deck already has, rather
  * than being locked out of `food` because the import owns the name.
  */
-function filterClause({ deck, tag }, params, userId) {
+function filterClause({ deck, list, tag }, params, userId) {
   let sql = "";
   if (deck) {
     sql += " AND c.deck = ?";
     params.push(deck);
+  }
+  // One of her imported lists (#137). Only her own cards carry a list name,
+  // and visibleTo() keeps them hers.
+  if (list) {
+    sql += " AND c.list_name = ?";
+    params.push(list);
   }
   if (tag) {
     sql +=
@@ -93,8 +108,8 @@ function filterClause({ deck, tag }, params, userId) {
 }
 
 export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() / 1000), random = Math.random) {
-  const { mode, deck, tag, only } = opts;
-  const filtered = isFiltered({ deck, tag, only });
+  const { mode, deck, list, tag, only } = opts;
+  const filtered = isFiltered({ tag, only });
 
   const requested = Number.isInteger(opts.limit) ? opts.limit : MAX_SESSION_LENGTH;
   const limit = Math.min(Math.max(requested, 1), MAX_SESSION_LENGTH);
@@ -125,7 +140,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ? AND st.starred = 1" : ""}
-      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deck, tag }, params, userId)} ${extra}`;
+      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deck, list, tag }, params, userId)} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
@@ -185,6 +200,16 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     };
   }
 
+  // Whether today's new cards are what is missing (#137): unseen cards are
+  // there, the daily limit has let through all it will. With a deck or list
+  // she practises in, this is an ordinary evening, and the set sheet says so
+  // instead of "Nothing matches" — which would send her looking for a wrong
+  // choice she never made.
+  const newCapReached =
+    !filtered && newAllowance === 0 && only !== "lapsed" && only !== "ahead"
+      ? run("AND s.card_id IS NULL", "LIMIT 1").length > 0
+      : false;
+
   const queue = composeQueue(groups, limit);
 
   // How many cards these filters match, before the session cap. Design 36
@@ -195,7 +220,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // §5: shuffle within the session so the same cards do not always come in the
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
-  return { mode: mode ?? null, filtered, available, cardIds: shuffle(queue, random) };
+  return { mode: mode ?? null, filtered, available, newCapReached, cardIds: shuffle(queue, random) };
 }
 
 const tokyoTime = new Intl.DateTimeFormat("en-GB", {
@@ -236,21 +261,25 @@ export function whenInTokyo(at, now) {
  * cards the scheduler has seen: new cards are not "due", they are allowed, and
  * the allowance is a different sentence.
  */
-export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
-  const ahead = queueForUser(db, userId, { only: "ahead" }, now).available;
-  const lapsed = queueForUser(db, userId, { only: "lapsed" }, now).available;
+export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), { deck, list } = {}) {
+  // Within the deck or list she practises in (#137), like the queue it stands
+  // in for: an offer counted over every card would promise a session of cards
+  // her lines never show.
+  const ahead = queueForUser(db, userId, { deck, list, only: "ahead" }, now).available;
+  const lapsed = queueForUser(db, userId, { deck, list, only: "lapsed" }, now).available;
 
   const visible = visibleTo(userId);
+  const scope = [];
   const scheduled = `FROM card_state s JOIN cards c ON c.id = s.card_id
-     WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}`;
-  const { at } = db.prepare(`SELECT min(s.due_at) AS at ${scheduled} AND s.due_at > ?`).get(userId, ...visible.params, now);
+     WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}${filterClause({ deck, list }, scope, userId)}`;
+  const { at } = db.prepare(`SELECT min(s.due_at) AS at ${scheduled} AND s.due_at > ?`).get(userId, ...visible.params, ...scope, now);
 
   let nextDue = null;
   if (at) {
     const endOfThatDay = Math.floor(Date.parse(`${nextDay(tokyoDay(at))}T00:00:00+09:00`) / 1000);
     const { n } = db
       .prepare(`SELECT count(*) AS n ${scheduled} AND s.due_at > ? AND s.due_at < ?`)
-      .get(userId, ...visible.params, now, endOfThatDay);
+      .get(userId, ...visible.params, ...scope, now, endOfThatDay);
     nextDue = { count: n, at, when: whenInTokyo(at, now) };
   }
 
