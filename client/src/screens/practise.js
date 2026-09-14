@@ -8,17 +8,25 @@ import { el, render, station } from "../ui/dom.js";
 const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
 
 /**
- * 60 is MAX_SESSION_LENGTH on the server, and the screen calls it "All".
+ * 60 is MAX_SESSION_LENGTH on the server.
  *
  * The only place session length is set (#123). Settings offered the same
  * three and wrote the same stored value, which read as two different
  * settings; it is a choice made when she sits down to practise, so it lives
  * where she does that.
+ *
+ * The question she is actually answering is how much time she has, so the
+ * buttons say that in words, and the count stays underneath so the word never
+ * promises more than it does. No minutes: there is not yet enough of her own
+ * practice to say how long a card takes (measured 2026-09-14: no answers on
+ * her account, nine on Henning's, from 9 to 98 seconds apart), and a guess
+ * would be wrong on the first 書く session. "Long" is "up to 60" rather than
+ * "all", because on a day with more than 60 due it is not all.
  */
 const SESSION_LENGTHS = [
-  { value: 10, label: "10" },
-  { value: 20, label: "20" },
-  { value: 60, label: "All" },
+  { value: 10, label: "Quick", detail: "10 cards" },
+  { value: 20, label: "Normal", detail: "20 cards" },
+  { value: 60, label: "Long", detail: "up to 60" },
 ];
 
 /**
@@ -39,6 +47,7 @@ export function practiseScreen({
   sessionLength,
   onSessionLength,
   readAloud = true,
+  onReadAloud,
   // #106: `{ due, outlook, stats }` from `/api/queue` and `/api/stats`, as a
   // promise the shell owns. The shell asks once and hands the same promise to
   // every rebuild of this tab; building the tab used to ask again itself, and
@@ -57,9 +66,10 @@ export function practiseScreen({
   root.classList.toggle("has-resume", hasResume);
 
   // What the numbers change, and nothing else: the slot above the chooser
-  // holds 15's nothing-due block, the one above the lines holds the due line.
+  // holds 15's nothing-due block, the one beside the lines' heading holds the
+  // due count.
   const top = el("div.due-slot");
-  const above = el("div.due-slot");
+  const above = el("span.due-slot");
 
   load();
 
@@ -74,14 +84,19 @@ export function practiseScreen({
    */
   async function load() {
     const soon = await answerSoon(numbers);
+    // Three questions in the order she answers them — what, how long, how —
+    // and the answer to the last one is the tap that starts the session. The
+    // length picker used to sit under the lines, where it was chosen after
+    // the tap it applied to. The lines are still the lowest controls, which
+    // on a phone is where the thumb already is.
     render(
       root,
       top,
       resumeRow(),
       setLine(),
-      above,
-      linesBlock(),
       lengthPicker(),
+      linesHead(),
+      linesBlock(),
       soundNote(),
       // #123: "Find and star words" and "Add a word" were the last two rows
       // here. They are the Words tab now, which is also what lets this tab fit
@@ -112,40 +127,30 @@ export function practiseScreen({
       // "Checking" line held, and the offers wait for the next build of the
       // tab: after a session, or on coming back to it.
       render(top);
-      render(above, el("p.due-line", { text: "Nothing due today." }));
+      render(above, "Nothing due today");
       return;
     }
     if (!outcome || outcome.error) {
       render(top);
-      // Both fit on one line at her phone's width, so the lines do not move
-      // when one becomes the other (measured in WebKit at 394 px; a longer
-      // sentence wrapped and pushed them down by 24 px).
-      render(
-        above,
-        el("p.due-line", { text: outcome ? "Couldn't check what's due." : "Checking what's due…" }),
-      );
+      // Beside the heading, on its one line, so the lines do not move when
+      // one becomes the other.
+      render(above, outcome ? "Couldn't check" : "Checking…");
       return;
     }
     // #91: `outlook` carries the design's "Next cards due" row and the offers'
     // counts (#90); the server sends it with an empty day's queue.
     const { due, outlook, stats } = outcome.value;
-    // #58: on a normal day the due-line sentence is the instruction and the
-    // four lines are its only answer — so it sits right above them, below
-    // the chooser, not above it where the WHAT TO PRACTISE block used to
-    // read as what the sentence was introducing.
+    // #58: the due count sits right above the lines, not above the chooser,
+    // where WHAT TO PRACTISE read as what it was introducing. Since the three
+    // headings it is no longer the instruction — "How to practise" is — just
+    // the count beside it.
     //
     // #70: "nothing due" and "carry on where you left off" both answer
     // "what do you do now", and stacked together they push the four lines
     // themselves below the fold. Carry on is the more specific answer, so
     // when it's on offer the generic suggestions step aside for it.
     render(top, ...(due > 0 || hasResume ? [] : nothingDue(outlook, stats)));
-    render(above, ...(due > 0 ? normalDay(due) : []));
-  }
-
-  function normalDay(due) {
-    return [
-      el("p.due-line", { text: `${due} ${due === 1 ? "card" : "cards"} due. Pick how you want to practise.` }),
-    ];
+    render(above, ...(due > 0 ? [`${cards(due)} due`] : []));
   }
 
   function nothingDue(outlook, stats) {
@@ -276,6 +281,15 @@ export function practiseScreen({
     );
   }
 
+  function linesHead() {
+    return el(
+      "div.lines-head",
+      {},
+      el("span.set-label", { text: "How to practise" }),
+      el("span.due-count", {}, above),
+    );
+  }
+
   function linesBlock() {
     return el(
       "div.lines",
@@ -308,44 +322,71 @@ export function practiseScreen({
    * The label came back after #123: in Settings the row sat under "Session
    * length", and moved here it was three bare buttons that neither she nor
    * Henning could read. It asks the question the way "What to practise" does,
-   * in her words rather than the setting's name. "All" stays: it is capped at
-   * 60, which only matters on a day with more than 60 due.
+   * in her words rather than the setting's name.
    */
   function lengthPicker() {
     const picker = el("div.length", { role: "group", "aria-labelledby": "length-label" });
     const draw = () =>
       render(
         picker,
-        SESSION_LENGTHS.map(({ value, label }) =>
-          el("button", {
-            type: "button",
-            text: label,
-            "aria-pressed": String(value === sessionLength),
-            onclick: () => {
-              sessionLength = value;
-              onSessionLength?.(value);
-              draw();
+        SESSION_LENGTHS.map(({ value, label, detail }) =>
+          el(
+            "button",
+            {
+              type: "button",
+              "aria-pressed": String(value === sessionLength),
+              onclick: () => {
+                sessionLength = value;
+                onSessionLength?.(value);
+                draw();
+              },
             },
-          }),
+            el("span.length-word", { text: label }),
+            el("span.length-count", { text: detail }),
+          ),
         ),
       );
     draw();
     return el(
       "div.length-block",
       {},
-      el("span.set-label", { id: "length-label", text: "How many cards" }),
+      el("span.set-label", { id: "length-label", text: "How long" }),
       picker,
     );
   }
 
+  /**
+   * A status, not a fourth question: it sits apart below the lines, smaller,
+   * with the one thing she might want to do about it on a quiet train right
+   * beside it. The switch writes the same stored setting as Settings → Read
+   * cards aloud, so the two never disagree. Redrawn in place, for the reason
+   * `lengthPicker` gives.
+   *
+   * The line has to follow the setting: promising sound that is switched off
+   * is the kind of small lie that makes the rest look unreliable.
+   */
   function soundNote() {
-    // The line has to follow the setting: promising sound that Settings has
-    // switched off is the kind of small lie that makes the rest look unreliable.
-    return el("p.sound-note", {
-      text: readAloud
-        ? "Sound on — every card is read aloud in Japanese."
-        : "Sound off — tap ♪ on a card to hear it.",
-    });
+    const note = el("div.sound-note");
+    const draw = () =>
+      render(
+        note,
+        el("span.sound-state", {
+          text: readAloud ? "Sound on — cards are read aloud." : "Sound off — tap ♪ on a card to hear it.",
+        }),
+        onReadAloud
+          ? el("button.sound-switch", {
+              type: "button",
+              text: readAloud ? "Turn off" : "Turn on",
+              onclick: () => {
+                readAloud = !readAloud;
+                onReadAloud(readAloud);
+                draw();
+              },
+            })
+          : null,
+      );
+    draw();
+    return note;
   }
 
   return root;

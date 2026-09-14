@@ -66,11 +66,23 @@ describe("the Words tab (#123)", () => {
 
   // Reads the source. Moving the picker here lost the "Session length" label
   // it had in Settings, and three bare buttons told nobody what they were for.
-  // The browser run for v51 measured the label at 394 × 852 with the Carry-on
-  // card showing: the tab still does not scroll, last element 716, fade 740.
-  it("gives the session length buttons a heading", () => {
+  // The browser run for v52 measured the reordered tab at 394 × 852 with the
+  // Carry-on card showing: it does not scroll, last element 697, fade 740.
+  it("asks what, how long and how, in that order", () => {
     assert.match(practise, /"aria-labelledby": "length-label"/);
-    assert.match(practise, /id: "length-label", text: "How many cards"/);
+    const order = ["setLine(),", "lengthPicker(),", "linesHead(),", "linesBlock(),", "soundNote(),"].map((call) =>
+      practise.indexOf(call),
+    );
+    assert.ok(order.every((at) => at > 0), "every block is rendered");
+    assert.deepEqual([...order].sort((a, b) => a - b), order);
+    for (const heading of ["What to practise", "How long", "How to practise"]) {
+      assert.match(practise, new RegExp(`text: "${heading}"`));
+    }
+  });
+
+  it("lets the sound line switch sound off where it says it is on", () => {
+    assert.match(practise, /button\.sound-switch/);
+    assert.match(app, /onReadAloud: \(on\) =>/);
   });
 
   it("drops the #118 workarounds that rested on a disproven theory", () => {

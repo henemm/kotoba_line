@@ -357,14 +357,6 @@
   display: contents;
 }
 
-/* On a normal day this replaces the heading block with a single line. */
-.practise .due-line {
-  padding: 24px var(--gutter) 20px;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--ink-muted);
-}
-
 .practise .next-due {
   margin: 0 var(--gutter) 22px;
   background: var(--night-deep);
@@ -492,11 +484,12 @@
   color: var(--ink-muted);
 }
 
+/* The second of the three questions, laid out like the first (.set-block). */
 .practise .length-block {
-  padding: 6px var(--gutter) 24px;
+  padding: 20px var(--gutter) 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 .practise .length {
   display: flex;
@@ -504,25 +497,69 @@
 }
 .practise .length button {
   flex: 1;
-  height: 46px;
+  height: 52px;
   border-radius: 12px;
   background: var(--surface);
   border: 2px solid transparent;
   color: var(--ink-muted);
-  font: 600 15px/1 inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 .practise .length button[aria-pressed="true"] {
   background: var(--surface-hi);
   border-color: var(--ink);
   color: var(--ink);
 }
-
-.practise .sound-note {
-  margin: 0;
-  padding: 0 var(--gutter) 24px;
-  font-size: 13px;
-  line-height: 1.5;
+.practise .length-word {
+  font: 600 15px/1 var(--ui);
+}
+.practise .length-count {
+  font: 400 12px/1 var(--ui);
   color: var(--ink-muted);
+}
+
+/* The third question, with the day's due count beside it rather than a
+   sentence of its own above the lines. */
+.practise .lines-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px var(--gutter) 0;
+}
+.practise .due-count {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A status line, not a question: smaller, set apart by a hairline, with its
+   switch beside it. */
+.practise .sound-note {
+  margin: 0 var(--gutter) 24px;
+  padding-top: 4px;
+  border-top: 1px solid var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+.practise .sound-switch {
+  flex: none;
+  min-height: 40px;
+  padding: 0 0 0 12px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 600 13px/1 var(--ui);
 }
 
 /* #56: on a phone with real safe-area insets the screen is 53px taller than
@@ -537,10 +574,8 @@
    32px in all — and 3px off each mode line, 30px over five. What the screen
    does not fit after that (a resume card, a smaller phone), it scrolls. */
 @media (max-width: 699px) {
-  .practise .due-line {
-    margin: 0;
+  .practise .lines-head {
     padding-top: 18px;
-    padding-bottom: 14px;
   }
   .practise .lines {
     padding: 6px var(--gutter) 14px;
@@ -553,10 +588,10 @@
     padding: 7px 0;
   }
   .practise .length-block {
-    padding-bottom: 16px;
+    padding-top: 16px;
   }
   .practise .sound-note {
-    padding-bottom: 18px;
+    margin-bottom: 18px;
   }
 
   /* #65: the resume card (51) sits on top of this already-tight layout, so
@@ -570,9 +605,11 @@
   .practise.has-resume .resume-block .rule {
     padding-top: 6px;
   }
-  .practise.has-resume .due-line {
+  .practise.has-resume .length-block {
     padding-top: 12px;
-    padding-bottom: 10px;
+  }
+  .practise.has-resume .lines-head {
+    padding-top: 14px;
   }
 }
 
@@ -583,14 +620,17 @@
   .practise .head p {
     font-size: 17px;
   }
+  /* The two headings the lines gained (How long, How to practise) made the
+     nothing-due tab scroll by 47px at 1024 × 1366, measured. 6px off each of
+     the five rows' padding takes that back (4px still left 7px to scroll). */
   .practise .lines .rail {
     left: calc(var(--gutter) + 16px);
-    top: calc(8px + 20px + 18px);
-    bottom: calc(20px + 20px + 18px);
+    top: calc(8px + 14px + 18px);
+    bottom: calc(20px + 14px + 18px);
   }
   .practise .line-row {
     gap: 22px;
-    padding: 20px 0;
+    padding: 14px 0;
   }
   .practise .line-row .jp {
     font-size: 28px;
