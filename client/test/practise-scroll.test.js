@@ -72,7 +72,7 @@ describe("the Words tab (#123)", () => {
   // asks how long and how, and what is left to narrow comes last.
   it("shows the deck and its cards for today, then asks how long and how", () => {
     assert.match(practise, /"aria-labelledby": "length-label"/);
-    const order = ["header(),", "today,", "lengthPicker(),", "linesBlock(),", "setLine(),", "soundNote(),"].map((call) =>
+    const order = ["header(),", "      today,\n", "lengthPicker(),", "linesBlock(),", "setLine(),", "soundNote(),"].map((call) =>
       practise.indexOf(call),
     );
     assert.ok(order.every((at) => at > 0), "every block is rendered");

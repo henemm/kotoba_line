@@ -4,6 +4,7 @@ import { signedOutScreen } from "./screens/signed-out.js";
 import { updateSheet } from "./screens/update-sheet.js";
 import { practiseScreen } from "./screens/practise.js";
 import { decksScreen } from "./screens/decks.js";
+import { deckOptionsSheet } from "./screens/deck-options.js";
 import { jokerSpentScreen, statsScreen, streakResetScreen } from "./screens/stats.js";
 import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
@@ -57,9 +58,9 @@ const state = {
   // practise tab because it outlives it: tapping a line starts a session with
   // these, and the session that runs says so (39).
   filters: { ...DEFAULT_FILTERS },
-  // The deck whose page is open, `{ key, name }` from /api/decks (#137), or
-  // undefined on the deck list. Not kept across starts: like Noji, the app
-  // opens on the list of decks.
+  // The deck whose page is open, as /api/decks describes it — key, name,
+  // counts, `ways` and its own `settings` (#137) — or undefined on the deck
+  // list. Not kept across starts: like Noji, the app opens on the decks.
   deck: undefined,
   // The sign-in screen's name for the app, from the settings this device last
   // saw (#139). Set at boot and by keepSettings.
@@ -216,10 +217,11 @@ function currentScreen() {
     return practiseScreen({
       deck: state.deck,
       onBack: closeDeck,
+      onOptions: openDeckOptions,
       sessionLength: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
       japanese: state.settings.japaneseScript,
-      hiddenModes: state.settings.hiddenModes,
+      hiddenModes: state.deck?.settings?.hiddenModes ?? [],
       onSessionLength: (len) => {
         keepSettings({ ...state.settings, sessionLength: len });
         // Best effort: the picker is a shortcut into the same stored setting,
@@ -363,9 +365,30 @@ function deckList() {
 
 /** Into a deck's page (#137). Anything narrowed in another deck is left behind. */
 function openDeck(deck) {
-  state.deck = { key: deck.key, name: deck.name };
+  state.deck = deck;
   state.filters = { ...DEFAULT_FILTERS, deckKey: deck.key };
   numbersChanged();
+  renderApp();
+}
+
+/**
+ * The open deck's options (#137). Written as each control is touched, like
+ * Settings, and kept in the open deck at once so the page behind the sheet
+ * already shows the change; a write that fails offline is tried again the
+ * next time the options change, as the stored list is sent whole.
+ */
+function openDeckOptions() {
+  if (!state.deck) return;
+  state.sheet = deckOptionsSheet({
+    deck: state.deck,
+    japanese: state.settings.japaneseScript,
+    onChange: (patch, settings) => {
+      state.deck = { ...state.deck, settings };
+      numbersChanged();
+      api.updateDeckSettings(state.deck.key, { hiddenModes: settings.hiddenModes, newPerDay: settings.newPerDay }).catch(() => {});
+    },
+    onClose: closeSheet,
+  });
   renderApp();
 }
 

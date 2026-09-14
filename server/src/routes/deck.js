@@ -20,6 +20,8 @@ import {
   starredAmong,
 } from "../queue.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
+import { updateDeckSettings } from "../deck-settings.js";
+import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 
 /**
  * The four intervals for each card, folded from its own history.
@@ -197,6 +199,36 @@ export default async function deckRoutes(app) {
   app.get("/api/decks", { preHandler: app.requireUser }, async (req) => ({
     decks: decksForUser(db, req.user.id),
   }));
+
+  /** #137: one deck's ways of practising and daily limit, from its options sheet. */
+  app.patch(
+    "/api/decks/settings",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["deckKey"],
+          minProperties: 2,
+          properties: {
+            deckKey: { type: "string", pattern: DECK_KEY_PATTERN },
+            hiddenModes: {
+              type: "array",
+              items: { type: "string", enum: MODE_KEYS },
+              uniqueItems: true,
+              maxItems: MODE_KEYS.length - 1,
+            },
+            newPerDay: { type: "integer", minimum: NEW_PER_DAY_MIN, maximum: NEW_PER_DAY_MAX },
+          },
+        },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req) => {
+      const { deckKey, ...patch } = req.body;
+      return { settings: updateDeckSettings(db, req.user.id, deckKey, patch) };
+    },
+  );
 
   /** §5a: the browse screen — search, filter, and see what is starred. */
   app.get(

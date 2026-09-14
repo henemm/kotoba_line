@@ -182,6 +182,73 @@ describe("her decks, for the practise tab (#137)", () => {
   });
 });
 
+describe("settings of one deck (#137, migration 014)", () => {
+  const patch = async (app, cookie, body) =>
+    app.inject({ method: "PATCH", url: "/api/decks/settings", headers: { cookie }, payload: body });
+
+  async function signedIn() {
+    const { app, db, config } = await testApp();
+    const user = await seedUser(db);
+    kaishiCard(db);
+    // A list long enough for a daily limit to bite.
+    const many = Array.from({ length: 14 }, (_, i) => ({ list: "long", position: i + 1, noteId: `l${i}-0`, front: `Wort ${i}`, back: `kotoba${i}` }));
+    importList(db, user.id, [...rows, ...many], { now: 1_800_000_000_000 });
+    const cookie = await signIn(app, config);
+    const json = async (url) => (await app.inject({ method: "GET", url, headers: { cookie } })).json();
+    return { app, db, user, cookie, json };
+  }
+
+  it("starts a list at 10 new cards a day and Kaishi at her overall limit, with every way on", async () => {
+    const { app, db, user, json } = await signedIn();
+    db.prepare("UPDATE user_settings SET new_per_day = 20 WHERE user_id = ?").run(user.id);
+    const { decks } = await json("/api/decks");
+    const byKey = Object.fromEntries(decks.map((d) => [d.key, d]));
+    assert.deepEqual(byKey.kaishi.settings, { hiddenModes: [], newPerDay: 20 });
+    assert.deepEqual(byKey["list:long"].settings, { hiddenModes: [], newPerDay: 10 });
+    assert.equal(byKey["list:long"].today.fresh, 10, "a list of 14 new words offers 10 today");
+    await app.close();
+  });
+
+  it("says which ways of practising a deck can do", async () => {
+    const { app, json } = await signedIn();
+    const { decks } = await json("/api/decks");
+    const byKey = Object.fromEntries(decks.map((d) => [d.key, d]));
+    // Kaishi's card has a translated sentence and a reading; the imported
+    // "Lesen" took the sentence without its English, the others have neither.
+    assert.deepEqual(byKey.kaishi.ways, { choose: 1, listen: 1, speak: 1, type: 1, flip: 1 });
+    assert.deepEqual(byKey["list:list a"].ways, { choose: 2, listen: 0, speak: 2, type: 1, flip: 2 });
+    await app.close();
+  });
+
+  it("keeps each deck's new cards to itself", async () => {
+    const { app, cookie, json } = await signedIn();
+    assert.equal((await patch(app, cookie, { deckKey: "list:long", newPerDay: 5 })).statusCode, 200);
+    const long = await json(`/api/queue?deckKey=${encodeURIComponent("list:long")}&limit=60`);
+    assert.equal(long.cardIds.length, 5);
+    // Answer all five: that deck is done for the day, the other is untouched.
+    const events = long.cardIds.map((id, i) => ({ id: `00000000-0000-4000-8000-00000000000${i}`, card_id: id, mode: "flip", rating: 3, reviewed_at: Math.floor(Date.now() / 1000) - 60 }));
+    const posted = await app.inject({ method: "POST", url: "/api/events", headers: { cookie }, payload: { events } });
+    assert.equal(posted.statusCode, 200, posted.body);
+    const after = await json(`/api/queue?deckKey=${encodeURIComponent("list:long")}&limit=60`);
+    assert.equal(after.today.fresh, 0);
+    const other = await json(`/api/queue?deckKey=${encodeURIComponent("list:list a")}&limit=60`);
+    assert.equal(other.today.fresh, 2, "new cards in one list do not use up another's");
+    await app.close();
+  });
+
+  it("stores the ways of practising per deck, and never all five hidden", async () => {
+    const { app, cookie, json } = await signedIn();
+    const res = await patch(app, cookie, { deckKey: "list:list a", hiddenModes: ["type", "choose"] });
+    assert.deepEqual(res.json().settings, { hiddenModes: ["choose", "type"], newPerDay: 10 });
+    const { decks } = await json("/api/decks");
+    assert.deepEqual(decks.find((d) => d.key === "kaishi").settings.hiddenModes, [], "another deck is not touched");
+    assert.equal((await patch(app, cookie, { deckKey: "list:list a", hiddenModes: ["choose", "listen", "speak", "type", "flip"] })).statusCode, 400);
+    assert.equal((await patch(app, cookie, { deckKey: "personal", newPerDay: 10 })).statusCode, 400);
+    assert.equal((await patch(app, cookie, { deckKey: "kaishi", newPerDay: 3 })).statusCode, 400);
+    await app.close();
+  });
+});
+
 describe("practising one of her lists (#137)", () => {
   it("runs only that list's cards", async () => {
     const { app, json } = await imported();

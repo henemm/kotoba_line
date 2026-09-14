@@ -68,6 +68,7 @@ function startLabel(mode) {
 export function practiseScreen({
   deck,
   onBack,
+  onOptions,
   onStart,
   onDrillTopic,
   onChooseSet,
@@ -76,8 +77,8 @@ export function practiseScreen({
   onSessionLength,
   readAloud = true,
   onReadAloud,
-  // #106: `{ due, outlook, stats }` from `/api/queue` and `/api/stats`, as a
-  // promise the shell owns. The shell asks once and hands the same promise to
+  // #106: `{ due, today, outlook, stats }` from `/api/queue` and `/api/stats`,
+  // as a promise the shell owns. The shell asks once and hands the same promise to
   // every rebuild of this tab; building the tab used to ask again itself, and
   // a normal start asked three times.
   numbers,
@@ -85,7 +86,7 @@ export function practiseScreen({
   scrollTop = 0,
   // #135: false shows the English beside every Japanese label instead.
   japanese = true,
-  // #133: the lines she has switched off in Settings.
+  // The ways of practising switched off for this deck (#137, Deck options).
   hiddenModes = [],
 }) {
   const root = el("div.practise.deck-page");
@@ -109,11 +110,10 @@ export function practiseScreen({
    */
   async function load() {
     const soon = await answerSoon(numbers);
-    // Three questions in the order she answers them — what, how long, how —
-    // and the answer to the last one is the tap that starts the session. The
-    // length picker used to sit under the lines, where it was chosen after
-    // the tap it applied to. The lines are still the lowest controls, which
-    // on a phone is where the thumb already is.
+    // What was chosen on the deck list comes first, then the two questions
+    // in the order she answers them — how long, how — and the answer to the
+    // last is the tap that starts the session. What is left to narrow comes
+    // after it, because on most days nothing is (#137).
     render(
       root,
       header(),
@@ -135,10 +135,9 @@ export function practiseScreen({
 
   /**
    * Three states, not two. A count that could not be had is not zero: this
-   * used to fall back to `due = 0`, which drew "おつかれさま · Nothing due
-   * today" on a train with cards due. And on a stalled connection
-   * `navigator.onLine` is still true, so no Offline strip explains a missing
-   * count — the slot has to say it.
+   * used to fall back to `due = 0`, which drew "Nothing due today" on a train
+   * with cards due. And on a stalled connection `navigator.onLine` is still
+   * true, so no Offline strip explains a missing count — the number has to.
    */
   function fill(outcome, { late = false } = {}) {
     if (!outcome || outcome.error) {
@@ -182,7 +181,12 @@ export function practiseScreen({
       onBack
         ? el("button.deck-back", { type: "button", "aria-label": "Your decks", onclick: onBack, text: "‹ Decks" })
         : null,
-      el("h1.deck-name", { text: deck?.name ?? "" }),
+      el(
+        "div.deck-title-row",
+        {},
+        el("h1.deck-name", { text: deck?.name ?? "" }),
+        onOptions ? el("button.deck-options-button", { type: "button", onclick: onOptions, text: "Options" }) : null,
+      ),
     );
   }
 
@@ -268,7 +272,9 @@ export function practiseScreen({
    * she left in a line is still offered on the deck list.
    */
   function linesBlock() {
-    const modes = visibleModes(hiddenModes);
+    // A way the deck cannot do is off whatever was stored (Deck options).
+    const cannot = Object.entries(deck?.ways ?? {}).filter(([, n]) => n === 0).map(([key]) => key);
+    const modes = visibleModes([...hiddenModes, ...cannot]);
     if (modes.length === 1) {
       const [mode] = modes;
       return el(
