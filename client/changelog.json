@@ -1,5 +1,12 @@
 [
   {
+    "version": "v49",
+    "summary": "Nothing new to see: a line in Settings to help find the scrolling problem.",
+    "notes": [
+      "Settings → Diagnostics has a new “List” line. It records what happens when the Practise screen will not scroll, so the problem can be found and fixed properly."
+    ]
+  },
+  {
     "version": "v48",
     "summary": "The Practise screen scrolls down to “Add a word” again.",
     "notes": [
