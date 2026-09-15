@@ -56,8 +56,9 @@ async function countCachedAudio() {
   try {
     if (!(await caches.has("kotoba-media"))) return 0;
     const cache = await caches.open("kotoba-media");
-    // Recordings only: the kana decks' stroke-order drawings live here too (#158).
-    return (await cache.keys()).filter((key) => !new URL(key.url).pathname.includes("/media/kanjivg-")).length;
+    // The files under sw.js's cap of 300 only: the kana decks' stroke-order
+    // drawings (#158) and the kana's own sounds (v84) live here too, uncapped.
+    return (await cache.keys()).filter((key) => !/\/media\/(kanjivg|kana)-/.test(new URL(key.url).pathname)).length;
   } catch {
     return undefined;
   }
@@ -400,6 +401,9 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       ...[
         ["Kaishi 1.5k", "Wörter, Beispielsätze und Aufnahmen – github.com/donkuri/Kaishi"],
         ["KanjiVG", "Strichfolge der Kana – kanjivg.tagaini.net, CC BY-SA 3.0"],
+        // v84: public domain asks for nothing; the line is there so she knows
+        // whose voice it is.
+        ["Wikimedia Commons", "Aussprache der einzelnen Kana – Aufnahmen von Hakatanoshio117117, gemeinfrei"],
         ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
         [
           "JMdict",

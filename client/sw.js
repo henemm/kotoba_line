@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v83";
+const VERSION = "v84";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -341,7 +341,16 @@ function overflow(keys, max) {
  */
 const isDrawing = (request) => new URL(request.url).pathname.includes("/media/kanjivg-");
 
+/**
+ * The kana's own sounds (v84) are left out of the cap for the same reason:
+ * 71 files of 13–42 KB, 1.8 MB together, never changing, and played on every
+ * kana card she reviews. Counted, a week of Kaishi words would push them out
+ * and she would fetch あ again on mobile data. The example words' recordings
+ * on a kana card are Kaishi's, ordinary recordings, and do count.
+ */
+const isKanaSound = (request) => new URL(request.url).pathname.includes("/media/kana-");
+
 async function evict(cache) {
-  const recordings = (await cache.keys()).filter((key) => !isDrawing(key));
+  const recordings = (await cache.keys()).filter((key) => !isDrawing(key) && !isKanaSound(key));
   for (const key of overflow(recordings, MEDIA_MAX)) await cache.delete(key);
 }

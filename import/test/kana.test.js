@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { openDatabase } from "../../server/src/db.js";
 import { strokeMediaName, writeKanaCards } from "../import-kana.js";
 import { kanaCards, kanaId, strokeCharacters, strokeFile, toKatakana } from "../lib/kana.js";
+import { KANA_SOUNDS, kanaSoundFile, soundMediaName } from "../lib/kana-sounds.js";
 import { toRomaji } from "../../client/src/romaji.js";
 
 describe("the kana decks (#158)", () => {
@@ -65,6 +66,47 @@ describe("the kana decks (#158)", () => {
     db.prepare("UPDATE cards SET word_meaning = 'o' WHERE id = ?").run(kanaId("を"));
     assert.equal(writeKanaCards(db, 3000), 1, "a changed row is put right, and stamped so phones hear of it");
     assert.equal(db.prepare("SELECT word_meaning FROM cards WHERE id = ?").get(kanaId("を")).word_meaning, "wo");
+    db.close();
+  });
+});
+
+describe("the kana's own recordings (v84)", () => {
+  const single = kanaCards().filter((c) => c.deck === "hiragana" && [...c.word].length === 1);
+
+  it("pins one Commons recording for each of the 71 sounds that are not yōon, and none for a yōon", () => {
+    assert.deepEqual(KANA_SOUNDS.map((s) => s.kana), single.map((c) => c.word));
+    for (const s of KANA_SOUNDS) {
+      assert.match(s.sha1, /^[0-9a-f]{40}$/, s.kana);
+      // The transcodes' global_gain runs 130–188 (measured on all 71), so any
+      // step within this range stays inside 0–255.
+      assert.ok(Number.isInteger(s.steps) && s.steps >= -20 && s.steps <= 20, `${s.kana} ${s.steps}`);
+    }
+    assert.equal(new Set(KANA_SOUNDS.map((s) => s.commons)).size, 71);
+  });
+
+  it("gives hiragana and katakana the same file, named by code point because じ and ぢ read the same", () => {
+    assert.equal(kanaSoundFile("あ"), "kana-03042.mp3");
+    assert.equal(kanaSoundFile("ア"), "kana-03042.mp3");
+    assert.equal(kanaSoundFile("ぢ"), "kana-03062.mp3");
+    assert.notEqual(kanaSoundFile("ぢ"), kanaSoundFile("じ"));
+    assert.equal(kanaSoundFile("ヲ"), "kana-03092.mp3");
+    assert.equal(kanaSoundFile("きゃ"), null);
+    assert.equal(kanaSoundFile("キャ"), null);
+    assert.equal(soundMediaName("ン"), "kana-03093.mp3");
+  });
+
+  it("writes the recording onto 142 cards, and a second run changes nothing", () => {
+    const db = openDatabase(":memory:");
+    writeKanaCards(db, 1000);
+    const withSound = () =>
+      db.prepare("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND word_audio IS NOT NULL").get().n;
+    assert.equal(withSound(), 0);
+    assert.equal(writeKanaCards(db, 2000, undefined, { sounds: true }), 142);
+    assert.equal(withSound(), 142);
+    assert.equal(db.prepare("SELECT word_audio FROM cards WHERE id = ?").get(kanaId("ア")).word_audio, "kana-03042.mp3");
+    assert.equal(writeKanaCards(db, 3000, undefined, { sounds: true }), 0);
+    assert.equal(writeKanaCards(db, 4000), 0, "--no-sounds leaves them where they are");
+    assert.equal(withSound(), 142);
     db.close();
   });
 });

@@ -1,5 +1,15 @@
 [
   {
+    "version": "v84",
+    "summary": "Die einzelnen Kana hörst du jetzt als echte Aufnahme.",
+    "notes": [
+      "Mit ♪ neben einem Hiragana oder Katakana spricht jetzt ein Mensch den Laut, dreimal hintereinander – nicht mehr die Stimme des Handys. Das gibt es bei 71 von 104 Lauten.",
+      "Die Aufnahmen sind alle ungefähr gleich laut gemacht.",
+      "Für Laute mit kleinem ゃ, ゅ oder ょ (wie きゃ) gibt es keine freie Aufnahme. Dort liest weiter die Handystimme vor, und darunter steht das.",
+      "Bei „Wie liest man das?“ hörst du den Laut erst, wenn du geantwortet hast."
+    ]
+  },
+  {
     "version": "v83",
     "summary": "Bei Hiragana hörst du jetzt echte Beispielwörter.",
     "notes": [

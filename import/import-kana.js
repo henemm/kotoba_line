@@ -7,6 +7,7 @@
  *   npm run import-kana -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
  *   npm run import-kana -- --no-strokes      # no stroke-order drawings
  *   npm run import-kana -- --no-examples     # keep the example words as they are
+ *   npm run import-kana -- --no-sounds       # keep the kana recordings as they are
  *
  * Re-runnable. A card's id comes from its characters (lib/kana.js), so a
  * second run finds the same rows, and only a row whose content changed gets a
@@ -20,6 +21,11 @@
  * Example words (v78) come from Kaishi — so run this after the Kaishi import —
  * and from the JLPT lists with JMdict's meanings, both pinned below
  * (lib/examples.js says why each).
+ *
+ * The kana's own sounds (v84) are recordings from Wikimedia Commons, each
+ * pinned by the original's sha1 and brought to one loudness on the way in
+ * (lib/kana-sounds.js). They are written before the cards, so a card never
+ * points at a recording that is not on disk.
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +33,8 @@ import { openDatabase } from "../server/src/db.js";
 import { kanaReading } from "../client/src/screens/session.js";
 import { makeMeaningLookup, parseJlptCsv, pickExamples } from "./lib/examples.js";
 import { kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
+import { COMMONS_UPLOADER, KANA_SOUNDS, kanaSoundFile, soundMediaName } from "./lib/kana-sounds.js";
+import { withGain } from "./lib/mp3gain.js";
 import { readCentralDirectory, readEntry } from "./lib/zip.js";
 
 export const KANJIVG_RELEASE = "r20250816";
@@ -64,12 +72,16 @@ function parseArgs(argv) {
 /**
  * Upsert the kana cards. Returns how many rows were new or changed.
  * Exported for the test, which runs it against an in-memory database.
+ *
+ * `sounds` writes each card's recording into `word_audio` (v84); the caller
+ * has put the files on disk first.
  */
-export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples) {
+export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples, { sounds = false } = {}) {
   const fields = ["word", "word_reading", "word_meaning", "frequency_rank", "deck"];
   // Without `examples` (--no-examples, or a test of the cards alone) the
-  // column is left as it is rather than cleared.
+  // column is left as it is rather than cleared; `word_audio` likewise.
   if (examples) fields.push("word_examples");
+  if (sounds) fields.push("word_audio");
   const existing = db.prepare(`SELECT ${fields.join(", ")}, deleted_at FROM cards WHERE id = ?`);
   const upsert = db.prepare(
     `INSERT INTO cards (id, ${fields.join(", ")}, updated_at)
@@ -83,7 +95,9 @@ export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples
   db.transaction(() => {
     for (const kanaCard of kanaCards()) {
       const found = examples?.get(kanaCard.id) ?? [];
-      const card = examples ? { ...kanaCard, word_examples: found.length ? JSON.stringify(found) : null } : kanaCard;
+      const card = { ...kanaCard };
+      if (examples) card.word_examples = found.length ? JSON.stringify(found) : null;
+      if (sounds) card.word_audio = kanaSoundFile(kanaCard.word);
       const row = existing.get(card.id);
       const same = row && row.deleted_at == null && fields.every((k) => row[k] === card[k]);
       if (same) continue;
@@ -131,6 +145,65 @@ async function loadExampleSources() {
   return { jlpt, jmdictWords };
 }
 
+const USER_AGENT = "kotoba-line-import/1.0 (https://www.henemm.com/kotoba/; kana decks)";
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * upload.wikimedia.org answers HTTP 429 after about a dozen quick requests
+ * (measured 2026-09-15), so one at a time, a pause between, and a longer one
+ * when it asks for it.
+ */
+async function politeFetch(url) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+    if (res.status !== 429 || attempt === 6) return res;
+    await sleep(5000 * attempt);
+  }
+}
+
+/**
+ * The Commons recordings, levelled, as `kana-<code point>.mp3` (v84).
+ *
+ * Commons is asked first for each original's sha1 and uploader, and a file
+ * that is not the one pinned in lib/kana-sounds.js stops the import: its gain
+ * steps were measured on that recording and no other. The audio itself is
+ * Wikimedia's MP3 transcode of the original, because iOS does not reliably
+ * play the Ogg Vorbis upload. A file already on disk is left alone, as the
+ * drawings are.
+ */
+async function writeSounds(mediaDir) {
+  mkdirSync(mediaDir, { recursive: true });
+  const missing = KANA_SOUNDS.filter((s) => !existsSync(join(mediaDir, soundMediaName(s.kana))));
+  const info = new Map();
+  for (let i = 0; i < missing.length; i += 50) {
+    const titles = missing.slice(i, i + 50).map((s) => `File:${s.commons}`);
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=sha1|url|user&titles=${encodeURIComponent(titles.join("|"))}`;
+    const res = await politeFetch(url);
+    if (!res.ok) throw new Error(`Wikimedia Commons: HTTP ${res.status} (${url})`);
+    const { query } = await res.json();
+    const asked = new Map((query.normalized ?? []).map((n) => [n.to, n.from]));
+    for (const page of Object.values(query.pages)) info.set(asked.get(page.title) ?? page.title, page.imageinfo?.[0]);
+  }
+  for (const [n, sound] of missing.entries()) {
+    const found = info.get(`File:${sound.commons}`);
+    if (!found) throw new Error(`Wikimedia Commons has no File:${sound.commons} (${sound.kana})`);
+    if (found.sha1 !== sound.sha1 || found.user !== COMMONS_UPLOADER) {
+      throw new Error(
+        `File:${sound.commons} (${sound.kana}) is not the recording pinned in lib/kana-sounds.js: sha1 ${found.sha1}, uploaded by ${found.user}`,
+      );
+    }
+    // The transcode sits beside the original: …/commons/e/ed/Ja-A.oga → …/commons/transcoded/e/ed/Ja-A.oga/Ja-A.oga.mp3
+    const [h, hh, name] = new URL(found.url).pathname.split("/").slice(-3);
+    const url = `https://upload.wikimedia.org/wikipedia/commons/transcoded/${h}/${hh}/${name}/${name}.mp3`;
+    if (n > 0) await sleep(2000);
+    const res = await politeFetch(url);
+    if (!res.ok) throw new Error(`${sound.kana}: HTTP ${res.status} (${url})`);
+    // withGain also refuses anything but the MPEG-1 Layer III it was written for.
+    writeFileSync(join(mediaDir, soundMediaName(sound.kana)), withGain(Buffer.from(await res.arrayBuffer()), sound.steps));
+  }
+  return { written: missing.length, kept: KANA_SOUNDS.length - missing.length };
+}
+
 async function writeStrokes(mediaDir) {
   mkdirSync(mediaDir, { recursive: true });
   let written = 0;
@@ -172,7 +245,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       process.stdout.write(`Examples (${deck}): ${withOne} of ${cards.length} cards have one\n`);
     }
   }
-  const changed = writeKanaCards(db, undefined, examples);
+  let sounds = false;
+  if (args["no-sounds"]) {
+    process.stdout.write("Kana recordings left as they are (--no-sounds)\n");
+  } else {
+    const { written, kept } = await writeSounds(mediaDir);
+    sounds = true;
+    process.stdout.write(`Kana recordings (Wikimedia Commons): ${written} written, ${kept} already there, in ${mediaDir}\n`);
+  }
+  const changed = writeKanaCards(db, undefined, examples, { sounds });
   db.close();
   process.stdout.write(`Kana cards: ${total} in ${dbFile}, ${changed} new or changed\n`);
 
