@@ -4,6 +4,17 @@ import { topicLabel } from "../topics.js";
 import { activeLabel, isDefault } from "./choose-set.js";
 import { el, num, render } from "../ui/dom.js";
 
+/**
+ * Noji's words for how far a card is (#159), which Charlotte already reads
+ * there. The server counts them (`progressBand` in server/src/queue.js):
+ * "Gemeisterte" are the cards it waits three weeks or more to ask again.
+ */
+const BANDS = [
+  { key: "new", label: "Nicht gelernte" },
+  { key: "learning", label: "In Bearbeitung" },
+  { key: "mastered", label: "Gemeisterte" },
+];
+
 /** "1 card", "20 cards" — design 10's offers lead with the count. */
 const cards = (n) => `${n} ${n === 1 ? "Karte" : "Karten"}`;
 
@@ -70,20 +81,16 @@ export function practiseScreen({
   // one — only in a deck of hers (#137).
   cardsBlock,
   onAddCard,
-  // #151: beside the sidebar, a deck with cards is two columns that scroll on
-  // their own, and `columnsScroll` is where the two were, for the same reason
-  // as `scrollTop`. v74: its cards in the middle, what to practise on the
-  // right — read left to right, the page ends where a session starts.
-  split = false,
-  columnsScroll = { main: 0, side: 0 },
 }) {
-  const root = el(split && cardsBlock ? "div.practise.deck-page.split" : "div.practise.deck-page");
+  const root = el("div.practise.deck-page");
   render(root, el("div.loading", { text: "…" }));
 
   // What the numbers change, and nothing else: the large number and its
   // parts, and under them 15's offers on a day with nothing due.
   const today = el("div.deck-today");
   const top = el("div.due-slot");
+  // #159: the whole deck in Noji's three bands, above its cards.
+  const progress = el("div.deck-progress");
 
   load();
 
@@ -116,27 +123,14 @@ export function practiseScreen({
       linesBlock(),
       setLine(),
       soundNote(),
+      progress,
       cardsBlock ?? null,
       addButton(),
     );
-    if (split && cardsBlock) {
-      // #151: the same blocks in two columns. v74: the cards first, beside the
-      // sidebar, and everything between the header and the cards after them,
-      // on the right. The add button stays with the cards (screens.css).
-      // Kaishi has no card list (v69), so its page stays one column.
-      const [head, ...rest] = root.children;
-      const add = root.querySelector(":scope > .deck-add-card");
-      const main = el("div.deck-main", {}, rest.slice(0, rest.indexOf(cardsBlock)));
-      root.replaceChildren(head, el("div.deck-side", {}, cardsBlock), main, ...(add ? [add] : []));
-    }
     fill(soon);
     // Once the rows are in: before, there is nothing to scroll and it clamps
     // to 0. By now renderApp() has put this tab on the page.
     if (scrollTop) root.scrollTop = scrollTop;
-    if (split && cardsBlock) {
-      root.querySelector(":scope > .deck-main").scrollTop = columnsScroll.main;
-      root.querySelector(":scope > .deck-side").scrollTop = columnsScroll.side;
-    }
     // Bounded without a timer of its own: every request gives up at
     // REQUEST_TIMEOUT_MS (api.js), so this settles one way or the other.
     if (!soon) fill(await numbers.then((value) => ({ value }), (error) => ({ error })), { late: true });
@@ -151,26 +145,23 @@ export function practiseScreen({
   function fill(outcome, { late = false } = {}) {
     if (!outcome || outcome.error) {
       render(top);
+      // Late, below the lines, so it can come in whenever the answer does.
+      render(progress);
       // In the number's place, so nothing below moves when one becomes the
       // other. A count that could not be had is not zero.
       render(today, el("div.deck-today-state", { text: outcome ? "Konnte nicht prüfen" : "Wird geprüft …" }));
       return;
     }
-    const { due, today: counts, outlook, stats, maxReached } = outcome.value;
+    const { due, today: counts, outlook, stats, maxReached, progress: bands } = outcome.value;
     const total = counts?.total ?? due;
     render(
       today,
       el("span.deck-today-n.tabular", { text: num(total) }),
       el("span.deck-today-label", { text: total === 1 ? "Karte für heute" : "Karten für heute" }),
-      counts
-        ? el(
-            "div.deck-today-split",
-            {},
-            part(counts.fresh, "neu"),
-            part(counts.review, "zu wiederholen"),
-          )
-        : null,
+      counts ? todaySplit(counts) : null,
     );
+    // Below the lines, so drawing it late moves nothing she is about to tap.
+    render(progress, ...(bands ? progressBlock(bands) : []));
     // Once the lines are on screen, nothing goes in above them: 15's offers
     // arriving late moved the lines out from under a thumb on its way to one
     // (measured in WebKit, 365 px). They wait for the next build of the page.
@@ -210,8 +201,60 @@ export function practiseScreen({
     );
   }
 
-  function part(n, label) {
-    return el("span.deck-today-part", {}, el("b.tabular", { text: num(n ?? 0) }), el("span", { text: label }));
+  /**
+   * Today's cards in Noji's three bands (#159): the new ones, and the reviews
+   * split by how far the card is. A server from before v76 sends only new and
+   * review, and gets the two it can say.
+   */
+  function todaySplit(counts) {
+    if (counts.mastered === undefined) {
+      return el("div.deck-today-split", {}, part(counts.fresh, "neu"), part(counts.review, "zu wiederholen"));
+    }
+    return el(
+      "div.deck-today-split",
+      {},
+      BANDS.map((band) => part(band.key === "new" ? counts.fresh : counts[band.key], band.label, band.key)),
+    );
+  }
+
+  function part(n, label, band) {
+    return el(
+      "span.deck-today-part",
+      {},
+      el("b.tabular", {}, band ? el(`span.band-dot.${band}`, { "aria-hidden": "true" }) : null, num(n ?? 0)),
+      el("span", { text: label }),
+    );
+  }
+
+  /**
+   * "Karten im Deck (387)" (#159), as on Noji's deck page: one bar for the
+   * whole deck and the same three bands under it, so she sees how far the
+   * deck is and not only today. Counted by the server with the day's numbers,
+   * so offline — where those are missing too — it is left off, not guessed.
+   */
+  function progressBlock(bands) {
+    const shown = BANDS.filter((band) => bands[band.key] > 0);
+    return [
+      el("h2.deck-progress-title", {}, "Karten im Deck ", el("span.tabular", { text: `(${num(bands.total)})` })),
+      el(
+        "div.deck-progress-bar",
+        { role: "img", "aria-label": BANDS.map((band) => `${num(bands[band.key])} ${band.label}`).join(", ") },
+        shown.map((band) => el(`span.${band.key}`, { style: { flexGrow: String(bands[band.key]) } })),
+      ),
+      el(
+        "div.deck-progress-legend",
+        {},
+        BANDS.map((band) =>
+          el(
+            "span.deck-progress-part",
+            {},
+            el(`span.band-dot.${band.key}`, { "aria-hidden": "true" }),
+            el("b.tabular", { text: num(bands[band.key]) }),
+            el("span", { text: band.label }),
+          ),
+        ),
+      ),
+    ];
   }
 
   /** The deck's name, and the way back to the list. */

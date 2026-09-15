@@ -102,22 +102,23 @@ and the × asks once. What remains is deliberate, and short.
   which keeps the count — the part of the sentence that is doing the work.
 - **iPad uses more of its width** (#150, v71). The 560 pt column was 47 % of a
   landscape iPad and 68 % of a portrait one. At 700 pt and wider the tab
-  screens are a 700 pt page, and a deck's page puts "cards for today" and "How
-  long" side by side. The session (16) is a card: a rounded surface up to
+  screens are a 700 pt page. The session (16) is a card: a rounded surface up to
   900 pt wide with めくる's front high on it, a rule, the answer, and the
   ratings in one row under it — Noji's layout, which Henning sent as the
   reference. 選ぶ's answers go in two columns from 1000 pt. Sign-in, the
   summary, the card form and the sheets keep the 560 pt column, and below
   700 pt (Split View, Slide Over) everything is the phone layout, as before.
-- **A landscape iPad has a sidebar instead of the tab bar** (#151, v72). At
-  1000 pt and wider — a landscape iPad, or a 12.9" one upright — the four tabs
-  are rows in a 300 pt sidebar on the recessed ground, with her decks and
-  today's counts under them and "New deck" last. A deck opens beside it with
-  no "‹ Decks" step; one of her decks shows what to practise and its cards in
-  two columns that scroll separately. Kaishi, which lists no cards, keeps the
-  one-column page. The session, the card form and the sheets take the screen
-  as before. Turning the iPad upright is the 700 pt page with the tab bar, and
-  the open deck and a search she has started stay.
+- **An iPad is one page at a time, in either orientation** (#159, v76). v72
+  (#151) gave a landscape iPad a sidebar with the tabs and her decks, and one
+  of her decks two columns; v71 put "cards for today" beside the buttons that
+  start. Charlotte asked for one screen, as in Noji ("Einzelscreen keine
+  Kombination, alles auf Klarheit"), so both are gone: a landscape iPad is the
+  700 pt page with the tab bar, stacked the way the phone is.
+- **A deck's page carries Noji's numbers** (#159, v76). Today's cards split
+  into "Nicht gelernte / In Bearbeitung / Gemeisterte", and above the card list
+  "Karten im Deck (N)" with one bar for the whole deck in the same three bands
+  — Noji's words, which she reads there, rather than the Stats tab's four. No
+  design screen draws them; the reference is her Noji screenshots in #159.
 - **52's dismissal is the session's ×.** The drawn frame is cropped, so the
   control the note calls for ("she can dismiss it") is not in it. The app
   already has one word for leaving a screen, and a second one here would teach
