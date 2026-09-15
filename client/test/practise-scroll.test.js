@@ -59,7 +59,7 @@ describe("the Words tab (#123)", () => {
     assert.doesNotMatch(practise, /button\.add-word-row|onAddWord|onBrowse|onOwnDeck/);
     // #137: a card is added in the deck it goes into, as in Noji, and not from
     // the Search tab any more.
-    assert.match(practise, /"\+ Add card"/);
+    assert.match(practise, /"\+ Karte hinzufügen"/);
     assert.doesNotMatch(browse, /"Add a word"|onAddWord/);
   });
 
@@ -68,7 +68,7 @@ describe("the Words tab (#123)", () => {
   it("asks no session length, in Settings or on the deck page", () => {
     assert.doesNotMatch(settings, /Session length|sessionLength/);
     assert.doesNotMatch(practise, /SESSION_LENGTHS|lengthPicker|sessionLength|text: "How long"/);
-    assert.match(deckOptions, /"Max cards per day"/);
+    assert.match(deckOptions, /text: "Höchstens pro Tag"/);
   });
 
   // Reads the source; the order on screen was measured in WebKit for v74
@@ -81,7 +81,7 @@ describe("the Words tab (#123)", () => {
     );
     assert.ok(order.every((at) => at > 0), "every block is rendered");
     assert.deepEqual([...order].sort((a, b) => a - b), order);
-    for (const heading of ["Start practising", "More options"]) {
+    for (const heading of ["Üben", "Weitere Auswahl"]) {
       assert.match(practise, new RegExp(`"${heading}"`));
     }
   });

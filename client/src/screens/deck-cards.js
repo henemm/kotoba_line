@@ -48,8 +48,8 @@ export function deckCardsBlock({ deck, japanese = true, onCard }) {
     autocapitalize: "none",
     autocorrect: "off",
     spellcheck: "false",
-    placeholder: "Search this deck",
-    "aria-label": `Search ${deck.name}`,
+    placeholder: "In diesem Deck suchen",
+    "aria-label": `In ${deck.name} suchen`,
   });
   search.addEventListener("input", () => {
     q = search.value.trim();
@@ -76,19 +76,19 @@ export function deckCardsBlock({ deck, japanese = true, onCard }) {
 
   function drawList() {
     if (!all) {
-      heading.textContent = "Cards in this deck";
+      heading.textContent = "Karten in diesem Deck";
       render(list, el("div.loading", { text: "…" }));
       return;
     }
     const cards = cardsOfDeck(deck, all);
     const matching = q ? cardsOfDeck(deck, all, q) : cards;
-    heading.textContent = `Cards in this deck · ${num(cards.length)}`;
+    heading.textContent = `Karten in diesem Deck · ${num(cards.length)}`;
     if (cards.length === 0) {
-      render(list, el("p.deck-cards-note", { text: "No cards yet. Tap + Add card to write the first one." }));
+      render(list, el("p.deck-cards-note", { text: "Noch keine Karten. Tippe auf + Karte hinzufügen, um die erste zu schreiben." }));
       return;
     }
     if (matching.length === 0) {
-      render(list, el("p.deck-cards-note", { text: `Nothing in ${deck.name} matches “${q}”.` }));
+      render(list, el("p.deck-cards-note", { text: `In ${deck.name} passt nichts zu „${q}“.` }));
       return;
     }
     render(
@@ -97,7 +97,7 @@ export function deckCardsBlock({ deck, japanese = true, onCard }) {
       matching.length > shown
         ? el("button.deck-cards-more", {
             type: "button",
-            text: `Show more · ${num(matching.length - shown)} left`,
+            text: `Mehr zeigen · noch ${num(matching.length - shown)}`,
             onclick: () => {
               shown += ROWS_PER_PAGE;
               drawList();
@@ -142,38 +142,38 @@ export function cardActionsSheet({ card, japanese = true, decks = [], onEdit, on
         el(
           "div.action-list",
           {},
-          el("button.action", { type: "button", text: "Edit", onclick: () => onEdit?.(card) }),
+          el("button.action", { type: "button", text: "Bearbeiten", onclick: () => onEdit?.(card) }),
           decks.length > 0
-            ? el("button.action", { type: "button", text: "Move to another deck", onclick: () => ((step = "move"), draw()) })
+            ? el("button.action", { type: "button", text: "In ein anderes Deck verschieben", onclick: () => ((step = "move"), draw()) })
             : null,
-          el("button.action.danger", { type: "button", text: "Delete", onclick: () => ((step = "delete"), draw()) }),
+          el("button.action.danger", { type: "button", text: "Löschen", onclick: () => ((step = "delete"), draw()) }),
         ),
       );
     } else if (step === "move") {
       render(
         sheet,
-        el("h2.sheet-title", { text: "Move to" }),
+        el("h2.sheet-title", { text: "Verschieben nach" }),
         el(
           "div.action-list",
           {},
           decks.map((d) => el("button.action", { type: "button", text: d.name, onclick: () => move(d) })),
         ),
         problem ? el("p.add-problem", { text: problem }) : null,
-        el("button.action.quiet", { type: "button", text: "Back", onclick: () => ((step = "menu"), (problem = undefined), draw()) }),
+        el("button.action.quiet", { type: "button", text: "Zurück", onclick: () => ((step = "menu"), (problem = undefined), draw()) }),
       );
     } else {
       // Asked, like deleting a word always was (design 30); the safe choice is
       // the solid one, because a tap that lands on "Delete" is often a mistake.
       render(
         sheet,
-        el("h2.sheet-title", { text: `Delete “${card.word_meaning ?? shownWord(card, japanese)}”?` }),
-        el("p.sheet-body", { text: "It leaves this deck and your sessions. What you have already practised still counts towards your streak and XP." }),
+        el("h2.sheet-title", { text: `„${card.word_meaning ?? shownWord(card, japanese)}“ löschen?` }),
+        el("p.sheet-body", { text: "Die Karte verschwindet aus diesem Deck und deinen Übungen. Was du schon geübt hast, zählt weiter für deine Serie und deine XP." }),
         problem ? el("p.add-problem", { text: problem }) : null,
         el(
           "div.sheet-actions",
           {},
-          el("button.btn", { type: "button", text: "Delete", onclick: remove }),
-          el("button.btn.solid", { type: "button", text: "Keep it", onclick: () => onClose?.() }),
+          el("button.btn", { type: "button", text: "Löschen", onclick: remove }),
+          el("button.btn.solid", { type: "button", text: "Behalten", onclick: () => onClose?.() }),
         ),
       );
     }
@@ -206,8 +206,8 @@ export function deckNameSheet({ title, name = "", action, onSubmit, onClose }) {
     maxlength: "60",
     autocapitalize: "sentences",
     autocorrect: "off",
-    placeholder: "Deck name",
-    "aria-label": "Deck name",
+    placeholder: "Name des Decks",
+    "aria-label": "Name des Decks",
   });
   input.value = name;
   let problem;
@@ -222,7 +222,7 @@ export function deckNameSheet({ title, name = "", action, onSubmit, onClose }) {
 
   render(
     sheet,
-    el("div.options-head", {}, el("h2.sheet-title", { text: title }), el("button.options-done", { type: "button", text: "Cancel", onclick: () => onClose?.() })),
+    el("div.options-head", {}, el("h2.sheet-title", { text: title }), el("button.options-done", { type: "button", text: "Abbrechen", onclick: () => onClose?.() })),
     input,
     note,
     button,

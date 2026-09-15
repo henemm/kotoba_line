@@ -44,8 +44,8 @@ export const recalled = (rating) => rating > RATING_AGAIN;
  */
 export function leavingCopy(answered) {
   const subject =
-    answered === 1 ? "The card you answered is" : `The ${answered} cards you answered are`;
-  return `${subject} already saved. The rest go back in the queue.`;
+    answered === 1 ? "Die Karte, die du beantwortet hast, ist" : `Die ${answered} Karten, die du beantwortet hast, sind`;
+  return `${subject} schon gespeichert. Der Rest kommt wieder in die Reihe.`;
 }
 
 /** Whether this device can read anything aloud at all (47's last sentence). */
@@ -54,13 +54,13 @@ export const canSpeak = () =>
 
 /** 47: said plainly, because a synthetic voice mistaken for a recording
  *  teaches the wrong pronunciation. */
-const SYNTH_CAPTION = "No recording for this card — read by the phone's Japanese voice";
+const SYNTH_CAPTION = "Keine Aufnahme für diese Karte – vorgelesen von der japanischen Stimme des Handys";
 
 const MIC_COPY = {
   refused:
-    "The microphone is off, so say it out loud and grade yourself. You can turn it on in iOS Settings.",
+    "Das Mikrofon ist aus. Sag es trotzdem laut und bewerte dich selbst. Einschalten kannst du es in den iOS-Einstellungen.",
   unsupported:
-    "This device can't listen. Say it out loud anyway — the mode works the same, you just grade yourself unaided.",
+    "Dieses Gerät kann nicht zuhören. Sag es trotzdem laut – die Übung funktioniert genauso, du bewertest dich nur selbst.",
 };
 
 /**
@@ -72,16 +72,18 @@ const MIC_COPY = {
  */
 export function formatInterval(seconds) {
   if (seconds == null) return undefined;
-  if (seconds < 60) return "<1m";
+  if (seconds < 60) return "<1 Min";
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes} Min`;
   const hours = Math.round(seconds / 3600);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return `${hours} Std`;
+  // Days and longer in words: "Tg" and "J" are not abbreviations anyone reads.
   const days = Math.round(seconds / 86400);
-  if (days < 30) return `${days}d`;
+  if (days < 30) return `${days} ${days === 1 ? "Tag" : "Tage"}`;
   const months = Math.round(days / 30);
-  if (months < 12) return `${months}mo`;
-  return `${Math.round(days / 365)}y`;
+  if (months < 12) return `${months} ${months === 1 ? "Monat" : "Monate"}`;
+  const years = Math.round(days / 365);
+  return `${years} ${years === 1 ? "Jahr" : "Jahre"}`;
 }
 
 const uuid = () =>
@@ -210,10 +212,10 @@ export function sessionScreen({
             el("p", {
               text:
                 mode === "type"
-                  ? `Nothing here can be typed in ${modeName(line, japanese)}. The cards that are due are your own words with no reading, so there is nothing to check an answer against.`
-                  : `Nothing here can be played in ${modeName(line, japanese)}. The cards that are due have no sentence with a translation to listen to.`,
+                  ? `Hier kann nichts in „${modeName(line, japanese)}“ getippt werden. Die fälligen Karten sind deine eigenen Wörter ohne Lesung, also gibt es nichts, womit eine Antwort verglichen werden kann.`
+                  : `Hier kann nichts in „${modeName(line, japanese)}“ geübt werden. Die fälligen Karten haben keinen Satz mit Übersetzung zum Anhören.`,
             }),
-            el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
+            el("button.btn-secondary", { type: "button", text: "Zurück", onclick: onExit }),
           ),
         );
         return;
@@ -226,8 +228,8 @@ export function sessionScreen({
         render(
           root,
           el("div.session-error", {},
-            el("p", { text: "Offline, and this hasn't been practised online yet — so there is nothing here to run." }),
-            el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
+            el("p", { text: "Du bist offline, und diese Auswahl wurde noch nie online geübt – deshalb gibt es hier nichts zu üben." }),
+            el("button.btn-secondary", { type: "button", text: "Zurück", onclick: onExit }),
           ),
         );
         return;
@@ -236,8 +238,8 @@ export function sessionScreen({
       render(
         root,
         el("div.session-error", {},
-          el("p", { text: "Could not start a session — the deck is not here yet." }),
-          el("button.btn-secondary", { type: "button", text: "Back", onclick: onExit }),
+          el("p", { text: "Die Übung konnte nicht starten – das Deck ist noch nicht auf dem Gerät." }),
+          el("button.btn-secondary", { type: "button", text: "Zurück", onclick: onExit }),
         ),
       );
       return;
@@ -257,7 +259,7 @@ export function sessionScreen({
       {},
       el("button.session-close", {
         type: "button",
-        "aria-label": "Leave the session",
+        "aria-label": "Übung verlassen",
         text: "×",
         onclick: askToLeave,
       }),
@@ -288,7 +290,7 @@ export function sessionScreen({
               "div.chosen-rule",
               {},
               el("span.dash"),
-              el("span.chosen-text", { text: `Your set · ${chosenLabel}` }),
+              el("span.chosen-text", { text: `Deine Auswahl · ${chosenLabel}` }),
               el("span.dash.long"),
             )
           : null,
@@ -320,7 +322,7 @@ export function sessionScreen({
     const button = el("button.session-star", {
       type: "button",
       class: on ? "on" : undefined,
-      "aria-label": on ? `Unstar ${shownWord(card, japanese)}` : `Star ${shownWord(card, japanese)}`,
+      "aria-label": on ? `${shownWord(card, japanese)} nicht mehr markieren` : `${shownWord(card, japanese)} markieren`,
       "aria-pressed": String(on),
       text: on ? "★" : "☆",
     });
@@ -344,7 +346,7 @@ export function sessionScreen({
       button.textContent = on ? "★" : "☆";
       button.classList.toggle("on", on);
       button.setAttribute("aria-pressed", String(on));
-      button.setAttribute("aria-label", `${on ? "Unstar" : "Star"} ${shownWord(card, japanese)}`);
+      button.setAttribute("aria-label", `${shownWord(card, japanese)} ${on ? "nicht mehr markieren" : "markieren"}`);
     }
 
     return button;
@@ -372,15 +374,15 @@ export function sessionScreen({
       el(
         "div.sheet",
         {},
-        el("h2.sheet-title", { text: "Leave this session?" }),
+        el("h2.sheet-title", { text: "Übung verlassen?" }),
         el("p.sheet-body", { text: leavingCopy(answered) }),
         el(
           "div.sheet-actions",
           {},
-          el("button.btn", { type: "button", text: "Leave", onclick: leave }),
+          el("button.btn", { type: "button", text: "Verlassen", onclick: leave }),
           el("button.btn.solid", {
             type: "button",
-            text: "Keep going",
+            text: "Weiterüben",
             onclick: () => sheet.remove(),
           }),
         ),
@@ -595,7 +597,7 @@ export function sessionScreen({
     });
   }
 
-  function speaker(text, file, { rate, ghost = true, label = "Read aloud", big = false, small = false } = {}) {
+  function speaker(text, file, { rate, ghost = true, label = "Vorlesen", big = false, small = false } = {}) {
     // Absent rather than inert, and never a guess (#137, v66): see `canVoice`.
     if (!canVoice(text, file)) return null;
     return el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`, {
@@ -671,7 +673,7 @@ export function sessionScreen({
               el(
                 "div.actions",
                 {},
-                el("button.btn.primary", { type: "button", text: "Continue", onclick: () => next() }),
+                el("button.btn.primary", { type: "button", text: "Weiter", onclick: () => next() }),
               ),
             );
           },
@@ -692,7 +694,7 @@ export function sessionScreen({
     if (readAloud && card.word_audio) say(card.word, card.word_audio);
 
     chooseFrom(card, "word_meaning", null, area, answers, [
-      el("span.prompt-label", { text: "What does this mean?" }),
+      el("span.prompt-label", { text: "Was bedeutet das?" }),
       wordHeading(card),
       // 48: in 選ぶ the sound is a bonus, so with no recording the control is
       // absent rather than inert — "an inert button would invite a tap that
@@ -721,19 +723,19 @@ export function sessionScreen({
     play();
 
     chooseFrom(card, "sentence_meaning", null, area, answers, [
-      el("span.prompt-label", { text: "Listen — no text" }),
+      el("span.prompt-label", { text: "Hör zu – ohne Text" }),
       speaker(card.sentence, card.sentence_audio, {
         rate: 0.85,
         ghost: false,
         big: true,
-        label: "Play it again",
+        label: "Nochmal abspielen",
       }),
       // 47: here synthesis does stand in, because the audio is the whole
       // question — and it says so, since "a synthetic voice she mistakes for a
       // recording teaches her the wrong pronunciation". Her own cards always
       // land in this state.
       card.sentence_audio
-        ? el("span.prompt-label", { text: "Tap to hear it again" })
+        ? el("span.prompt-label", { text: "Tippen, um es nochmal zu hören" })
         : el("p.synth-note", { text: SYNTH_CAPTION }),
     ]);
   }
@@ -767,26 +769,26 @@ export function sessionScreen({
 
       render(
         area,
-        el("span.prompt-label", { text: "Say it in Japanese" }),
+        el("span.prompt-label", { text: "Sag es auf Japanisch" }),
         el(`p.meaning${dimmed ? ".dim" : ""}`, { text: prompt ?? "" }),
         phase === "listening" ? levelBars() : null,
         phase === "listening"
-          ? el("span.mic-label", { text: "Listening" })
+          ? el("span.mic-label", { text: "Hört zu" })
           : null,
         phase === "heard"
           ? el(
               "div.heard",
               {},
-              el("span.heard-label", { text: "Heard" }),
+              el("span.heard-label", { text: "Gehört" }),
               el("p.heard-text.jp", {
                 class: transcript ? undefined : "empty",
-                text: transcript || "— nothing heard —",
+                text: transcript || "– nichts gehört –",
               }),
             )
           : null,
         phase === "heard"
           ? el("p.mic-note", {
-              text: "What the phone heard, not a mark. You decide whether you had it.",
+              text: "Das hat das Handy gehört – keine Bewertung. Ob du es gewusst hast, entscheidest du.",
             })
           : null,
         // 45/46: one sentence, once per session — not once per card.
@@ -797,12 +799,12 @@ export function sessionScreen({
       const row = el("div.actions");
       if (!cannotListen) {
         if (phase === "listening") {
-          row.append(el("button.btn", { type: "button", text: "Stop", onclick: () => stopRecognition() }));
+          row.append(el("button.btn", { type: "button", text: "Stopp", onclick: () => stopRecognition() }));
         } else {
           row.append(
             el("button.btn", {
               type: "button",
-              text: phase === "heard" ? "Again" : "Record",
+              text: phase === "heard" ? "Nochmal" : "Aufnehmen",
               onclick: () => listenOnce(card, draw),
             }),
           );
@@ -812,7 +814,7 @@ export function sessionScreen({
       row.append(
         el("button.btn.primary", {
           type: "button",
-          text: "Show answer",
+          text: "Antwort zeigen",
           onclick: () => revealSpeak(card, area, answers, useSentence),
         }),
       );
@@ -845,7 +847,7 @@ export function sessionScreen({
     const settle = holdInPlace(area, ".prompt-label");
     render(
       area,
-      el("span.prompt-label", { text: "Say it in Japanese" }),
+      el("span.prompt-label", { text: "Sag es auf Japanisch" }),
       el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
       useSentence
         ? revealedSentence(card)
@@ -856,7 +858,7 @@ export function sessionScreen({
             // 話す is the mode where hearing it back matters most: she has just
             // tried to produce it, and the recording is the only way to find
             // out whether what she said was right (#32).
-            speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+            speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
           ),
       useSentence ? null : romajiLine(card),
     );
@@ -869,8 +871,8 @@ export function sessionScreen({
       el(
         "div.ratings.two",
         {},
-        ratingButton("Missed it", RATING_AGAIN, () => grade(card, RATING_AGAIN)),
-        ratingButton("Had it", RATING_GOOD, () => grade(card, RATING_GOOD)),
+        ratingButton("Nicht gewusst", RATING_AGAIN, () => grade(card, RATING_AGAIN)),
+        ratingButton("Gewusst", RATING_GOOD, () => grade(card, RATING_GOOD)),
       ),
     );
     settle();
@@ -901,13 +903,13 @@ export function sessionScreen({
       autocapitalize: "off",
       spellcheck: "false",
       enterkeyhint: "go",
-      placeholder: japanese ? "romaji or kana" : "romaji",
-      "aria-label": "The Japanese word",
+      placeholder: japanese ? "Romaji oder Kana" : "Romaji",
+      "aria-label": "Das japanische Wort",
     });
     // Kept at its height when empty, so the buttons below do not jump the
     // moment she starts typing.
     const preview = el("p.type-preview.jp", { "aria-live": "polite" });
-    const check = el("button.btn.primary", { type: "submit", text: "Check", disabled: true });
+    const check = el("button.btn.primary", { type: "submit", text: "Prüfen", disabled: true });
 
     input.addEventListener("input", () => {
       // Only while there are letters to turn into kana. Kana from a Japanese
@@ -921,7 +923,7 @@ export function sessionScreen({
     area.classList.add("typing");
     render(
       area,
-      el("span.prompt-label", { text: "Type it in Japanese" }),
+      el("span.prompt-label", { text: "Tipp es auf Japanisch" }),
       el("p.meaning", { text: card.word_meaning ?? "" }),
       el(
         "form.type-form",
@@ -940,7 +942,7 @@ export function sessionScreen({
           // typing nonsense to get past the card should not be the only exit.
           el("button.btn", {
             type: "button",
-            text: "Show answer",
+            text: "Antwort zeigen",
             onclick: () => revealType(card, area, answers),
           }),
           check,
@@ -989,21 +991,21 @@ export function sessionScreen({
     area.classList.remove("typing");
     render(
       area,
-      el("span.prompt-label", { text: "Type it in Japanese" }),
+      el("span.prompt-label", { text: "Tipp es auf Japanisch" }),
       el("p.meaning", { text: card.word_meaning ?? "" }),
       typed === undefined
         ? null
         : el(
             "div.typed.reveal",
             { class: correct ? "right" : "wrong" },
-            el("span.typed-label", { text: correct ? "Right" : "You typed" }),
+            el("span.typed-label", { text: correct ? "Richtig" : "Du hast getippt" }),
             el("p.typed-text.jp", { text: typed.trim() }),
           ),
       el(
         "div.word-line.reveal",
         {},
         wordHeading(card),
-        speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+        speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
       ),
       reading(card.word_furigana || card.word_reading, card.word, card),
       // Always, whatever "Show romaji" says: she has most likely just typed
@@ -1013,7 +1015,7 @@ export function sessionScreen({
       // right, just not this card's. It counts, and says which.
       given && given.id !== card.id
         ? el("p.type-note.reveal", {
-            text: `${shownWord(given, japanese)} means that too. This card is ${shownWord(card, japanese)}.`,
+            text: `${shownWord(given, japanese)} heißt das auch. Diese Karte ist ${shownWord(card, japanese)}.`,
           })
         : null,
     );
@@ -1029,11 +1031,11 @@ export function sessionScreen({
           {},
           // Moved on within the tap rather than on a timer, so the next
           // card's field can still open the keyboard (see `drawType`).
-          ratingButton("Missed it", RATING_AGAIN, () => {
+          ratingButton("Nicht gewusst", RATING_AGAIN, () => {
             grade(card, RATING_AGAIN, null);
             next();
           }),
-          ratingButton("It was a typo", RATING_GOOD, () => {
+          ratingButton("Nur vertippt", RATING_GOOD, () => {
             grade(card, RATING_GOOD, null);
             next();
           }),
@@ -1049,7 +1051,7 @@ export function sessionScreen({
       el(
         "div.actions",
         {},
-        el("button.btn.primary", { type: "button", text: "Continue", onclick: () => next() }),
+        el("button.btn.primary", { type: "button", text: "Weiter", onclick: () => next() }),
       ),
     );
     settle();
@@ -1090,7 +1092,7 @@ export function sessionScreen({
       // No speaker and no reading aloud: the word is the answer.
       render(
         area,
-        el("span.prompt-label", { text: "In Japanese" }),
+        el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
       );
     } else {
@@ -1112,7 +1114,7 @@ export function sessionScreen({
         {},
         el("button.btn.primary", {
           type: "button",
-          text: "Flip",
+          text: "Umdrehen",
           onclick: () => revealFlip(card, area, answers),
         }),
       ),
@@ -1136,14 +1138,14 @@ export function sessionScreen({
     if (meaningFirst) {
       render(
         area,
-        el("span.prompt-label", { text: "In Japanese" }),
+        el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
         cardRule(),
         el(
           "div.word-line.reveal",
           {},
           wordHeading(card),
-          speaker(card.word, card.word_audio, { small: true, label: "Hear the word" }),
+          speaker(card.word, card.word_audio, { small: true, label: "Wort hören" }),
         ),
         reading(card.word_furigana || card.word_reading, card.word, card),
         romajiLine(card),
@@ -1163,7 +1165,7 @@ export function sessionScreen({
           // it away, so the one gesture that had worked a second earlier stopped
           // working exactly when the reading was finally on screen to check it
           // against.
-          speaker(card.word, card.word_audio, { small: true, label: "Hear the word again" }),
+          speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
         ),
         // `word_reading` for her own words (#85): `word_furigana` is Anki's
         // bracket notation and is always NULL on a card she wrote, so the
@@ -1189,10 +1191,10 @@ export function sessionScreen({
       el(
         "div.ratings",
         {},
-        ratingButton("Again", RATING_AGAIN, () => grade(card, RATING_AGAIN), intervals[RATING_AGAIN]),
-        ratingButton("Hard", RATING_HARD, () => grade(card, RATING_HARD), intervals[RATING_HARD]),
-        ratingButton("Good", RATING_GOOD, () => grade(card, RATING_GOOD), intervals[RATING_GOOD]),
-        ratingButton("Easy", RATING_EASY, () => grade(card, RATING_EASY), intervals[RATING_EASY]),
+        ratingButton("Nochmal", RATING_AGAIN, () => grade(card, RATING_AGAIN), intervals[RATING_AGAIN]),
+        ratingButton("Schwer", RATING_HARD, () => grade(card, RATING_HARD), intervals[RATING_HARD]),
+        ratingButton("Gut", RATING_GOOD, () => grade(card, RATING_GOOD), intervals[RATING_GOOD]),
+        ratingButton("Leicht", RATING_EASY, () => grade(card, RATING_EASY), intervals[RATING_EASY]),
       ),
     );
     settle();
@@ -1326,11 +1328,11 @@ export function sessionScreen({
       return el(
         "div.sentence-line.reveal",
         {},
-        el("span.sentence-sound", { text: "Example sentence" }),
+        el("span.sentence-sound", { text: "Beispielsatz" }),
         speaker(card.sentence, card.sentence_audio, {
           rate: 0.85,
           small: true,
-          label: "Hear the sentence again",
+          label: "Satz nochmal hören",
         }),
       );
     }
@@ -1363,7 +1365,7 @@ export function sessionScreen({
       speaker(card.sentence, card.sentence_audio, {
         rate: 0.85,
         small: true,
-        label: "Hear the sentence again",
+        label: "Satz nochmal hören",
       }),
     );
   }

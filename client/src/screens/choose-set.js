@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { topicLabel } from "../topics.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -21,10 +22,10 @@ const THIN_TOPIC = 5;
 const TOPICS_SHOWN = 6;
 
 const ONLY = [
-  { value: undefined, label: "Due today" },
-  { value: "starred", label: "★ Starred" },
-  { value: "lapsed", label: "Lapsed" },
-  { value: "new", label: "New" },
+  { value: undefined, label: "Heute fällig" },
+  { value: "starred", label: "★ Markiert" },
+  { value: "lapsed", label: "Vergessen" },
+  { value: "new", label: "Neu" },
 ];
 
 /** The defaults are the scheduler's own answer, so opening and closing changes nothing. */
@@ -49,7 +50,7 @@ export const scopeOf = (f = {}) => ({ deckKey: f.deckKey });
 /** What the deck part of a set is called: a list by its own name. */
 function deckLabel({ deck, list }) {
   if (list) return list;
-  if (deck === "personal") return "my deck";
+  if (deck === "personal") return "mein Deck";
   return deck ? "Kaishi" : undefined;
 }
 
@@ -59,7 +60,7 @@ function deckLabel({ deck, list }) {
  * be resumed (51), which puts it back into the filters this line describes.
  */
 function onlyLabel(only) {
-  if (only === "ahead") return "Due in two days";
+  if (only === "ahead") return "In zwei Tagen fällig";
   return ONLY.find((o) => o.value === only)?.label.replace("★ ", "") ?? only;
 }
 
@@ -73,8 +74,9 @@ function onlyLabel(only) {
 export function summaryLine({ deck, list, tag, only }, { max = 3 } = {}) {
   const parts = [
     deckLabel({ deck, list }),
-    tag ?? "any topic",
-    only ? onlyLabel(only).toLowerCase() : "due today",
+    tag ? topicLabel(tag) : "jedes Thema",
+    // Lower-case only the first letter: German keeps its nouns capitalised.
+    only ? lowerFirst(onlyLabel(only)) : "heute fällig",
   ].filter(Boolean);
   if (parts.length <= max) return parts.join(" · ");
   return `… · ${parts.slice(-max).join(" · ")}`;
@@ -87,10 +89,12 @@ export function summaryLine({ deck, list, tag, only }, { max = 3 } = {}) {
  * still at their default are what an ordinary session would have done, and
  * naming them would make a chosen set look more elaborate than it is.
  */
+const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+
 export function activeLabel({ deck, list, tag, only }) {
   const parts = [];
   if (deck || list) parts.push(deckLabel({ deck, list }));
-  if (tag) parts.push(tag);
+  if (tag) parts.push(topicLabel(tag));
   if (only) parts.push(onlyLabel(only));
   return parts.join(" · ");
 }
@@ -133,10 +137,10 @@ export function chooseSetScreen({
       el(
         "div.set-head",
         {},
-        el("span.set-title", { text: "Choose a set" }),
+        el("span.set-title", { text: "Auswahl treffen" }),
         el("button.set-reset", {
           type: "button",
-          text: "Reset",
+          text: "Zurücksetzen",
           disabled: isDefault(chosen),
           onclick: () => {
             // The deck stays: Reset is about what was narrowed inside it (#137).
@@ -186,13 +190,13 @@ export function chooseSetScreen({
     const rest = sorted.length - shown.length;
 
     return group(
-      "Topic",
+      "Thema",
       el(
         "div.chips.set-chips",
         {},
         el("button.chip", {
           type: "button",
-          text: "Any",
+          text: "Alle",
           "aria-pressed": String(!chosen.tag),
           onclick: () => {
             chosen.tag = undefined;
@@ -205,7 +209,7 @@ export function chooseSetScreen({
             // and hiding a thin topic would be hiding the deck's shape.
             class: t.total < THIN_TOPIC ? "thin" : undefined,
             type: "button",
-            text: `${t.tag} ${num(t.total)}`,
+            text: `${topicLabel(t.tag)} ${num(t.total)}`,
             "aria-pressed": String(chosen.tag === t.tag),
             onclick: () => set("tag", t.tag),
           }),
@@ -226,7 +230,7 @@ export function chooseSetScreen({
 
   function onlyGroup() {
     return group(
-      "Only",
+      "Nur",
       el(
         "div.chips.set-chips",
         {},
@@ -269,14 +273,14 @@ export function chooseSetScreen({
       // rather than hiding the topic."
       total !== undefined && total > 0 && total < THIN_TOPIC
         ? el("p.set-note", {
-            text: `Only ${num(total)} ${total === 1 ? "card" : "cards"} match. That is still a session.`,
+            text: `Nur ${num(total)} ${total === 1 ? "Karte passt" : "Karten passen"}. Das reicht trotzdem zum Üben.`,
           })
         : null,
       empty
         ? el("p.set-note", {
             text: capReached
-              ? "Today's new words are done. Choose New for more."
-              : "Nothing matches. Change a choice, or reset.",
+              ? "Die neuen Wörter für heute sind geschafft. Wähle „Neu“ für mehr."
+              : "Nichts passt. Ändere eine Auswahl oder setze zurück.",
           })
         : null,
       el("button.btn-primary", {
@@ -284,10 +288,10 @@ export function chooseSetScreen({
         disabled: empty || counting,
         text:
           total === undefined || counting
-            ? "Start"
+            ? "Los"
             : total > willPractise
-              ? `Start ${num(willPractise)} of ${num(total)}`
-              : `Start ${num(total)}`,
+              ? `${num(willPractise)} von ${num(total)} üben`
+              : `${num(total)} üben`,
         onclick: () => onApply?.({ ...chosen }),
       }),
     );

@@ -3,6 +3,7 @@ import { loadDeck } from "../deck.js";
 import { romajiQuery, searchRomaji } from "../romaji.js";
 import { showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
+import { topicLabel } from "../topics.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -143,8 +144,8 @@ export function browseScreen({
     autocapitalize: "none",
     autocorrect: "off",
     spellcheck: "false",
-    placeholder: "Search all decks",
-    "aria-label": "Search all decks",
+    placeholder: "In allen Decks suchen",
+    "aria-label": "In allen Decks suchen",
   });
 
   // Typing is not a request per keystroke. 200ms is long enough to swallow a
@@ -175,7 +176,7 @@ export function browseScreen({
       el(
         "div.browse-head",
         {},
-        el("span.browse-title", { text: "Search" }),
+        el("span.browse-title", { text: "Suche" }),
         el("span.browse-count.tabular", { text: countLabel() }),
       ),
       el(
@@ -185,7 +186,7 @@ export function browseScreen({
         state.q
           ? el("button.browse-clear", {
               type: "button",
-              "aria-label": "Clear the search",
+              "aria-label": "Suche löschen",
               text: "×",
               onclick: () => {
                 search.value = "";
@@ -208,7 +209,7 @@ export function browseScreen({
           // rather than after, but turning it back off always works.
           disabled: state.offline && !state.starredOnly,
           "aria-pressed": String(state.starredOnly),
-          text: `★ ${state.starred === undefined ? "starred" : `${num(state.starred)} starred`}`,
+          text: `★ ${state.starred === undefined ? "markiert" : `${num(state.starred)} markiert`}`,
           onclick: () => {
             state.starredOnly = !state.starredOnly;
             reload();
@@ -235,7 +236,7 @@ export function browseScreen({
 
   function countLabel() {
     if (state.loading && state.cards.length === 0) return "…";
-    if (state.q || state.starredOnly) return `${num(state.total)} found`;
+    if (state.q || state.starredOnly) return `${num(state.total)} gefunden`;
     return num(state.total);
   }
 
@@ -261,11 +262,11 @@ export function browseScreen({
       // soon as one card anywhere was starred (seen 2026-09-14 with 食べる
       // starred). The heading says what the list is; the ★ chip above is the
       // starred set.
-      idle ? el("span.browse-section", { text: "All words, most common first" }) : null,
+      idle ? el("span.browse-section", { text: "Alle Wörter, die häufigsten zuerst" }) : null,
       el("div.rows", {}, state.cards.map(row)),
       !state.q && !state.starredOnly
         ? el("p.browse-note", {
-            text: "Type to search all your decks, or star cards here to build a set you can practise on its own.",
+            text: "Tippe, um in all deinen Decks zu suchen, oder markiere hier Karten, die du extra üben willst.",
           })
         : null,
     );
@@ -284,9 +285,9 @@ export function browseScreen({
       disabled: !hasLiveData,
       "aria-label": hasLiveData
         ? card.starred
-          ? `Unstar ${shownWord(card, japanese)}`
-          : `Star ${shownWord(card, japanese)}`
-        : "Stars need a connection",
+          ? `Markierung entfernen: ${shownWord(card, japanese)}`
+          : `${shownWord(card, japanese)} markieren`
+        : "Markieren braucht Internet",
       "aria-pressed": String(Boolean(card.starred)),
       text: hasLiveData && card.starred ? "★" : "☆",
     });
@@ -306,7 +307,7 @@ export function browseScreen({
         card.starred = wanted;
         state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
         star.textContent = wanted ? "★" : "☆";
-        star.setAttribute("aria-label", `${wanted ? "Unstar" : "Star"} ${shownWord(card, japanese)}`);
+        star.setAttribute("aria-label", wanted ? `Markierung entfernen: ${shownWord(card, japanese)}` : `${shownWord(card, japanese)} markieren`);
         star.setAttribute("aria-pressed", String(wanted));
         drawChrome();
         setStar(card.id, wanted);
@@ -331,7 +332,7 @@ export function browseScreen({
         tap
           ? {
               type: "button",
-              "aria-label": own ? `Edit, move or delete ${shownWord(card, japanese)}` : `Topics for ${shownWord(card, japanese)}`,
+              "aria-label": own ? `Bearbeiten, verschieben oder löschen: ${shownWord(card, japanese)}` : `Themen für ${shownWord(card, japanese)}`,
               // The redraw is handed over rather than left to the caller:
               // the row is drawn from this card object, and app.js has no
               // way to repaint one row of a list it does not own.
@@ -353,7 +354,7 @@ export function browseScreen({
           ? el(
               "span.row-mine",
               {},
-              card.myTags.map((t) => el("span.row-tag", { text: t })),
+              card.myTags.map((t) => el("span.row-tag", { text: topicLabel(t) })),
             )
           : null,
       ),
@@ -365,16 +366,16 @@ export function browseScreen({
   function nothingMatches() {
     if (state.starredOnly && !state.q) {
       return [
-        el("p.browse-empty-title", { text: "Nothing starred yet." }),
-        el("p.browse-note", { text: "Star a card in browse and it shows up here." }),
+        el("p.browse-empty-title", { text: "Noch nichts markiert." }),
+        el("p.browse-note", { text: "Markiere in der Suche eine Karte, dann erscheint sie hier." }),
       ];
     }
     return [
-      el("p.browse-empty-title", { text: `Nothing in your decks matches “${state.q}”.` }),
+      el("p.browse-empty-title", { text: `In deinen Decks passt nichts zu „${state.q}“.` }),
       el("p.browse-note", {
         // Called out because typing "yakitori" on an English keyboard is the
         // likeliest way to arrive here.
-        text: "Search covers each word as it is written, in romaji, its reading and its meaning.",
+        text: "Die Suche findet jedes Wort so, wie es geschrieben ist, in Romaji, über seine Lesung und über seine Bedeutung.",
       }),
       // 33 led from here into adding the word. Adding is in a deck now (#137),
       // which is where the card has to go.
@@ -430,7 +431,7 @@ export function browseScreen({
       state.offline = false;
     } catch (err) {
       if (err instanceof OfflineError) await fetchOfflinePage(page);
-      else state.error = "Could not load the deck.";
+      else state.error = "Das Deck konnte nicht geladen werden.";
     }
     state.loading = false;
     drawChrome();
@@ -454,7 +455,7 @@ export function browseScreen({
       state.cards = [];
       state.total = 0;
       state.more = false;
-      state.error = "Stars need a connection. Search does not.";
+      state.error = "Markierungen brauchen Internet. Die Suche nicht.";
       return;
     }
     const deck = await loadDeck().catch(() => new Map());
@@ -465,7 +466,7 @@ export function browseScreen({
       state.cards = [];
       state.total = 0;
       state.more = false;
-      state.error = "Offline, and nothing has been cached to browse yet.";
+      state.error = "Offline, und auf diesem Gerät ist noch nichts zum Durchsuchen gespeichert.";
       return;
     }
     const matches = [...deck.values()]

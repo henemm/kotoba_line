@@ -54,6 +54,11 @@ independently and git merged them without a conflict. The changelog entry is
 what the update prompt shows her under "More info" (#93), so write it for her,
 in plain words; `client/test/whats-new.test.js` fails without one.
 
+**The interface is German** (spec §12, since v75). Every control, label, message
+and changelog entry, in the "du" form. Do not write a new English string into
+`client/`. Code comments stay English. Deck content (Kaishi's English glosses,
+topic names) is data and not covered by this.
+
 ## Shape of the thing
 
 | | |

@@ -65,7 +65,7 @@ describe("what the sheet says above More info (#114)", () => {
     // The case that prompted it: v42 → v45, where v45's one-line fix stood for
     // the tab bar changing shape in v43.
     const { text, items, more } = sheetSummary([entry(45), entry(44), entry(43)]);
-    assert.equal(text, "3 updates in one:");
+    assert.equal(text, "3 Aktualisierungen auf einmal:");
     assert.deepEqual(items, ["summary 45", "summary 44", "summary 43"]);
     assert.equal(more, 0);
   });
@@ -73,7 +73,7 @@ describe("what the sheet says above More info (#114)", () => {
   it("counts the rest past a handful, so the sheet does not scroll before Update", () => {
     const many = [50, 49, 48, 47, 46, 45].map(entry);
     const { text, items, more } = sheetSummary(many);
-    assert.equal(text, "6 updates in one:");
+    assert.equal(text, "6 Aktualisierungen auf einmal:");
     assert.equal(items.length, SUMMARIES_SHOWN);
     assert.equal(more, 6 - SUMMARIES_SHOWN);
   });

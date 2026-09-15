@@ -32,7 +32,7 @@ export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
     // #114: with several versions waiting, every summary — not the newest
     // standing in for all of them.
     const { text, items, more } = sheetSummary(entries);
-    const summary = text ?? (kind === "ready" ? "Small fixes and improvements." : undefined);
+    const summary = text ?? (kind === "ready" ? "Kleine Fehlerbehebungen und Verbesserungen." : undefined);
     render(
       root,
       el(
@@ -40,7 +40,7 @@ export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
         { role: "dialog", "aria-modal": "true", "aria-labelledby": "update-title" },
         el("h2.sheet-title", {
           id: "update-title",
-          text: kind === "ready" ? "A new version is ready" : "Updated",
+          text: kind === "ready" ? "Eine neue Version ist da" : "Aktualisiert",
         }),
         summary ? el("p.sheet-body", { text: summary }) : null,
         items.length > 0
@@ -48,14 +48,14 @@ export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
               "ul.update-summaries",
               {},
               items.map((line) => el("li", { text: line })),
-              more > 0 ? el("li", { text: `and ${more} more, under More info` }) : null,
+              more > 0 ? el("li", { text: `und ${more} weitere, unter „Mehr erfahren“` }) : null,
             )
           : null,
         entries.length > 0
           ? el("button.update-more", {
               type: "button",
               "aria-expanded": open ? "true" : "false",
-              text: open ? "Less" : "More info",
+              text: open ? "Weniger" : "Mehr erfahren",
               onclick: () => {
                 open = !open;
                 draw();
@@ -67,12 +67,12 @@ export function updateSheet({ kind, entries, onUpdate, onLater, onDone }) {
           ? el(
               "div.sheet-actions",
               {},
-              el("button.btn", { type: "button", text: "Later", disabled: busy, onclick: onLater }),
+              el("button.btn", { type: "button", text: "Später", disabled: busy, onclick: onLater }),
               // Update is the solid one: it is the answer the question expects,
               // and unlike leaving a session nothing is lost by tapping it.
               el("button.btn.solid", {
                 type: "button",
-                text: busy ? "Updating…" : "Update",
+                text: busy ? "Wird aktualisiert …" : "Aktualisieren",
                 disabled: busy,
                 onclick: () => {
                   busy = true;

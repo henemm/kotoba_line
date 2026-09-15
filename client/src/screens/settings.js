@@ -36,7 +36,7 @@ async function shellVersion() {
     const ready = (await caches.keys())
       .filter((name) => name.startsWith("kotoba-shell-"))
       .map((name) => name.replace("kotoba-shell-", ""));
-    if (ready.length === 0) return `${SHELL_VERSION} · not installed`;
+    if (ready.length === 0) return `${SHELL_VERSION} · nicht installiert`;
     if (ready.length === 1 && ready[0] === SHELL_VERSION) return SHELL_VERSION;
     // Only the newest. A version that waited and was overtaken by a later one
     // leaves its cache behind until the next takeover clears it, and listing
@@ -44,7 +44,7 @@ async function shellVersion() {
     // numbers: as strings, "v100" sorts before "v99".
     const newest = ready.reduce((a, b) => (versionNumber(b) > versionNumber(a) ? b : a));
     if (newest === SHELL_VERSION) return SHELL_VERSION;
-    return `${SHELL_VERSION} running · ${newest} ready to update`;
+    return `${SHELL_VERSION} läuft · ${newest} bereit zum Aktualisieren`;
   } catch {
     return SHELL_VERSION;
   }
@@ -77,16 +77,17 @@ async function countCachedAudio() {
 
 /** What 話す ("Say it aloud") can draw its prompt from (#77). */
 const SPEAK_SOURCES = [
-  { value: "word", label: "Word" },
-  { value: "sentence", label: "Sentence" },
-  { value: "random", label: "Random" },
+  { value: "word", label: "Wort" },
+  { value: "sentence", label: "Satz" },
+  { value: "random", label: "Zufällig" },
 ];
 
 /** The three appearances (#137, v65): the same list as the server's CHECK. */
 const APPEARANCES = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "Like iPhone" },
+  { value: "light", label: "Hell" },
+  { value: "dark", label: "Dunkel" },
+  // "Automatisch", as iOS itself names it in German; "Wie iPhone" broke over two lines.
+  { value: "system", label: "Automatisch" },
 ];
 
 export function settingsScreen({ user, onSignOut, onSettings }) {
@@ -134,7 +135,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
   }
 
   function header() {
-    return el("div.settings-head", { text: "Settings" });
+    return el("div.settings-head", { text: "Einstellungen" });
   }
 
   /**
@@ -147,8 +148,8 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
     return el("p.settings-offline", {
       text:
         err instanceof OfflineError
-          ? "Settings need a connection. Practice does not."
-          : "Could not load settings.",
+          ? "Für die Einstellungen brauchst du Internet. Zum Üben nicht."
+          : "Die Einstellungen konnten nicht geladen werden.",
     });
   }
 
@@ -172,8 +173,8 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
         el("p.settings-problem", {
           text:
             err instanceof OfflineError
-              ? "Offline — that one did not save."
-              : "That did not save.",
+              ? "Offline – das wurde nicht gespeichert."
+              : "Das wurde nicht gespeichert.",
         }),
       );
       return;
@@ -195,7 +196,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
   function appearance() {
     const current = data.settings.appearance ?? "light";
     return group(
-      "Appearance",
+      "Darstellung",
       el(
         "div.field",
         {},
@@ -229,11 +230,11 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
    */
   function sound() {
     return group(
-      "Sound",
+      "Ton",
       row(
-        "Read cards aloud",
-        "Recorded audio where the deck has it, speech otherwise.",
-        toggle(data.settings.readAloud, "Read cards aloud", (on) =>
+        "Karten vorlesen",
+        "Aufnahmen, wo das Deck welche hat, sonst Sprachausgabe.",
+        toggle(data.settings.readAloud, "Karten vorlesen", (on) =>
           write({ readAloud: on }),
         ),
       ),
@@ -252,31 +253,31 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
   function script() {
     const { japaneseScript } = data.settings;
     return group(
-      "Japanese",
+      "Japanisch",
       row(
-        "Japanese script",
+        "Japanische Schrift",
         japaneseScript
-          ? "Words and buttons in Japanese characters."
-          : "Off: words in romaji, example sentences as sound only, buttons in English.",
-        toggle(japaneseScript, "Japanese script", (on) => write({ japaneseScript: on })),
+          ? "Wörter und Knöpfe in japanischen Schriftzeichen."
+          : "Aus: Wörter in Romaji, Beispielsätze nur zum Hören, Knöpfe auf Deutsch.",
+        toggle(japaneseScript, "Japanische Schrift", (on) => write({ japaneseScript: on })),
       ),
       japaneseScript
         ? row(
-            "Show pitch accent",
+            "Tonhöhenakzent zeigen",
             // Says what it is for rather than what it is: 花 and 鼻 are both
             // はな and both low-high, and the only thing telling them apart is
             // what the particle after them does.
-            "A line over the high part when a card is revealed. 花 and 鼻 are both はな, and sound different.",
-            toggle(data.settings.pitchAccent, "Show pitch accent", (on) =>
+            "Eine Linie über dem hohen Teil, wenn die Karte aufgedeckt ist. 花 und 鼻 sind beide はな und klingen verschieden.",
+            toggle(data.settings.pitchAccent, "Tonhöhenakzent zeigen", (on) =>
               write({ pitchAccent: on }),
             ),
           )
         : null,
       japaneseScript
         ? row(
-            "Show romaji",
-            "The word written in latin letters under the kana, for reading it back without a dictionary.",
-            toggle(data.settings.romaji, "Show romaji", (on) => write({ romaji: on })),
+            "Romaji zeigen",
+            "Das Wort in lateinischen Buchstaben unter den Kana, damit du es ohne Wörterbuch lesen kannst.",
+            toggle(data.settings.romaji, "Romaji zeigen", (on) => write({ romaji: on })),
           )
         : null,
     );
@@ -296,11 +297,11 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
   function practice() {
     const { speakSource } = data.settings;
     return group(
-      "Practice",
+      "Üben",
       el(
         "div.field",
         {},
-        el("span.field-label", { text: "Say it aloud asks about" }),
+        el("span.field-label", { text: "Laut sagen fragt nach" }),
         el(
           "div.choice",
           {},
@@ -321,16 +322,16 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
 
   function account() {
     return group(
-      "Account",
+      "Konto",
       el(
         "div.row",
         {},
         el("span.row-title", { text: user?.handle ?? "" }),
-        el("span.row-aside", { text: "signed in" }),
+        el("span.row-aside", { text: "angemeldet" }),
       ),
-      el("button.signout", { type: "button", text: "Sign out", onclick: signOut }),
+      el("button.signout", { type: "button", text: "Abmelden", onclick: signOut }),
       el("p.settings-note", {
-        text: "Signing out clears this device. Progress lives on the server.",
+        text: "Beim Abmelden wird dieses Gerät geleert. Dein Fortschritt bleibt auf dem Server.",
       }),
     );
   }
@@ -341,7 +342,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
     } catch (err) {
       // A 401 means the cookie was already gone, which is the state we wanted.
       if (!(err instanceof ApiError && err.status === 401)) {
-        root.append(el("p.settings-problem", { text: "Could not sign out." }));
+        root.append(el("p.settings-problem", { text: "Abmelden hat nicht geklappt." }));
         return;
       }
     }
@@ -362,11 +363,11 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       "div.diagnostics",
       {},
       diagnostic(
-        "Synced",
-        sync.lastEventAt ? `${when(sync.lastEventAt)} · ${num(sync.events)} reviews` : "nothing yet",
+        "Synchronisiert",
+        sync.lastEventAt ? `${when(sync.lastEventAt)} · ${num(sync.events)} Wiederholungen` : "noch nichts",
       ),
-      diagnostic("Cards on device", `${num(data.cachedCards ?? 0)} of ${num(deckTotal())}`),
-      diagnostic("Audio cached", audioLine()),
+      diagnostic("Karten auf dem Gerät", `${num(data.cachedCards ?? 0)} von ${num(deckTotal())}`),
+      diagnostic("Gespeicherte Audios", audioLine()),
       // Two versions, because they answer different questions and they are
       // routinely out of step: "App" is the shell this phone is running and
       // changes only after the app is quit and reopened; "Server" is what the
@@ -390,9 +391,9 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
    * — it is not a download that stalled.
    */
   function audioLine() {
-    if (data.cachedAudio === undefined) return "not counted";
-    if (data.cachedAudio === 0) return "nothing yet";
-    return `${num(data.cachedAudio)} ${data.cachedAudio === 1 ? "file" : "files"}`;
+    if (data.cachedAudio === undefined) return "nicht gezählt";
+    if (data.cachedAudio === 0) return "noch nichts";
+    return `${num(data.cachedAudio)} ${data.cachedAudio === 1 ? "Datei" : "Dateien"}`;
   }
 
   function diagnostic(label, value) {
@@ -451,6 +452,6 @@ export function when(unixSeconds, now = new Date()) {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate();
   return sameDay
-    ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    ? d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
 }

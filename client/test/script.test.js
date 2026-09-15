@@ -52,10 +52,11 @@ describe("Japanese script off (#135)", () => {
     assert.equal(appName(false), "Kotoba Line");
   });
 
-  it("names a mode in English instead of Japanese", () => {
+  it("names a mode in German instead of Japanese (v75)", () => {
     const choose = MODES.find((m) => m.key === "choose");
     assert.equal(modeName(choose, true), "選ぶ");
-    assert.equal(modeName(choose, false), "Pick the meaning");
+    assert.equal(modeName(choose, false), "Bedeutung wählen");
+    assert.equal(modeName(MODES.find((m) => m.key === "listen"), false), "Nur hören");
   });
 });
 

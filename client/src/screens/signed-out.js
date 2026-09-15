@@ -34,20 +34,20 @@ import { pinEntry } from "./signin.js";
  * sentence would be a small lie in the middle of a reassurance.
  */
 export function signedOutCopy(waiting = 0) {
-  const title = "Sign in again to keep syncing";
-  const ran = "Your session on the server ran out.";
+  const title = "Melde dich wieder an, damit weiter synchronisiert wird";
+  const ran = "Deine Anmeldung auf dem Server ist abgelaufen.";
 
   if (waiting === 0) {
     // Nothing queued: the reassurance has nothing to reassure her about, and
     // an invented count would be worse than none. 25's empty branch does the
     // same thing — "Offline" with no number after it.
-    return { title, body: `${ran} Nothing is waiting to send.` };
+    return { title, body: `${ran} Es wartet nichts darauf, gesendet zu werden.` };
   }
   const answers =
     waiting === 1
-      ? "The one answer waiting here is safe on this device"
-      : `The ${waiting} answers waiting here are safe on this device`;
-  return { title, body: `${ran} ${answers} and will send as soon as you are back in.` };
+      ? "Die eine Antwort, die hier wartet, ist auf diesem Gerät sicher und wird gesendet"
+      : `Die ${waiting} Antworten, die hier warten, sind auf diesem Gerät sicher und werden gesendet`;
+  return { title, body: `${ran} ${answers}, sobald du wieder angemeldet bist.` };
 }
 
 /**
@@ -66,7 +66,7 @@ export function signedOutScreen({ handle, waiting = 0, onSignIn, onDismiss }) {
   });
 
   const pin = pinEntry({
-    buttonText: "Sign in",
+    buttonText: "Anmelden",
     onState: (state) => {
       root.dataset.state = state;
     },
@@ -82,7 +82,7 @@ export function signedOutScreen({ handle, waiting = 0, onSignIn, onDismiss }) {
     // a word for, and inventing a second one here would teach her two.
     el("button.session-close", {
       type: "button",
-      "aria-label": "Dismiss and keep practising",
+      "aria-label": "Schließen und weiter üben",
       text: "×",
       onclick: () => onDismiss?.(),
     }),
@@ -107,7 +107,7 @@ export function signedOutScreen({ handle, waiting = 0, onSignIn, onDismiss }) {
     {},
     pin.button,
     el("p.note", {
-      text: "Practising works offline in the meantime. Nothing is lost either way.",
+      text: "Üben geht in der Zwischenzeit auch offline. So oder so geht nichts verloren.",
     }),
   );
 

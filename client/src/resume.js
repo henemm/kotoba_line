@@ -44,18 +44,19 @@ export function isResumable(saved, now = Date.now(), timeZone = undefined) {
   return localDay(saved.at, timeZone) === localDay(now, timeZone);
 }
 
-/** "4 of 20 done, 20 minutes ago" — 51's second line. */
+/** "4 von 20 geschafft, vor 20 Minuten" — 51's second line, in German since v75. */
 export function describe(saved, now = Date.now()) {
-  // Floored, not rounded: thirty seconds ago is "just now", not "1 minute
-  // ago". Rounding up makes the app sound like it was away longer than it was.
+  // Floored, not rounded: thirty seconds ago is "gerade eben", not "vor 1
+  // Minute". Rounding up makes the app sound like it was away longer than it was.
   const minutes = Math.floor((now - saved.at) / 60000);
+  const hours = Math.round(minutes / 60);
   const when =
     minutes < 1
-      ? "just now"
+      ? "gerade eben"
       : minutes < 60
-        ? `${minutes} minute${minutes === 1 ? "" : "s"} ago`
-        : `${Math.round(minutes / 60)} hour${Math.round(minutes / 60) === 1 ? "" : "s"} ago`;
-  return `${saved.index} of ${saved.cardIds.length} done, ${when}`;
+        ? `vor ${minutes} ${minutes === 1 ? "Minute" : "Minuten"}`
+        : `vor ${hours} ${hours === 1 ? "Stunde" : "Stunden"}`;
+  return `${saved.index} von ${saved.cardIds.length} geschafft, ${when}`;
 }
 
 export async function remember(session) {

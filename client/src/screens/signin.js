@@ -30,7 +30,7 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
     inputmode: "numeric",
     autocomplete: "one-time-code",
     maxlength: String(PIN_LENGTH),
-    "aria-label": "PIN, six digits",
+    "aria-label": "PIN, sechs Ziffern",
   });
 
   const cells = el("div.cells");
@@ -74,7 +74,7 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
       const left = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
       const mm = Math.floor(left / 60);
       const ss = String(left % 60).padStart(2, "0");
-      button.textContent = `Try again in ${mm}:${ss}`;
+      button.textContent = `Nochmal in ${mm}:${ss}`;
       button.disabled = true;
       button.classList.add("tabular");
       return;
@@ -96,7 +96,7 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
       }
       updateButton();
     }, 250);
-    setState("limited", `Too many attempts. Five per minute.`);
+    setState("limited", `Zu viele Versuche. Fünf pro Minute.`);
   }
 
   capture.addEventListener("input", () => {
@@ -124,14 +124,14 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
       capture.value = "";
 
       if (err instanceof OfflineError) {
-        setState("error", "No connection. Try again in a moment.");
+        setState("error", "Keine Verbindung. Versuch es gleich noch einmal.");
       } else if (err instanceof ApiError && err.status === 429) {
         // nginx rate-limits to five a minute (§9). It cannot tell us how long
         // is left, so the countdown runs the full window.
         startCountdown(60);
         return;
       } else {
-        setState("error", "That PIN doesn't match.");
+        setState("error", "Diese PIN stimmt nicht.");
         capture.focus();
       }
     }
@@ -176,12 +176,12 @@ export function signInScreen({ onSignedIn, japanese = true }) {
     autocorrect: "off",
     spellcheck: "false",
     maxlength: "22",
-    placeholder: "your name",
+    placeholder: "dein Name",
     "aria-label": "Name",
   });
 
   const pin = pinEntry({
-    buttonText: "Start",
+    buttonText: "Los",
     canSubmit: () => nameInput.value.trim().length > 0,
     onState: (state) => {
       form.dataset.state = state;
@@ -203,7 +203,7 @@ export function signInScreen({ onSignedIn, japanese = true }) {
       {},
       el("span.stop"),
       el(japanese ? "h1.jp" : "h1", { text: appName(japanese) }),
-      el("p.tagline", { text: "Four practice modes over one Japanese deck." }),
+      el("p.tagline", { text: "Fünf Arten, japanische Vokabeln zu üben." }),
     ),
     el(
       "div.block.name",
@@ -216,7 +216,7 @@ export function signInScreen({ onSignedIn, japanese = true }) {
       "div.block.pin.pin-entry",
       {},
       el("span.stop"),
-      el("div.mono-label", { text: "PIN · six digits" }),
+      el("div.mono-label", { text: "PIN · sechs Ziffern" }),
       pin.cells,
       pin.capture,
       pin.messageSlot,
@@ -229,7 +229,7 @@ export function signInScreen({ onSignedIn, japanese = true }) {
     el("span.rail-end"),
     el("span.stop"),
     pin.button,
-    el("p.note", { text: "No sign-up and no reset. Accounts are created on the server." }),
+    el("p.note", { text: "Keine Registrierung und kein Zurücksetzen. Konten werden auf dem Server angelegt." }),
   );
 
   render(root, form, foot);

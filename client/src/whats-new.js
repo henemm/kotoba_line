@@ -50,7 +50,7 @@ export function sheetSummary(entries) {
   const summaries = (entries ?? []).map((entry) => entry?.summary).filter(Boolean);
   if (summaries.length <= 1) return { text: summaries[0], items: [], more: 0 };
   const items = summaries.slice(0, SUMMARIES_SHOWN);
-  return { text: `${summaries.length} updates in one:`, items, more: summaries.length - items.length };
+  return { text: `${summaries.length} Aktualisierungen auf einmal:`, items, more: summaries.length - items.length };
 }
 
 /**

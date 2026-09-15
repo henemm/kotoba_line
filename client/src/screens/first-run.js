@@ -122,12 +122,12 @@ export function firstRunScreen({ onReady, japanese = true }) {
             {},
             el("span", {
               text: state.total
-                ? `${num(state.got)} of ${num(state.total)} cards`
-                : `${num(state.got)} cards`,
+                ? `${num(state.got)} von ${num(state.total)} Karten`
+                : `${num(state.got)} Karten`,
             }),
             el("span", {
               text: state.total
-                ? `${megabytes(state.got).toFixed(1)} of ${megabytes(state.total).toFixed(1)} MB`
+                ? `${megabytes(state.got).toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} von ${megabytes(state.total).toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`
                 : "",
             }),
           ),
@@ -136,21 +136,21 @@ export function firstRunScreen({ onReady, japanese = true }) {
         el(
           "div.first-card",
           {},
-          el("span.first-card-title", { text: "Text only, once" }),
+          el("span.first-card-title", { text: "Einmal nur der Text" }),
           el("p.first-card-body", {
-            text: "Audio is never downloaded in bulk. Each recording is kept the first time you hear it, so the app stays small on mobile data.",
+            text: "Audios werden nie alle auf einmal geladen. Jede Aufnahme wird gespeichert, wenn du sie zum ersten Mal hörst – so bleibt die App bei mobilen Daten klein.",
           }),
         ),
       ),
       el(
         "div.first-foot",
         {},
-        el("p.first-note", { text: "You can start practising as soon as the first cards arrive." }),
+        el("p.first-note", { text: "Du kannst loslegen, sobald die ersten Karten da sind." }),
         state.paused || state.failed
-          ? el("button.btn-secondary", { type: "button", text: "Carry on", onclick: download })
+          ? el("button.btn-secondary", { type: "button", text: "Weitermachen", onclick: download })
           : el("button.btn-secondary", {
               type: "button",
-              text: "Pause until Wi-Fi",
+              text: "Bis WLAN pausieren",
               onclick: pause,
             }),
       ),
@@ -158,9 +158,9 @@ export function firstRunScreen({ onReady, japanese = true }) {
   }
 
   function heading() {
-    if (state.failed) return `Stopped at ${num(state.got)} — tap to carry on`;
-    if (state.paused) return `Paused at ${num(state.got)}`;
-    return "Getting the deck";
+    if (state.failed) return `Angehalten bei ${num(state.got)} – tippe zum Weitermachen`;
+    if (state.paused) return `Pausiert bei ${num(state.got)}`;
+    return "Das Deck wird geladen";
   }
 
   return root;

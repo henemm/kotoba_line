@@ -122,13 +122,15 @@ export function viewportReport() {
     // `mode` is whether the standalone rule in base.css matched at all — the
     // one thing that separates "the fix is wrong" from "the fix never ran".
     [
-      "Screen",
+      // The row names are German (v75); the measurements after them are
+      // technical readings for whoever debugs, left as they are.
+      "Bildschirm",
       `${window.innerWidth} × ${window.innerHeight} · screen ${window.screen?.height ?? 0}` +
         ` · held ${held} · low ${lowest} · mode ${displayMode()}`,
     ],
-    ["Units", `dvh ${measure("100dvh")} · lvh ${measure("100lvh")} · svh ${measure("100svh")}`],
+    ["Einheiten", `dvh ${measure("100dvh")} · lvh ${measure("100lvh")} · svh ${measure("100svh")}`],
     [
-      "Layout",
+      "Aufbau",
       `page ${document.documentElement.clientHeight} · fixed ${fixedBottom} · app ${
         app ? Math.round(app.getBoundingClientRect().height) : 0
       }`,

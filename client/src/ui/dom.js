@@ -113,4 +113,4 @@ export function station(colour, size = 30, border = 5) {
 }
 
 /** Formats an integer the way every screen shows one. */
-export const num = (n) => Number(n ?? 0).toLocaleString("en-GB");
+export const num = (n) => Number(n ?? 0).toLocaleString("de-DE");
