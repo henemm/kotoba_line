@@ -1,5 +1,15 @@
 [
   {
+    "version": "v77",
+    "summary": "Neu: Hiragana und Katakana als eigene Decks.",
+    "notes": [
+      "In deinen Decks stehen jetzt „Hiragana“ und „Katakana“. Jedes hat 104 Karten: erst あいうえお, dann Reihe für Reihe weiter, danach が, ぱ und きゃ.",
+      "Jeden Tag kommen 5 neue Kana dazu, also eine Reihe. Unter Optionen kannst du mehr einstellen – praktisch, wenn du viele schon kannst.",
+      "Üben kannst du sie mit „Bedeutung wählen“ (wie liest man das?) und „Karte umdrehen“. Hinten auf der Karte siehst du, wie man sie liest und in welcher Reihenfolge man die Striche schreibt, und oft ein Wort, das damit anfängt.",
+      "Kana, die du schon kannst, beantwortest du mit „Leicht“ – dann kommen sie erst nach über einer Woche wieder."
+    ]
+  },
+  {
     "version": "v76",
     "summary": "Auf dem iPad gibt es wieder nur eine Seite, und jedes Deck zeigt, wie weit du bist.",
     "notes": [

@@ -50,9 +50,20 @@ export function wordRomaji(card) {
   return each.every(Boolean) ? each.join(" / ") : undefined;
 }
 
-/** What to show for a card's word. */
+/**
+ * A card of the hiragana or katakana deck (#158). Its word is a letter being
+ * learned, its meaning is how the letter is read.
+ */
+export const isKana = (card) => card?.deck === "hiragana" || card?.deck === "katakana";
+
+/**
+ * What to show for a card's word.
+ *
+ * A kana card shows its kana whatever the switch says (#158): the script is
+ * what that deck teaches, and in romaji the card would show its own answer.
+ */
 export function shownWord(card, japanese) {
-  if (japanese) return card.word;
+  if (japanese || isKana(card)) return card.word;
   return wordRomaji(card) ?? card.word;
 }
 

@@ -7,6 +7,10 @@
  * collide, no counter has to be kept anywhere, and `id < 0` reads as "she made
  * this one" at any point in the system without a join.
  *
+ * The kana decks (#158) take a third space: 10,000,000–10,255,255, derived
+ * from the characters (`kanaId` in import/lib/kana.js). An Anki note id that
+ * small would date from 1970, and a personal id is negative.
+ *
  * Everything else about a personal card is ordinary. It lands in the same
  * `cards` table with `deck = 'personal'`, the same `tags` table, and the same
  * scheduler — "so a personal card is not a special case anywhere downstream"

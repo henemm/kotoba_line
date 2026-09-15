@@ -1824,6 +1824,51 @@
   margin: 0;
   text-wrap: balance;
 }
+/* #158: a kana's back. The reading is the answer, so it is the largest thing
+   under the rule; the stroke order and the example words come after it, each
+   smaller. */
+.meaning.kana-reading {
+  font-size: 34px;
+  font-weight: 700;
+}
+.kana-strokes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.kana-stroke-row {
+  display: flex;
+  justify-content: center;
+}
+.kana-stroke {
+  width: 120px;
+  height: 120px;
+  filter: var(--stroke-drawing);
+}
+.kana-credit {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.kana-examples {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.kana-example {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 16px;
+}
+.kana-example .jp {
+  font-family: var(--jp);
+  font-size: 20px;
+}
+.kana-example-meaning {
+  color: var(--ink-muted);
+}
 /* 44: once there is a transcript, the prompt steps back so the two are not
    read as a pair to compare. */
 .meaning.dim {

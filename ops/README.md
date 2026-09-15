@@ -101,8 +101,15 @@ not know to look here first):
 umask 022
 npm run import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run tag   -- --db /srv/kotoba/data/kotoba.sqlite
+npm run import-kana -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run verify-import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 ```
+
+`import-kana` writes the Hiragana and Katakana decks (#158) — 208 cards from
+the fixed table in `import/lib/kana.js` — and fetches KanjiVG's 148
+stroke-order drawings into the media directory as `kanjivg-*.svg`. It needs
+migration 018, so run it after `ops/deploy.sh`, not before. Re-running it
+changes nothing that has not changed.
 
 `verify-import` samples twenty cards and checks their audio is really audio.
 It exits non-zero if anything is wrong, so it is worth reading. It does not,

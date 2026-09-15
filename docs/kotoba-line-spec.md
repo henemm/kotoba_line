@@ -359,6 +359,23 @@ deck, and she can edit or delete her own (#84, #85). The UI should let her filte
 by deck or tag. This is the part of the app that will matter most after the
 first month, so leave room for it in the queue logic now.
 
+**Kana decks** (#158, v77). Hiragana and Katakana are two more built-in
+decks, `deck = 'hiragana'` and `'katakana'`, keyed by name like Kaishi. They
+are not downloaded: `import/lib/kana.js` writes out the standard table — 46
+basic kana, 25 with dakuten or handakuten and 33 yōon per script, Hepburn
+readings, を as "wo" — in teaching order, which is the new-card order. A card's
+id is derived from its characters (10,000,000 plus their places in the kana
+block), a range no Anki note id or personal card can reach. Each deck
+introduces 5 a day, one gojūon row.
+
+A kana card is asked two ways only: 選ぶ (the kana, then its reading among the
+readings of nearby rows) and めくる (the kana, turning over to the reading,
+KanjiVG's stroke order and up to two Kaishi words that start with it). 話す
+and 書く would prompt with the reading, which is the answer, and 聞く has no
+sentence. The Japanese-script switch (§12) does not apply inside a kana deck.
+Sound is the phone's speech synthesis: no free set of single-kana recordings
+exists. Nothing on a kana card is generated — no mnemonics.
+
 ---
 
 ## 8a. XP, levels and streak

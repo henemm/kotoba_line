@@ -1,6 +1,6 @@
 import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 import { deckSettings } from "./deck-settings.js";
-import { MY_WORDS, ownDecks } from "./decks.js";
+import { KANA_DECKS, MY_WORDS, isKanaDeck, ownDecks } from "./decks.js";
 import { DEFAULT_TIME_ZONE, dayIn, nextDay, startOfDay } from "./day.js";
 import { maturityBand } from "./stats.js";
 // The client's own module, not a copy (v69): the image puts client/src/romaji.js
@@ -86,10 +86,11 @@ export function isFiltered({ tag, only }) {
  * named her decks, and resolve by name for a phone that has not updated.
  * Anything else is not a deck.
  */
-export const DECK_KEY_PATTERN = "^(kaishi|deck:[0-9]{1,15}|mine|list:.{1,100})$";
+export const DECK_KEY_PATTERN = "^(kaishi|hiragana|katakana|deck:[0-9]{1,15}|mine|list:.{1,100})$";
 
 export function parseDeckKey(key) {
-  if (key === "kaishi") return { deck: "kaishi" };
+  // The kana decks (#158) are a `cards.deck` of their own, like Kaishi.
+  if (key === "kaishi" || isKanaDeck(key)) return { deck: key };
   if (typeof key !== "string") return undefined;
   if (/^deck:\d{1,15}$/.test(key)) return { deck: "personal", deckId: Number(key.slice(5)) };
   if (key === "mine") return { deck: "personal", deckName: MY_WORDS };
@@ -395,11 +396,12 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), ti
         AND (? IS NULL OR c.deck_id = ?)`,
   );
 
-  // Kaishi, then her decks oldest first (migration 016 made her lists decks
+  // Kaishi, the kana decks (#158) once imported, then her decks oldest first (migration 016 made her lists decks
   // in the order this list showed them). One of hers is listed empty: a deck
   // she just made is where she adds its first card.
   const candidates = [
     { key: "kaishi", name: "Kaishi", own: false },
+    ...KANA_DECKS.map((d) => ({ ...d, own: false })),
     ...ownDecks(db, userId).map((d) => ({ key: `deck:${d.id}`, id: d.id, name: d.name, own: true })),
   ];
 
@@ -417,11 +419,26 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), ti
         cards: row.cards,
         seen: row.seen,
         today,
-        ways: { choose: row.cards, listen: row.listen ?? 0, speak: row.cards, type: row.type ?? 0, flip: row.cards },
+        ways: waysFor(key, row),
         settings: deckSettings(db, userId, key),
       };
     })
     .filter(Boolean);
+}
+
+/**
+ * How many cards each way of practising can ask in a deck.
+ *
+ * A kana deck (#158) asks only two ways. 選ぶ shows the kana and offers
+ * readings; めくる shows it and turns over to the reading and the stroke
+ * order. 話す and 書く prompt with the card's meaning — for a kana that is
+ * its reading, so the prompt would be the answer — and 聞く needs sentences
+ * a kana has none of. They count 0, which the deck page and its options
+ * already read as "not possible here".
+ */
+function waysFor(key, row) {
+  if (isKanaDeck(key)) return { choose: row.cards, listen: 0, speak: 0, type: 0, flip: row.cards };
+  return { choose: row.cards, listen: row.listen ?? 0, speak: row.cards, type: row.type ?? 0, flip: row.cards };
 }
 
 /** The three ways of saying a moment, one set per time zone. */
@@ -533,7 +550,9 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   // (#84).
   const visible = visibleTo(userId);
   const whereParams = [...visible.params];
-  let where = `WHERE c.deleted_at IS NULL AND ${visible.sql}`;
+  // Search finds words (#158): a kana card is a letter, and "ka" would bring
+  // か and カ up among the Kaishi words, opening a topics sheet for a letter.
+  let where = `WHERE c.deleted_at IS NULL AND c.deck NOT IN ('hiragana', 'katakana') AND ${visible.sql}`;
   let romajiKey;
 
   if (q) {

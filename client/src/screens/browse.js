@@ -1,5 +1,6 @@
 import { OfflineError, api } from "../api.js";
 import { loadDeck } from "../deck.js";
+import { isKana } from "../script.js";
 import { romajiQuery, searchRomaji } from "../romaji.js";
 import { showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
@@ -470,7 +471,8 @@ export function browseScreen({
       return;
     }
     const matches = [...deck.values()]
-      .filter((c) => !c.deleted_at && matchesQuery(c, state.q))
+      // Words only, as on the server (#158): not the kana decks' letters.
+      .filter((c) => !c.deleted_at && !isKana(c) && matchesQuery(c, state.q))
       .sort(exactFirst(state.q, byFrequencyThenId));
     state.total = matches.length;
     state.cards = matches.slice(0, (page + 1) * PAGE_SIZE);

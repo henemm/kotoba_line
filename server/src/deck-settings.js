@@ -1,4 +1,4 @@
-import { canonicalDeckKey } from "./decks.js";
+import { canonicalDeckKey, isKanaDeck } from "./decks.js";
 import { MODE_KEYS } from "./settings.js";
 
 /**
@@ -16,6 +16,12 @@ import { MODE_KEYS } from "./settings.js";
 export const LIST_NEW_PER_DAY = 10;
 
 /**
+ * A kana deck introduces 5 a day (#158): its cards are in gojūon order, so
+ * that is one row — あいうえお, then かきくけこ — the way kana are taught.
+ */
+export const KANA_NEW_PER_DAY = 5;
+
+/**
  * "Max cards per day" (migration 017): new and review together, as in Noji.
  * `null` is no limit, and every deck's default. Same bounds as the CHECK.
  */
@@ -28,7 +34,7 @@ export function deckSettings(db, userId, key) {
   const row = db
     .prepare("SELECT hidden_modes, new_per_day, max_per_day FROM deck_settings WHERE user_id = ? AND deck_key = ?")
     .get(userId, deckKey);
-  let fallback = LIST_NEW_PER_DAY;
+  let fallback = isKanaDeck(deckKey) ? KANA_NEW_PER_DAY : LIST_NEW_PER_DAY;
   if (deckKey === "kaishi") {
     fallback = db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15;
   }
