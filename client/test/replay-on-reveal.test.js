@@ -78,7 +78,12 @@ describe("a revealed card can be heard again (#32)", () => {
   it("reads 選ぶ's word aloud only from the recording its speaker plays (v66)", () => {
     // 48 leaves the speaker out on a card with no recording; the automatic
     // reading used to go ahead with the phone's voice anyway.
-    assert.match(bodyOf("drawChoose"), /if \(readAloud && card\.word_audio\) say\(card\.word, card\.word_audio\);/);
+    // v84: the recording is `promptAudio(card)`, which is the word's except on
+    // a kana card — and the speaker plays that same one.
+    const choose = bodyOf("drawChoose");
+    assert.match(choose, /const audio = promptAudio\(card\);/);
+    assert.match(choose, /if \(readAloud && audio\) say\(card\.word, audio\);/);
+    assert.match(choose, /audio \? speaker\(card\.word, audio\) : null/);
     // Everywhere else the reading goes through the same rule as the speaker.
     for (const fn of ["revealSpeak", "revealType", "drawFlip", "revealFlip"]) {
       assert.doesNotMatch(bodyOf(fn), /\bsay\(/, fn);

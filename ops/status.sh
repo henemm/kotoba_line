@@ -140,6 +140,8 @@ const out = {
   kanaExampleAudio: has("word_examples")
     ? one(`SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND word_examples LIKE '%"audio"%'`)
     : "absent",
+  // v84: a kana's own recording, from Wikimedia Commons.
+  kanaSound: one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL AND word_audio IS NOT NULL"),
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
@@ -214,6 +216,13 @@ NODE
     elif [[ ${F_kanaExampleAudio} != absent && ${F_kanaExamples:-0} -gt 0 ]]; then
       ok "${F_kanaExampleAudio} kana cards with a recorded example word"
     fi
+    # v84: 71 sounds have a recording, each shared by its hiragana and its
+    # katakana card — 142 of 208. The 33 yōon have none (import/lib/kana-sounds.js).
+    if [[ ${F_kana:-0} -gt 0 && ${F_kanaSound:-0} -lt 142 ]]; then
+      warn "npm run import-kana" "${F_kanaSound:-0} of 142 kana cards have their sound — the kana import needs running again (v84)"
+    elif [[ ${F_kana:-0} -gt 0 ]]; then
+      ok "${F_kanaSound} kana cards with their own recording"
+    fi
 
     if [[ ${F_tagged:-0} -eq 0 && ${F_cards:-0} -gt 0 ]]; then
       warn "npm run tag" "no card carries a topic"
@@ -244,6 +253,13 @@ if [[ -d $MEDIA_DIR ]]; then
     printf '      fix: chmod -R a+r %s\n' "$MEDIA_DIR"
   else
     ok "$total audio files, all readable by nginx"
+  fi
+  # v84: the kana sounds are written by the kana import, not the deck's.
+  kanaSounds=$(find "$MEDIA_DIR" -name 'kana-*.mp3' 2>/dev/null | wc -l | tr -d ' ')
+  if [[ ${kanaSounds:-0} -lt 71 ]]; then
+    warn "npm run import-kana" "${kanaSounds:-0} of 71 kana recordings in $MEDIA_DIR"
+  else
+    ok "${kanaSounds} kana recordings"
   fi
 else
   warn "npm run import" "no $MEDIA_DIR yet"

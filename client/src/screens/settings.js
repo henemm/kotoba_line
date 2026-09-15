@@ -400,6 +400,9 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       ...[
         ["Kaishi 1.5k", "Wörter, Beispielsätze und Aufnahmen – github.com/donkuri/Kaishi"],
         ["KanjiVG", "Strichfolge der Kana – kanjivg.tagaini.net, CC BY-SA 3.0"],
+        // v84: public domain asks for nothing; the line is there so she knows
+        // whose voice it is.
+        ["Wikimedia Commons", "Aussprache der einzelnen Kana – Aufnahmen von Hakatanoshio117117, gemeinfrei"],
         ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
         [
           "JMdict",

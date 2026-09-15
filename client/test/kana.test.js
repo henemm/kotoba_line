@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { pickDistractors } from "../src/deck.js";
 import { isKana, showsScript, shownWord } from "../src/script.js";
-import { exampleAudio, flipsMeaningFirst, kanaExamples, meaningPool, soundParts, strokeFiles } from "../src/screens/session.js";
+import {
+  exampleAudio,
+  flipsMeaningFirst,
+  kanaExamples,
+  kanaSynthesised,
+  meaningPool,
+  promptAudio,
+  soundParts,
+  strokeFiles,
+} from "../src/screens/session.js";
 
 // Pure logic only: what the kana card's back looks like was checked in WebKit.
 const kana = (word, reading, deck = "hiragana", rank = 1) => ({
@@ -101,6 +110,20 @@ describe("kana cards (#158)", () => {
     };
     assert.deepEqual(exampleAudio(card), ["kao.mp3"]);
     assert.deepEqual(exampleAudio(ka), []);
+  });
+
+  it("keeps a kana's recording out of 選ぶ's question, where the sound is the answer (v84)", () => {
+    const recorded = { ...ka, word_audio: "kana-0304b.mp3" };
+    assert.equal(promptAudio(recorded), null);
+    assert.equal(promptAudio({ ...katakanaKa, word_audio: "kana-0304b.mp3" }), null);
+    assert.equal(promptAudio({ ...kasa, word_audio: "kasa.mp3" }), "kasa.mp3", "a Kaishi word still plays with its question");
+    assert.equal(promptAudio(kasa), null);
+  });
+
+  it("captions a kana's ♪ as the phone's voice only where there is no recording (v84)", () => {
+    assert.equal(kanaSynthesised(kana("きゃ", "kya", "hiragana", 72)), true);
+    assert.equal(kanaSynthesised({ ...ka, word_audio: "kana-0304b.mp3" }), false);
+    assert.equal(kanaSynthesised(kasa), false, "Kaishi cards keep their own rules (47, 48)");
   });
 
   it("names the stroke-order drawings the way the import writes them", () => {

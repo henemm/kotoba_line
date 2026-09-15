@@ -110,8 +110,12 @@ the fixed table in `import/lib/kana.js` — and fetches KanjiVG's 148
 stroke-order drawings into the media directory as `kanjivg-*.svg`. Since
 v78 it also picks each card's example words from Kaishi, the JLPT lists and
 JMdict (fetched from pinned versions, ~1.5 MB), so run it after the Kaishi
-import. It needs migrations 018 and 019, so run it after `ops/deploy.sh`, not
-before. Re-running it changes nothing that has not changed.
+import. Since v84 it fetches the 71 kana recordings from Wikimedia Commons
+as `kana-*.mp3` (~1.8 MB, about three minutes: Wikimedia throttles quick
+downloads) and stops if a file is not the pinned recording. Run it after
+`ops/deploy.sh`, not before: it needs migrations 018 and 019, and a v83 shell
+would play a kana's recording before she has answered. Re-running it changes
+nothing that has not changed.
 
 `verify-import` samples twenty cards and checks their audio is really audio.
 It exits non-zero if anything is wrong, so it is worth reading. It does not,

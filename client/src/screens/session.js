@@ -653,8 +653,10 @@ export function sessionScreen({
               area.querySelector(".word")?.replaceWith(
                 el("div.word-line", {}, wordHeading(card), kanaSpeaker(card)),
               );
+              const note = kanaSynthNote(card);
+              if (note) area.querySelector(".word-line")?.after(note);
               area.append(kanaExampleBlock(card) ?? "");
-              if (readAloud) voice(card.word, null);
+              if (readAloud) voice(card.word, card.word_audio);
             }
 
             // #57: this used to schedule the next card on a fixed 900/2400ms
@@ -682,11 +684,15 @@ export function sessionScreen({
     // "Read cards aloud" governs what happens on its own. The ♪ button still
     // works with it off — tapping it is an explicit request, and a setting
     // about automatic sound should not disable a control just pressed.
+    // A kana's recording is loaded now, so it plays on a train after she has
+    // answered — but neither played nor offered before: its sound is the
+    // answer (v84, #158). `promptAudio` is that rule.
+    const audio = promptAudio(card);
     prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card));
     // Only a recording, like the speaker below. Until v66 a card without one
     // was read by the phone's voice with no button to hear it again — on her
     // Noji lists, a Japanese voice reading romaji (Henning, 2026-09-14).
-    if (readAloud && card.word_audio) say(card.word, card.word_audio);
+    if (readAloud && audio) say(card.word, audio);
 
     chooseFrom(card, "word_meaning", null, area, answers, [
       // #158: a kana has a reading, not a meaning.
@@ -697,7 +703,7 @@ export function sessionScreen({
       // does nothing". No caption either, because nothing was promised, and no
       // synthesis: the synthetic voice belongs where she is listening for the
       // pronunciation, which in 選ぶ she is not.
-      card.word_audio ? speaker(card.word, card.word_audio) : null,
+      audio ? speaker(card.word, audio) : null,
       // The question here is meaning, not pronunciation, so a romaji line
       // gives nothing away — it just lets "Show romaji" do on the prompt what
       // its settings description promises ("for reading it back") instead of
@@ -1110,13 +1116,23 @@ export function sessionScreen({
   }
 
   /**
-   * A lone kana, read by the phone's voice. Synthesis, not a recording: no
-   * free recording of every kana exists — Wikimedia Commons has 71 of the 104
-   * sounds and none of the yōon (researched 2026-09-15) — and a lone kana is
-   * Japanese text the phone's voice reads as that sound.
+   * A lone kana's sound. Since v84 a person's recording, saying it three
+   * times, for the 71 sounds Wikimedia Commons has one of
+   * (import/lib/kana-sounds.js); the 33 yōon have none anywhere free
+   * (researched 2026-09-15), so the phone's voice reads those — a lone kana
+   * is Japanese text it reads as that sound — and `kanaSynthNote` says so.
    */
   function kanaSpeaker(card) {
-    return speaker(card.word, null, { small: true, label: "Kana hören" });
+    return speaker(card.word, card.word_audio, { small: true, label: "Kana hören" });
+  }
+
+  /**
+   * 47's caption, where a kana's ♪ is the phone's voice: she is listening
+   * for the pronunciation here, which is exactly when a synthetic voice has
+   * to say what it is.
+   */
+  function kanaSynthNote(card) {
+    return kanaSynthesised(card) && canVoice(card.word, null) ? el("p.synth-note.reveal", { text: SYNTH_CAPTION }) : null;
   }
 
   /**
@@ -1144,12 +1160,13 @@ export function sessionScreen({
           wordHeading(card),
           kanaSpeaker(card),
         ),
+        kanaSynthNote(card),
         cardRule(),
         el("div.meaning.kana-reading.reveal", { text: card.word_meaning }),
         strokeOrder(card),
         kanaExampleBlock(card),
       );
-      if (readAloud) voice(card.word, null);
+      if (readAloud) voice(card.word, card.word_audio);
     } else if (meaningFirst) {
       render(
         area,
@@ -1636,6 +1653,19 @@ export function kanaExamples(card) {
   } catch {
     return [];
   }
+}
+
+/**
+ * The recording 選ぶ may play and offer before she answers: the word's — but
+ * never a kana's, whose sound is the answer (v84, #158).
+ */
+export function promptAudio(card) {
+  return isKana(card) ? null : (card?.word_audio ?? null);
+}
+
+/** A kana whose ♪ is the phone's voice: one of the sounds with no recording (v84). */
+export function kanaSynthesised(card) {
+  return isKana(card) && !card.word_audio;
 }
 
 /** The recordings of a kana card's example words (v83), to fetch with the card. */

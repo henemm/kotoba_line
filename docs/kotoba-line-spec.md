@@ -374,8 +374,14 @@ readings of nearby rows) and めくる (the kana, turning over to the reading,
 KanjiVG's stroke order and up to two words that start with it). 話す
 and 書く would prompt with the reading, which is the answer, and 聞く has no
 sentence. The Japanese-script switch (§12) does not apply inside a kana deck.
-Sound is the phone's speech synthesis: no free set of single-kana recordings
-exists. Nothing on a kana card is generated — no mnemonics.
+Sound (v84) is a human recording for the 71 sounds that are not yōon —
+Hakatanoshio117117's set on Wikimedia Commons, public domain, each saying the
+kana three times, brought to the level of Kaishi's word recordings without
+re-encoding (`import/lib/kana-sounds.js`). It is in `word_audio`, shared by a
+hiragana card and its katakana, and 選ぶ keeps it silent until she has
+answered, because the sound is the answer. The 33 yōon have no free
+recording anywhere, so the phone's speech synthesis reads them, with 47's
+caption. Nothing on a kana card is generated — no mnemonics.
 
 The example words (v78) are chosen by the import and stored on the card
 (`word_examples`, migration 019): Kaishi words first, then the JLPT lists
