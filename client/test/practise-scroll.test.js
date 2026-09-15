@@ -21,6 +21,7 @@ import { describe, it } from "node:test";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = readFileSync(join(__dirname, "..", "src", "app.js"), "utf8");
 const practise = readFileSync(join(__dirname, "..", "src", "screens", "practise.js"), "utf8");
+const deckCards = readFileSync(join(__dirname, "..", "src", "screens", "deck-cards.js"), "utf8");
 const deckOptions = readFileSync(join(__dirname, "..", "src", "screens", "deck-options.js"), "utf8");
 const css = readFileSync(join(__dirname, "..", "src", "ui", "screens.css"), "utf8");
 
@@ -58,8 +59,11 @@ describe("the Words tab (#123)", () => {
   it("keeps search off the deck page, and adding a card on it (#137)", () => {
     assert.doesNotMatch(practise, /button\.add-word-row|onAddWord|onBrowse|onOwnDeck/);
     // #137: a card is added in the deck it goes into, as in Noji, and not from
-    // the Search tab any more.
-    assert.match(practise, /"\+ Karte hinzufügen"/);
+    // the Search tab any more. v78: right above the deck's search, in the
+    // page's flow — no floating button (measured in WebKit, PR description).
+    assert.match(deckCards, /"\+ Karte hinzufügen"/);
+    assert.ok(deckCards.indexOf("render(root, heading, add, search, list)") > 0, "the button comes before the search");
+    assert.doesNotMatch(practise + css, /deck-add-card/);
     assert.doesNotMatch(browse, /"Add a word"|onAddWord/);
   });
 

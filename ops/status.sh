@@ -133,6 +133,9 @@ const out = {
   })(),
   cards: one("SELECT count(*) n FROM cards WHERE deck = 'kaishi'"),
   kana: one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL"),
+  kanaExamples: has("word_examples")
+    ? one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND word_examples IS NOT NULL")
+    : "absent",
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
@@ -192,6 +195,13 @@ NODE
       warn "npm run import-kana" "${F_kana:-0} of 208 kana cards — the hiragana and katakana decks need importing"
     else
       ok "${F_kana} kana cards (Hiragana, Katakana)"
+    fi
+    # v78: examples on 148 of 208 (86 hiragana + 62 katakana, measured
+    # 2026-09-15). None at all means the import ran before migration 019.
+    if [[ ${F_kanaExamples} != absent && ${F_kana:-0} -gt 0 && ${F_kanaExamples:-0} -eq 0 ]]; then
+      warn "npm run import-kana" "no kana card has example words — the kana import needs running again"
+    elif [[ ${F_kanaExamples} != absent && ${F_kana:-0} -gt 0 ]]; then
+      ok "${F_kanaExamples} kana cards with example words"
     fi
 
     if [[ ${F_tagged:-0} -eq 0 && ${F_cards:-0} -gt 0 ]]; then

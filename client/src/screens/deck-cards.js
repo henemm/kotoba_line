@@ -34,7 +34,7 @@ export function cardsOfDeck(deck, cards, q = "") {
   return found.sort(exactFirst(q, (a, b) => a.id - b.id));
 }
 
-export function deckCardsBlock({ deck, japanese = true, onCard }) {
+export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
   const root = el("div.deck-cards");
   const list = el("div.deck-cards-list");
   const heading = el("span.set-label");
@@ -57,7 +57,13 @@ export function deckCardsBlock({ deck, japanese = true, onCard }) {
     drawList();
   });
 
-  render(root, heading, search, list);
+  // "+ Karte hinzufügen" sits right above the search, with the cards it adds
+  // to (Henning, v78). It floated over the page before, as Noji's does, and
+  // covered whatever was under it — the sound switch on an iPad, a card row on
+  // the phone. One place on every screen size, in the page's own flow.
+  const add = onAdd ? el("button.deck-cards-add", { type: "button", onclick: onAdd, text: "+ Karte hinzufügen" }) : null;
+
+  render(root, heading, add, search, list);
   load();
 
   async function load() {

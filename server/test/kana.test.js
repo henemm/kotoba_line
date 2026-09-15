@@ -74,6 +74,7 @@ describe("the kana decks (#158)", () => {
     assert.equal(a.word, "あ");
     assert.equal(a.word_meaning, "a");
     assert.equal(a.deck, "hiragana");
+    assert.ok("word_examples" in a, "the example words travel with the card (v78)");
     await app.close();
   });
 });

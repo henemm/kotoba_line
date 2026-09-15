@@ -74,32 +74,12 @@ describe("kana cards (#158)", () => {
     }
   });
 
-  it("finds Kaishi words that start with the kana, most common first", () => {
-    const pool = [ka, kasa, kyou, kiku, akai, coffee, camera, kaban];
-    assert.deepEqual(kanaExamples(ka, pool), [
-      { id: 7, kana: "かばん", meaning: "bag" },
-      { id: 1, kana: "かさ", meaning: "umbrella" },
-    ]);
-  });
-
-  it("leaves out a kana inside a word, where it is often another sound", () => {
-    // あか has か, but not at the start; う in きょう is the long ō.
-    assert.ok(!kanaExamples(ka, [akai]).length);
-    assert.deepEqual(kanaExamples(kana("う", "u", "hiragana", 3), [kyou]), []);
-  });
-
-  it("does not take きょう for き: that sound is きょ", () => {
-    const pool = [ki, kyou, kiku];
-    assert.deepEqual(kanaExamples(ki, pool).map((e) => e.kana), ["きく"]);
-    assert.deepEqual(kanaExamples(kana("きょ", "kyo", "hiragana", 74), pool).map((e) => e.kana), ["きょう"]);
-  });
-
-  it("finds ん anywhere, since no word starts with it", () => {
-    assert.deepEqual(kanaExamples(kana("ん", "n", "hiragana", 46), [kaban, kasa]).map((e) => e.kana), ["かばん"]);
-  });
-
-  it("finds katakana at the start of the word, where Kaishi writes loanwords", () => {
-    assert.deepEqual(kanaExamples(katakanaKa, [kasa, coffee, camera]).map((e) => e.kana), ["カメラ"]);
+  it("reads the example words the import stored on the card, and survives a bad value", () => {
+    const withExamples = { ...ka, word_examples: JSON.stringify([{ kana: "かさ", meaning: "umbrella", source: "kaishi" }]) };
+    assert.deepEqual(kanaExamples(withExamples), [{ kana: "かさ", meaning: "umbrella", source: "kaishi" }]);
+    assert.deepEqual(kanaExamples(ka), []);
+    assert.deepEqual(kanaExamples({ ...ka, word_examples: "{not json" }), []);
+    assert.deepEqual(kanaExamples({ ...ka, word_examples: JSON.stringify([{ kana: "か" }]) }), [], "an entry without a meaning is left out");
   });
 
   it("names the stroke-order drawings the way the import writes them", () => {

@@ -107,9 +107,11 @@ npm run verify-import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba
 
 `import-kana` writes the Hiragana and Katakana decks (#158) — 208 cards from
 the fixed table in `import/lib/kana.js` — and fetches KanjiVG's 148
-stroke-order drawings into the media directory as `kanjivg-*.svg`. It needs
-migration 018, so run it after `ops/deploy.sh`, not before. Re-running it
-changes nothing that has not changed.
+stroke-order drawings into the media directory as `kanjivg-*.svg`. Since
+v78 it also picks each card's example words from Kaishi, the JLPT lists and
+JMdict (fetched from pinned versions, ~1.5 MB), so run it after the Kaishi
+import. It needs migrations 018 and 019, so run it after `ops/deploy.sh`, not
+before. Re-running it changes nothing that has not changed.
 
 `verify-import` samples twenty cards and checks their audio is really audio.
 It exits non-zero if anything is wrong, so it is worth reading. It does not,

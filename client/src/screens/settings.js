@@ -131,6 +131,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       script(),
       practice(),
       account(),
+      sources(),
       diagnostics(),
     );
   }
@@ -348,6 +349,29 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       }
     }
     onSignOut?.();
+  }
+
+  // ── Sources ─────────────────────────────────────────────────────
+
+  /**
+   * Where the words, drawings and example words come from (#158, v78). The
+   * licences ask for it: JMdict wants the acknowledgement on a screen of its
+   * own in an app, KanjiVG and the JLPT lists want the attribution. Plain
+   * text, because a link out of the installed app is a dead end offline.
+   */
+  function sources() {
+    return group(
+      "Quellen",
+      ...[
+        ["Kaishi 1.5k", "Wörter, Beispielsätze und Aufnahmen – github.com/donkuri/Kaishi"],
+        ["KanjiVG", "Strichfolge der Kana – kanjivg.tagaini.net, CC BY-SA 3.0"],
+        ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
+        [
+          "JMdict",
+          "Bedeutungen dieser Beispielwörter – Electronic Dictionary Research and Development Group, edrdg.org, CC BY-SA 4.0",
+        ],
+      ].map(([title, detail]) => row(title, detail)),
+    );
   }
 
   // ── Diagnostics ─────────────────────────────────────────────────
