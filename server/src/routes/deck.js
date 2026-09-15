@@ -389,6 +389,10 @@ const cardBody = {
     sentenceMeaning: { type: "string", maxLength: 300 },
     // Which of her decks (#137). Optional: a phone from before decks sends none.
     deckId: { type: "integer", minimum: 1 },
+    // The Kaishi card whose recording she chose for this word (v70); null
+    // takes a recording off. Left out — an older phone — nothing is chosen,
+    // and a changed word loses a recording that no longer fits.
+    kaishiId: { type: ["integer", "null"], minimum: 1 },
     tags: {
       type: "array",
       maxItems: MAX_TAGS,

@@ -1,6 +1,9 @@
 import { OfflineError, api } from "../api.js";
 import { say, unlock } from "../audio.js";
-import { inScript, shownWord } from "../script.js";
+import { loadDeck } from "../deck.js";
+import { kaishiMatches, kaishiOf } from "../kaishi-match.js";
+import { inScript, showsScript, shownWord } from "../script.js";
+import { plainSentence } from "./session.js";
 import { acknowledged, el, render } from "../ui/dom.js";
 
 /**
@@ -46,12 +49,19 @@ export function addWordScreen({
   const editing = Boolean(card);
   // Coerced rather than trusted: this arrives from two call sites, and one of
   // them is a click handler that would otherwise hand over the event.
+  // v70: a card with a Kaishi recording stores Kaishi's spelling (大きい), which
+  // with the script off she has only ever seen as "ookii" — so that is what
+  // the field shows, and what she can correct.
+  const startWord = editing ? (card.word_audio ? shownWord(card, japanese) : card.word ?? "") : "";
+  // A Kaishi sentence marks its word as <b>…</b>; the field shows it plain,
+  // and an untouched sentence is sent back as it was, recording and all.
+  const startSentence = editing ? plainSentence(card.sentence) ?? "" : "";
   const draft = editing
     ? {
-        word: card.word ?? "",
+        word: startWord,
         reading: card.word_reading ?? "",
         meaning: card.word_meaning ?? "",
-        sentence: card.sentence ?? "",
+        sentence: startSentence,
         sentenceMeaning: card.sentence_meaning ?? "",
       }
     : {
@@ -76,6 +86,22 @@ export function addWordScreen({
   let lastSaved;
   let focusAsked = false;
 
+  // v70: the Kaishi words on this phone, the one whose recording the card has
+  // (`link`), and whether she took one off or typed it away (`linkDropped`).
+  let kaishi = [];
+  let link;
+  let linkDropped = false;
+  const offers = el("div.kaishi-offer");
+  loadDeck()
+    .then((deck) => {
+      kaishi = [...deck.values()].filter((c) => c.deck === "kaishi");
+      if (editing && !linkDropped) link = kaishiOf(card, kaishi);
+      drawOffers();
+    })
+    .catch(() => {
+      /* no cache yet: the form works, it just offers nothing */
+    });
+
   const fields = {};
 
   function field(key, { placeholder, big = false, lang = "ja" }) {
@@ -99,6 +125,7 @@ export function addWordScreen({
       // Only the header needs redrawing — a full redraw would take the
       // keyboard's focus away between two characters.
       refreshHeader();
+      if (key === "word") drawOffers();
     });
     fields[key] = input;
     return input;
@@ -147,6 +174,7 @@ export function addWordScreen({
           "Japanese",
           el("div.field.big", {}, field("word", { placeholder: japanese ? "日本語" : "Romaji or kana", big: true, lang: japanese ? "ja" : "romaji" })),
           el("p.add-hint", { text: "In romaji or kana, the way you would write it in Noji." }),
+          offers,
         ),
         ...(moreOpen
           ? [
@@ -182,8 +210,9 @@ export function addWordScreen({
             nextButton,
             el("p.add-note", {
               // Said before she commits rather than after: a card she writes has
-              // no recording, and since v66 romaji is never read by a guessing voice.
-              text: "Cards you add have no recording. A word in kana or kanji is read by the phone's Japanese voice; romaji stays silent.",
+              // no recording unless she takes Kaishi's (v70), and since v66 romaji
+              // is never read by a guessing voice.
+              text: "Where Kaishi has the word, you can give your card its recording. Otherwise a word in kana or kanji is read by the phone's Japanese voice; romaji stays silent.",
             }),
           ),
     );
@@ -194,6 +223,93 @@ export function addWordScreen({
       focusAsked = true;
       setTimeout(() => fields.meaning?.focus(), 50);
     }
+  }
+
+  /**
+   * What came with a Kaishi word goes with it: its reading and its example
+   * sentence, where the form still holds them unchanged. Found in the browser
+   * run: "kiku" retyped as "kiite" kept きく as its reading and a sentence
+   * about 聞く.
+   */
+  function dropLink() {
+    for (const [key, value] of [["reading", link.word_reading], ["sentence", plainSentence(link.sentence)]]) {
+      if (value && draft[key].trim() === value) {
+        draft[key] = "";
+        if (fields[key]) fields[key].value = "";
+      }
+    }
+    link = undefined;
+    linkDropped = true;
+  }
+
+  /**
+   * v70: under the Japanese, the Kaishi words that are exactly what she typed,
+   * each with its English meaning, a ♪ to hear it and "Use" — or the one her
+   * card already takes its recording from, with "Remove". Drawn into its own
+   * slot, like the header, so typing never loses the keyboard.
+   */
+  function drawOffers() {
+    // Typed into something else: the recording was of another word.
+    if (link && !kaishiMatches(draft.word, [link]).length) dropLink();
+    const word = (k) =>
+      el("span.kaishi-word", {}, el(showsScript(k, japanese) ? "b.jp" : "b", { text: shownWord(k, japanese) }), el("span", { text: k.word_meaning ?? "" }));
+    const hear = (k) =>
+      el("button.kaishi-hear", {
+        type: "button",
+        "aria-label": `Hear ${shownWord(k, japanese)}`,
+        text: "♪",
+        ...acknowledged(() => {
+          unlock();
+          say(undefined, k.word_audio);
+        }),
+      });
+    if (link) {
+      render(
+        offers,
+        el("span.kaishi-label", { text: "Recording from Kaishi" }),
+        el(
+          "div.kaishi-row.linked",
+          {},
+          word(link),
+          hear(link),
+          el("button.kaishi-use", {
+            type: "button",
+            text: "Remove",
+            onclick: () => {
+              dropLink();
+              drawOffers();
+            },
+          }),
+        ),
+      );
+      return;
+    }
+    const found = kaishiMatches(draft.word, kaishi).filter((k) => k.word_audio);
+    if (found.length === 0) return render(offers);
+    render(
+      offers,
+      el("span.kaishi-label", { text: found.length === 1 ? "Kaishi has this word" : "Kaishi has these words" }),
+      ...found.map((k) =>
+        el(
+          "div.kaishi-row",
+          {},
+          word(k),
+          hear(k),
+          el("button.kaishi-use", {
+            type: "button",
+            text: "Use",
+            "aria-label": `Use the recording of ${shownWord(k, japanese)}, “${k.word_meaning}”`,
+            onclick: () => {
+              link = k;
+              drawOffers();
+            },
+          }),
+        ),
+      ),
+      el("p.kaishi-note", {
+        text: found.length === 1 ? "Only if it means your German: its recording comes with your card." : "Pick the one that means your German: its recording comes with your card.",
+      }),
+    );
   }
 
   /**
@@ -372,14 +488,21 @@ export function addWordScreen({
     problem = undefined;
     refreshHeader();
 
+    // v70: the Kaishi word she chose, or null where she took one off. Neither —
+    // a card whose Kaishi word this phone does not have — sends the stored
+    // spelling back if she left the field alone, so the server keeps the
+    // recording of an unchanged word.
+    const kaishiId = link ? link.id : editing && linkDropped ? null : undefined;
+    const untouched = editing && kaishiId === undefined && draft.word.trim() === startWord.trim();
     const body = {
-      word: draft.word.trim(),
+      word: untouched ? card.word : draft.word.trim(),
       reading: draft.reading.trim() || undefined,
       meaning: draft.meaning.trim(),
-      sentence: draft.sentence.trim() || undefined,
+      sentence: (editing && card.sentence && draft.sentence.trim() === startSentence.trim() ? card.sentence : draft.sentence.trim()) || undefined,
       sentenceMeaning: draft.sentenceMeaning.trim() || undefined,
       tags: [...chosen],
       deckId: deck?.id,
+      kaishiId,
     };
     try {
       // Editing sends the whole card; a field she emptied is left out and the
@@ -389,6 +512,8 @@ export function addWordScreen({
         // The same deck, an empty form, the German field ready for the next card.
         lastSaved = body.meaning;
         Object.assign(draft, { word: "", reading: "", meaning: "", sentence: "", sentenceMeaning: "" });
+        link = undefined;
+        drawOffers();
         chosen = new Set();
         moreOpen = false;
         saving = false;

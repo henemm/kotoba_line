@@ -10,8 +10,8 @@
  * Everything else about a personal card is ordinary. It lands in the same
  * `cards` table with `deck = 'personal'`, the same `tags` table, and the same
  * scheduler — "so a personal card is not a special case anywhere downstream"
- * (design 28). It has no recorded audio, so it always meets 47's synthesis
- * state, which is already built.
+ * (design 28). It has no recording of its own; where she chose the Kaishi word
+ * it is (v70), it carries that word's.
  *
  * The one thing that is special is who may see it (#84). A personal card has
  * an `owner_id`, and every query that hands out or accepts a card goes through
@@ -73,6 +73,76 @@ function cleanFields({ word, reading, meaning, sentence, sentenceMeaning, tags =
   return fields;
 }
 
+/**
+ * The Kaishi card she chose for a word of hers (v70), or a 404.
+ *
+ * Nothing is matched here: the phone offers the Kaishi words whose romaji is
+ * exactly what she typed, with their English meaning, and she picks one. Not
+ * by itself, because a single match is not proof — of the 551 words on her
+ * Noji lists, 27 had exactly one Kaishi match that the import had rightly
+ * left alone, among them "Kurasu" (Klasse) → 暮らす "to live" and "Ima"
+ * (Wohnzimmer) → 今 "now" (measured 2026-09-15).
+ */
+function kaishiCard(db, kaishiId) {
+  const k = db
+    .prepare(
+      `SELECT id, word, word_furigana, word_reading, word_pitch, word_audio,
+              sentence, sentence_furigana, sentence_audio
+         FROM cards WHERE id = ? AND deck = 'kaishi' AND deleted_at IS NULL`,
+    )
+    .get(kaishiId);
+  if (!k) throw Object.assign(new Error("no such Kaishi card"), { status: 404 });
+  return k;
+}
+
+/**
+ * What a card of hers stores for its word and sentence (v70).
+ *
+ * With a Kaishi card: that card's spelling, reading, pitch and recording, as
+ * the import gives a word from her lists (import-list.js) — and its example
+ * sentence with its recording, unless she wrote a sentence of her own. Her
+ * German is never replaced.
+ *
+ * Without one, what she typed. A recording she had stays only while the text
+ * it is a recording of does: "lieber stumm als falsch" (Henning, v66). Until
+ * this, correcting the Japanese of a word from her lists kept the old word's
+ * recording.
+ */
+function spoken(f, k, before, { dropWord = false } = {}) {
+  const sameSentence = before && (before.sentence ?? null) === f.sentence;
+  const herSentence = {
+    sentence: f.sentence,
+    sentenceFurigana: sameSentence ? before.sentence_furigana : null,
+    sentenceAudio: sameSentence ? before.sentence_audio : null,
+  };
+  if (k) {
+    // Kaishi's sentence arrives with the word, once. On a card already linked
+    // to this word the sentence is hers to keep, change or clear.
+    const newLink = !before || before.word_audio !== k.word_audio;
+    const takesKaishi = newLink && (!f.sentence || f.sentence === k.sentence);
+    return {
+      word: k.word,
+      furigana: k.word_furigana,
+      reading: k.word_reading,
+      pitch: k.word_pitch,
+      audio: k.word_audio,
+      ...(takesKaishi
+        ? { sentence: k.sentence, sentenceFurigana: k.sentence_furigana, sentenceAudio: k.sentence_audio }
+        : herSentence),
+    };
+  }
+  const sameWord = !dropWord && before && before.word === f.word && (before.word_reading ?? null) === f.reading;
+  return {
+    word: f.word,
+    furigana: sameWord ? before.word_furigana : null,
+    reading: f.reading,
+    pitch: sameWord ? before.word_pitch : null,
+    audio: sameWord ? before.word_audio : null,
+    // A sentence's recording is of the sentence, so it stays with it.
+    ...herSentence,
+  };
+}
+
 function replaceTags(db, cardId, tags) {
   db.prepare("DELETE FROM tags WHERE card_id = ?").run(cardId);
   const insert = db.prepare("INSERT OR IGNORE INTO tags (card_id, tag) VALUES (?, ?)");
@@ -95,6 +165,8 @@ export function createCard(db, userId, input, now = Date.now()) {
     throw Object.assign(new Error("no such deck"), { status: 404 });
   }
 
+  const s = spoken(f, input.kaishiId == null ? undefined : kaishiCard(db, input.kaishiId), undefined);
+
   // Negative, and unique even when two cards are added in the same
   // millisecond — which a test does, and an impatient thumb might.
   let id = -now;
@@ -105,11 +177,15 @@ export function createCard(db, userId, input, now = Date.now()) {
   db.transaction(() => {
     db.prepare(
       `INSERT INTO cards
-         (id, word, word_furigana, word_reading, word_meaning, word_audio,
+         (id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
           sentence, sentence_furigana, sentence_meaning, sentence_audio,
           frequency_rank, deck, owner_id, updated_at, deck_id)
-       VALUES (?, ?, NULL, ?, ?, NULL, ?, NULL, ?, NULL, NULL, 'personal', ?, ?, ?)`,
-    ).run(id, f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, userId, seconds, deckId);
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'personal', ?, ?, ?)`,
+    ).run(
+      id, s.word, s.furigana, s.reading, s.pitch, f.meaning, s.audio,
+      s.sentence, s.sentenceFurigana, f.sentenceMeaning, s.sentenceAudio,
+      userId, seconds, deckId,
+    );
     replaceTags(db, id, f.tags);
   })();
 
@@ -129,7 +205,13 @@ export function createCard(db, userId, input, now = Date.now()) {
  * `updated_at` moves, which is what carries the change to her other device.
  */
 export function updateCard(db, userId, id, input, now = Date.now()) {
-  const card = db.prepare("SELECT deck, owner_id, deleted_at FROM cards WHERE id = ?").get(id);
+  const card = db
+    .prepare(
+      `SELECT deck, owner_id, deleted_at, word, word_furigana, word_reading, word_pitch, word_audio,
+              sentence, sentence_furigana, sentence_audio
+         FROM cards WHERE id = ?`,
+    )
+    .get(id);
   // Someone else's word answers exactly like a missing one: saying "not
   // yours" would confirm that the id exists.
   if (!card || card.deleted_at || (card.deck === "personal" && card.owner_id !== userId)) {
@@ -143,15 +225,23 @@ export function updateCard(db, userId, id, input, now = Date.now()) {
   if (input.deckId !== undefined && !ownDeck(db, userId, input.deckId)) {
     return { ok: false, reason: "not_found" };
   }
+  // v70: a Kaishi card chosen, or `null` for none — then the old word's
+  // recording goes even if the text is unchanged: she took it off.
+  const k = input.kaishiId == null ? undefined : kaishiCard(db, input.kaishiId);
+  const s = spoken(f, k, card, { dropWord: input.kaishiId === null });
   const seconds = Math.floor(now / 1000);
   db.transaction(() => {
     db.prepare(
       `UPDATE cards
-          SET word = ?, word_reading = ?, word_meaning = ?,
-              sentence = ?, sentence_meaning = ?, updated_at = ?,
-              deck_id = coalesce(?, deck_id)
+          SET word = ?, word_furigana = ?, word_reading = ?, word_pitch = ?, word_audio = ?,
+              word_meaning = ?, sentence = ?, sentence_furigana = ?, sentence_audio = ?,
+              sentence_meaning = ?, updated_at = ?, deck_id = coalesce(?, deck_id)
         WHERE id = ?`,
-    ).run(f.word, f.reading, f.meaning, f.sentence, f.sentenceMeaning, seconds, input.deckId ?? null, id);
+    ).run(
+      s.word, s.furigana, s.reading, s.pitch, s.audio,
+      f.meaning, s.sentence, s.sentenceFurigana, s.sentenceAudio,
+      f.sentenceMeaning, seconds, input.deckId ?? null, id,
+    );
     replaceTags(db, id, f.tags);
   })();
 
@@ -161,7 +251,7 @@ export function updateCard(db, userId, id, input, now = Date.now()) {
 export function getCard(db, id) {
   const card = db
     .prepare(
-      `SELECT id, word, word_furigana, word_reading, word_meaning, word_audio,
+      `SELECT id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
               sentence, sentence_furigana, sentence_meaning, sentence_audio,
               frequency_rank, deck, updated_at, deck_id, list_name
          FROM cards WHERE id = ?`,

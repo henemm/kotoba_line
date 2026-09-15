@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v69";
+const VERSION = "v70";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -58,6 +58,7 @@ const SHELL_FILES = [
   "src/api.js",
   "src/audio.js",
   "src/deck.js",
+  "src/kaishi-match.js",
   "src/modes.js",
   "src/outbox.js",
   "src/pitch.js",
