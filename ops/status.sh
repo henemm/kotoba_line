@@ -372,7 +372,7 @@ fi
 
 printf '  In this order:\n\n'
 step=1
-for cmd in "git pull" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run tag" "chmod"; do
+for cmd in "git pull" "git merge --ff-only origin/main" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run tag" "chmod"; do
   for n in "${NEEDED[@]}"; do
     [[ $n == "$cmd" ]] || continue
     case $cmd in
@@ -390,6 +390,17 @@ for cmd in "git pull" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" 
     step=$((step + 1))
     break
   done
+done
+
+# Every check above compares the server with this checkout. A checkout that is
+# behind matches a server that is behind in the same way, so the steps after
+# catching up are not known yet — say so rather than let the list look whole.
+for n in "${NEEDED[@]}"; do
+  if [[ $n == "git pull" || $n == "git merge --ff-only origin/main" ]]; then
+    printf '\n  This checkout is behind, and everything above was compared with it.\n'
+    printf '  After step 1, run ops/status.sh again: it may need more than this.\n'
+    break
+  fi
 done
 
 cat <<'EOF'
