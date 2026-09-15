@@ -27,10 +27,16 @@ COPY server/package.json ./
 COPY server/src ./src
 COPY server/migrations ./migrations
 COPY server/bin ./bin
+# Search matches romaji with the client's own converter (v69), imported as
+# ../../client/src/romaji.js from src/ — so it sits at /client/src, as in the
+# repository. romaji.js imports pitch.js; neither touches the DOM.
+COPY client/src/romaji.js client/src/pitch.js /client/src/
+# ES modules, as the repository's root package.json declares for client/.
+RUN echo '{ "type": "module" }' > /client/package.json
 
 # The image ships no data directory; it is a mounted host volume (§9), and
 # the container must be able to write the SQLite file and its WAL sidecars.
-RUN mkdir -p /data && chown -R node:node /data /app
+RUN mkdir -p /data && chown -R node:node /data /app /client
 USER node
 
 VOLUME ["/data"]

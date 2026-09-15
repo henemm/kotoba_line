@@ -82,6 +82,23 @@ else
   bad "ops/deploy.sh" "nothing deployed at $APP_DIR yet — run: ops/deploy.sh"
 fi
 
+# v69: search folds romaji with client/src/romaji.js on the phone and, from a
+# copy baked into the API image, on the server. `deploy.sh --client` renews only
+# the first, and two different foldings give two different searches without an
+# error anywhere — so compare what the running API has with the repository.
+COMPOSE=${COMPOSE:-docker compose -f ops/docker-compose.yml}
+for shared in romaji.js pitch.js; do
+  if in_api=$($COMPOSE exec -T api cat "/client/src/$shared" 2>/dev/null); then
+    if [[ $in_api == "$(cat "client/src/$shared")" ]]; then
+      ok "the API searches with the repository's $shared"
+    else
+      warn "ops/deploy.sh" "the API has an older client/src/$shared than the repository — run: ops/deploy.sh (not --client)"
+    fi
+  else
+    warn "ops/deploy.sh" "the API has no /client/src/$shared, so its search cannot read romaji — run: ops/deploy.sh"
+  fi
+done
+
 # ── The database ────────────────────────────────────────────────────
 head_ "Database"
 if [[ ! -f $DB ]]; then

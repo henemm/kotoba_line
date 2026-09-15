@@ -553,8 +553,10 @@ describe("browsing the deck cached on the device (#22)", () => {
     assert.equal(matchesQuery(card(), "EAT"), true);
   });
 
-  it("does not search romaji — the note under an empty result says so", () => {
-    assert.equal(matchesQuery(card(), "taberu"), false);
+  // It did not until v69; search.test.js has the rest.
+  it("searches romaji, from the start of a word", () => {
+    assert.equal(matchesQuery(card(), "taberu"), true);
+    assert.equal(matchesQuery(card(), "beru"), false);
   });
 
   it("orders like the server does: ranked cards first, unranked last, ties by id", () => {

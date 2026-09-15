@@ -18,7 +18,7 @@ import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
 import { startFlushingStars } from "./stars.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
-import { syncDeck } from "./deck.js";
+import { loadDeck, syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
@@ -498,7 +498,8 @@ async function deleteOpenDeck() {
  * arrive, and a new list each time would lose her search mid-word.
  */
 function deckCards() {
-  if (!state.deck) return undefined;
+  // Her decks only (v69): see cardsOfDeck.
+  if (!state.deck?.own) return undefined;
   if (state.deckCards?.key !== state.deck.key) {
     state.deckCards = {
       key: state.deck.key,
@@ -522,8 +523,18 @@ async function refreshOpenDeck({ redraw = true } = {}) {
   if (redraw && !state.overlay) renderApp();
 }
 
-/** A tap on one of her cards in a deck (#137): edit, move, delete. */
-function openCardActions(card) {
+/**
+ * A tap on one of her cards (#137): edit, move, delete — in a deck, and from
+ * Search (v69), where `onChanged` redoes the search she is in.
+ */
+function openCardActions(card, { onChanged } = {}) {
+  const afterChange = async () => {
+    await cardsChanged();
+    if (onChanged) {
+      onChanged();
+      renderApp();
+    } else await refreshOpenDeck();
+  };
   const bodyOf = (deckId) => ({
     word: card.word,
     reading: card.word_reading || undefined,
@@ -540,10 +551,10 @@ function openCardActions(card) {
   state.sheet = cardActionsSheet({
     card,
     japanese: state.settings.japaneseScript,
-    decks: state.lastDecks.filter((d) => d.own && d.key !== state.deck?.key),
+    decks: state.lastDecks.filter((d) => d.own && d.id !== card.deck_id),
     onEdit: () => {
       state.sheet = undefined;
-      openEditCard(card);
+      openEditCard(card, { onChanged });
     },
     onMove: async (_, deck) => {
       try {
@@ -552,8 +563,7 @@ function openCardActions(card) {
         return failed(err, "Moving");
       }
       state.sheet = undefined;
-      await cardsChanged();
-      await refreshOpenDeck();
+      await afterChange();
       return undefined;
     },
     onDelete: async () => {
@@ -563,8 +573,7 @@ function openCardActions(card) {
         return failed(err, "Deleting");
       }
       state.sheet = undefined;
-      await cardsChanged();
-      await refreshOpenDeck();
+      await afterChange();
       return undefined;
     },
     onClose: closeSheet,
@@ -699,17 +708,24 @@ function openAddCard() {
   renderApp();
 }
 
-/** #85: one of her cards, opened from its deck. Saving or deleting goes back to the deck. */
-function openEditCard(card) {
+/**
+ * #85: one of her cards, opened from its deck or from Search (v69). Saving or
+ * deleting goes back to where she came from.
+ */
+function openEditCard(card, { onChanged } = {}) {
   const back = async () => {
     state.overlay = undefined;
     await cardsChanged();
-    await refreshOpenDeck();
+    if (onChanged) {
+      onChanged();
+      renderApp();
+    } else await refreshOpenDeck();
   };
+  const deck = state.lastDecks.find((d) => d.own && d.id === card.deck_id);
   state.overlay = addWordScreen({
     tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
     card,
-    deck: state.deck ? { id: state.deck.id, name: state.deck.name } : undefined,
+    deck: deck ? { id: deck.id, name: deck.name } : undefined,
     japanese: state.settings.japaneseScript,
     onCancel: closeOverlay,
     onSaved: back,
@@ -744,8 +760,36 @@ function wordsScreen() {
   return browseScreen({
     romaji: state.settings.romaji,
     japanese: state.settings.japaneseScript,
-    // #35: tapping a row files it under one of her own topics.
+    // #35: tapping a Kaishi row files it under one of her own topics.
     onTopics: openCardTopics,
+    // v69: one of hers opens what it opens in its deck. A row carries only
+    // what the list shows, so the card comes from the phone, where it has its
+    // sentence: an edit from the row would have saved the card without it.
+    onOwnCard: async (row, reload) => {
+      if (state.lastDecks.length === 0) await deckList().catch(() => {});
+      const cached = async () => (await loadDeck().catch(() => new Map())).get(row.id);
+      // Written on another phone since this one last synced: fetch it first.
+      let card = await cached();
+      if (!card) {
+        await syncDeck().catch(() => {});
+        card = await cached();
+      }
+      if (card) return openCardActions(card, { onChanged: reload });
+      // Not on this phone and no way to fetch it: say so, rather than a tap
+      // that does nothing — which is what this replaced.
+      state.sheet = el(
+        "div.sheet-scrim.card-actions",
+        { onclick: (e) => e.target === e.currentTarget && closeSheet() },
+        el(
+          "div.sheet",
+          { role: "dialog" },
+          el("h2.sheet-title", { text: row.word_meaning ?? "" }),
+          el("p.sheet-body", { text: "This card is not on this phone yet. Connect to the internet once, then try again." }),
+          el("div.sheet-actions", {}, el("button.btn.solid", { type: "button", text: "OK", onclick: closeSheet })),
+        ),
+      );
+      renderApp();
+    },
   });
 }
 

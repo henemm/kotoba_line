@@ -98,6 +98,68 @@ function normalizeMora(mora) {
   return [...mora].map(normalizeChar).join("");
 }
 
+/**
+ * Latin text reduced to what a search compares (v69): lower case, a macron
+ * written out as the vowel twice (ō → oo, as the app writes it), apostrophes
+ * and other accents dropped, anything else that is not a–z a single space.
+ * Japanese script folds to nothing — it is searched as it is written.
+ */
+export function foldLatin(text) {
+  return (text ?? "")
+    .normalize("NFD")
+    .toLowerCase()
+    .replace(/([aeiou])̄/g, "$1$1")
+    .replace(/['’̀-ͯ]/g, "")
+    .replace(/[^a-z]+/g, " ")
+    .trim();
+}
+
+/**
+ * A long vowel written short: "ookii" → "okii", so "okii" finds "Ōkii". Not
+ * ii, which is mostly two sounds she hears (ii, kawaii, oishii), and not
+ * ou → o: "kou" would then find every "ko".
+ */
+const shortVowels = (key) => key.replace(/([aeou])\1+/g, "$1");
+
+/**
+ * A search as romaji, or undefined when it is not one. "fuß" is German: with
+ * its ß folded away it would be "fu" and find fukuro and furui.
+ *
+ * The search keeps its doubled vowels — only a card's keys get a short form —
+ * or the German "Tee" would be "te" and find every word that starts with it.
+ */
+export function romajiQuery(q) {
+  const plain = (q ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (!/^[a-z\s'’.,!?-]+$/.test(plain)) return undefined;
+  return foldLatin(q) || undefined;
+}
+
+/**
+ * Everything a card can be found by in romaji (v69): " key| key| key|", one
+ * key per way of writing it. A search matches where a word starts (" eki"),
+ * so "eki" finds 駅 and not dekiru or teki; " eki|" is the whole key, which a
+ * list puts first.
+ *
+ * Searched by the server (`browseCards`) and on the phone (`matchesQuery`)
+ * from the same two fields, so the two searches cannot disagree. Reported by
+ * Henning: with the script off the app shows "kore" and "naru", and searching
+ * either found nothing — the search knew only これ and なる. 212 of the 551
+ * cards from the Noji lists were like that, the ones the import matched to a
+ * Kaishi recording (measured 2026-09-14).
+ *
+ * The keys: the reading, whole and each of its alternatives (なに・なん), and
+ * the word itself for a card she wrote in romaji ("Ōkii") — each also with
+ * its long vowels short.
+ */
+export function searchRomaji(word, reading) {
+  const kana = reading ?? word ?? "";
+  const keys = [toRomaji(kana), ...(kana.includes("・") ? kana.split("・").map(toRomaji) : []), word]
+    .map(foldLatin)
+    .filter(Boolean)
+    .flatMap((k) => [k, shortVowels(k)]);
+  return [...new Set(keys)].map((k) => ` ${k}|`).join("");
+}
+
 export function toRomaji(kana) {
   if (!kana) return undefined;
 

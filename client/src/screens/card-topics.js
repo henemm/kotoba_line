@@ -1,4 +1,5 @@
 import { OfflineError, api } from "../api.js";
+import { say } from "../audio.js";
 import { showsScript, shownWord } from "../script.js";
 import { el, render } from "../ui/dom.js";
 
@@ -56,10 +57,23 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
           el(
             "span.topics-title",
             {},
+            // v69: which deck the card is in. "From the deck" above its topic
+            // read as the deck's name (Henning, 2026-09-14).
+            el("span.topics-deck-name", { text: card.deck_name ?? "Kaishi" }),
             // #135
-            el(showsScript(card, japanese) ? "span.jp" : "span", { text: shownWord(card, japanese) }),
+            el(showsScript(card, japanese) ? "span.topics-word.jp" : "span.topics-word", { text: shownWord(card, japanese) }),
             el("span.topics-gloss", { text: card.word_meaning ?? "" }),
           ),
+          // v69: something to do with a Kaishi word found in Search — hear it.
+          // Only its recording: this sheet never falls back to speech.
+          card.word_audio
+            ? el("button.topics-hear", {
+                type: "button",
+                "aria-label": `Hear ${shownWord(card, japanese)}`,
+                text: "♪",
+                onclick: () => say(undefined, card.word_audio),
+              })
+            : null,
           el("button.topics-close", {
             type: "button",
             "aria-label": "Close",
@@ -71,7 +85,7 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
           ? el(
               "div.topics-deck",
               {},
-              el("span.set-label", { text: "From the deck" }),
+              el("span.set-label", { text: deckTags.length === 1 ? "Topic" : "Topics" }),
               el(
                 "div.chips",
                 {},

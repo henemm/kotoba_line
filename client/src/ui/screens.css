@@ -3566,10 +3566,30 @@
   gap: 3px;
   min-width: 0;
 }
-.topics-title .jp {
+/* v69: the romaji word as large as the Japanese one — it was body text. */
+.topics-title .topics-word {
   font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.topics-deck-name {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
+.topics-hear {
+  flex: none;
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-hi);
+  color: var(--ink);
+  font-size: 18px;
 }
 .topics-gloss {
   font-size: 13px;
@@ -3595,6 +3615,12 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
+}
+/* The sheet has its own padding; the practise tab's gutter indented the
+   chips under their label (Henning's screenshot, 2026-09-14). */
+.topics-deck .chips,
+.topics-mine .chips {
+  padding: 0;
 }
 
 /* The deck's own tags, shown and not editable. Without them the card looks
