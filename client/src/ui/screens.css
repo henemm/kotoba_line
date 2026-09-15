@@ -490,47 +490,6 @@
   color: var(--ink-muted);
 }
 
-/* The second of the three questions, laid out like the first (.set-block). */
-.practise .length-block {
-  padding: 40px var(--gutter) 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.practise .length {
-  display: flex;
-  gap: 8px;
-}
-.practise .length button {
-  flex: 1;
-  height: 56px;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 2px solid transparent;
-  color: var(--ink-muted);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-.practise .length button[aria-pressed="true"] {
-  background: var(--surface-hi);
-  border-color: var(--ink);
-  color: var(--ink);
-}
-.practise .length-word {
-  font: 700 17px/1.1 var(--jp);
-}
-/* #135: "A little" in ちょっと's place. */
-.practise .length-word.latin {
-  font: 700 16px/1.1 var(--ui);
-}
-.practise .length-count {
-  font: 400 12px/1 var(--ui);
-  color: var(--ink-muted);
-}
-
 /* The third question, with the day's due count beside it rather than a
    sentence of its own above the lines. */
 .practise .lines-head {
@@ -742,8 +701,12 @@
 .deck-page .offer .copy {
   min-width: 0;
 }
-.deck-page .length-block {
-  padding-top: 28px;
+.deck-max-note {
+  margin: 14px var(--gutter) 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  text-align: center;
 }
 
 .deck-start-block {
@@ -767,31 +730,57 @@
   flex-direction: column;
   gap: 12px;
 }
+/* v74: one button each, apart, with a ▶ — not rows of a list with a ›, which
+   read as links to another page (Henning: "die Übungen müssen tatsächlich
+   Buttons sein"). The outline and shadow lift them off the page as the one
+   solid start button (.deck-start) is lifted; solid black five times over
+   would shout. */
 .deck-ways-list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--night);
+  gap: 10px;
 }
 .deck-way {
-  padding: 16px 18px;
+  min-height: 64px;
+  padding: 12px 12px 12px 20px;
+  border-radius: 18px;
+  border: 1.5px solid var(--surface-hi);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.deck-way .copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 2px;
 }
 .deck-way .name {
-  flex: 1;
   font-size: 18px;
   font-weight: 700;
 }
 .deck-way .name.jp {
-  flex: none;
   font-family: var(--jp);
   font-size: 20px;
 }
 .deck-way .en {
-  flex: 1;
   font-size: 14px;
   color: var(--ink-muted);
+}
+.deck-way .play {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--night);
+  display: grid;
+  place-items: center;
+  /* ▶ sits left of centre in its box; nudged so it looks centred. */
+  padding-left: 3px;
+  font-size: 14px;
+  line-height: 1;
 }
 .deck-more {
   margin: 14px var(--gutter) 0;
@@ -803,13 +792,13 @@
   font-weight: 600;
 }
 
-/* #150: a deck's page on a 700pt page (base.css). "cards for today" and "How
-   long" side by side, then everything else under them at full width, in the
-   same order as on the phone. Grid rather than a wrapper in practise.js, so
-   the phone's page is the same markup and provably unchanged. Only a page
-   with its numbers: an empty deck and the loading state keep the column.
-   The three lengths stand one above the other, as tall together as the
-   number beside them, instead of three squeezed buttons in half a page. */
+/* #150: a deck's page on a 700pt page (base.css). "cards for today" and the
+   ways to start side by side — v74: the start on the right, where the page
+   ends when it is read left to right; it was "How long" until that went —
+   then everything else under them at full width, in the same order as on the
+   phone. Grid rather than a wrapper in practise.js, so the phone's page is
+   the same markup. Only a page with its numbers: an empty deck and the
+   loading state keep the column. */
 @media (min-width: 700px) {
   .deck-page:has(> .deck-today) {
     display: grid;
@@ -828,22 +817,14 @@
     /* Level with the buttons, under the label beside it. */
     margin: 23px 10px 0 var(--gutter);
   }
-  .deck-page > .length-block {
+  .deck-page > .deck-ways,
+  .deck-page > .deck-start-block {
     grid-column: 2;
     grid-row: 2;
     padding: 0 var(--gutter) 0 10px;
   }
-  .deck-page .length {
-    flex: 1;
-    flex-direction: column;
-  }
-  .deck-page .length button {
-    flex: 1;
-    height: auto;
-    min-height: 56px;
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 0 18px;
+  .deck-page > .deck-start-block {
+    align-self: center;
   }
   .deck-page .due-slot:empty {
     display: none;
@@ -851,12 +832,16 @@
 }
 
 /* #151: a deck of hers beside the sidebar. Two columns that scroll on their
-   own: what to practise on the left, "Cards in this deck" with its search on
-   the right, and the name and Options across the top. `.split` is set by
-   practise.js only with the sidebar on screen and a card list to show;
-   Kaishi's page stays the one-column page above. */
+   own, and the name and Options across the top. v74: "Cards in this deck"
+   with its search next to the sidebar, what to practise on the right — read
+   left to right it goes deck, its cards, start (Henning: the list on the
+   right looked like where to start, and a tap there only edits a word).
+   `.split` is set by practise.js only with the sidebar on screen and a card
+   list to show; Kaishi's page stays the one-column page above.
+   `position: relative` holds "+ Add card" to the card column (below). */
 .deck-page.split {
   --gutter: 28px;
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
@@ -878,16 +863,20 @@
 .deck-main {
   display: flex;
   flex-direction: column;
-  padding: 0 12px 32px;
+  padding: 0 12px 32px 0;
 }
 .deck-side {
-  padding: 0 12px 0 0;
+  padding: 0 0 0 12px;
 }
 .deck-side .deck-cards {
   padding-top: 0;
 }
 #app:has(> nav.sidebar) .deck-add-card {
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+/* Over the cards it adds to, not over the buttons that start a session. */
+.deck-page.split > .deck-add-card {
+  right: calc(50% + var(--gutter));
 }
 
 /* A deck's options (#137): top right on its page, where Noji keeps a deck's
@@ -981,6 +970,17 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink-muted);
+}
+.options-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+/* "No limit" beside four numbers, on a phone. */
+.deck-options .choice button {
+  padding: 0 4px;
+  white-space: nowrap;
 }
 
 /* The tab scrolls, and is spaced to read rather than to fit (Henning,

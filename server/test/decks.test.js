@@ -69,8 +69,13 @@ describe("migration 016: her lists become decks", () => {
       ],
       "her settings follow the deck, and settings for a list that is gone are dropped",
     );
-    assert.deepEqual(deckSettings(db, her.id, `deck:${idOf(her.id, "100 vokabeln")}`), { hiddenModes: ["speak", "type"], newPerDay: 15 });
-    assert.deepEqual(deckSettings(db, her.id, "list:100 vokabeln"), { hiddenModes: ["speak", "type"], newPerDay: 15 }, "and the old key reads the same row");
+    // The code reads the schema as it is now, so the migrations after 016 run first.
+    for (const file of readdirSync(migrations).filter((f) => f.endsWith(".sql") && f > "016_decks.sql").sort()) {
+      db.exec(readFileSync(new URL(file, migrations), "utf8"));
+    }
+    const expected = { hiddenModes: ["speak", "type"], newPerDay: 15, maxPerDay: null };
+    assert.deepEqual(deckSettings(db, her.id, `deck:${idOf(her.id, "100 vokabeln")}`), expected);
+    assert.deepEqual(deckSettings(db, her.id, "list:100 vokabeln"), expected, "and the old key reads the same row");
   });
 });
 

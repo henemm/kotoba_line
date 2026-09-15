@@ -21,6 +21,7 @@ import { describe, it } from "node:test";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = readFileSync(join(__dirname, "..", "src", "app.js"), "utf8");
 const practise = readFileSync(join(__dirname, "..", "src", "screens", "practise.js"), "utf8");
+const deckOptions = readFileSync(join(__dirname, "..", "src", "screens", "deck-options.js"), "utf8");
 const css = readFileSync(join(__dirname, "..", "src", "ui", "screens.css"), "utf8");
 
 describe("the practise tab keeps its place (#118)", () => {
@@ -62,25 +63,25 @@ describe("the Words tab (#123)", () => {
     assert.doesNotMatch(browse, /"Add a word"|onAddWord/);
   });
 
-  it("leaves session length to the practise tab alone", () => {
+  // v74 (#123 reversed): no "How long" anywhere. A session is the deck's cards
+  // for today, as in Noji, and a deck's Options hold "Max cards per day".
+  it("asks no session length, in Settings or on the deck page", () => {
     assert.doesNotMatch(settings, /Session length|sessionLength/);
-    assert.match(practise, /SESSION_LENGTHS/);
+    assert.doesNotMatch(practise, /SESSION_LENGTHS|lengthPicker|sessionLength|text: "How long"/);
+    assert.match(deckOptions, /"Max cards per day"/);
   });
 
-  // Reads the source. Moving the picker here lost the "Session length" label
-  // it had in Settings, and three bare buttons told nobody what they were for.
-  // The browser run for v52 measured the reordered tab at 394 × 852 with the
-  // Carry-on card showing: it does not scroll, last element 697, fade 740.
-  // #137: the deck is chosen on the list before this page opens, so the page
-  // asks how long and how, and what is left to narrow comes last.
-  it("shows the deck and its cards for today, then asks how long and how", () => {
-    assert.match(practise, /"aria-labelledby": "length-label"/);
-    const order = ["header(),", "      today,\n", "lengthPicker(),", "linesBlock(),", "setLine(),", "soundNote(),"].map((call) =>
+  // Reads the source; the order on screen was measured in WebKit for v74
+  // (PR description). #137: the deck is chosen on the list before this page
+  // opens, so the page asks only how to practise, and what is left to narrow
+  // comes last.
+  it("shows the deck and its cards for today, then the ways to start", () => {
+    const order = ["header(),", "      today,\n", "linesBlock(),", "setLine(),", "soundNote(),"].map((call) =>
       practise.indexOf(call),
     );
     assert.ok(order.every((at) => at > 0), "every block is rendered");
     assert.deepEqual([...order].sort((a, b) => a - b), order);
-    for (const heading of ["How long", "Practise by", "More options"]) {
+    for (const heading of ["Start practising", "More options"]) {
       assert.match(practise, new RegExp(`"${heading}"`));
     }
   });

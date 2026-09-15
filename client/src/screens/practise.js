@@ -7,33 +7,11 @@ import { el, num, render } from "../ui/dom.js";
 const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
 
 /**
- * 60 is MAX_SESSION_LENGTH on the server.
- *
- * The only place session length is set (#123). Settings offered the same
- * three and wrote the same stored value, which read as two different
- * settings; it is a choice made when she sits down to practise, so it lives
- * where she does that.
- *
- * The question she is actually answering is how much time she has, so the
- * buttons say that in words, and the count stays underneath so the word never
- * promises more than it does. No minutes: there is not yet enough of her own
- * practice to say how long a card takes (measured 2026-09-14: no answers on
- * her account, nine on Henning's, from 9 to 98 seconds apart), and a guess
- * would be wrong on the first 書く session. The last is "up to 60" rather than
- * "all", because on a day with more than 60 due it is not all.
- *
- * The words are Japanese, drawn like the lines below them: the modes are
- * 選ぶ and 聞く with English underneath, and "Quick / Normal / Long" read
- * as a form (Henning: "etwas langweilig"). All three are words she is
- * learning — ちょっと is rank 93 in the deck, 普通 293, いっぱい 683 — so the
- * choice is also a small reading exercise. ふつう is written in kana, as she
- * would read it before the kanji. `en` is what VoiceOver says.
+ * There is no "How long" any more (v74, #123 reversed). It stood beside "14
+ * cards for today" as "Normal · 20 cards" — two numbers that disagreed, and
+ * Charlotte found it confusing. As in Noji, a session is the day's cards; a
+ * deck that should ask fewer has "Max cards per day" in its Options.
  */
-const SESSION_LENGTHS = [
-  { value: 10, label: "ちょっと", en: "A little", detail: "10 cards" },
-  { value: 20, label: "ふつう", en: "Normal", detail: "20 cards" },
-  { value: 60, label: "いっぱい", en: "A lot", detail: "up to 60" },
-];
 
 /**
  * What the one button on a deck page says (#137), when only one way of
@@ -56,9 +34,10 @@ function startLabel(mode) {
  * A deck's page (#137) — designs 10 and 15, inside one deck.
  *
  * Reached from the deck list (decks.js), the way Noji's deck page is: the
- * cards for today as one large number, what they are made of, then how long
- * and how to practise. With one way of practising switched on, that is one
- * button, like Noji's "Karten lernen"; with several, one plain row each. The
+ * cards for today as one large number, what they are made of, then how to
+ * practise. With one way of practising switched on, that is one button, like
+ * Noji's "Karten lernen"; with several, one button each (v74: they were rows
+ * with a ›, which read as links to another page, not as "start"). The
  * metro-line stations are gone from here — Henning: the red circles "kamen
  * nicht gut an" — and so is the rail between them.
  *
@@ -73,8 +52,6 @@ export function practiseScreen({
   onDrillTopic,
   onChooseSet,
   filters = {},
-  sessionLength,
-  onSessionLength,
   readAloud = true,
   onReadAloud,
   // #106: `{ due, today, outlook, stats }` from `/api/queue` and `/api/stats`,
@@ -93,8 +70,9 @@ export function practiseScreen({
   cardsBlock,
   onAddCard,
   // #151: beside the sidebar, a deck with cards is two columns that scroll on
-  // their own — what to practise on the left, its cards on the right — and
-  // `columnsScroll` is where the two were, for the same reason as `scrollTop`.
+  // their own, and `columnsScroll` is where the two were, for the same reason
+  // as `scrollTop`. v74: its cards in the middle, what to practise on the
+  // right — read left to right, the page ends where a session starts.
   split = false,
   columnsScroll = { main: 0, side: 0 },
 }) {
@@ -125,16 +103,15 @@ export function practiseScreen({
       return;
     }
     const soon = await answerSoon(numbers);
-    // What was chosen on the deck list comes first, then the two questions
-    // in the order she answers them — how long, how — and the answer to the
-    // last is the tap that starts the session. What is left to narrow comes
-    // after it, because on most days nothing is (#137).
+    // What was chosen on the deck list comes first, then the one question —
+    // how to practise — and the answer is the tap that starts the session.
+    // What is left to narrow comes after it, because on most days nothing is
+    // (#137).
     render(
       root,
       header(),
       today,
       top,
-      lengthPicker(),
       linesBlock(),
       setLine(),
       soundNote(),
@@ -142,13 +119,14 @@ export function practiseScreen({
       addButton(),
     );
     if (split && cardsBlock) {
-      // #151: the same blocks in the same order, in two columns — everything
-      // between the header and the cards on the left, the cards on the right.
+      // #151: the same blocks in two columns. v74: the cards first, beside the
+      // sidebar, and everything between the header and the cards after them,
+      // on the right. The add button stays with the cards (screens.css).
       // Kaishi has no card list (v69), so its page stays one column.
       const [head, ...rest] = root.children;
       const add = root.querySelector(":scope > .deck-add-card");
       const main = el("div.deck-main", {}, rest.slice(0, rest.indexOf(cardsBlock)));
-      root.replaceChildren(head, main, el("div.deck-side", {}, cardsBlock), ...(add ? [add] : []));
+      root.replaceChildren(head, el("div.deck-side", {}, cardsBlock), main, ...(add ? [add] : []));
     }
     fill(soon);
     // Once the rows are in: before, there is nothing to scroll and it clamps
@@ -177,7 +155,7 @@ export function practiseScreen({
       render(today, el("div.deck-today-state", { text: outcome ? "Couldn't check" : "Checking…" }));
       return;
     }
-    const { due, today: counts, outlook, stats } = outcome.value;
+    const { due, today: counts, outlook, stats, maxReached } = outcome.value;
     const total = counts?.total ?? due;
     render(
       today,
@@ -196,7 +174,19 @@ export function practiseScreen({
     // arriving late moved the lines out from under a thumb on its way to one
     // (measured in WebKit, 365 px). They wait for the next build of the page.
     if (late) return;
-    render(top, ...(total > 0 ? [] : nothingDue(outlook, stats)));
+    render(top, ...(total > 0 ? [] : [maxNote(maxReached), ...nothingDue(outlook, stats)]));
+  }
+
+  /**
+   * Migration 017: with cards still due, a zero is the deck's "Max cards per
+   * day", not a finished deck — and the page says where that was set, so a
+   * limit she forgot about does not look like a fault.
+   */
+  function maxNote(reached) {
+    if (!reached) return null;
+    return el("p.deck-max-note", {
+      text: "That's today's maximum for this deck. You can change it in Options.",
+    });
   }
 
   /**
@@ -318,8 +308,10 @@ export function practiseScreen({
 
   /**
    * How to practise (#137). One way switched on: one button that says what it
-   * does, like Noji's "Karten lernen". Several: a plain row each. A session
-   * she left in a line is still offered on the deck list.
+   * does, like Noji's "Karten lernen". Several: a button each, with ▶ where
+   * the rows had ›, because a tap starts the session rather than opening a
+   * page (v74, Henning: "die Übungen müssen tatsächlich Buttons sein"). A
+   * session she left in a line is still offered on the deck list.
    */
   function linesBlock() {
     // A way the deck cannot do is off whatever was stored (Deck options).
@@ -336,7 +328,7 @@ export function practiseScreen({
     return el(
       "div.deck-ways",
       {},
-      el("span.set-label", { text: "Practise by" }),
+      el("span.set-label", { text: "Start practising" }),
       el(
         "div.deck-ways-list",
         {},
@@ -344,9 +336,13 @@ export function practiseScreen({
           el(
             "button.deck-way",
             { type: "button", onclick: () => onStart({ mode: mode.key }) },
-            el(japanese ? "span.name.jp" : "span.name", { text: modeName(mode, japanese) }),
-            japanese ? el("span.en", { text: mode.en }) : null,
-            el("span.chevron", { "aria-hidden": "true", text: "›" }),
+            el(
+              "span.copy",
+              {},
+              el(japanese ? "span.name.jp" : "span.name", { text: modeName(mode, japanese) }),
+              japanese ? el("span.en", { text: mode.en }) : null,
+            ),
+            el("span.play", { "aria-hidden": "true", text: "▶" }),
           ),
         ),
       ),
@@ -354,58 +350,11 @@ export function practiseScreen({
   }
 
   /**
-   * #111: every redraw goes into this one `picker`, the one on screen. It used
-   * to redraw by building a whole second picker and moving its buttons across
-   * — and those buttons' own taps then redrew the second picker, which was
-   * never on screen. So only the first tap moved the highlight; every later
-   * one was saved (measured: a PATCH per tap) and showed nothing, until a tab
-   * change rebuilt the screen.
-   *
-   * The label came back after #123: in Settings the row sat under "Session
-   * length", and moved here it was three bare buttons that neither she nor
-   * Henning could read. It asks the question the way "What to practise" does,
-   * in her words rather than the setting's name.
-   */
-  function lengthPicker() {
-    const picker = el("div.length", { role: "group", "aria-labelledby": "length-label" });
-    const draw = () =>
-      render(
-        picker,
-        SESSION_LENGTHS.map(({ value, label, en, detail }) =>
-          el(
-            "button",
-            {
-              type: "button",
-              "aria-label": `${en}, ${detail}`,
-              "aria-pressed": String(value === sessionLength),
-              onclick: () => {
-                sessionLength = value;
-                onSessionLength?.(value);
-                draw();
-              },
-            },
-            japanese
-              ? el("span.length-word", { lang: "ja", text: label })
-              : el("span.length-word.latin", { text: en }),
-            el("span.length-count", { text: detail }),
-          ),
-        ),
-      );
-    draw();
-    return el(
-      "div.length-block",
-      {},
-      el("span.set-label", { id: "length-label", text: "How long" }),
-      picker,
-    );
-  }
-
-  /**
-   * A status, not a fourth question: it sits apart below the lines, smaller,
-   * with the one thing she might want to do about it on a quiet train right
-   * beside it. The switch writes the same stored setting as Settings → Read
-   * cards aloud, so the two never disagree. Redrawn in place, for the reason
-   * `lengthPicker` gives.
+   * A status, not a question: it sits apart below the lines, smaller, with
+   * the one thing she might want to do about it on a quiet train right beside
+   * it. The switch writes the same stored setting as Settings → Read cards
+   * aloud, so the two never disagree. Redrawn in place (#111): a redraw that
+   * builds a second note leaves the switch's later taps drawing off screen.
    *
    * The line has to follow the setting: promising sound that is switched off
    * is the kind of small lie that makes the rest look unreliable.

@@ -21,7 +21,7 @@ import {
 } from "../queue.js";
 import { timeZoneOf } from "../day.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
-import { updateDeckSettings } from "../deck-settings.js";
+import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, updateDeckSettings } from "../deck-settings.js";
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 
@@ -223,6 +223,8 @@ export default async function deckRoutes(app) {
               maxItems: MODE_KEYS.length - 1,
             },
             newPerDay: { type: "integer", minimum: NEW_PER_DAY_MIN, maximum: NEW_PER_DAY_MAX },
+            // Migration 017: null is "no limit".
+            maxPerDay: { type: ["integer", "null"], minimum: MAX_PER_DAY_MIN, maximum: MAX_PER_DAY_MAX },
           },
         },
       },

@@ -43,6 +43,14 @@ const TABS = [
 const app = document.getElementById("app");
 
 /**
+ * The most one sitting asks — MAX_SESSION_LENGTH on the server. Since v74 there
+ * is no "How long" (#123, reversed): a session is the deck's cards for today,
+ * as in Noji, which the server keeps to the deck's "Max cards per day" if she
+ * set one. She can stop at any time, and Carry on keeps the rest.
+ */
+const SESSION_MAX = 60;
+
+/**
  * iPad package B (#151): a window this wide shows the tabs as a sidebar, with
  * her decks under them, and the tab's screen beside it — Apple's own pattern
  * on an iPad (Mail, Notes, Files). Henning's words: "Auswahl des Decks links,
@@ -103,8 +111,8 @@ const state = {
   // 49: this device has no deck yet, so the first thing after signing in is
   // getting one.
   firstRun: false,
-  // The server's copy of the settings, so the session length and the sound
-  // note agree with the Settings screen on every device. Held here rather
+  // The server's copy of the settings, so the sound note and the script
+  // agree with the Settings screen on every device. Held here rather
   // than fetched per screen because the practice tab needs it before the
   // Settings tab has ever been opened.
   //
@@ -328,20 +336,13 @@ function currentScreen() {
       onBack: wide.matches ? undefined : closeDeck,
       split: wide.matches,
       onOptions: openDeckOptions,
-      sessionLength: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
       japanese: state.settings.japaneseScript,
       hiddenModes: state.deck?.settings?.hiddenModes ?? [],
       cardsBlock: deckCards(),
       onAddCard: state.deck?.own ? openAddCard : undefined,
-      onSessionLength: (len) => {
-        keepSettings({ ...state.settings, sessionLength: len });
-        // Best effort: the picker is a shortcut into the same stored setting,
-        // and a session started offline should not be blocked by it.
-        api.updateSettings({ sessionLength: len }).catch(() => {});
-      },
-      // The same best effort for the sound switch under the lines: muting on
-      // a train with no signal should still mute this session.
+      // Best effort for the sound switch under the lines: muting on a train
+      // with no signal should still mute this session.
       onReadAloud: (on) => {
         keepSettings({ ...state.settings, readAloud: on });
         api.updateSettings({ readAloud: on }).catch(() => {});
@@ -436,7 +437,7 @@ function practiseNumbers() {
       // #86: the joker notice is decided from these same numbers, so they are
       // not fetched twice.
       considerJokerNotice(stats);
-      return { due: queue.cardIds.length, today: queue.today, outlook: queue.outlook, stats };
+      return { due: queue.cardIds.length, today: queue.today, outlook: queue.outlook, maxReached: queue.maxReached, stats };
     }),
   };
   entry.promise.catch(() => {
@@ -508,7 +509,13 @@ function openDeckOptions() {
     onChange: (patch, settings) => {
       state.deck = { ...state.deck, settings };
       numbersChanged();
-      api.updateDeckSettings(state.deck.key, { hiddenModes: settings.hiddenModes, newPerDay: settings.newPerDay }).catch(() => {});
+      api
+        .updateDeckSettings(state.deck.key, {
+          hiddenModes: settings.hiddenModes,
+          newPerDay: settings.newPerDay,
+          maxPerDay: settings.maxPerDay ?? null,
+        })
+        .catch(() => {});
     },
     onRename: state.deck.own ? openRenameDeck : undefined,
     onDelete: state.deck.own ? deleteOpenDeck : undefined,
@@ -742,7 +749,7 @@ function openSheet() {
     filters: state.filters,
     topics: state.topics,
     showTopics: state.deck?.key === "kaishi",
-    sessionLength: state.settings.sessionLength,
+    sessionLength: SESSION_MAX,
     // #120: what the sheet holds is the set, Start or no Start. Written here
     // on every tap rather than on close, because loadTopics() below rebuilds
     // the sheet from state.filters — a tap made before the topics arrived
@@ -1149,7 +1156,7 @@ function renderApp() {
       chosenLabel: isDefault(state.session.filters)
         ? undefined
         : activeLabel(state.session.filters),
-      limit: state.settings.sessionLength,
+      limit: SESSION_MAX,
       readAloud: state.settings.readAloud,
       // #21: off by default, and read here rather than inside the session so
       // the setting is in one place with the others.
