@@ -19,9 +19,11 @@ DATA_DIR=${DATA_DIR:-/srv/kotoba/data}
 MEDIA_DIR=${MEDIA_DIR:-/srv/kotoba/media}
 DB=${DB_FILE:-$DATA_DIR/kotoba.sqlite}
 
+# warn and bad take the step as $1 and the sentence as $2. Printing "$*" put the
+# step in front of every sentence that already ends in "— run: <step>".
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
-warn() { printf '  \033[33m!\033[0m %s\n' "$*"; NEEDED+=("$1"); }
-bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; NEEDED+=("$1"); }
+warn() { printf '  \033[33m!\033[0m %s\n' "${2-$1}"; NEEDED+=("$1"); }
+bad()  { printf '  \033[31m✗\033[0m %s\n' "${2-$1}"; NEEDED+=("$1"); }
 head_() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
 NEEDED=()
@@ -82,22 +84,88 @@ else
   bad "ops/deploy.sh" "nothing deployed at $APP_DIR yet — run: ops/deploy.sh"
 fi
 
-# v69: search folds romaji with client/src/romaji.js on the phone and, from a
-# copy baked into the API image, on the server. `deploy.sh --client` renews only
-# the first, and two different foldings give two different searches without an
-# error anywhere — so compare what the running API has with the repository.
+# ── The running API vs the repository ───────────────────────────────
+# #162: this used to compare only the shell's VERSION. v76 changed
+# server/src/queue.js as well, and the one step printed was `--client` — which
+# would have put a v76 client in front of a v75 API, and the deck page would
+# have shown no numbers, because the client reads a missing `progress` as
+# offline. So read the code out of the running container and compare it file
+# by file, rather than trusting a label or a hash stamped in at build time:
+# those are only true from the next build on, and a build from a feature
+# branch or by hand would stamp something the checkout cannot vouch for.
+#
+# What is compared mirrors the runtime stage of ops/Dockerfile:
+#   server/package.json, src/, migrations/, bin/   → /app
+#   client/src/romaji.js, pitch.js                 → /client/src
+# v69: search folds romaji with the client's romaji.js on the phone and, from
+# that copy, on the server; two different foldings give two different searches
+# without an error anywhere. Everything under /app and /client is listed on the
+# container's side, so a COPY added there and not here shows up as a difference
+# instead of being skipped.
+#
+# The dependencies are compared by version, from the list npm writes into
+# node_modules when it installs, against server/package-lock.json. The compose
+# file is compared by the hash compose itself labels the container with, which
+# does not depend on the checkout's path. Not compared: ops/Dockerfile itself —
+# the image does not carry it, so a change to FROM, ENV or CMD needs saying.
+head_ "API"
 COMPOSE=${COMPOSE:-docker compose -f ops/docker-compose.yml}
-for shared in romaji.js pitch.js; do
-  if in_api=$($COMPOSE exec -T api cat "/client/src/$shared" 2>/dev/null); then
-    if [[ $in_api == "$(cat "client/src/$shared")" ]]; then
-      ok "the API searches with the repository's $shared"
+# One path per line as "path hash", paths as in the repository.
+as_repo_paths() { awk '{ p = $2; if (p !~ /^client\//) p = "server/" p; print p, $1 }' | sort; }
+
+if api_sums=$($COMPOSE exec -T api sh -c \
+    'cd /app && find . -path ./node_modules -prune -o -type f -exec sha256sum {} + &&
+     cd / && find client -type f ! -name package.json -exec sha256sum {} +' 2>/dev/null); then
+  api_sums=$(sed 's#  \./#  #' <<<"$api_sums" | as_repo_paths)
+  repo_sums=$({ (cd server && find package.json src migrations bin -type f -exec sha256sum {} +)
+                sha256sum client/src/romaji.js client/src/pitch.js; } | as_repo_paths)
+  # A file that is new, gone or changed appears on one side only.
+  differ=$(comm -3 <(echo "$repo_sums") <(echo "$api_sums") | awk '{ print $1 }' | sort -u)
+  if [[ -z $differ ]]; then
+    ok "the API runs the repository's code ($(wc -l <<<"$repo_sums" | tr -d ' ') files)"
+  else
+    warn "ops/deploy.sh" "the API runs different code than the repository — run: ops/deploy.sh (not --client)"
+    head -n 5 <<<"$differ" | sed 's/^/      differs: /'
+    n=$(wc -l <<<"$differ" | tr -d ' ')
+    [[ $n -gt 5 ]] && printf '      … and %d more\n' $((n - 5))
+  fi
+
+  if deps=$($COMPOSE exec -T api cat /app/node_modules/.package-lock.json 2>/dev/null |
+      node -e '
+        const fs = require("fs");
+        const installed = JSON.parse(fs.readFileSync(0, "utf8")).packages;
+        const locked = JSON.parse(fs.readFileSync("server/package-lock.json", "utf8")).packages;
+        const differ = [];
+        for (const [path, p] of Object.entries(installed)) {
+          if (locked[path]?.version !== p.version) differ.push(path);
+        }
+        // --omit=dev leaves out dev packages, and optional ones exist per
+        // platform: the musl build of argon2 is installed, the Windows one not.
+        for (const [path, p] of Object.entries(locked)) {
+          if (path && !p.dev && !p.optional && !installed[path]) differ.push(path);
+        }
+        console.log(differ.length ? differ.join(" ") : `ok ${Object.keys(installed).length}`);
+      ' 2>/dev/null); then
+    if [[ $deps == ok* ]]; then
+      ok "the API has the locked dependencies (${deps#ok } packages)"
     else
-      warn "ops/deploy.sh" "the API has an older client/src/$shared than the repository — run: ops/deploy.sh (not --client)"
+      warn "ops/deploy.sh" "the API's dependencies differ from server/package-lock.json (${deps%% *}…) — run: ops/deploy.sh"
     fi
   else
-    warn "ops/deploy.sh" "the API has no /client/src/$shared, so its search cannot read romaji — run: ops/deploy.sh"
+    warn "ops/deploy.sh" "could not read the API's installed dependencies — run: ops/deploy.sh"
   fi
-done
+
+  running_config=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.config-hash"}}' \
+    "$($COMPOSE ps -q api 2>/dev/null)" 2>/dev/null)
+  repo_config=$($COMPOSE config --hash api 2>/dev/null | awk '{ print $2 }')
+  if [[ -n $repo_config && $running_config == "$repo_config" ]]; then
+    ok "the API container runs with the repository's ops/docker-compose.yml"
+  else
+    warn "ops/deploy.sh" "the API container was started from a different ops/docker-compose.yml — run: ops/deploy.sh"
+  fi
+else
+  warn "ops/deploy.sh" "the API container is not running, so its code cannot be compared — run: ops/deploy.sh"
+fi
 
 # ── The database ────────────────────────────────────────────────────
 head_ "Database"
@@ -304,7 +372,7 @@ fi
 
 printf '  In this order:\n\n'
 step=1
-for cmd in "git pull" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run tag" "chmod"; do
+for cmd in "git pull" "git merge --ff-only origin/main" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run tag" "chmod"; do
   for n in "${NEEDED[@]}"; do
     [[ $n == "$cmd" ]] || continue
     case $cmd in
@@ -322,6 +390,17 @@ for cmd in "git pull" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" 
     step=$((step + 1))
     break
   done
+done
+
+# Every check above compares the server with this checkout. A checkout that is
+# behind matches a server that is behind in the same way, so the steps after
+# catching up are not known yet — say so rather than let the list look whole.
+for n in "${NEEDED[@]}"; do
+  if [[ $n == "git pull" || $n == "git merge --ff-only origin/main" ]]; then
+    printf '\n  This checkout is behind, and everything above was compared with it.\n'
+    printf '  After step 1, run ops/status.sh again: it may need more than this.\n'
+    break
+  fi
 done
 
 cat <<'EOF'
