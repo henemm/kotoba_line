@@ -62,11 +62,10 @@ now corrected — 話す no longer scores what it heard, めくる prints the in
 under each rating, the two sound-absent cards behave as 47 and 48 draw them,
 and the × asks once. What remains is deliberate, and short.
 
-- **The six bars in 43 do not follow the microphone's level.** They are a loop
-  that says "listening" rather than "this loud". `SpeechRecognition` hands over
-  no audio stream, and opening a second one with `getUserMedia` to measure it
-  is unreliable alongside recognition on iOS — the risk is breaking the feature
-  to animate it honestly. Worth revisiting if the API ever exposes a level.
+- **Screens 43–46 are not built** (#155). 話す used to record her answer and
+  quote what speech recognition heard. On her iPad, recording crashed the
+  installed app, so the record button, the listening bars and the transcript
+  are gone. 話す is 42 alone: the meaning, "Antwort zeigen", then two ratings.
 - **Two rows in Settings are deliberately not built** (#20). The per-deck
   switches would be a second way to ask what the choose-set sheet already asks
   per session — Both / Kaishi / Mine — and the more dangerous of the two, since

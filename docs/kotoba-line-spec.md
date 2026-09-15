@@ -308,7 +308,8 @@ words she is actually studying.
 - Speech synthesis requires a user gesture before it will produce sound.
   Trigger a silent utterance on the first tap of the session.
 - `webkitSpeechRecognition` exists in Safari but is unreliable in standalone
-  mode. Feature-detect, and treat the result as feedback, never as grading.
+  mode — on her iPad, recording in 話す crashed the app (#155). The app does
+  not use it: she says the answer aloud to herself and grades herself.
 - Storage can be evicted under pressure. This is survivable because the
   server holds the truth — but it is exactly why the outbox must flush
   eagerly rather than batching for hours.

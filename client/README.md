@@ -270,13 +270,11 @@ above *again* counts as a recall for the strip and the tally, which is what
 FSRS means by it: counting *hard* as wrong would put a card she knew into
 "worth another look".
 
-**話す quotes what it heard; it never scores it** (§7 and screen 44). No tick,
-no colour, no yes/no — and a sentence under the transcript, because a
-transcript on a practice screen reads as a verdict unless something says
-otherwise. The first build tinted it green or red, which is the thing the
-design rules out. A refused or missing microphone is not an error state: the
-record button is simply absent and one sentence says what to do instead, once
-per session.
+**話す does not listen** (#155). Screens 43–46 drew a record button that
+quoted what the phone heard, never scoring it. On her iPad recording crashed
+the app, so it is gone: she says it aloud, shows the answer and grades
+herself. Do not bring speech recognition back without testing it in the
+installed app on the iPad.
 
 **Only めくる shows intervals** (screen 41). Each of its four buttons carries
 the interval FSRS would give — that number is the reason four buttons are worth

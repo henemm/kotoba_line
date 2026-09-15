@@ -1869,87 +1869,6 @@
 .kana-example-meaning {
   color: var(--ink-muted);
 }
-/* 44: once there is a transcript, the prompt steps back so the two are not
-   read as a pair to compare. */
-.meaning.dim {
-  font-size: 20px;
-  color: var(--ink-muted);
-}
-.mic-label {
-  font: 400 12px/1 var(--mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-.mic-note {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--ink-muted);
-  text-wrap: pretty;
-}
-
-/* 44: quoted, never scored. There is deliberately no success or failure
-   colour anywhere in this block — that is the whole point of the screen. */
-.heard {
-  width: 100%;
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.heard-label {
-  font: 400 11px/1 var(--mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-.heard-text {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-.heard-text.empty {
-  color: var(--ink-muted);
-  font-weight: 400;
-}
-
-/* 43: six bars in the mode colour, the only animation here besides level up.
-   They are a loop rather than the microphone's real level — see the note in
-   session.js — so they say "listening", not "this loud". */
-.level-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  height: 34px;
-}
-.level-bars span {
-  width: 5px;
-  height: 34px;
-  border-radius: 3px;
-  background: var(--rail);
-  display: block;
-  transform-origin: bottom;
-  animation: level 900ms ease-in-out infinite alternate;
-}
-@keyframes level {
-  from {
-    transform: scaleY(0.26);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .level-bars span {
-    animation: none;
-    transform: scaleY(0.6);
-  }
-}
-
 /* めくる: the back of the card. */
 .reading {
   font-size: 20px;
@@ -2257,8 +2176,7 @@
     --held-floor: 32px;
   }
   /* The fields that are --surface on the page would vanish on the card. */
-  .card-area .field,
-  .card-area .heard {
+  .card-area .field {
     background: var(--night);
   }
   .card-area.typing {
