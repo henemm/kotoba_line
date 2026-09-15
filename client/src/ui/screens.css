@@ -4345,6 +4345,15 @@ button.deck-card:active {
 .sheet.card-sheet {
   max-height: 88dvh;
   overflow-y: auto;
+  padding-bottom: 0;
+}
+/* #168: the space under the last control as a box, not padding, which the
+   iPhone leaves out of a scroll. The sheet's 18px gap comes before it, so
+   together they are the 24px + inset the padding was. */
+.sheet.card-sheet::after {
+  content: "";
+  flex: none;
+  height: calc(6px + env(safe-area-inset-bottom));
 }
 
 /* #98: one card's own record, inside its sheet. */

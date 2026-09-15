@@ -346,6 +346,9 @@ describe("GET /api/stats", () => {
     assert.equal(body.streak, 0);
     assert.equal(body.cardsSeen, 0);
     assert.deepEqual(body.maturity, { new: 0, learning: 0, young: 0, mature: 0 });
+    // #98: day one still draws the calendar, every day of it empty.
+    assert.ok(body.history.length > 5 * 7 && body.history.length <= 6 * 7);
+    assert.ok(body.history.every((d) => d.reviews === 0 && d.joker === false));
     await app.close();
   });
 
