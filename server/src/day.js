@@ -36,6 +36,9 @@ function dayFormatter(timeZone) {
  * know — a typo, an offset string, a header someone made up — is the default
  * rather than an error: a wrong day is recoverable, a practise tab that will
  * not load is not.
+ *
+ * An offset like "+09:00" is accepted, because `Intl` accepts it: a day with
+ * no daylight saving, which is what it says. Browsers send names.
  */
 export function validTimeZone(name) {
   if (typeof name !== "string" || name.length === 0 || name.length > 64) return DEFAULT_TIME_ZONE;
