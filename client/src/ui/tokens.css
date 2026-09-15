@@ -49,16 +49,30 @@
         Helvetica, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* The phone column. iPad widens this to 560 and centres it; the session and
-     the moments keep the phone layout whatever the screen. */
+  /* The phone column. iPad widens this to 560 and centres it; the moments
+     keep the phone layout whatever the screen. */
   --column: 390px;
   --gutter: 26px;
 }
 
+/* iPad package A (#150). design/README.md makes every iPad screen a centred
+   560pt column except Stats and the Practise tab. Measured on v69 that column
+   was 47% of a landscape iPad and 68% of a portrait one, and Henning asked for
+   the width to be used (2026-09-15). So two more widths, each decided by the
+   window, never by the device:
+
+   --page   the tab screens, 700pt (base.css widens #app to it).
+   --card   the session's card and the buttons under it (screens.css).
+
+   Everything else — sign-in, the summary, the card form, the sheets — keeps
+   --column. Below 700pt (Split View, Slide Over, a narrow Stage Manager
+   window) none of this applies and the phone layout stays. */
 @media (min-width: 700px) {
   :root {
     --column: 560px;
     --gutter: 40px;
+    --page: 700px;
+    --card: min(900px, 100% - 80px);
   }
 }
 

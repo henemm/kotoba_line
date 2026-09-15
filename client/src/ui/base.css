@@ -368,6 +368,19 @@ input:focus-visible {
   :root {
     --tabbar-h: 72px;
   }
+  /* #150: a tab screen is a 700pt page, not the 560pt column, and inside it
+     the column is the page — Settings and Search size their groups by
+     --column, and they are tab screens too. The session keeps the whole
+     window for its card (screens.css). Everything else stays the column.
+     Without :has() (before iOS 15.4) all of it stays the column, which is
+     the layout v69 had. */
+  #app:has(> nav.tabbar) {
+    --column: var(--page);
+    max-width: var(--page);
+  }
+  #app:has(> .session) {
+    max-width: none;
+  }
   .tabbar .label {
     font-size: 13px;
   }

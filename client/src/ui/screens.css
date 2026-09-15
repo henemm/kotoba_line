@@ -803,6 +803,53 @@
   font-weight: 600;
 }
 
+/* #150: a deck's page on a 700pt page (base.css). "cards for today" and "How
+   long" side by side, then everything else under them at full width, in the
+   same order as on the phone. Grid rather than a wrapper in practise.js, so
+   the phone's page is the same markup and provably unchanged. Only a page
+   with its numbers: an empty deck and the loading state keep the column.
+   The three lengths stand one above the other, as tall together as the
+   number beside them, instead of three squeezed buttons in half a page. */
+@media (min-width: 700px) {
+  .deck-page:has(> .deck-today) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+  }
+  .deck-page:has(> .deck-today) > * {
+    grid-column: 1 / -1;
+  }
+  .deck-page > .deck-head {
+    grid-row: 1;
+  }
+  .deck-page > .deck-today {
+    grid-column: 1;
+    grid-row: 2;
+    /* Level with the buttons, under the label beside it. */
+    margin: 23px 10px 0 var(--gutter);
+  }
+  .deck-page > .length-block {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0 var(--gutter) 0 10px;
+  }
+  .deck-page .length {
+    flex: 1;
+    flex-direction: column;
+  }
+  .deck-page .length button {
+    flex: 1;
+    height: auto;
+    min-height: 56px;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0 18px;
+  }
+  .deck-page .due-slot:empty {
+    display: none;
+  }
+}
+
 /* A deck's options (#137): top right on its page, where Noji keeps a deck's
    menu, and a sheet of switches like Settings. */
 .deck-title-row {
@@ -2078,11 +2125,32 @@
   color: var(--night);
 }
 
+/* #150: drawn only on the iPad card, below. */
+.card-rule {
+  display: none;
+}
+
 @media (min-width: 700px) {
-  /* The station strip runs the full width — twenty stations are finally
-     countable — while the answers stay in the column and sit low. */
+  /* #150, a departure from design/ 16 (a 560pt column of text on the page):
+     on a window 700pt or wider the card is a card. Henning's reference is
+     Noji on his iPad — a large rounded surface with the question, a rule and
+     the answer, and the ratings in one row under it. The session has the
+     whole window (base.css); the strip, the card and the buttons share one
+     width, --card, so ✕ and the counter line up with the card's edges.
+
+     The card fills the height between the strip and the buttons, with a
+     margin above the card and below the buttons that grows with the window:
+     about 520pt of card on a landscape iPad, and in portrait a card that is
+     not a 950pt-tall column of air. It fills rather than being centred
+     because a centred card grows upwards when the answer comes in, and #113
+     keeps the question exactly where the front had it. */
+  .session {
+    --session-air: clamp(8px, calc((100dvh - 880px) / 2), 160px);
+  }
   .session-chrome {
-    padding: 16px 40px;
+    width: var(--card);
+    margin: 0 auto;
+    padding: 16px 0;
   }
   .station {
     height: 6px;
@@ -2090,10 +2158,58 @@
   .stations {
     gap: 5px;
   }
+  .card-area {
+    width: var(--card);
+    margin: var(--session-air) auto 20px;
+    padding: 40px 56px;
+    border-radius: 28px;
+    background: var(--surface);
+    /* `holdInPlace` sets the top padding by hand; this is as low as it may
+       go, so a card that has to make room never puts its text on its edge. */
+    --held-floor: 32px;
+  }
+  /* The fields that are --surface on the page would vanish on the card. */
+  .card-area .field,
+  .card-area .heard {
+    background: var(--night);
+  }
+  .card-area.typing {
+    padding-top: 40px;
+  }
+  /* めくる's front sits in the upper part of the card, not its middle. #113
+     holds the front where it was when the answer comes in, and a front held
+     in the middle of a 640pt card left the top half of the card empty and
+     the answer squeezed under it (measured at 1180 × 820). Noji does the
+     same: the question high, the rule, the answer below. */
+  .card-area[data-mode="flip"] {
+    justify-content: flex-start;
+    padding-top: clamp(48px, 12dvh, 140px);
+  }
+  /* The rule between the front and the answer (めくる). Not drawn on the
+     phone, where the card is the screen and the reveal is enough. */
+  .card-rule {
+    display: block;
+    align-self: stretch;
+    height: 1px;
+    margin: 0;
+    border: 0;
+    background: var(--surface-hi);
+  }
   .options {
+    width: var(--card);
+    margin: 0 auto;
+    padding: 0 0 max(24px, var(--session-air));
+  }
+  .session-error {
     width: var(--column);
     margin: 0 auto;
-    padding-bottom: 56px;
+  }
+  /* The leaving sheet (50) keeps to the column, not the window. */
+  .session .sheet-scrim {
+    justify-content: center;
+  }
+  .session .sheet {
+    max-width: var(--column);
   }
   .opt {
     padding: 20px;
@@ -2109,6 +2225,19 @@
   .actions .btn {
     min-height: 62px;
     font-size: 17px;
+  }
+}
+
+/* #150: 選ぶ's four answers in two columns once the card is wide enough for
+   an English gloss to fit on one line in half of it (a landscape iPad). Only
+   the answers: the ratings row and "Continue" share this container, and the
+   button that follows an answer spans both columns. */
+@media (min-width: 1000px) {
+  .options:has(> .opt) {
+    grid-template-columns: 1fr 1fr;
+  }
+  .options > .actions {
+    grid-column: 1 / -1;
   }
 }
 

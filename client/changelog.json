@@ -1,5 +1,15 @@
 [
   {
+    "version": "v71",
+    "summary": "On an iPad the app uses the whole screen: the card is big, and the pages are wider.",
+    "notes": [
+      "When you practise on an iPad, the card is a large card like in Noji, with Again, Hard, Good and Easy in one row under it.",
+      "With the iPad sideways, Pick the meaning shows its four answers in two columns.",
+      "A deck's page is wider, with the cards for today and How long side by side.",
+      "On an iPhone nothing changes."
+    ]
+  },
+  {
     "version": "v70",
     "summary": "A card you write can have a real recording, if Kaishi has the word.",
     "notes": [
