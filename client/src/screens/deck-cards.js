@@ -1,6 +1,7 @@
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { showsScript, shownWord } from "../script.js";
 import { exactFirst, matchesQuery } from "./browse.js";
+import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -130,11 +131,15 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
  * card menu without the entries nobody has asked for yet. "Move" turns the
  * same sheet into the list of her other decks, so there is no second sheet to
  * find the way back from.
+ *
+ * #98: the menu also shows the card's own record, under the actions — built
+ * once, so going to "move" and back does not ask the server again.
  */
 export function cardActionsSheet({ card, japanese = true, decks = [], onEdit, onMove, onDelete, onClose }) {
   const scrim = el("div.sheet-scrim.card-actions", { onclick: (e) => e.target === e.currentTarget && onClose?.() });
-  const sheet = el("div.sheet", { role: "dialog", "aria-label": card.word_meaning ?? shownWord(card, japanese) });
+  const sheet = el("div.sheet.card-sheet", { role: "dialog", "aria-label": card.word_meaning ?? shownWord(card, japanese) });
   scrim.append(sheet);
+  const history = cardHistoryBlock({ cardId: card.id });
   let step = "menu";
   let problem;
   draw();
@@ -154,6 +159,7 @@ export function cardActionsSheet({ card, japanese = true, decks = [], onEdit, on
             : null,
           el("button.action.danger", { type: "button", text: "Löschen", onclick: () => ((step = "delete"), draw()) }),
         ),
+        history,
       );
     } else if (step === "move") {
       render(

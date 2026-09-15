@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  historyDays,
   levelFloor,
   levelForXp,
   levelThreshold,
@@ -491,6 +492,143 @@ describe("the topic list behind the picker (#35)", () => {
       await app.inject({ method: "GET", url: "/api/stats", headers: { cookie } })
     ).json();
     assert.equal(topics.some((t) => t.tag === "gone"), false);
+    await app.close();
+  });
+});
+
+describe("the calendar on the Stats tab (#98)", () => {
+  const counts = (entries) => new Map(Object.entries(entries));
+  const march = (d) => `2026-03-${String(d).padStart(2, "0")}`;
+
+  it("runs from the Monday five weeks back through today, every day listed", () => {
+    // 2026-09-15 is a Tuesday: its week began on the 14th, five before on 10 August.
+    const days = historyDays(counts({}), [], "2026-09-15");
+    assert.equal(days[0].day, "2026-08-10");
+    assert.equal(days.at(-1).day, "2026-09-15");
+    assert.equal(days.length, 5 * 7 + 2);
+    for (let i = 1; i < days.length; i++) assert.equal(days[i].day, nextDay(days[i - 1].day));
+  });
+
+  it("starts a week on Monday whichever day today is", () => {
+    assert.equal(historyDays(counts({}), [], "2026-09-14")[0].day, "2026-08-10");
+    assert.equal(historyDays(counts({}), [], "2026-09-14").length, 5 * 7 + 1);
+    assert.equal(historyDays(counts({}), [], "2026-09-20").length, 6 * 7, "a Sunday closes a full week");
+    assert.equal(historyDays(counts({}), [], "2026-03-01")[0].day, "2026-01-19", "across months");
+  });
+
+  it("carries each day's reviews and marks the days a joker covered", () => {
+    const days = historyDays(counts({ "2026-09-10": 12, "2026-09-12": 3 }), ["2026-09-11"], "2026-09-15");
+    const byDay = Object.fromEntries(days.map((d) => [d.day, d]));
+    assert.deepEqual(byDay["2026-09-10"], { day: "2026-09-10", reviews: 12, joker: false });
+    assert.deepEqual(byDay["2026-09-11"], { day: "2026-09-11", reviews: 0, joker: true });
+    assert.deepEqual(byDay["2026-09-12"], { day: "2026-09-12", reviews: 3, joker: false });
+  });
+
+  it("lists every day a joker covered, also in a streak a later gap ended", () => {
+    // Five days earn a joker, day 6 spends it, days 7 and 8 end the streak.
+    assert.deepEqual(streakFromDays([1, 2, 3, 4, 5].map(march), march(9)).coveredDays, [march(6)]);
+    assert.deepEqual(streakFromDays([], march(9)).coveredDays, []);
+  });
+
+  it("buckets reviews by the device's day, in GET /api/stats", async () => {
+    const { app, db, config } = await testApp();
+    const user = await seedUser(db);
+    seedCards(db, 12);
+    const uid = (n) => `9f8e7d6c-5b4a-4321-8765-${String(n).padStart(12, "0")}`;
+
+    // 23:30 on the 14th in Berlin is already 06:30 on the 15th in Tokyo.
+    const t = Date.parse("2026-09-14T21:30:00Z") / 1000;
+    ingestEvents(
+      db,
+      user.id,
+      Array.from({ length: 11 }, (_, i) => ({ id: uid(i), card_id: (i % 12) + 1, mode: "choose", rating: 3, reviewed_at: t + i })),
+      t + 60,
+    );
+    const cookie = await signIn(app, config);
+    const read = async (zone) =>
+      (await app.inject({ method: "GET", url: "/api/stats", headers: { cookie, "x-time-zone": zone } })).json().history;
+
+    const berlin = await read("Europe/Berlin");
+    assert.equal(berlin.find((d) => d.day === "2026-09-14")?.reviews, 11);
+    const tokyo = await read("Asia/Tokyo");
+    assert.equal(tokyo.find((d) => d.day === "2026-09-15")?.reviews, 11);
+    assert.equal(tokyo.find((d) => d.day === "2026-09-14")?.reviews ?? 0, 0);
+    await app.close();
+  });
+});
+
+describe("GET /api/cards/:id/history (#98)", () => {
+  const uid = (n) => `1a2b3c4d-5e6f-4a1b-8c2d-${String(n).padStart(12, "0")}`;
+
+  async function fixture() {
+    const { app, db, config } = await testApp();
+    const mira = await seedUser(db);
+    await seedUser(db, { handle: "yuki", pin: "112233" });
+    seedCards(db, 3);
+    const cookie = await signIn(app, config);
+    const yuki = await signIn(app, config, { handle: "yuki", pin: "112233" });
+    const get = (id, who = cookie) =>
+      app.inject({ method: "GET", url: `/api/cards/${id}/history`, headers: { cookie: who, "x-time-zone": "Asia/Tokyo" } });
+    return { app, db, mira, cookie, yuki, get };
+  }
+
+  it("needs a session", async () => {
+    const { app } = await testApp();
+    assert.equal((await app.inject({ method: "GET", url: "/api/cards/1/history" })).statusCode, 401);
+    await app.close();
+  });
+
+  it("lists her reviews of one card, newest first, with the day it is next due", async () => {
+    const { app, db, mira, get } = await fixture();
+    const t = Date.parse("2026-09-10T02:00:00Z") / 1000; // 11:00 in Tokyo
+    ingestEvents(
+      db,
+      mira.id,
+      [
+        { id: uid(1), card_id: 1, mode: "choose", rating: 1, reviewed_at: t },
+        { id: uid(2), card_id: 1, mode: "flip", rating: 3, reviewed_at: t + 2 * DAY },
+        { id: uid(3), card_id: 2, mode: "choose", rating: 3, reviewed_at: t + DAY },
+      ],
+      t + 3 * DAY,
+    );
+
+    const res = await get(1);
+    assert.equal(res.statusCode, 200);
+    const body = res.json();
+    assert.deepEqual(body.events, [
+      { day: "2026-09-12", mode: "flip", rating: 3 },
+      { day: "2026-09-10", mode: "choose", rating: 1 },
+    ]);
+    const state = db.prepare("SELECT due_at FROM card_state WHERE user_id = ? AND card_id = 1").get(mira.id);
+    assert.equal(body.dueDay, dayIn(state.due_at, "Asia/Tokyo"));
+    // A card still in its learning steps can be due again the same day.
+    assert.ok(body.dueDay >= "2026-09-12");
+    await app.close();
+  });
+
+  it("is empty for a card she has never reviewed", async () => {
+    const { app, get } = await fixture();
+    const body = (await get(3)).json();
+    assert.deepEqual(body.events, []);
+    assert.equal(body.dueDay, null);
+    assert.equal(body.today, dayIn(Math.floor(Date.now() / 1000), "Asia/Tokyo"));
+    await app.close();
+  });
+
+  it("works for her own card, whose id is negative, and for no one else", async () => {
+    const { app, cookie, yuki, get } = await fixture();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/cards",
+      headers: { cookie },
+      payload: { word: "焼き鳥", meaning: "Spieß" },
+    });
+    const { card } = res.json();
+    assert.ok(card.id < 0);
+
+    assert.equal((await get(card.id)).statusCode, 200);
+    assert.equal((await get(card.id, yuki)).statusCode, 404, "a friend's word is not hers to read (#84)");
+    assert.equal((await get(999)).statusCode, 404);
     await app.close();
   });
 });

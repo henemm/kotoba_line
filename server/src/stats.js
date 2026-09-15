@@ -1,4 +1,4 @@
-import { visibleTo } from "./cards.js";
+import { visibleCard, visibleTo } from "./cards.js";
 import { DEFAULT_TIME_ZONE, dayIn, nextDay } from "./day.js";
 
 /**
@@ -98,7 +98,7 @@ export function levelFloor(level) {
 export function streakFromDays(qualifyingDays, today) {
   const qualifying = new Set(qualifyingDays);
   if (qualifying.size === 0) {
-    return { current: 0, longest: 0, jokers: 0, jokerSpentOn: undefined, gapDays: 0, jokerGap: null, streakReset: null };
+    return { current: 0, longest: 0, jokers: 0, jokerSpentOn: undefined, gapDays: 0, jokerGap: null, streakReset: null, coveredDays: [] };
   }
 
   const sorted = [...qualifying].sort();
@@ -115,6 +115,9 @@ export function streakFromDays(qualifyingDays, today) {
   // no joker left to cover them": the days are the whole run, including any a
   // joker covered before the jokers ran out.
   let missed;
+  // #98: every day a joker covered, for the calendar — including ones whose
+  // streak a later gap ended, because the joker was spent all the same.
+  const coveredDays = [];
 
   for (let day = sorted[0]; day <= today; day = nextDay(day)) {
     if (qualifying.has(day)) {
@@ -138,6 +141,7 @@ export function streakFromDays(qualifyingDays, today) {
       else gap = { firstDay: day, lastDay: day, days: 1 };
       jokerSpentOn = day;
       gapDays += 1;
+      coveredDays.push(day);
       continue;
     }
 
@@ -170,7 +174,80 @@ export function streakFromDays(qualifyingDays, today) {
       ? { firstDay: missed.firstDay, lastDay: missed.lastDay, days: missed.days, lost: missed.ended }
       : null;
 
-  return { current, longest, jokers, jokerSpentOn, gapDays, jokerGap, streakReset };
+  return { current, longest, jokers, jokerSpentOn, gapDays, jokerGap, streakReset, coveredDays };
+}
+
+/** #98: the calendar on the Stats tab shows this many weeks, the current one last. */
+export const HISTORY_WEEKS = 6;
+
+/** Step a YYYY-MM-DD string back one day. */
+function previousDay(day) {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
+/** 1 for a Monday through 7 for a Sunday — the German week. */
+function weekday(day) {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay() || 7;
+}
+
+/**
+ * The days the calendar draws (#98): from the Monday `weeks - 1` weeks before
+ * this one, through today. Every day is in the list, practised or not, so the
+ * client lays out a grid and never does date arithmetic of its own — the day
+ * boundary is the server's (§8a, #122), and a calendar is exactly where a
+ * `new Date()` on the phone would quietly move it.
+ *
+ * `joker` marks a day a joker covered. A day with reviews but fewer than
+ * `REVIEWS_PER_QUALIFYING_DAY` is still a day she practised; the client tells
+ * it apart from one that counted for the streak, so the calendar never looks
+ * as though it contradicts the streak beside it.
+ */
+export function historyDays(reviewsPerDay, coveredDays, today, weeks = HISTORY_WEEKS) {
+  let first = today;
+  for (let i = weekday(today); i > 1; i -= 1) first = previousDay(first);
+  for (let i = 1; i < weeks; i += 1) for (let j = 0; j < 7; j += 1) first = previousDay(first);
+
+  const covered = new Set(coveredDays);
+  const days = [];
+  for (let day = first; day <= today; day = nextDay(day)) {
+    days.push({ day, reviews: reviewsPerDay.get(day) ?? 0, joker: covered.has(day) });
+  }
+  return days;
+}
+
+/**
+ * One card's own record (#98), for the sheet a card opens: every review she
+ * gave it, newest first, each with the day it fell on in her zone, and the day
+ * it is next due. Null if the card is not one she can see.
+ *
+ * `next` comes from card_state, which is a cache — but it is the same cache
+ * the queue reads, so it says what the queue will do.
+ */
+export function cardHistory(db, userId, cardId, timeZone = DEFAULT_TIME_ZONE, now = Math.floor(Date.now() / 1000)) {
+  if (!visibleCard(db, userId, cardId)) return null;
+
+  const events = db
+    .prepare(
+      `SELECT mode, rating, reviewed_at
+         FROM review_events WHERE user_id = ? AND card_id = ?
+        ORDER BY reviewed_at DESC, id DESC`,
+    )
+    .all(userId, cardId)
+    .map((e) => ({ day: dayIn(e.reviewed_at, timeZone), mode: e.mode, rating: e.rating }));
+
+  const state = db
+    .prepare("SELECT due_at, reps FROM card_state WHERE user_id = ? AND card_id = ?")
+    .get(userId, cardId);
+
+  return {
+    events,
+    // So the sheet can say "due now" for a day already past without a date
+    // of the phone's own.
+    today: dayIn(now, timeZone),
+    dueDay: events.length > 0 && state?.reps > 0 ? dayIn(state.due_at, timeZone) : null,
+  };
 }
 
 /**
@@ -296,6 +373,8 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000), ti
     // lastDay, like jokerGap.
     streakReset: streak.streakReset,
     reviewsToday: reviewsPerDay.get(today) ?? 0,
+    // `[{ day, reviews, joker }]`, Monday six weeks back through today (#98).
+    history: historyDays(reviewsPerDay, streak.coveredDays, today),
     reviewsPerQualifyingDay: REVIEWS_PER_QUALIFYING_DAY,
     cardsSeen: seenCardIds.size,
     maturity,

@@ -3,6 +3,7 @@ import { say } from "../audio.js";
 import { showsScript, shownWord } from "../script.js";
 import { topicLabel } from "../topics.js";
 import { el, render } from "../ui/dom.js";
+import { cardHistoryBlock } from "./card-history.js";
 
 /**
  * Put one card into her own topics (#35).
@@ -43,6 +44,9 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
   let saving = false;
   let problem;
   const fields = {};
+  // #98: her record of this card, under her topics. Built once: every chip
+  // she toggles redraws the sheet, and that should not ask the server again.
+  const history = cardHistoryBlock({ cardId: card.id });
 
   draw();
 
@@ -50,7 +54,7 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
     render(
       root,
       el(
-        "div.sheet",
+        "div.sheet.card-sheet",
         {},
         el(
           "div.topics-head",
@@ -126,6 +130,7 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
                 }),
           ),
         ),
+        history,
         problem ? el("p.add-problem", { text: problem }) : null,
         el(
           "div.sheet-actions",
