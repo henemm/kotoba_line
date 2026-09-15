@@ -42,6 +42,9 @@
   --row-band-learning: #8A93A8;
   --row-band-young:    #B9C0D0;
 
+  /* KanjiVG draws its strokes black (#158): turned round on the dark ground. */
+  --stroke-drawing: invert(0.92);
+
   /* Japanese is always noticeably larger than the Latin text beside it. */
   --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
         "Yu Gothic", sans-serif;
@@ -114,6 +117,7 @@
   --row-band-new-edge: #A3ABBC;
   --row-band-learning: #A3ABBC;
   --row-band-young:    #6B7489;
+  --stroke-drawing: none;
   color-scheme: light;
 }
 
@@ -140,6 +144,7 @@
     --row-band-new-edge: #A3ABBC;
     --row-band-learning: #A3ABBC;
     --row-band-young:    #6B7489;
+    --stroke-drawing: none;
     color-scheme: light;
   }
 }

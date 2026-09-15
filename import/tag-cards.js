@@ -61,8 +61,9 @@ const db = new Database(dbFile);
 // The deck's cards only. Her own words carry the topics she chose when she
 // wrote them, and those live in the same `tags` table: rebuilding it wholesale
 // used to wipe every one of them, and then hand her words whatever topics the
-// keyword rules guessed instead.
-const cards = db.prepare("SELECT id, word, word_meaning FROM cards WHERE deck <> 'personal'").all();
+// keyword rules guessed instead. Kaishi's only since #158: a kana card's
+// meaning is its reading, and "ka" matched against the keyword rules is noise.
+const cards = db.prepare("SELECT id, word, word_meaning FROM cards WHERE deck = 'kaishi'").all();
 
 const assignments = [];
 let fromOverride = 0;
@@ -78,7 +79,7 @@ const taggedCards = new Set(assignments.map((a) => a.card_id));
 
 if (!args["dry-run"]) {
   db.transaction(() => {
-    db.prepare("DELETE FROM tags WHERE card_id IN (SELECT id FROM cards WHERE deck <> 'personal')").run();
+    db.prepare("DELETE FROM tags WHERE card_id IN (SELECT id FROM cards WHERE deck = 'kaishi')").run();
     const insert = db.prepare("INSERT OR IGNORE INTO tags (card_id, tag) VALUES (?, ?)");
     for (const a of assignments) insert.run(a.card_id, a.tag);
   })();

@@ -12,6 +12,18 @@
  * (v60–v67) and 'mine' (her words outside any list, now the deck "My words").
  */
 
+/**
+ * The kana decks (#158): everyone's, like Kaishi, and keyed by name the same
+ * way. Their cards come from `npm run import-kana` (import/lib/kana.js), and
+ * `cards.deck` holds the key.
+ */
+export const KANA_DECKS = [
+  { key: "hiragana", name: "Hiragana" },
+  { key: "katakana", name: "Katakana" },
+];
+
+export const isKanaDeck = (key) => KANA_DECKS.some((d) => d.key === key);
+
 /** Where a card goes when nothing says which deck: what "Add a word" did before decks. */
 export const MY_WORDS = "My words";
 
@@ -41,7 +53,7 @@ function deckNamed(db, userId, name) {
  * does not exist (any more). An old spelling becomes 'deck:<id>'.
  */
 export function canonicalDeckKey(db, userId, key) {
-  if (key === "kaishi") return "kaishi";
+  if (key === "kaishi" || isKanaDeck(key)) return key;
   if (typeof key !== "string") return undefined;
   let deck;
   if (/^deck:\d+$/.test(key)) deck = ownDeck(db, userId, Number(key.slice(5)));

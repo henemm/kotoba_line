@@ -29,6 +29,12 @@ const CANNOT = {
   type: "Hier nicht möglich: keine Wörter mit Lesung zum Prüfen",
 };
 
+/**
+ * #158: in a kana deck 話す and 書く would ask with the reading, which is the
+ * answer, and 聞く has no sentences to play.
+ */
+const CANNOT_IN_KANA = "Bei Kana nicht möglich – übe sie mit „Bedeutung wählen“ oder „Karte umdrehen“";
+
 export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, onDelete, onClose }) {
   let settings = { hiddenModes: [], ...(deck.settings ?? {}) };
   const ways = deck.ways ?? {};
@@ -68,7 +74,7 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           const last = shown && on.length === 1;
           const count = ways[mode.key];
           const note = !can
-            ? CANNOT[mode.key] ?? "Hier nicht möglich"
+            ? (deck.key === "hiragana" || deck.key === "katakana" ? CANNOT_IN_KANA : CANNOT[mode.key]) ?? "Hier nicht möglich"
             : mode.key === "type" && count < deck.cards
               ? `${num(count)} von ${num(deck.cards)} Karten lassen sich tippen`
               : null;

@@ -34,6 +34,9 @@ export const NEW_PER_DAY_MAX = 40;
 export const DECKS = [
   { key: "kaishi", label: "Kaishi 1.5k" },
   { key: "personal", label: "Personal" },
+  // #158. Listed at zero before the kana import, like `personal`.
+  { key: "hiragana", label: "Hiragana" },
+  { key: "katakana", label: "Katakana" },
 ];
 
 const COLUMNS = {

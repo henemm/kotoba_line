@@ -167,14 +167,19 @@ export function pickDistractors(
 
   const chosen = [];
   const taken = new Set();
+  // Two wrong answers that read the same would be two identical buttons: ず
+  // and づ are both "zu" (#158), and Kaishi has glosses shared by two words.
+  const offered = new Set();
 
   for (const tier of tiers) {
     const available = tier.filter((c) => !taken.has(c.id));
     while (chosen.length < count && available.length > 0) {
       const i = Math.floor(random() * available.length);
       const [card] = available.splice(i, 1);
-      chosen.push(card);
       taken.add(card.id);
+      if (offered.has(card[field])) continue;
+      offered.add(card[field]);
+      chosen.push(card);
     }
     if (chosen.length >= count) break;
   }

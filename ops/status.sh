@@ -132,6 +132,7 @@ const out = {
     }
   })(),
   cards: one("SELECT count(*) n FROM cards WHERE deck = 'kaishi'"),
+  kana: one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL"),
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
@@ -185,6 +186,14 @@ NODE
       fi
     done
 
+    # #158: 104 cards in each script (import/lib/kana.js). Written by their
+    # own import, which a deploy does not run.
+    if [[ ${F_kana:-0} -lt 208 ]]; then
+      warn "npm run import-kana" "${F_kana:-0} of 208 kana cards — the hiragana and katakana decks need importing"
+    else
+      ok "${F_kana} kana cards (Hiragana, Katakana)"
+    fi
+
     if [[ ${F_tagged:-0} -eq 0 && ${F_cards:-0} -gt 0 ]]; then
       warn "npm run tag" "no card carries a topic"
     else
@@ -219,6 +228,21 @@ else
   warn "npm run import" "no $MEDIA_DIR yet"
 fi
 
+# ── Stroke order for the kana decks (#158) ──────────────────────────
+head_ "Stroke order"
+if [[ -d $MEDIA_DIR ]]; then
+  # 71 kana and the small ゃゅょ in each script (import/lib/kana.js).
+  strokes=$(find "$MEDIA_DIR" -maxdepth 1 -name 'kanjivg-*.svg' 2>/dev/null | wc -l | tr -d ' ')
+  unreadable=$(find "$MEDIA_DIR" -maxdepth 1 -name 'kanjivg-*.svg' ! -perm -004 2>/dev/null | wc -l | tr -d ' ')
+  if [[ ${strokes:-0} -lt 148 ]]; then
+    warn "npm run import-kana" "$strokes of 148 KanjiVG drawings — a kana card's back shows no stroke order without them"
+  elif [[ ${unreadable:-0} -gt 0 ]]; then
+    bad "chmod" "$unreadable of $strokes drawings are not world-readable — nginx cannot serve them"
+  else
+    ok "$strokes drawings, all readable by nginx"
+  fi
+fi
+
 # ── What to do ──────────────────────────────────────────────────────
 head_ "What this needs"
 if [[ ${#NEEDED[@]} -eq 0 ]]; then
@@ -231,18 +255,26 @@ fi
 
 # The full deploy already copies the client, so listing both would have the
 # operator do the same thing twice and wonder which one mattered.
-if [[ " ${NEEDED[*]} " == *" ops/deploy.sh "* ]]; then
+#
+# Compared element by element: matching " ops/deploy.sh " inside the joined
+# list also matched "ops/deploy.sh --client" itself, so a client-only release
+# (v76) printed "In this order:" and no step at all.
+full_deploy=false
+for n in "${NEEDED[@]}"; do [[ $n == "ops/deploy.sh" ]] && full_deploy=true; done
+if $full_deploy; then
   NEEDED=("${NEEDED[@]/ops\/deploy.sh --client/}")
 fi
 
 printf '  In this order:\n\n'
 step=1
-for cmd in "git pull" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run tag" "chmod"; do
+for cmd in "git pull" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run tag" "chmod"; do
   for n in "${NEEDED[@]}"; do
     [[ $n == "$cmd" ]] || continue
     case $cmd in
       "npm run import")
         printf '  %d. umask 022\n     npm run import -- --db %s --media %s\n' "$step" "$DB" "$MEDIA_DIR" ;;
+      "npm run import-kana")
+        printf '  %d. umask 022\n     npm run import-kana -- --db %s --media %s\n' "$step" "$DB" "$MEDIA_DIR" ;;
       "npm run tag")
         printf '  %d. npm run tag -- --db %s\n' "$step" "$DB" ;;
       "chmod")

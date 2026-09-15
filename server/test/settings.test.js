@@ -75,6 +75,8 @@ describe("the deck rows", () => {
     assert.deepEqual(deckCounts(db), [
       { key: "kaishi", label: "Kaishi 1.5k", cards: 3 },
       { key: "personal", label: "Personal", cards: 0 },
+      { key: "hiragana", label: "Hiragana", cards: 0 },
+      { key: "katakana", label: "Katakana", cards: 0 },
     ]);
     db.close();
   });
@@ -110,7 +112,7 @@ describe("GET /api/settings", () => {
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
-      ["kaishi", "personal"],
+      ["kaishi", "personal", "hiragana", "katakana"],
     );
     assert.deepEqual(body.sync, { events: 0, lastEventAt: null });
     assert.match(body.version, /^\d+\.\d+\.\d+$/);

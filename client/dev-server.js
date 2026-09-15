@@ -86,7 +86,9 @@ const server = createServer((req, res) => {
       res.end("not found");
       return;
     }
-    res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "public, max-age=31536000" });
+    // By extension, as nginx's mime.types does: the kana decks' stroke order
+    // is SVG (#158), and WebKit will not draw an image sent as audio/mpeg.
+    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream", "cache-control": "public, max-age=31536000" });
     createReadStream(file).pipe(res);
     return;
   }

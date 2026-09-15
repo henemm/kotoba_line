@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { prime, say, stop, unlock } from "../audio.js";
+import { mediaUrl, prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
@@ -7,7 +7,7 @@ import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
-import { inScript, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
+import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
@@ -566,6 +566,8 @@ export function sessionScreen({
     // #135: with the script off the word itself is the romaji; a second copy
     // under it says nothing.
     if (!japanese) return null;
+    // #158: a kana card's romaji is its answer, and its meaning already.
+    if (isKana(card)) return null;
     if (!romaji && !always) return null;
     const text = wordRomaji(card);
     if (!text) return null;
@@ -694,7 +696,8 @@ export function sessionScreen({
     if (readAloud && card.word_audio) say(card.word, card.word_audio);
 
     chooseFrom(card, "word_meaning", null, area, answers, [
-      el("span.prompt-label", { text: "Was bedeutet das?" }),
+      // #158: a kana has a reading, not a meaning.
+      el("span.prompt-label", { text: isKana(card) ? "Wie liest man das?" : "Was bedeutet das?" }),
       wordHeading(card),
       // 48: in 選ぶ the sound is a bonus, so with no recording the control is
       // absent rather than inert — "an inert button would invite a tap that
@@ -1096,15 +1099,19 @@ export function sessionScreen({
         el("p.meaning", { text: card.word_meaning ?? "" }),
       );
     } else {
+      // #158: a kana's sound is its reading, which is the answer — so the
+      // front of a kana card stays silent and carries no speaker.
+      const kana = isKana(card);
       render(
         area,
         wordHeading(card),
-        speaker(card.word, card.word_audio),
+        kana ? null : speaker(card.word, card.word_audio),
         // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
         // "what does it say" — a romaji line here does not spoil the flip.
         romajiLine(card),
       );
-      if (readAloud) voice(card.word, card.word_audio);
+      if (kana) prime(...strokeFiles(card));
+      else if (readAloud) voice(card.word, card.word_audio);
     }
 
     render(
@@ -1117,6 +1124,43 @@ export function sessionScreen({
           text: "Umdrehen",
           onclick: () => revealFlip(card, area, answers),
         }),
+      ),
+    );
+  }
+
+  /**
+   * How a kana is written (#158): KanjiVG's drawing of each character, the
+   * strokes numbered in order — two for a yōon, the small ゃ beside its kana.
+   * The files are the import's (`npm run import-kana`); one that is not there
+   * yet, or not cached on a train, takes its block away rather than showing a
+   * broken image.
+   */
+  function strokeOrder(card) {
+    const block = el("div.kana-strokes.reveal");
+    const hide = () => block.remove();
+    render(
+      block,
+      el(
+        "div.kana-stroke-row",
+        {},
+        strokeFiles(card).map((file) => el("img.kana-stroke", { src: mediaUrl(file), alt: "", onerror: hide })),
+      ),
+      // CC BY-SA 3.0 asks for the attribution wherever the drawing is shown.
+      el("span.kana-credit", { text: "Strichfolge: KanjiVG (CC BY-SA 3.0)" }),
+    );
+    return block;
+  }
+
+  /** Up to two Kaishi words with this kana in them, each read in kana, with its meaning. */
+  function kanaExampleBlock(card) {
+    const examples = kanaExamples(card, pool);
+    if (examples.length === 0) return null;
+    return el(
+      "div.kana-examples.reveal",
+      {},
+      el("span.prompt-label", { text: "Zum Beispiel" }),
+      examples.map(({ kana, meaning }) =>
+        el("div.kana-example", {}, el("span.jp", { text: kana }), el("span.kana-example-meaning", { text: meaning })),
       ),
     );
   }
@@ -1135,7 +1179,27 @@ export function sessionScreen({
     // #113: the word stays where the front showed it — or, with the meaning on
     // the front (#137), the meaning does, and the word comes in under it.
     const settle = holdInPlace(area, meaningFirst ? ".prompt-label" : ".word");
-    if (meaningFirst) {
+    if (isKana(card)) {
+      // #158: the kana stays, and under it how it is read, how it is written
+      // and where she has met it — Kaishi words with it in them.
+      render(
+        area,
+        el(
+          "div.word-line",
+          {},
+          wordHeading(card),
+          // Synthesis, not a recording: no free set of single-kana recordings
+          // exists (Wikimedia Commons has a and e), and a lone kana is Japanese
+          // text the phone's voice reads as that sound.
+          speaker(card.word, null, { small: true, label: "Kana hören" }),
+        ),
+        cardRule(),
+        el("div.meaning.kana-reading.reveal", { text: card.word_meaning }),
+        strokeOrder(card),
+        kanaExampleBlock(card),
+      );
+      if (readAloud) voice(card.word, null);
+    } else if (meaningFirst) {
       render(
         area,
         el("span.prompt-label", { text: "Auf Japanisch" }),
@@ -1629,11 +1693,23 @@ export function canVoice(text, file) {
 /** "Es ist sehr lecker" is a sentence; "Zug" and "Nur das" are not. */
 const isPhrase = (text) => (text ?? "").trim().split(/\s+/).length >= 3;
 
+/**
+ * Which cards may lend a wrong answer to which: her decks' German to hers,
+ * Kaishi's English to Kaishi's, and a kana's reading only to kana of the same
+ * script (#158) — "ka" among Kaishi's glosses would be the answer at a glance,
+ * and a Kaishi word offered "ka" would be nonsense.
+ */
+const answerGroup = (card) => (isInHerDeck(card) ? "hers" : isKana(card) ? card.deck : "kaishi");
+
+/** Two gojūon rows either side (import/lib/kana.js ranks them in teaching order). */
+const KANA_NEIGHBOURS = 10;
+
 export function meaningPool(card, pool, japanese = true) {
   const shown = shownWord(card, japanese);
   const fromList = isInHerDeck(card);
+  const group = answerGroup(card);
   const candidates = pool.filter(
-    (c) => isInHerDeck(c) === fromList && shownWord(c, japanese) !== shown,
+    (c) => answerGroup(c) === group && shownWord(c, japanese) !== shown,
   );
   // #137, v66: on her lists a whole sentence among single words is the right
   // answer at a glance, whatever the Japanese said — "Es ist sehr lecker"
@@ -1641,9 +1717,57 @@ export function meaningPool(card, pool, japanese = true) {
   // and a word gets words, while there are three to choose from (101 of the
   // 551 meanings are three words or more). Kaishi's English glosses are not
   // sentences, and keep the pool they had.
+  if (isKana(card)) {
+    // #158: a kana's wrong answers come from the rows around it — the ones she
+    // is learning with it, not "ji" beside イ on her second day, which is
+    // wrong at a glance because she has not met ジ yet.
+    const near = candidates.filter(
+      (c) => Math.abs((c.frequency_rank ?? 0) - (card.frequency_rank ?? 0)) <= KANA_NEIGHBOURS,
+    );
+    return near.length >= 3 ? near : candidates;
+  }
   if (!fromList) return candidates;
   const alike = candidates.filter((c) => isPhrase(c.word_meaning) === isPhrase(card.word_meaning));
   return alike.length >= 3 ? alike : candidates;
+}
+
+/** The media files of a kana card's stroke-order drawings (import/import-kana.js names them). */
+export function strokeFiles(card) {
+  return [...(card.word ?? "")].map((c) => `kanjivg-${c.codePointAt(0).toString(16).padStart(5, "0")}.svg`);
+}
+
+const SMALL_YOON = /[ゃゅょャュョ]/;
+
+/**
+ * Kaishi words a kana card can point to (#158), read in kana, most common
+ * first.
+ *
+ * Only words that **start** with the kana. Inside a word a kana is often not
+ * its own sound: う in きょう is the long ō, い in せんせい the long ē, and き in
+ * きょう is きょ. At the start it is the sound on the card — except before a
+ * small ゃゅょ, which makes it a yōon. ん never starts a word, so it is the
+ * one kana found anywhere. Katakana are looked for in the word itself (Kaishi
+ * writes loanwords in katakana), hiragana in the reading. A kana no word
+ * starts with, like を, shows no example rather than a misleading one.
+ *
+ * Human-written, like everything a card shows: the Kaishi deck's words and its
+ * English glosses. Nothing is made up for the kana decks.
+ */
+export function kanaExamples(card, pool, count = 2) {
+  const kana = card.word;
+  if (!kana) return [];
+  const anywhere = kana === "ん" || kana === "ン";
+  const textOf = (c) => (card.deck === "katakana" ? c.word : (kanaReading(c.word_furigana) ?? c.word_reading));
+  const matches = (text) => {
+    if (!text) return false;
+    if (anywhere) return text.includes(kana);
+    return text.startsWith(kana) && !SMALL_YOON.test(text[kana.length] ?? "");
+  };
+  return pool
+    .filter((c) => c.deck === "kaishi" && !c.deleted_at && c.word_meaning && matches(textOf(c)))
+    .sort((a, b) => (a.frequency_rank ?? Infinity) - (b.frequency_rank ?? Infinity))
+    .slice(0, count)
+    .map((c) => ({ id: c.id, kana: textOf(c), meaning: c.word_meaning }));
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */

@@ -881,7 +881,8 @@ function resumeSession(saved) {
   // before decks had one ends on the deck list.
   const key = state.filters.deckKey;
   const known = state.lastDecks.find((d) => d.key === key);
-  state.deck = key ? (known ?? { key, name: key === "kaishi" ? "Kaishi" : key.startsWith("list:") ? key.slice(5) : "Dein Deck" }) : undefined;
+  const names = { kaishi: "Kaishi", hiragana: "Hiragana", katakana: "Katakana" };
+  state.deck = key ? (known ?? { key, name: names[key] ?? (key.startsWith("list:") ? key.slice(5) : "Dein Deck") }) : undefined;
   state.deckCards = undefined;
   state.session = { mode: saved.mode, filters: state.filters, resuming: saved };
   state.summary = undefined;
