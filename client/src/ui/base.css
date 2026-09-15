@@ -185,8 +185,14 @@ input:focus-visible {
 }
 
 /* ── tab bar (design 11, floating since #102) ───────────────────── */
-/* No icons: three words and a station dot for the active tab, the same dot
-   used everywhere else. Hidden during a session and behind sign-in.
+/* No icons, and no dots: four words, the active one bright in a pill of its
+   own. Hidden during a session and behind sign-in.
+
+   Design 11 draws a station dot above every word. #129 (Henning) takes them
+   out: the dot was meant to mark the active tab, but once the inactive ones
+   had to be lighter to be seen at all (v43) and the pill arrived (#102), four
+   dots said nothing the pill and the bright word did not. Do not put them
+   back for design 11's sake.
 
    Design 11 draws a bar joined to the bottom edge. #102 (Henning's call)
    makes it float, the way iOS 26 draws its tab bar: a capsule held off the
@@ -261,10 +267,8 @@ input:focus-visible {
 .tabbar button {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   background: none;
   border: 0;
   border-radius: calc((var(--tabbar-h) - 12px) / 2);
@@ -329,23 +333,11 @@ input:focus-visible {
   height: var(--tabbar-space);
 }
 
-.tabbar .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  /* --surface-hi, as before, would vanish into the capsule's border colour. */
-  background: var(--ink-dim);
-  display: block;
-}
-
 .tabbar .label {
+  position: relative; /* for the joker badge */
   font-size: 12px;
   font-weight: 600;
   color: var(--ink-muted);
-}
-
-.tabbar [aria-current="page"] .dot {
-  background: var(--ink);
 }
 
 .tabbar [aria-current="page"] .label {
@@ -354,27 +346,23 @@ input:focus-visible {
 
 /* The joker badge: a diamond on Stats the first time one is earned, cleared
    once the tab is opened. A diamond is the only diamond in the app.
-   Design 11 puts it 12px right of centre over a 12px label. The label here is
-   larger, and measured in WebKit at 394 × 852 that covered the "s" of Stats by
-   8px (#86, the first time the badge could light at all) — so 28px.
-   In the capsule (#102) `top` moved from 16px to 7px to keep it level with
-   the dot and label; measured at 394 × 852 the diamond clears the "s" by 8px
-   and stays inside the capsule top and bottom.
-   With four tabs (#123) each is about 85px wide, and that diamond ran 17px
-   into Settings (measured at 402 × 874). So it is smaller and sits by the dot,
-   where an iOS badge sits by its icon, clear of the label below. */
+   Design 11 puts it over the label, beside the dot. With the dots gone (#129)
+   it sits where Statistik's dot was, centred over the word, and the word stays
+   centred in the pill. Beside the word it was tried first and measured at
+   394 × 852: 4px from "Statistik" and 6px from "Einstellungen", so it read as
+   belonging to either. */
 .tabbar .joker-badge {
   position: absolute;
-  top: 5px;
+  bottom: 100%;
   left: 50%;
-  margin-left: 11px;
-  width: 14px;
-  height: 14px;
+  margin-bottom: 5px;
+  margin-left: -4px;
+  width: 8px;
+  height: 8px;
   background: var(--ink);
   transform: rotate(45deg);
-  /* 5px on a 14px square draws a circle, and a circle is a station. */
-  border-radius: 3px;
-  display: block;
+  /* 2px on an 8px square still reads as a diamond, not a station. */
+  border-radius: 2px;
 }
 
 @media (min-width: 700px) {
