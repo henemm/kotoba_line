@@ -17,6 +17,13 @@ import { el, num, render } from "../ui/dom.js";
  */
 const NEW_PER_DAY_CHOICES = [5, 10, 15, 20, 30];
 
+/**
+ * v74, migration 017: how many cards the deck asks for a day, new and review
+ * together — Noji's "Max cards per day", which took the place of "How long"
+ * on the deck page. `null` is no limit and every deck's default.
+ */
+const MAX_PER_DAY_CHOICES = [null, 20, 30, 50, 100];
+
 const CANNOT = {
   listen: "Not possible here: no example sentences with a translation",
   type: "Not possible here: no words with a reading to check against",
@@ -102,6 +109,20 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           }),
         ),
       ),
+      el("span.options-label", { id: "max-per-day-label", text: "Max cards per day" }),
+      el(
+        "div.choice",
+        { role: "group", "aria-labelledby": "max-per-day-label" },
+        maxChoicesFor(settings.maxPerDay ?? null).map((n) =>
+          el("button", {
+            type: "button",
+            text: n === null ? "No limit" : String(n),
+            "aria-pressed": String(n === (settings.maxPerDay ?? null)),
+            onclick: () => n !== (settings.maxPerDay ?? null) && change({ maxPerDay: n }),
+          }),
+        ),
+      ),
+      el("p.options-hint", { text: "New and review cards together. You can always stop a session early." }),
       // #137: a deck of hers can be renamed and deleted here, where Noji keeps
       // a deck's menu. Kaishi is everyone's and cannot.
       deck.own && (onRename || onDelete)
@@ -153,6 +174,12 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
   }
 
   return scrim;
+}
+
+/** The maximum's choices, and hers among them if it was stored as something else (the server allows 10 to 500). */
+export function maxChoicesFor(current) {
+  if (MAX_PER_DAY_CHOICES.includes(current)) return MAX_PER_DAY_CHOICES;
+  return [null, ...[...MAX_PER_DAY_CHOICES.slice(1), current].sort((a, b) => a - b)];
 }
 
 /** The five choices, and hers among them if it was set to something else (Settings allowed 5 to 40 in fives). */

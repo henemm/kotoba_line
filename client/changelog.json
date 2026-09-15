@@ -1,5 +1,15 @@
 [
   {
+    "version": "v74",
+    "summary": "A deck's page is simpler: tap how you want to practise, and you start.",
+    "notes": [
+      "No more “How long”. A session is the deck's cards for today, like in Noji, and you can stop at any time. Carry on keeps the rest.",
+      "The ways to practise are buttons now. Tap one and the session starts.",
+      "If a deck should ask for fewer cards a day, open its Options and choose Max cards per day.",
+      "With the iPad sideways, the deck's cards are in the middle and the buttons to start are on the right."
+    ]
+  },
+  {
     "version": "v73",
     "summary": "A new day in the app starts at midnight, on your own clock.",
     "notes": [

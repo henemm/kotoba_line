@@ -202,8 +202,8 @@ describe("settings of one deck (#137, migration 014)", () => {
     db.prepare("UPDATE user_settings SET new_per_day = 20 WHERE user_id = ?").run(user.id);
     const { decks } = await json("/api/decks");
     const byName = Object.fromEntries(decks.map((d) => [d.name, d]));
-    assert.deepEqual(byName.Kaishi.settings, { hiddenModes: [], newPerDay: 20 });
-    assert.deepEqual(byName.long.settings, { hiddenModes: [], newPerDay: 10 });
+    assert.deepEqual(byName.Kaishi.settings, { hiddenModes: [], newPerDay: 20, maxPerDay: null });
+    assert.deepEqual(byName.long.settings, { hiddenModes: [], newPerDay: 10, maxPerDay: null });
     assert.equal(byName.long.today.fresh, 10, "a list of 14 new words offers 10 today");
     await app.close();
   });
@@ -225,7 +225,8 @@ describe("settings of one deck (#137, migration 014)", () => {
     const long = await json(`/api/queue?deckKey=${encodeURIComponent("list:long")}&limit=60`);
     assert.equal(long.cardIds.length, 5);
     // Answer all five: that deck is done for the day, the other is untouched.
-    const events = long.cardIds.map((id, i) => ({ id: `00000000-0000-4000-8000-00000000000${i}`, card_id: id, mode: "flip", rating: 3, reviewed_at: Math.floor(Date.now() / 1000) - 60 }));
+    // At now, not a minute before: that minute can be yesterday (#122).
+    const events = long.cardIds.map((id, i) => ({ id: `00000000-0000-4000-8000-00000000000${i}`, card_id: id, mode: "flip", rating: 3, reviewed_at: Math.floor(Date.now() / 1000) }));
     const posted = await app.inject({ method: "POST", url: "/api/events", headers: { cookie }, payload: { events } });
     assert.equal(posted.statusCode, 200, posted.body);
     const after = await json(`/api/queue?deckKey=${encodeURIComponent("list:long")}&limit=60`);
@@ -238,12 +239,67 @@ describe("settings of one deck (#137, migration 014)", () => {
   it("stores the ways of practising per deck, and never all five hidden", async () => {
     const { app, cookie, json } = await signedIn();
     const res = await patch(app, cookie, { deckKey: "list:list a", hiddenModes: ["type", "choose"] });
-    assert.deepEqual(res.json().settings, { hiddenModes: ["choose", "type"], newPerDay: 10 });
+    assert.deepEqual(res.json().settings, { hiddenModes: ["choose", "type"], newPerDay: 10, maxPerDay: null });
     const { decks } = await json("/api/decks");
     assert.deepEqual(decks.find((d) => d.key === "kaishi").settings.hiddenModes, [], "another deck is not touched");
     assert.equal((await patch(app, cookie, { deckKey: "list:list a", hiddenModes: ["choose", "listen", "speak", "type", "flip"] })).statusCode, 400);
     assert.equal((await patch(app, cookie, { deckKey: "personal", newPerDay: 10 })).statusCode, 400);
     assert.equal((await patch(app, cookie, { deckKey: "kaishi", newPerDay: 3 })).statusCode, 400);
+    await app.close();
+  });
+
+  it("caps a deck's cards for the day, reviews first, and counts what she answered (migration 017)", async () => {
+    const { app, db, user, cookie, json } = await signedIn();
+    const url = `/api/queue?deckKey=${encodeURIComponent("list:long")}&limit=60`;
+    const now = Math.floor(Date.now() / 1000);
+    // Three of the long list's cards are due reviews; the other eleven are new.
+    const ids = db.prepare("SELECT id FROM cards WHERE list_name = 'long' ORDER BY id").all().map((r) => r.id);
+    const state = db.prepare(
+      "INSERT INTO card_state (user_id, card_id, due_at, stability, difficulty, reps, lapses, last_review) VALUES (?, ?, ?, 1, 5, 1, 0, ?)",
+    );
+    for (const id of ids.slice(0, 3)) state.run(user.id, id, now - 60, now - 5 * 86400);
+    db.prepare("INSERT INTO review_events (id, user_id, card_id, mode, rating, reviewed_at, received_at) VALUES (?, ?, ?, 'flip', 3, ?, ?)")
+      .run("00000000-0000-4000-8000-0000000000aa", user.id, ids[0], now - 5 * 86400, now - 5 * 86400);
+
+    assert.deepEqual((await json(url)).today, { total: 13, fresh: 10, review: 3 }, "no limit: 3 due and 10 new");
+
+    const set = await patch(app, cookie, { deckKey: "list:long", maxPerDay: 10 });
+    assert.equal(set.statusCode, 200, set.body);
+    assert.equal(set.json().settings.maxPerDay, 10);
+    const capped = await json(url);
+    assert.deepEqual(capped.today, { total: 10, fresh: 7, review: 3 }, "the reviews stay, the new cards give way");
+    assert.equal(capped.cardIds.length, 10);
+
+    // Four answered today leave six.
+    const events = capped.cardIds.slice(0, 4).map((id, i) => ({ id: `00000000-0000-4000-8000-00000000010${i}`, card_id: id, mode: "flip", rating: 3, reviewed_at: now }));
+    assert.equal((await app.inject({ method: "POST", url: "/api/events", headers: { cookie }, payload: { events } })).statusCode, 200);
+    assert.equal((await json(url)).today.total, 6);
+
+    // A set she chose is not capped (§5a), and null takes the limit off again.
+    assert.ok((await json(`${url}&only=new`)).cardIds.length > 6);
+    assert.equal((await patch(app, cookie, { deckKey: "list:long", maxPerDay: null })).json().settings.maxPerDay, null);
+    assert.ok((await json(url)).today.total > 6);
+    assert.equal((await patch(app, cookie, { deckKey: "list:long", maxPerDay: 5 })).statusCode, 400);
+    await app.close();
+  });
+
+  it("says when the day's maximum, not an empty deck, is why nothing is left", async () => {
+    const { app, db, user, cookie, json } = await signedIn();
+    const url = `/api/queue?deckKey=${encodeURIComponent("list:long")}&limit=60`;
+    const now = Math.floor(Date.now() / 1000);
+    // All fourteen are due reviews; the maximum is ten.
+    const state = db.prepare(
+      "INSERT INTO card_state (user_id, card_id, due_at, stability, difficulty, reps, lapses, last_review) VALUES (?, ?, ?, 1, 5, 1, 0, ?)",
+    );
+    for (const { id } of db.prepare("SELECT id FROM cards WHERE list_name = 'long'").all()) state.run(user.id, id, now - 60, now - 5 * 86400);
+    await patch(app, cookie, { deckKey: "list:long", maxPerDay: 10 });
+    const first = await json(url);
+    assert.equal(first.maxReached, false);
+    const events = first.cardIds.map((id, i) => ({ id: `00000000-0000-4000-8000-0000000002${String(i).padStart(2, "0")}`, card_id: id, mode: "flip", rating: 3, reviewed_at: now }));
+    await app.inject({ method: "POST", url: "/api/events", headers: { cookie }, payload: { events } });
+    const after = await json(url);
+    assert.equal(after.today.total, 0);
+    assert.equal(after.maxReached, true, "four are still due, held back by the maximum");
     await app.close();
   });
 });

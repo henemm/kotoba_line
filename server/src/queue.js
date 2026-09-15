@@ -158,9 +158,10 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // Noji: new cards in "1000" no longer use up the day's new cards in Kaishi.
   // Without a deck — a phone still on v62 — the overall limit covers everything.
   const inDeck = parseDeckKey(deckKey) !== undefined;
-  const newPerDay = inDeck
-    ? deckSettings(db, userId, deckKey).newPerDay
-    : (db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15);
+  const ofDeck = inDeck ? deckSettings(db, userId, deckKey) : undefined;
+  const newPerDay =
+    ofDeck?.newPerDay ??
+    (db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15);
 
   // How many new cards were introduced today — in this deck, when there is
   // one — so the daily cap is a cap on the day rather than on the session.
@@ -182,6 +183,25 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
              WHERE user_id = ? AND reviewed_at < ?)${scopeSql}`,
     )
     .get(userId, dayStart, userId, dayStart, ...scopeParams).n;
+
+  // The deck's "Max cards per day" (migration 017), new and review together:
+  // what is left of it after the cards she has already answered today in this
+  // deck. Undefined with no limit, and for a set she chose (§5a).
+  const maxPerDay = !filtered ? ofDeck?.maxPerDay : undefined;
+  const leftToday =
+    maxPerDay == null
+      ? undefined
+      : Math.max(
+          0,
+          maxPerDay -
+            db
+              .prepare(
+                `SELECT count(DISTINCT e.card_id) n
+                   FROM review_events e JOIN cards c ON c.id = e.card_id
+                  WHERE e.user_id = ? AND e.reviewed_at >= ?${scopeSql}`,
+              )
+              .get(userId, dayStart, ...scopeParams).n,
+        );
 
   const starredOnly = only === "starred";
 
@@ -233,6 +253,20 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   let groups = { due, lapsed, fresh };
 
+  // The day's maximum takes reviews first, then new cards, in the order the
+  // session meets them — as Noji does. What it holds back is due tomorrow still.
+  let maxReached = false;
+  if (leftToday !== undefined) {
+    const reviews = [...new Set([...due, ...lapsed])];
+    const kept = new Set(reviews.slice(0, leftToday));
+    maxReached = leftToday === 0 && reviews.length + fresh.length > 0;
+    groups = {
+      due: due.filter((id) => kept.has(id)),
+      lapsed: lapsed.filter((id) => kept.has(id)),
+      fresh: fresh.slice(0, Math.max(0, leftToday - kept.size)),
+    };
+  }
+
   // §5a's `only=` narrows to one group rather than mixing.
   if (only === "lapsed") groups = { due: [], lapsed, fresh: [] };
   else if (only === "new") groups = { due: [], lapsed: [], fresh };
@@ -279,7 +313,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // §5: shuffle within the session so the same cards do not always come in the
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
-  return { mode: mode ?? null, filtered, available, today, newCapReached, cardIds: shuffle(queue, random) };
+  return { mode: mode ?? null, filtered, available, today, newCapReached, maxReached, cardIds: shuffle(queue, random) };
 }
 
 /**
