@@ -1,5 +1,13 @@
 [
   {
+    "version": "v81",
+    "summary": "Updates findest du jetzt auch in den Einstellungen.",
+    "notes": [
+      "Wenn eine neue Version bereit ist, steht ganz oben in den Einstellungen „Neue Version“ mit dem Knopf „Aktualisieren“.",
+      "Hast du beim Hinweis auf „Später“ getippt, kannst du so trotzdem jederzeit aktualisieren. Gibt es nichts Neues, siehst du dort auch nichts."
+    ]
+  },
+  {
     "version": "v80",
     "summary": "Richtig ist jetzt grün, falsch bleibt rot.",
     "notes": [

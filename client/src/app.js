@@ -151,6 +151,10 @@ const state = {
   update: undefined,
   updateNode: undefined,
   updateDeferred: undefined,
+  // #103: the version downloaded and waiting, `{ worker, version, entries }`,
+  // kept after Later so Settings can still offer it — Later used to leave no
+  // way to update until the app was next started.
+  waiting: undefined,
 };
 
 /**
@@ -288,6 +292,13 @@ function currentScreen() {
   if (state.tab === "stats") return statsScreen({ onBrowse: () => goToTab("words") });
   return settingsScreen({
     user: state.user,
+    // #103: only while a version waits. Update here is the same swap as the
+    // sheet's, without asking again: tapping it is the answer.
+    update: state.waiting && {
+      version: state.waiting.version,
+      entries: state.waiting.entries,
+      onUpdate: () => applyUpdate(state.waiting.worker, state.waiting.version),
+    },
     onSettings: keepSettings,
     onSignOut: async () => {
       state.user = undefined;
@@ -1150,6 +1161,7 @@ let notesFrom = (async () => {
 async function offerUpdate({ worker, version }) {
   if (state.updateDeferred === version || state.update?.version === version) return;
   const entries = notesSince(await readChangelog(version), await notesFrom, version);
+  state.waiting = { worker, version, entries };
   showUpdate({ kind: "ready", worker, version, entries });
 }
 
