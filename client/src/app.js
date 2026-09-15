@@ -527,7 +527,12 @@ function deckCards() {
   if (state.deckCards?.key !== state.deck.key) {
     state.deckCards = {
       key: state.deck.key,
-      block: deckCardsBlock({ deck: state.deck, japanese: state.settings.japaneseScript, onCard: openCardActions }),
+      block: deckCardsBlock({
+        deck: state.deck,
+        japanese: state.settings.japaneseScript,
+        onCard: openCardActions,
+        onAdd: openAddCard,
+      }),
     };
   }
   return state.deckCards.block;

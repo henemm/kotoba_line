@@ -4077,20 +4077,17 @@ button.deck-card:active {
   font: 600 15px/1 var(--ui);
 }
 
-.deck-add-card {
-  position: absolute;
-  z-index: 11; /* over the tab bar's dimmed band (9) and beside the bar (10) */
-  right: var(--gutter);
-  bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 14px);
-  border: 0;
-  border-radius: 26px;
-  background: var(--ink);
-  color: var(--night);
-  padding: 14px 20px;
+/* v78: in the flow above the deck's search, no longer floating (deck-cards.js). */
+.deck-cards-add {
+  width: 100%;
+  min-height: 50px;
+  border: 1.5px solid var(--surface-hi);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
   font: 700 16px/1 var(--ui);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
 }
-.deck-add-card:active {
+.deck-cards-add:active {
   opacity: 0.85;
 }
 

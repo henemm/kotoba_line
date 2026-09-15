@@ -370,11 +370,18 @@ introduces 5 a day, one gojūon row.
 
 A kana card is asked two ways only: 選ぶ (the kana, then its reading among the
 readings of nearby rows) and めくる (the kana, turning over to the reading,
-KanjiVG's stroke order and up to two Kaishi words that start with it). 話す
+KanjiVG's stroke order and up to two words that start with it). 話す
 and 書く would prompt with the reading, which is the answer, and 聞く has no
 sentence. The Japanese-script switch (§12) does not apply inside a kana deck.
 Sound is the phone's speech synthesis: no free set of single-kana recordings
 exists. Nothing on a kana card is generated — no mnemonics.
+
+The example words (v78) are chosen by the import and stored on the card
+(`word_examples`, migration 019): Kaishi words first, then the JLPT lists
+(Jonathan Waller, CC BY) N5 → N4 → N3 with the first gloss of JMdict's entry
+(EDRDG, CC BY-SA 4.0). Kaishi alone gave 3 of 104 katakana cards an example;
+with the lists it is 62. Settings → Quellen carries the attributions the
+licences ask for.
 
 ---
 

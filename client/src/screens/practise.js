@@ -107,7 +107,7 @@ export function practiseScreen({
     // A deck of hers with nothing in it yet has nothing to practise: the page
     // is the way to its first card (#137).
     if (deck?.own && deck.cards === 0) {
-      render(root, header(), emptyDeck(), addButton());
+      render(root, header(), emptyDeck());
       return;
     }
     const soon = await answerSoon(numbers);
@@ -125,7 +125,6 @@ export function practiseScreen({
       soundNote(),
       progress,
       cardsBlock ?? null,
-      addButton(),
     );
     fill(soon);
     // Once the rows are in: before, there is nothing to scroll and it clamps
@@ -179,16 +178,6 @@ export function practiseScreen({
     return el("p.deck-max-note", {
       text: "Das ist das Maximum für heute in diesem Deck. Du kannst es unter Optionen ändern.",
     });
-  }
-
-  /**
-   * Noji's floating "Karten hinzufügen" (#137): over the page, above the tab
-   * bar, wherever she has scrolled to. Kaishi has none — its cards are the
-   * deck's, not hers to add to.
-   */
-  function addButton() {
-    if (!deck?.own || !onAddCard) return null;
-    return el("button.deck-add-card", { type: "button", onclick: onAddCard, text: "+ Karte hinzufügen" });
   }
 
   function emptyDeck() {

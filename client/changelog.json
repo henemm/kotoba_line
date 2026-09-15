@@ -1,5 +1,15 @@
 [
   {
+    "version": "v78",
+    "summary": "Mehr Beispielwörter bei Katakana, und „Karte hinzufügen“ steht jetzt über der Suche.",
+    "notes": [
+      "Hinten auf den Katakana-Karten stehen jetzt bei 62 von 104 Kana Wörter wie カメラ (camera) oder ホテル (hotel). Vorher war das nur bei 3 so. Die Wörter kommen aus den Wortlisten für Anfänger (JLPT).",
+      "Auch bei Hiragana gibt es jetzt öfter ein Beispiel.",
+      "In deinen eigenen Decks schwebt „+ Karte hinzufügen“ nicht mehr über der Seite. Der Knopf steht direkt über „In diesem Deck suchen“ und verdeckt nichts mehr.",
+      "Unter Einstellungen → Quellen steht, woher Wörter, Strichfolgen und Bedeutungen kommen."
+    ]
+  },
+  {
     "version": "v77",
     "summary": "Neu: Hiragana und Katakana als eigene Decks.",
     "notes": [

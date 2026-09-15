@@ -1151,9 +1151,9 @@ export function sessionScreen({
     return block;
   }
 
-  /** Up to two Kaishi words with this kana in them, each read in kana, with its meaning. */
+  /** Up to two words that start with this kana, each read in kana, with its meaning. */
   function kanaExampleBlock(card) {
-    const examples = kanaExamples(card, pool);
+    const examples = kanaExamples(card);
     if (examples.length === 0) return null;
     return el(
       "div.kana-examples.reveal",
@@ -1181,7 +1181,7 @@ export function sessionScreen({
     const settle = holdInPlace(area, meaningFirst ? ".prompt-label" : ".word");
     if (isKana(card)) {
       // #158: the kana stays, and under it how it is read, how it is written
-      // and where she has met it — Kaishi words with it in them.
+      // and words that start with it.
       render(
         area,
         el(
@@ -1736,38 +1736,19 @@ export function strokeFiles(card) {
   return [...(card.word ?? "")].map((c) => `kanjivg-${c.codePointAt(0).toString(16).padStart(5, "0")}.svg`);
 }
 
-const SMALL_YOON = /[ゃゅょャュョ]/;
-
 /**
- * Kaishi words a kana card can point to (#158), read in kana, most common
- * first.
- *
- * Only words that **start** with the kana. Inside a word a kana is often not
- * its own sound: う in きょう is the long ō, い in せんせい the long ē, and き in
- * きょう is きょ. At the start it is the sound on the card — except before a
- * small ゃゅょ, which makes it a yōon. ん never starts a word, so it is the
- * one kana found anywhere. Katakana are looked for in the word itself (Kaishi
- * writes loanwords in katakana), hiragana in the reading. A kana no word
- * starts with, like を, shows no example rather than a misleading one.
- *
- * Human-written, like everything a card shows: the Kaishi deck's words and its
- * English glosses. Nothing is made up for the kana decks.
+ * A kana card's example words (#158, v78), as `npm run import-kana` chose them
+ * — Kaishi first, then the JLPT lists (import/lib/examples.js has the rules).
+ * Unreadable or absent is no examples, never an error on a card.
  */
-export function kanaExamples(card, pool, count = 2) {
-  const kana = card.word;
-  if (!kana) return [];
-  const anywhere = kana === "ん" || kana === "ン";
-  const textOf = (c) => (card.deck === "katakana" ? c.word : (kanaReading(c.word_furigana) ?? c.word_reading));
-  const matches = (text) => {
-    if (!text) return false;
-    if (anywhere) return text.includes(kana);
-    return text.startsWith(kana) && !SMALL_YOON.test(text[kana.length] ?? "");
-  };
-  return pool
-    .filter((c) => c.deck === "kaishi" && !c.deleted_at && c.word_meaning && matches(textOf(c)))
-    .sort((a, b) => (a.frequency_rank ?? Infinity) - (b.frequency_rank ?? Infinity))
-    .slice(0, count)
-    .map((c) => ({ id: c.id, kana: textOf(c), meaning: c.word_meaning }));
+export function kanaExamples(card) {
+  if (!card?.word_examples) return [];
+  try {
+    const list = JSON.parse(card.word_examples);
+    return Array.isArray(list) ? list.filter((e) => e?.kana && e?.meaning) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */
