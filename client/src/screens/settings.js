@@ -2,7 +2,7 @@ import { ApiError, OfflineError, api } from "../api.js";
 import { cardCount } from "../store.js";
 import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
-import { versionNumber } from "../whats-new.js";
+import { sheetSummary, versionNumber } from "../whats-new.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -91,11 +91,12 @@ const APPEARANCES = [
   { value: "system", label: "Automatisch" },
 ];
 
-export function settingsScreen({ user, onSignOut, onSettings }) {
+export function settingsScreen({ user, update, onSignOut, onSettings }) {
   const root = el("div.settings");
   render(root, el("div.loading", { text: "…" }));
 
   let data;
+  let updating = false;
 
   load();
 
@@ -103,7 +104,9 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
     try {
       data = await api.settings();
     } catch (err) {
-      render(root, header(), problem(err));
+      // The new version is already on the phone, so offline is no reason to
+      // hide it.
+      render(root, header(), waitingUpdate(), problem(err));
       return;
     }
     draw();
@@ -123,6 +126,7 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
     render(
       root,
       header(),
+      waitingUpdate(),
       // #123: only what configures the app. The Deck group (names and counts,
       // each leading to Browse) and session length went to the Words and
       // Practise tabs, where she is when she needs them.
@@ -182,6 +186,37 @@ export function settingsScreen({ user, onSignOut, onSettings }) {
       return;
     }
     draw();
+  }
+
+  // ── Update ──────────────────────────────────────────────────────
+
+  /**
+   * #103 (Henning): the update in Settings, and only when there is one. The
+   * sheet asks once per version (#93), and after Später it used to be gone
+   * until the app was next started. First on the screen, because it is the
+   * one thing here that is news; the diagnostics row further down still says
+   * the same in numbers.
+   */
+  function waitingUpdate() {
+    if (!update) return null;
+    const { text } = sheetSummary(update.entries);
+    return group(
+      "App",
+      row(
+        `Neue Version ${update.version}`,
+        text ?? "Kleine Fehlerbehebungen und Verbesserungen.",
+      ),
+      el("button.update-now", {
+        type: "button",
+        text: updating ? "Wird aktualisiert …" : "Aktualisieren",
+        disabled: updating,
+        onclick: () => {
+          updating = true;
+          data ? draw() : render(root, header(), waitingUpdate());
+          update.onUpdate();
+        },
+      }),
+    );
   }
 
   // New cards per day and the ways of practising belong to a deck since
