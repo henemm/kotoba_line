@@ -1,5 +1,15 @@
 [
   {
+    "version": "v87",
+    "summary": "Mehr Beispielwörter bei den Kana kannst du jetzt anhören.",
+    "notes": [
+      "Bei Katakana haben jetzt 37 von 104 Karten ein Beispielwort, das ein Japaner oder eine Japanerin vorspricht, zum Beispiel カメラ, ホテル oder ピアノ. Vorher waren es 5.",
+      "Dadurch steht der Laut öfter auch mitten im Wort, nicht nur am Anfang – so hörst du, wie er dort klingt.",
+      "Bei Hiragana gibt es jetzt auch Wörter mit ゃ, ゅ oder ょ zum Anhören, zum Beispiel ぎゅうにゅう.",
+      "Eine der Stimmen kommt aus der Gegend um Osaka. Bei manchen Wörtern liegt die Betonung deshalb etwas anders als in Tokio."
+    ]
+  },
+  {
     "version": "v86",
     "summary": "Du siehst jetzt, an welchen Tagen du geübt hast.",
     "notes": [

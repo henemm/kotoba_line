@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { openDatabase } from "../../server/src/db.js";
 import { kanaExamples, writeKanaCards } from "../import-kana.js";
+import { EXAMPLE_SOUNDS, exampleSoundName } from "../lib/example-sounds.js";
 import { makeMeaningLookup, parseJlptCsv, pickExamples, shortGloss, soundAt, startsWithSound } from "../lib/examples.js";
 import { kanaId } from "../lib/kana.js";
 
@@ -123,6 +124,34 @@ describe("example words for the kana decks (#158, v78)", () => {
     assert.deepEqual(pickExamples({ word: "か", deck: "hiragana" }, { kaishi: silent, meaningOf }).map((e) => e.kana), ["かさ"]);
   });
 
+  it("ranks a native recording from elsewhere like a Kaishi recording, after Kaishi's (v87)", () => {
+    const meaningOf = makeMeaningLookup(jmdict);
+    const jlpt = [{ written: "カメラ", reading: "カメラ", level: 5 }];
+    const kaishi = [{ reading: "カード", meaning: "card" }];
+    const recorded = [
+      { reading: "カメラ", meaning: "camera", audio: "example-a.mp3", source: "lingualibre" },
+      { reading: "スカート", meaning: "skirt", audio: "example-b.mp3", source: "lingualibre" },
+      { reading: "バカ", meaning: "fool", source: "tofugu" }, // no recording: not offered
+    ];
+    const ka = { word: "カ", deck: "katakana" };
+    // A recorded word inside beats a silent word at the start, and the source
+    // is the recording's, not "kaishi".
+    assert.deepEqual(
+      pickExamples(ka, { kaishi, recorded, jlpt, meaningOf }).map((e) => [e.kana, e.source, e.audio, e.at]),
+      [
+        ["カメラ", "lingualibre", "example-a.mp3", 0],
+        ["スカート", "lingualibre", "example-b.mp3", 1],
+        ["カード", "kaishi", undefined, 0],
+      ],
+    );
+    // Kaishi's own recording keeps the first place.
+    const kaishiRecorded = [{ reading: "カップ", meaning: "cup", audio: "kappu.mp3" }];
+    assert.deepEqual(
+      pickExamples(ka, { kaishi: kaishiRecorded, recorded, meaningOf }).map((e) => e.kana),
+      ["カップ", "スカート", "カメラ"],
+    );
+  });
+
   it("never gives a hiragana card a katakana word", () => {
     const meaningOf = makeMeaningLookup(jmdict);
     const jlpt = [{ written: "カメラ", reading: "カメラ", level: 5 }];
@@ -142,6 +171,12 @@ describe("example words for the kana decks (#158, v78)", () => {
     assert.equal(writeKanaCards(db, 2000, kanaExamples(db, sources)), 0);
     assert.equal(writeKanaCards(db, 3000), 0, "without sources the stored examples are kept");
     assert.ok(stored("カ"));
+
+    // v87: a pinned recording puts its file on the example.
+    const camera = EXAMPLE_SOUNDS.find((s) => s.reading === "カメラ");
+    assert.equal(writeKanaCards(db, 4000, kanaExamples(db, { ...sources, sounds: [camera] })), 3, "カ, メ and ラ gain it");
+    assert.deepEqual(JSON.parse(stored("カ"))[0], { kana: "カメラ", meaning: "camera", source: "lingualibre", audio: exampleSoundName(camera), at: 0 });
+    assert.deepEqual(JSON.parse(stored("メ")), [{ kana: "カメラ", meaning: "camera", source: "lingualibre", audio: exampleSoundName(camera), at: 1 }]);
     db.close();
   });
 });

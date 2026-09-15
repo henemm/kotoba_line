@@ -279,8 +279,12 @@ NODE
     fi
     # v83: 91 of them with a recorded word (86 hiragana + 5 katakana, measured
     # 2026-09-15). None means the examples are still v78's, chosen without.
+    # v87: 133 (96 + 37) with the Lingua Libre and Tofugu recordings; fewer
+    # than 120 means the import has not run since.
     if [[ ${F_kanaExampleAudio} != absent && ${F_kanaExamples:-0} -gt 0 && ${F_kanaExampleAudio:-0} -eq 0 ]]; then
       warn "npm run import-kana" "no kana example word has its recording — the kana import needs running again (v83)"
+    elif [[ ${F_kanaExampleAudio} != absent && ${F_kanaExamples:-0} -gt 0 && ${F_kanaExampleAudio:-0} -lt 120 ]]; then
+      warn "npm run import-kana" "${F_kanaExampleAudio} kana cards with a recorded example word, 133 expected — the kana import needs running again (v87)"
     elif [[ ${F_kanaExampleAudio} != absent && ${F_kanaExamples:-0} -gt 0 ]]; then
       ok "${F_kanaExampleAudio} kana cards with a recorded example word"
     fi
@@ -328,6 +332,14 @@ if [[ -d $MEDIA_DIR ]]; then
     warn "npm run import-kana" "${kanaSounds:-0} of 71 kana recordings in $MEDIA_DIR"
   else
     ok "${kanaSounds} kana recordings"
+  fi
+  # v87: the example words' recordings from Lingua Libre and Tofugu
+  # (import/lib/example-sounds.js).
+  exampleSounds=$(find "$MEDIA_DIR" -name 'example-*.mp3' 2>/dev/null | wc -l | tr -d ' ')
+  if [[ ${exampleSounds:-0} -lt 57 ]]; then
+    warn "npm run import-kana" "${exampleSounds:-0} of 57 example word recordings in $MEDIA_DIR"
+  else
+    ok "${exampleSounds} example word recordings"
   fi
 else
   warn "npm run import" "no $MEDIA_DIR yet"

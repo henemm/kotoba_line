@@ -114,8 +114,10 @@ import. Since v84 it fetches the 71 kana recordings from Wikimedia Commons
 as `kana-*.mp3` (~1.8 MB, about three minutes: Wikimedia throttles quick
 downloads) and stops if a file is not the pinned recording. Run it after
 `ops/deploy.sh`, not before: it needs migrations 018 and 019, and a v83 shell
-would play a kana's recording before she has answered. Re-running it changes
-nothing that has not changed.
+would play a kana's recording before she has answered. Since v87 it also
+fetches 57 example-word recordings from Lingua Libre (Commons) and Tofugu
+(GitHub) as `example-*.mp3` (~1.3 MB, about a minute), pinned the same way.
+Re-running it changes nothing that has not changed.
 
 `verify-import` samples twenty cards and checks their audio is really audio.
 It exits non-zero if anything is wrong, so it is worth reading. It does not,
