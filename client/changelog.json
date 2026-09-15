@@ -1,5 +1,14 @@
 [
   {
+    "version": "v76",
+    "summary": "Auf dem iPad gibt es wieder nur eine Seite, und jedes Deck zeigt, wie weit du bist.",
+    "notes": [
+      "Hältst du das iPad quer, sieht die App aus wie hochkant: unten die Tabs, in der Mitte eine Seite. Mit „‹ Decks“ kommst du zurück zu deinen Decks.",
+      "Unter „Karten für heute“ steht jetzt, wie viele davon nicht gelernt, in Bearbeitung oder gemeistert sind – wie in Noji.",
+      "Weiter unten zeigt „Karten im Deck“ mit einem Balken, wie weit du im ganzen Deck bist. Gemeistert ist eine Karte, wenn sie erst in drei Wochen oder später wieder drankommt."
+    ]
+  },
+  {
     "version": "v75",
     "summary": "Die App spricht jetzt Deutsch.",
     "notes": [

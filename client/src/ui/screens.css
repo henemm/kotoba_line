@@ -675,9 +675,13 @@
   font-size: 16px;
   color: var(--ink-muted);
 }
+/* #159: three parts where there were two, so they share the width rather than
+   keep 48px apart — "In Bearbeitung" beside two others still fits a phone. */
 .deck-today-split {
+  align-self: stretch;
   display: flex;
-  gap: 48px;
+  justify-content: space-around;
+  gap: 12px;
   margin-top: 14px;
 }
 .deck-today-part {
@@ -689,8 +693,82 @@
   color: var(--ink-muted);
 }
 .deck-today-part b {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 20px;
   color: var(--ink);
+}
+
+/* #159: Noji's three bands, drawn in the maturity ramp the Stats tab uses —
+   the saturated colours belong to the ways of practising and are not reused
+   (design 02). Faintest is a card never answered, ink is mastered. */
+.band-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.band-dot.new,
+.deck-progress-bar > .new {
+  background: var(--band-new);
+}
+.band-dot.learning,
+.deck-progress-bar > .learning {
+  background: var(--band-young);
+}
+.band-dot.mastered,
+.deck-progress-bar > .mastered {
+  background: var(--band-mature);
+}
+
+/* "Karten im Deck (387)": the whole deck, above its cards (Noji's deck page).
+   Empty until the day's numbers are in, and then it takes no room. */
+.deck-progress {
+  flex: none;
+  margin: 28px var(--gutter) 0;
+}
+.deck-progress:empty {
+  display: none;
+}
+.deck-progress-title {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.deck-progress-bar {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.deck-progress-bar > span {
+  flex-basis: 0;
+  min-width: 4px;
+}
+.deck-progress-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 12px;
+}
+.deck-progress-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+.deck-progress-part b {
+  color: var(--ink);
+}
+/* The progress names the deck's cards and counts them, so the card list under
+   it does not say it a second time. Offline there is no progress, and the
+   list's own heading, counted from the phone's copy, is back. */
+.deck-page:has(> .deck-progress:not(:empty)) .deck-cards > .set-label {
+  display: none;
 }
 .deck-page .next-due {
   margin-top: 14px;
@@ -790,93 +868,6 @@
   justify-content: space-between;
   font-size: 15px;
   font-weight: 600;
-}
-
-/* #150: a deck's page on a 700pt page (base.css). "cards for today" and the
-   ways to start side by side — v74: the start on the right, where the page
-   ends when it is read left to right; it was "How long" until that went —
-   then everything else under them at full width, in the same order as on the
-   phone. Grid rather than a wrapper in practise.js, so the phone's page is
-   the same markup. Only a page with its numbers: an empty deck and the
-   loading state keep the column. */
-@media (min-width: 700px) {
-  .deck-page:has(> .deck-today) {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-content: start;
-  }
-  .deck-page:has(> .deck-today) > * {
-    grid-column: 1 / -1;
-  }
-  .deck-page > .deck-head {
-    grid-row: 1;
-  }
-  .deck-page > .deck-today {
-    grid-column: 1;
-    grid-row: 2;
-    /* Level with the buttons, under the label beside it. */
-    margin: 23px 10px 0 var(--gutter);
-  }
-  .deck-page > .deck-ways,
-  .deck-page > .deck-start-block {
-    grid-column: 2;
-    grid-row: 2;
-    padding: 0 var(--gutter) 0 10px;
-  }
-  .deck-page > .deck-start-block {
-    align-self: center;
-  }
-  .deck-page .due-slot:empty {
-    display: none;
-  }
-}
-
-/* #151: a deck of hers beside the sidebar. Two columns that scroll on their
-   own, and the name and Options across the top. v74: "Cards in this deck"
-   with its search next to the sidebar, what to practise on the right — read
-   left to right it goes deck, its cards, start (Henning: the list on the
-   right looked like where to start, and a tap there only edits a word).
-   `.split` is set by practise.js only with the sidebar on screen and a card
-   list to show; Kaishi's page stays the one-column page above.
-   `position: relative` holds "+ Add card" to the card column (below). */
-.deck-page.split {
-  --gutter: 28px;
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
-  padding-bottom: 0;
-}
-.deck-page.split > .deck-head {
-  grid-column: 1 / -1;
-  padding-left: 40px;
-  padding-right: 40px;
-}
-.deck-main,
-.deck-side {
-  min-height: 0;
-  overflow-y: auto;
-}
-/* A column, as the page is on the phone: its rows ("More options") stretch to
-   the width rather than shrinking to their words. */
-.deck-main {
-  display: flex;
-  flex-direction: column;
-  padding: 0 12px 32px 0;
-}
-.deck-side {
-  padding: 0 0 0 12px;
-}
-.deck-side .deck-cards {
-  padding-top: 0;
-}
-#app:has(> nav.sidebar) .deck-add-card {
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-}
-/* Over the cards it adds to, not over the buttons that start a session. */
-.deck-page.split > .deck-add-card {
-  right: calc(50% + var(--gutter));
 }
 
 /* A deck's options (#137): top right on its page, where Noji keeps a deck's
@@ -2166,7 +2157,7 @@
 }
 
 /* #151: on a window 700pt and wider a sheet keeps to the column rather than
-   running the width of the window — beside the sidebar that was 1180pt of
+   running the width of the window — on a landscape iPad that was 1180pt of
    sheet for a name field. Centred, like the update sheet already was. */
 @media (min-width: 700px) {
   .sheet-scrim {

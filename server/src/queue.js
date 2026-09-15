@@ -2,6 +2,7 @@ import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 import { deckSettings } from "./deck-settings.js";
 import { MY_WORDS, ownDecks } from "./decks.js";
 import { DEFAULT_TIME_ZONE, dayIn, nextDay, startOfDay } from "./day.js";
+import { maturityBand } from "./stats.js";
 // The client's own module, not a copy (v69): the image puts client/src/romaji.js
 // and pitch.js at /client/src, the same place relative to src/ as in the repo.
 import { romajiQuery, searchRomaji } from "../../client/src/romaji.js";
@@ -302,8 +303,21 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // "10 cards for today · 10 new · 0 to review". A due card can also be a
   // recent lapse, so those two are counted as a set; a fresh card has no
   // scheduler row and can be neither.
-  const reviews = new Set([...groups.due, ...groups.lapsed]).size;
+  const reviewIds = new Set([...groups.due, ...groups.lapsed]);
+  const reviews = reviewIds.size;
   const today = { total: reviews + groups.fresh.length, fresh: groups.fresh.length, review: reviews };
+
+  // #159: inside a deck, what Noji's deck page shows — the whole deck in three
+  // bands, and today's reviews split into the same two that can be due. Over
+  // the deck, not the chosen set: it is the deck's progress, whatever this
+  // session narrows to.
+  const progress = inDeck ? deckProgress(db, userId, deckKey) : undefined;
+  if (progress) {
+    let mastered = 0;
+    for (const id of reviewIds) if (progress.bands.get(id) === "mastered") mastered += 1;
+    today.learning = reviews - mastered;
+    today.mastered = mastered;
+  }
 
   // How many cards these filters match, before the session cap. Design 36
   // watches this number change on every tap — "she is watching a number, not
@@ -313,7 +327,49 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // §5: shuffle within the session so the same cards do not always come in the
   // same order. The composition above decided *which* cards; this decides only
   // the order they are met in.
-  return { mode: mode ?? null, filtered, available, today, newCapReached, maxReached, cardIds: shuffle(queue, random) };
+  return {
+    mode: mode ?? null,
+    filtered,
+    available,
+    today,
+    ...(progress ? { progress: progress.counts } : {}),
+    newCapReached,
+    maxReached,
+    cardIds: shuffle(queue, random),
+  };
+}
+
+/**
+ * Noji's three words for how far a card is (#159): "Nicht gelernt", "In
+ * Bearbeitung", "Gemeistert". Charlotte reads them there, so the deck page
+ * uses them rather than the Stats tab's four bands. "Mastered" is the Stats
+ * tab's "mature" — the scheduler waits three weeks or more before asking
+ * again — and the other two bands are what is left of it: a card never
+ * answered, and everything in between.
+ */
+export function progressBand(state) {
+  const band = maturityBand(state);
+  if (band === "new") return "new";
+  return band === "mature" ? "mastered" : "learning";
+}
+
+/** The deck's cards in those three bands, with each card's band for today's split. */
+export function deckProgress(db, userId, deckKey) {
+  const params = [userId];
+  const visible = visibleTo(userId);
+  params.push(...visible.params);
+  const sql = `SELECT c.id, s.due_at, s.last_review, s.reps FROM cards c
+    LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
+    WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deckKey }, params, userId)}`;
+  const counts = { total: 0, new: 0, learning: 0, mastered: 0 };
+  const bands = new Map();
+  for (const row of db.prepare(sql).all(...params)) {
+    const band = progressBand(row.reps == null ? undefined : row);
+    bands.set(row.id, band);
+    counts[band] += 1;
+    counts.total += 1;
+  }
+  return { counts, bands };
 }
 
 /**

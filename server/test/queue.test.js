@@ -712,3 +712,32 @@ describe("how many cards the filters match (design 36)", () => {
     db.close();
   });
 });
+
+describe("a deck's progress in Noji's three bands (#159)", () => {
+  it("counts the whole deck, and splits today's reviews the same way", async () => {
+    const { db, user } = await fixture();
+    // Kaishi is cards 1–30 here. Two are due: one the scheduler had put three
+    // weeks out (mastered), one five days out (in progress).
+    setState(db, user.id, 1, { dueAt: NOW - 60, lastReview: NOW - 30 * DAY });
+    setState(db, user.id, 2, { dueAt: NOW - 60, lastReview: NOW - 5 * DAY });
+    // Not due: one mastered, one still in its first day.
+    setState(db, user.id, 3, { dueAt: NOW + 10 * DAY, lastReview: NOW - 25 * DAY });
+    setState(db, user.id, 4, { dueAt: NOW + 3600, lastReview: NOW - 3600 });
+    // Someone else's state is not her progress.
+    const other = await seedUser(db, { handle: "yui" });
+    setState(db, other.id, 5, { dueAt: NOW + 100 * DAY, lastReview: NOW - 100 * DAY });
+
+    const answer = queueForUser(db, user.id, { deckKey: "kaishi" }, NOW);
+    assert.deepEqual(answer.progress, { total: 30, new: 26, learning: 2, mastered: 2 });
+    assert.equal(answer.today.review, 2);
+    assert.equal(answer.today.learning, 1);
+    assert.equal(answer.today.mastered, 1);
+    assert.equal(answer.today.total, answer.today.fresh + answer.today.learning + answer.today.mastered);
+
+    // A topic narrows the session, not the deck's progress.
+    assert.deepEqual(queueForUser(db, user.id, { deckKey: "kaishi", tag: "school" }, NOW).progress, answer.progress);
+    // Without a deck there is no deck to describe.
+    assert.equal(queueForUser(db, user.id, {}, NOW).progress, undefined);
+    db.close();
+  });
+});

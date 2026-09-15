@@ -172,7 +172,7 @@ describe("her decks, for the practise tab (#137)", () => {
     const { app, json } = await imported();
     const listB = await json(`/api/queue?deckKey=${encodeURIComponent("list:list b")}&limit=20`);
     assert.equal(listB.cardIds.length, 2);
-    assert.deepEqual(listB.today, { total: 2, fresh: 2, review: 0 });
+    assert.deepEqual(listB.today, { total: 2, fresh: 2, review: 0, learning: 0, mastered: 0 });
     const kaishi = await json("/api/queue?deckKey=kaishi&limit=20");
     assert.deepEqual(kaishi.cardIds, [100]);
     const refused = await json("/api/queue?deckKey=personal");
@@ -261,13 +261,13 @@ describe("settings of one deck (#137, migration 014)", () => {
     db.prepare("INSERT INTO review_events (id, user_id, card_id, mode, rating, reviewed_at, received_at) VALUES (?, ?, ?, 'flip', 3, ?, ?)")
       .run("00000000-0000-4000-8000-0000000000aa", user.id, ids[0], now - 5 * 86400, now - 5 * 86400);
 
-    assert.deepEqual((await json(url)).today, { total: 13, fresh: 10, review: 3 }, "no limit: 3 due and 10 new");
+    assert.deepEqual((await json(url)).today, { total: 13, fresh: 10, review: 3, learning: 3, mastered: 0 }, "no limit: 3 due and 10 new");
 
     const set = await patch(app, cookie, { deckKey: "list:long", maxPerDay: 10 });
     assert.equal(set.statusCode, 200, set.body);
     assert.equal(set.json().settings.maxPerDay, 10);
     const capped = await json(url);
-    assert.deepEqual(capped.today, { total: 10, fresh: 7, review: 3 }, "the reviews stay, the new cards give way");
+    assert.deepEqual(capped.today, { total: 10, fresh: 7, review: 3, learning: 3, mastered: 0 }, "the reviews stay, the new cards give way");
     assert.equal(capped.cardIds.length, 10);
 
     // Four answered today leave six.
