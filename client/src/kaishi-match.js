@@ -42,8 +42,13 @@ export function kaishiMatches(typed, cards) {
  * The Kaishi word a card of hers took its recording from, if any. A card
  * keeps no pointer to it; the recording's file name is the pointer, since only
  * a Kaishi card has recordings to give.
+ *
+ * Four recordings are shared by two Kaishi cards each — よく "well" and
+ * "often", 早い "early" and "fast" (measured 2026-09-15) — so where the file
+ * names two, the example sentence the card took says which: those differ.
  */
 export function kaishiOf(card, cards) {
   if (!card?.word_audio) return undefined;
-  return cards.find((c) => c.deck === "kaishi" && c.word_audio === card.word_audio);
+  const same = cards.filter((c) => c.deck === "kaishi" && c.word_audio === card.word_audio);
+  return same.find((c) => c.sentence === card.sentence) ?? same[0];
 }

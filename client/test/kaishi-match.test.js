@@ -50,4 +50,11 @@ describe("offering Kaishi's recording for a word she types (v70)", () => {
     assert.equal(kaishiOf({ word: "大きい", word_audio: "5.mp3" }, cards), ookii);
     assert.equal(kaishiOf({ word: "Kiku", word_audio: null }, cards), undefined);
   });
+
+  it("tells two Kaishi words with one recording apart by the sentence the card took", () => {
+    const well = { ...k(10, "よく", "よく", "well", 70, "yoku.mp3"), sentence: "<b>よく</b>できました。" };
+    const often = { ...k(11, "よく", "よく", "often", 80, "yoku.mp3"), sentence: "<b>よく</b>来ます。" };
+    assert.equal(kaishiOf({ word: "よく", word_audio: "yoku.mp3", sentence: often.sentence }, [well, often]), often);
+    assert.equal(kaishiOf({ word: "よく", word_audio: "yoku.mp3", sentence: null }, [well, often]), well);
+  });
 });
