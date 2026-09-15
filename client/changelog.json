@@ -1,5 +1,13 @@
 [
   {
+    "version": "v82",
+    "summary": "Die Hiragana- und Katakana-Seiten lassen sich jetzt scrollen.",
+    "notes": [
+      "Auf dem iPhone ließ sich die Seite eines Kana-Decks nicht scrollen. Unten lag „Karten im Deck“ unter der Leiste mit Decks, Suche, Statistik und Einstellungen.",
+      "Jetzt kannst du auf allen Seiten bis ganz nach unten scrollen, und nichts bleibt mehr unter der Leiste versteckt."
+    ]
+  },
+  {
     "version": "v81",
     "summary": "Updates findest du jetzt auch in den Einstellungen.",
     "notes": [

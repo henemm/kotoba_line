@@ -309,11 +309,24 @@ input:focus-visible {
   }
 }
 
-/* The tab screens run to the bottom edge now, under the capsule. */
-.practise,
-.stats,
-.settings {
-  padding-bottom: var(--tabbar-space);
+/* The tab screens run to the bottom edge now, under the capsule, and keep
+   --tabbar-space clear at the end of their scroll.
+
+   #168: as a last box, not as padding-bottom. Safari on the iPhone leaves a
+   scroll container's bottom padding out of how far it scrolls — desktop
+   WebKit and Chromium count it, which is why nothing here showed it. So a
+   screen scrolled only as far as its content goes past the bottom edge, and
+   one whose content ends above it did not scroll at all: the Hiragana deck
+   page, whose last row ends at 840 of 874 (measured at 402 × 874 with the
+   iPhone's insets), sat under the capsule and could not be reached. A box
+   is content, and every engine scrolls to the end of content.
+   `.words .browse-list` does the same in screens.css. */
+.practise::after,
+.stats::after,
+.settings::after {
+  content: "";
+  flex: none;
+  height: var(--tabbar-space);
 }
 
 .tabbar .dot {
