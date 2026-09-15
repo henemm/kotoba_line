@@ -1,5 +1,14 @@
 [
   {
+    "version": "v72",
+    "summary": "On an iPad held sideways, your decks are on the left and the deck you are in is on the right.",
+    "notes": [
+      "With the iPad sideways, the tabs and your decks are in a list on the left. Tap a deck there to open it straight away, without going back.",
+      "A deck of yours shows how to practise on the left and its cards on the right, and each side scrolls on its own.",
+      "Turn the iPad upright and it is the page you know, with the same deck still open."
+    ]
+  },
+  {
     "version": "v71",
     "summary": "On an iPad the app uses the whole screen: the card is big, and the pages are wider.",
     "notes": [

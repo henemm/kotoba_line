@@ -24,7 +24,7 @@ import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
-import { el, render } from "./ui/dom.js";
+import { el, num, render } from "./ui/dom.js";
 import { appName } from "./script.js";
 
 // #123: four, where design 11 draws three. Words is where she searches, stars
@@ -41,6 +41,26 @@ const TABS = [
 ];
 
 const app = document.getElementById("app");
+
+/**
+ * iPad package B (#151): a window this wide shows the tabs as a sidebar, with
+ * her decks under them, and the tab's screen beside it — Apple's own pattern
+ * on an iPad (Mail, Notes, Files). Henning's words: "Auswahl des Decks links,
+ * Arbeit mit dem Deck rechts".
+ *
+ * Decided by the window, never the device: a landscape iPad, or a 12.9" in
+ * portrait, and not Split View. The one place this width is decided — CSS
+ * styles whatever is drawn (`#app:has(> nav.sidebar)`), so the two can never
+ * disagree about which layout is on screen. Turning the iPad is only a
+ * redraw: the open deck, a half-typed search and the Search tab's results are
+ * all held in `state`, not in the layout.
+ */
+const wide = matchMedia("(min-width: 1000px)");
+// Only the tab screens change with it. Sign-in, a session, the card form keep
+// the node they have — redrawing sign-in would clear the PIN she is typing.
+wide.addEventListener("change", () => {
+  if (app.querySelector(":scope > nav.tabbar, :scope > nav.sidebar")) renderApp();
+});
 
 // Before the first render: the shell's height depends on `--viewport-h`, and a
 // first paint at the wrong height is the bug this fixes.
@@ -163,7 +183,7 @@ function offlineBar() {
  * the screen under it. Anywhere else the next redraw picks it up.
  */
 function replaceOfflineBar() {
-  if (!app.querySelector(":scope > nav.tabbar, :scope > .signed-out")) return false;
+  if (!app.querySelector(":scope > nav.tabbar, :scope > nav.sidebar, :scope > .signed-out")) return false;
   const current = app.querySelector(":scope > .offline-bar");
   const next = offlineBar();
   if (current && next) current.replaceWith(next);
@@ -190,6 +210,84 @@ function tabBar() {
       ),
     ),
   );
+}
+
+/**
+ * The tab bar of a wide window (#151): the app's name, the four tabs as rows,
+ * and her decks under them with today's count, as the Decks tab lists them.
+ *
+ * Built again on every redraw, like the tab bar. The decks come from the same
+ * kept answer the Decks tab reads (`deckList`), drawn at once from the last
+ * one seen so a redraw does not flash an empty list, and filled in again when
+ * a newer answer arrives.
+ */
+function sideBar() {
+  const japanese = state.settings.japaneseScript;
+  const decksRows = el("div.side-decks");
+  const nav = el(
+    "nav.sidebar",
+    { "aria-label": "Tabs and decks" },
+    el("div.side-name", { lang: japanese ? "ja" : undefined, text: appName(japanese) }),
+    el(
+      "div.side-tabs",
+      {},
+      TABS.map((tab) =>
+        el(
+          "button.side-row",
+          {
+            type: "button",
+            // "Decks" is current only on the deck list; with a deck open, the
+            // deck's own row is.
+            "aria-current": state.tab === tab.key && !(tab.key === "practise" && state.deck) ? "page" : undefined,
+            onclick: () => goToTab(tab.key),
+          },
+          el("span.label", { text: tab.label }),
+          state.jokerBadge && tab.key === "stats" ? el("span.joker-badge") : null,
+        ),
+      ),
+    ),
+    el("span.side-label", { text: "Your decks" }),
+    decksRows,
+  );
+
+  const fill = (decks) =>
+    render(
+      decksRows,
+      decks.map((deck) =>
+        el(
+          "button.side-row.side-deck",
+          {
+            type: "button",
+            "aria-current": state.tab === "practise" && state.deck?.key === deck.key ? "page" : undefined,
+            onclick: () => openDeckFromSidebar(deck),
+          },
+          el("span.label", { text: deck.name }),
+          el("span.today.tabular", { text: num(deck.today?.total ?? 0) }),
+        ),
+      ),
+      el(
+        "button.side-row.side-new",
+        { type: "button", onclick: openNewDeck },
+        el("span.side-plus", { "aria-hidden": "true", text: "+" }),
+        el("span.label", { text: "New deck" }),
+      ),
+    );
+  fill(state.lastDecks);
+  deckList().then(
+    (answer) => nav.isConnected && fill(answer.decks ?? []),
+    () => {},
+  );
+  return nav;
+}
+
+/** A deck tapped in the sidebar: straight into it, from whichever tab (#151). */
+function openDeckFromSidebar(deck) {
+  // Already open: nothing to do, and reopening would drop her search in it.
+  if (state.tab === "practise" && state.deck?.key === deck.key) return;
+  if (state.tab !== "practise") numbersChanged();
+  state.tab = "practise";
+  state.overlay = undefined;
+  openDeck(deck);
 }
 
 function goToTab(key) {
@@ -225,7 +323,10 @@ function currentScreen() {
   if (state.tab === "practise") {
     return practiseScreen({
       deck: state.deck,
-      onBack: closeDeck,
+      // #151: beside the sidebar the deck is chosen there, so there is no
+      // "‹ Decks" step back — and the cards get a column of their own.
+      onBack: wide.matches ? undefined : closeDeck,
+      split: wide.matches,
       onOptions: openDeckOptions,
       sessionLength: state.settings.sessionLength,
       readAloud: state.settings.readAloud,
@@ -271,6 +372,10 @@ function currentScreen() {
       // mid-swipe, whenever the settings, the own-deck count or a sync
       // arrived. Read before render() replaces the old tab.
       scrollTop: app.querySelector(":scope > .practise")?.scrollTop ?? 0,
+      columnsScroll: {
+        main: app.querySelector(":scope > .practise > .deck-main")?.scrollTop ?? 0,
+        side: app.querySelector(":scope > .practise > .deck-side")?.scrollTop ?? 0,
+      },
     });
   }
   if (state.tab === "words") return (state.words ??= wordsScreen());
@@ -1100,6 +1205,14 @@ function renderApp() {
   // the prompt never covers a card, a summary, a form or 52 — it waits, and
   // appears on the next redraw that reaches the tabs. The set sheet wins while
   // it is open; she is in the middle of choosing.
+  if (wide.matches) {
+    // #151: the sidebar is rebuilt, and keeps where she had scrolled it to.
+    const sideScroll = app.querySelector(":scope > nav.sidebar")?.scrollTop ?? 0;
+    render(app, offlineBar(), currentScreen(), sideBar(), state.sheet ?? state.updateNode);
+    const side = app.querySelector(":scope > nav.sidebar");
+    if (side && sideScroll) side.scrollTop = sideScroll;
+    return;
+  }
   render(app, offlineBar(), currentScreen(), tabBar(), state.sheet ?? state.updateNode);
 }
 
