@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { allTags, createCard, deleteCard, normaliseTag, personalCards } from "../src/cards.js";
+import { allTags, createCard, deleteCard, normaliseTag, personalCards, updateCard } from "../src/cards.js";
 import { ingestEvents } from "../src/events.js";
 import { statsForUser } from "../src/stats.js";
 import { openDatabase } from "../src/db.js";
@@ -72,6 +72,82 @@ describe("a card of her own", () => {
     const card = createCard(db, user.id, { word: "定期", meaning: "commuter pass" });
     assert.equal(card.word_audio, null);
     assert.equal(card.sentence_audio, null);
+    db.close();
+  });
+});
+
+// v70: she types a word, the phone offers the Kaishi word with that romaji,
+// and she chooses it. The server only copies what she chose.
+describe("a Kaishi recording she chose for her card (v70)", () => {
+  const OOKII = 1_400_000_000_001;
+  const setup = async () => {
+    const db = openDatabase(":memory:");
+    const user = await seedUser(db);
+    db.prepare(
+      `INSERT INTO cards (id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
+                          sentence, sentence_furigana, sentence_meaning, sentence_audio, frequency_rank, deck, updated_at)
+       VALUES (?, '大きい', '大[おお]きい', 'おおきい', 3, 'big, large', 'ookii.mp3',
+               '<b>大きい</b>家です。', '<b>大[おお]きい</b>家[いえ]です。', 'It is a big house.', 'ookii-s.mp3', 300, 'kaishi', 0)`,
+    ).run(OOKII);
+    return { db, user };
+  };
+
+  it("takes the Kaishi word's spelling, reading, pitch, recording and sentence, and keeps her German", async () => {
+    const { db, user } = await setup();
+    const card = createCard(db, user.id, { word: "Ookii", meaning: "Groß", kaishiId: OOKII });
+    assert.equal(card.word, "大きい");
+    assert.equal(card.word_reading, "おおきい");
+    assert.equal(card.word_audio, "ookii.mp3");
+    assert.equal(card.word_meaning, "Groß");
+    assert.equal(card.sentence_audio, "ookii-s.mp3");
+    // Kaishi's translation is English; on her German card it would be a third language.
+    assert.equal(card.sentence_meaning, null);
+    db.close();
+  });
+
+  it("keeps a sentence she wrote herself, without Kaishi's recording of another one", async () => {
+    const { db, user } = await setup();
+    const card = createCard(db, user.id, { word: "Ookii", meaning: "Groß", sentence: "Ookii inu", kaishiId: OOKII });
+    assert.equal(card.sentence, "Ookii inu");
+    assert.equal(card.sentence_audio, null);
+    assert.equal(card.word_audio, "ookii.mp3");
+    db.close();
+  });
+
+  it("refuses a Kaishi card that does not exist", async () => {
+    const { db, user } = await setup();
+    assert.throws(() => createCard(db, user.id, { word: "x", meaning: "y", kaishiId: 42 }), /no such Kaishi card/);
+    db.close();
+  });
+
+  it("drops the recording when she changes the Japanese, and when she takes it off", async () => {
+    const { db, user } = await setup();
+    const linked = createCard(db, user.id, { word: "Ookii", meaning: "Groß", kaishiId: OOKII });
+
+    // An older phone edits only the German: the word is unchanged, the recording stays.
+    const german = updateCard(db, user.id, linked.id, { word: "大きい", reading: "おおきい", meaning: "Gross", sentence: linked.sentence });
+    assert.equal(german.card.word_audio, "ookii.mp3");
+
+    // Corrected to another word: the old recording would say the wrong thing.
+    const changed = updateCard(db, user.id, linked.id, { word: "Chiisai", meaning: "Klein", sentence: linked.sentence });
+    assert.equal(changed.card.word_audio, null);
+    assert.equal(changed.card.word_pitch, null);
+    assert.equal(changed.card.sentence_audio, "ookii-s.mp3", "the sentence is unchanged, so is its recording");
+
+    const relinked = updateCard(db, user.id, linked.id, { word: "Ookii", meaning: "Groß", kaishiId: OOKII });
+    assert.equal(relinked.card.word_audio, "ookii.mp3");
+    const off = updateCard(db, user.id, linked.id, { word: "Ookii", meaning: "Groß", kaishiId: null });
+    assert.equal(off.card.word_audio, null);
+    assert.equal(off.card.word, "Ookii");
+    db.close();
+  });
+
+  it("lets her clear a linked card's sentence without Kaishi's coming back", async () => {
+    const { db, user } = await setup();
+    const linked = createCard(db, user.id, { word: "Ookii", meaning: "Groß", kaishiId: OOKII });
+    const cleared = updateCard(db, user.id, linked.id, { word: "Ookii", meaning: "Groß", kaishiId: OOKII });
+    assert.equal(cleared.card.sentence, null);
+    assert.equal(cleared.card.word_audio, "ookii.mp3");
     db.close();
   });
 });

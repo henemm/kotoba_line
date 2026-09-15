@@ -1,5 +1,14 @@
 [
   {
+    "version": "v70",
+    "summary": "A card you write can have a real recording, if Kaishi has the word.",
+    "notes": [
+      "While you type the Japanese, the app shows the Kaishi word that is exactly what you typed, with its English meaning. Tap ♪ to hear it, and Use to give your card its recording.",
+      "Only take it if it means your German: “kiku” can be to hear, to ask or to be effective.",
+      "If you change the Japanese of a card later, a recording of the old word is taken off, so a card never says the wrong word."
+    ]
+  },
+  {
     "version": "v69",
     "summary": "Search finds a word by its romaji now, and a card you find there does something.",
     "notes": [
