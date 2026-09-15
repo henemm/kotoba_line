@@ -15,7 +15,8 @@ export const mmss = (seconds) =>
  * Design 09 — the session summary.
  *
  * The station strip stays at the top and becomes the record of the route:
- * mode colour for cleared, red for missed. A session is modal, so there is no
+ * green for cleared, red for missed (#156: it was the mode colour, which in
+ * 選ぶ is an orange too close to red). A session is modal, so there is no
  * tab bar underneath.
  */
 export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = true }) {

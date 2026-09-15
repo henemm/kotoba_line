@@ -1554,8 +1554,11 @@
   border-radius: 3px;
   background: var(--surface-hi);
 }
+/* #156: green, the colour of a right answer on the card itself. The strip used
+   to take the mode's colour, and 選ぶ's orange (#F15A22) next to --no read as
+   one red — measured off Henning's screenshot, #DF6436 against #C03E37. */
 .station.done {
-  background: var(--rail);
+  background: var(--yes);
 }
 .station.now {
   background: var(--ink);
