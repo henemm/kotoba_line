@@ -56,13 +56,6 @@ export const canSpeak = () =>
  *  teaches the wrong pronunciation. */
 const SYNTH_CAPTION = "Keine Aufnahme für diese Karte – vorgelesen von der japanischen Stimme des Handys";
 
-const MIC_COPY = {
-  refused:
-    "Das Mikrofon ist aus. Sag es trotzdem laut und bewerte dich selbst. Einschalten kannst du es in den iOS-Einstellungen.",
-  unsupported:
-    "Dieses Gerät kann nicht zuhören. Sag es trotzdem laut – die Übung funktioniert genauso, du bewertest dich nur selbst.",
-};
-
 /**
  * An interval the way screen 41 prints it: `<1m`, `8m`, `2d`, `6d`, `3mo`.
  *
@@ -104,8 +97,8 @@ const uuid = () =>
  *
  * What the canvas genuinely does not settle is a handful of *states*, and
  * those are decided here and listed in design/README.md: what 聞く does with a
- * card it cannot play, and what 話す shows when speech recognition is absent,
- * refused, or hears nothing.
+ * card it cannot play, and what 話す does without the microphone it no longer
+ * uses (#155).
  */
 export function sessionScreen({
   mode = "choose",
@@ -150,17 +143,6 @@ export function sessionScreen({
   // Card ids she has starred, for the ★ in the chrome (#35). Comes down with
   // the queue, because the cached deck is public and cannot carry it.
   let starred = new Set();
-
-  /**
-   * 45 and 46 look identical to her — "the distinction between refused and
-   * unsupported matters to the developer, not to her" — but the copy differs,
-   * so the state does too. Feature-detected once, at session start.
-   */
-  let micState =
-    "SpeechRecognition" in globalThis || "webkitSpeechRecognition" in globalThis
-      ? "ready"
-      : "unsupported";
-  let micNoticeShown = false;
 
   begin();
 
@@ -361,7 +343,6 @@ export function sessionScreen({
    */
   function askToLeave() {
     stop();
-    stopRecognition();
     // Deliberately not cancelling the pending advance: "Keep going" has to
     // land her back in a session that still moves, and the card behind the
     // sheet is one she has already answered.
@@ -744,104 +725,40 @@ export function sessionScreen({
   }
 
   /**
-   * 話す — see the meaning, say it aloud, then judge yourself. Screens 42–46.
+   * 話す — see the meaning, say it aloud, then judge yourself. Screen 42.
    *
-   * §7 and screen 44 agree and the first build did not: recognition is
-   * *quoted, never scored*. No tick, no colour, no yes/no — and a sentence
-   * under the transcript, because "a transcript on a practice screen looks
-   * like a verdict unless something says otherwise". She marks the card
-   * either way, which is also why the mode is unchanged on a device that
-   * cannot listen at all.
+   * Screens 43–46 drew a record button that quoted what the phone heard.
+   * #155 removed it: on her iPad, recording crashed the app. Speech
+   * recognition never scored anything (§7), so the mode loses nothing it
+   * decided with — she says it aloud to herself, turns the card and marks
+   * it, exactly as a device without a microphone always did.
    */
   function drawSpeak(card, area, answers) {
     // Decided once per card, at the prompt — not re-rolled at reveal, or a
     // "random" card could ask about the word and then reveal the sentence.
     const useSentence = speakUsesSentence(card, speakSource);
     prime(useSentence ? card.sentence_audio : card.word_audio);
-    const prompt = useSentence ? card.sentence_meaning : card.word_meaning;
 
-    /**
-     * `phase` is what the card is doing, not what the microphone can do:
-     *   idle | listening | heard
-     * 45 and 46 are not phases — they are the absence of the record control,
-     * plus one sentence, and they look identical to her (46's note).
-     */
-    const draw = (phase, transcript) => {
-      const cannotListen = micState !== "ready";
-      const dimmed = phase === "heard";
-
-      render(
-        area,
-        el("span.prompt-label", { text: "Sag es auf Japanisch" }),
-        el(`p.meaning${dimmed ? ".dim" : ""}`, { text: prompt ?? "" }),
-        phase === "listening" ? levelBars() : null,
-        phase === "listening"
-          ? el("span.mic-label", { text: "Hört zu" })
-          : null,
-        phase === "heard"
-          ? el(
-              "div.heard",
-              {},
-              el("span.heard-label", { text: "Gehört" }),
-              el("p.heard-text.jp", {
-                class: transcript ? undefined : "empty",
-                text: transcript || "– nichts gehört –",
-              }),
-            )
-          : null,
-        phase === "heard"
-          ? el("p.mic-note", {
-              text: "Das hat das Handy gehört – keine Bewertung. Ob du es gewusst hast, entscheidest du.",
-            })
-          : null,
-        // 45/46: one sentence, once per session — not once per card.
-        cannotListen && !micNoticeShown ? el("p.mic-note", { text: MIC_COPY[micState] }) : null,
-      );
-      if (cannotListen) micNoticeShown = true;
-
-      const row = el("div.actions");
-      if (!cannotListen) {
-        if (phase === "listening") {
-          row.append(el("button.btn", { type: "button", text: "Stopp", onclick: () => stopRecognition() }));
-        } else {
-          row.append(
-            el("button.btn", {
-              type: "button",
-              text: phase === "heard" ? "Nochmal" : "Aufnehmen",
-              onclick: () => listenOnce(card, draw),
-            }),
-          );
-        }
-      }
-      // 43: "Show answer stays available throughout."
-      row.append(
+    render(
+      area,
+      el("span.prompt-label", { text: "Sag es auf Japanisch" }),
+      el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
+    );
+    render(
+      answers,
+      el(
+        "div.actions",
+        {},
         el("button.btn.primary", {
           type: "button",
           text: "Antwort zeigen",
           onclick: () => revealSpeak(card, area, answers, useSentence),
         }),
-      );
-      render(answers, row);
-    };
-
-    draw("idle");
-  }
-
-  /** 43: six bars in the mode colour, the only animation here. */
-  function levelBars() {
-    return el(
-      "div.level-bars",
-      {},
-      // Their heights are a loop rather than the microphone's real level:
-      // SpeechRecognition hands over no audio stream, and opening a second
-      // one with getUserMedia to measure it is unreliable next to
-      // recognition on iOS. Recorded in design/README.md.
-      [0, 1, 2, 3, 4, 5].map((i) => el("span", { style: { animationDelay: `${i * 90}ms` } })),
+      ),
     );
   }
 
   function revealSpeak(card, area, answers, useSentence) {
-    stopRecognition();
     const text = useSentence ? card.sentence : card.word;
     const audio = useSentence ? card.sentence_audio : card.word_audio;
 
@@ -1264,69 +1181,6 @@ export function sessionScreen({
     settle();
   }
 
-  // ── 話す's microphone (43–46) ────────────────────────────────────
-
-  let recogniser;
-
-  function stopRecognition() {
-    try {
-      recogniser?.abort();
-    } catch {
-      /* already gone */
-    }
-    recogniser = undefined;
-  }
-
-  /**
-   * Listen once and hand the transcript back to the card, unjudged.
-   *
-   * Nothing here decides anything: `redraw` is given the words and the phase,
-   * and screen 44 is explicit that the words are quoted rather than scored.
-   * The earlier build compared them against the sentence and tinted the
-   * result, which is the thing the design rules out.
-   */
-  function listenOnce(card, redraw) {
-    const SR = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition;
-    stopRecognition();
-
-    const rec = new SR();
-    recogniser = rec;
-    rec.lang = "ja-JP";
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-
-    let got;
-    rec.onresult = (e) => {
-      got = e.results[0][0].transcript;
-    };
-
-    rec.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-        // 45: for the rest of the session, not for this card. Asking again on
-        // every card would nag about something only iOS Settings can undo.
-        micState = "refused";
-        micNoticeShown = false;
-        redraw("idle");
-        return;
-      }
-      // Anything else — including "no-speech" — is the empty transcript, which
-      // 44 draws as the same box reading "— nothing heard —".
-      got = "";
-    };
-
-    rec.onend = () => {
-      recogniser = undefined;
-      redraw("heard", got ?? "");
-    };
-
-    try {
-      rec.start();
-      redraw("listening");
-    } catch {
-      redraw("heard", "");
-    }
-  }
-
   /**
    * #113: turn the card over without moving what she was asked.
    *
@@ -1511,7 +1365,6 @@ export function sessionScreen({
 
   root.destroy = () => {
     stop();
-    stopRecognition();
   };
   return root;
 }
