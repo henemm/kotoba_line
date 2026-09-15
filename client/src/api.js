@@ -185,6 +185,8 @@ export const api = {
     request(`/cards/${cardId}/tags`, { method: "PUT", body: { tags } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
   stats: () => request("/stats"),
+  // #98: one card's own record — her reviews of it, and when it is due.
+  cardHistory: (cardId) => request(`/cards/${cardId}/history`),
 
   cards: () => request("/cards"),
   addCard: (card) => request("/cards", { method: "POST", body: card }),

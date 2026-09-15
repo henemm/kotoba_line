@@ -1,5 +1,14 @@
 [
   {
+    "version": "v86",
+    "summary": "Du siehst jetzt, an welchen Tagen du geübt hast.",
+    "notes": [
+      "In der Statistik gibt es einen Kalender der letzten sechs Wochen. Ein voller Tag hat für deine Serie gezählt, ein grauer war weniger als zehn Wiederholungen, und gestrichelt ist ein Tag, den ein Joker abgedeckt hat.",
+      "Tippe auf einen Tag, dann steht darunter, wie viele Wiederholungen es waren.",
+      "Wenn du eine Karte antippst, siehst du ihren Verlauf: wie oft du sie geübt hast, wie es jeweils lief und wann sie wieder dran ist."
+    ]
+  },
+  {
     "version": "v85",
     "summary": "Die Leiste unten ist aufgeräumt.",
     "notes": [

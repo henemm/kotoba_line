@@ -1,4 +1,5 @@
 import { OfflineError, api } from "../api.js";
+import { WEEKDAYS, calendarWeeks, dayDetail, dayKind, dayOfMonth, daysPractised } from "../history.js";
 import { byTopicLabel, topicLabel } from "../topics.js";
 import { el, num, render } from "../ui/dom.js";
 
@@ -248,6 +249,8 @@ export function statsScreen({ onBrowse } = {}) {
 
   let topicsExpanded = false;
   let data;
+  // #98: the calendar day whose line is shown; today until she taps another.
+  let pickedDay;
 
   load();
 
@@ -283,6 +286,7 @@ export function statsScreen({ onBrowse } = {}) {
         levelBlock(),
         streakTiles(),
         jokerCard(),
+        historyBlock(),
         maturityBlock(),
         topicsBlock(),
       ),
@@ -372,6 +376,89 @@ export function statsScreen({ onBrowse } = {}) {
           ? "Voll. Weitere Tage am Stück bringen nichts, bis einer verbraucht ist."
           : "Einer für je fünf Tage am Stück, höchstens drei. Ein verpasster Tag verbraucht einen, und die Serie läuft weiter.",
       }),
+    );
+  }
+
+  // ── history ─────────────────────────────────────────────────────
+  /**
+   * Which days she practised, and how much (#98). design/ has no screen for
+   * this — it came from comparing Noji, which shows an activity calendar — so
+   * it borrows what this screen already has: the grey-to-white ramp, the
+   * dashed slot a spent joker leaves, and a line of text for the one number a
+   * tap asks about, rather than a tooltip a phone cannot hover.
+   *
+   * Placed under the jokers because it is the streak's evidence: a filled day
+   * is one that counted, and a dashed one is a day a joker covered.
+   */
+  function historyBlock() {
+    const history = data.history ?? [];
+    if (history.length === 0) return null;
+
+    const perDay = data.reviewsPerQualifyingDay;
+    const today = history.at(-1).day;
+    const yesterday = history.at(-2)?.day;
+    const picked = history.find((d) => d.day === pickedDay) ?? history.at(-1);
+    const practised = daysPractised(history);
+    const detail = el("p.history-detail", { "aria-live": "polite", text: dayDetail(picked, perDay, today, yesterday) });
+
+    // A tap changes the pressed day and the line under the grid in place.
+    // Redrawing the screen would reset its scroll and drop the focus from
+    // the button she just pressed.
+    const pick = (entry, button) => {
+      pickedDay = entry.day;
+      for (const b of button.parentNode.querySelectorAll("button.history-day")) b.setAttribute("aria-pressed", "false");
+      button.setAttribute("aria-pressed", "true");
+      detail.textContent = dayDetail(entry, perDay, today, yesterday);
+    };
+
+    return el(
+      "section.history",
+      {},
+      el(
+        "div.section-head",
+        {},
+        el("span.section-title", { text: "Verlauf" }),
+        el("span.section-count", {
+          text: `${practised} ${practised === 1 ? "Tag" : "Tage"} geübt`,
+        }),
+      ),
+      el(
+        "div.history-grid",
+        { role: "group", "aria-label": `Die letzten ${calendarWeeks(history).length} Wochen` },
+        WEEKDAYS.map((w) => el("span.history-weekday", { "aria-hidden": "true", text: w })),
+        calendarWeeks(history).flat().map((entry) =>
+          entry
+            ? el(
+                "button.history-day",
+                {
+                  type: "button",
+                  class: [dayKind(entry, perDay), entry.day === today ? "today" : ""].filter(Boolean).join(" "),
+                  "aria-pressed": String(entry === picked),
+                  "aria-label": dayDetail(entry, perDay, today, yesterday),
+                  onclick: (e) => pick(entry, e.currentTarget),
+                },
+                el("span.history-date.tabular", { text: String(dayOfMonth(entry.day)) }),
+              )
+            : el("span.history-day.future", { "aria-hidden": "true" }),
+        ),
+      ),
+      detail,
+      el(
+        "div.history-legend",
+        {},
+        legendItem("counted", `ab ${perDay} Wiederholungen`),
+        legendItem("some", "weniger"),
+        legendItem("joker", "Joker"),
+      ),
+    );
+  }
+
+  function legendItem(kind, label) {
+    return el(
+      "span.history-legend-item",
+      {},
+      el("span.history-swatch", { class: kind }),
+      el("span", { text: label }),
     );
   }
 
