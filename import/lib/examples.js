@@ -42,6 +42,62 @@ export function parseJlptCsv(text, level) {
     .map(([written, reading]) => ({ written: written.trim(), reading: reading.trim(), level }));
 }
 
+const toHiragana = (text) => text.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+
+/** The vowel a kana ends on, in hiragana — enough to see a long vowel coming. */
+const VOWEL = new Map(
+  Object.entries({
+    a: "あかさたなはまやらわがざだばぱぁゃ",
+    i: "いきしちにひみりぎじぢびぴぃ",
+    u: "うくすつぬふむゆるぐずづぶぷぅゅ",
+    e: "えけせてねへめれげぜでべぺぇ",
+    o: "おこそとのほもよろをごぞどぼぽぉょ",
+  }).flatMap(([vowel, chars]) => [...chars].map((c) => [c, vowel])),
+);
+
+/**
+ * Where in a word, read in kana, this kana is heard as its own sound — the
+ * index, or -1 (v83, #158).
+ *
+ * The start of the word first: there a kana is always its own sound, unless a
+ * small ゃゅょ follows and makes it a yōon (き in きょう is きょ). Henning
+ * asked why an example has to *start* with the kana rather than contain it;
+ * for a word she can hear, it does not — so a later place counts too, except
+ * where the kana is not heard as itself:
+ *
+ *   a vowel after itself   the long vowel: まあ, おおきい, おねえさん, くうき
+ *   う after an o          the long ō: そう, きょう
+ *   い after an e          the long ē: せんせい, えいが
+ *   す at the very end     whispered away: です, ます
+ *   は at the very end     the particle, said wa: じつは, では
+ *   う in いう             said ゆう
+ *
+ * Whispered vowels elsewhere (the し in そして, the く in きく) stay: the
+ * consonant is still there to hear, and a sound that changes with its
+ * neighbours is what Henning found worth hearing.
+ */
+export function soundAt(reading, kana) {
+  if (!reading || !kana) return -1;
+  // Matched in the card's own script — a katakana card is practice in reading
+  // katakana, so ハ is never shown in はな — and folded to hiragana only to
+  // look up the vowel before it.
+  const word = toHiragana(reading);
+  const sound = toHiragana(kana);
+  for (let i = reading.indexOf(kana); i !== -1; i = reading.indexOf(kana, i + 1)) {
+    if (SMALL_YOON.test(word[i + sound.length] ?? "")) continue;
+    if (i === 0 || sound.length > 1) return i;
+    const before = VOWEL.get(word[i - 1]);
+    const own = { あ: "a", い: "i", う: "u", え: "e", お: "o" }[sound];
+    if (own && before === own) continue;
+    if (sound === "う" && before === "o") continue;
+    if (sound === "い" && before === "e") continue;
+    if ((sound === "す" || sound === "は") && i === word.length - 1) continue;
+    if (sound === "う" && word === "いう") continue;
+    return i;
+  }
+  return -1;
+}
+
 /**
  * Words the lists offer whose first JMdict sense would teach the wrong thing.
  * Reviewed by hand over every example the import chose (2026-09-15): the list
@@ -98,25 +154,58 @@ export function makeMeaningLookup(jmdictWords) {
 /**
  * The examples for one kana card.
  *
- * `kaishi` are Kaishi cards (their reading already worked out), most common
- * first; `jlpt` are JLPT rows in N5, N4, N3 order. A hiragana card looks at
- * readings in hiragana, a katakana card at readings in katakana, so テレビ is
- * never an example for て.
+ * `kaishi` are Kaishi cards (their reading already worked out, and `audio`,
+ * the file of the card's own recording, where it has one), most common first;
+ * `jlpt` are JLPT rows in N5, N4, N3 order. A hiragana card looks at readings
+ * in hiragana, a katakana card at readings in katakana, so テレビ is never an
+ * example for て.
+ *
+ * v83: a word she can hear comes first (Henning: "gibt es dieses Wort
+ * nirgendwo von einem Muttersprachler gesprochen?" — for hiragana it was
+ * already on the server, unplayed), and the sound in the middle of a word
+ * counts too (Henning: two or three of those "could be very revealing, just
+ * because it sounds different"). Up to three, in this order:
+ *
+ *   1. a Kaishi word with a recording that starts with the kana
+ *   2. up to two Kaishi words with a recording that have it later (`soundAt`)
+ *   3. more recorded words that start with it
+ *   4. any other word that starts with it, Kaishi before the lists — as v78
+ *
+ * A word without a recording still has to start with the kana: a silent word
+ * with the sound somewhere inside shows less than one that begins with it.
+ * `at` is where the sound is, so the card can mark it.
  */
-export function pickExamples(card, { kaishi = [], jlpt = [], meaningOf }, count = 2) {
+export function pickExamples(card, { kaishi = [], jlpt = [], meaningOf }, count = 3) {
   const kana = card.word;
+  const candidates = [];
+  let starts = 0;
+  let middles = 0;
+  kaishi.forEach((k, order) => {
+    // A reading that is two readings (なに・なん) is not one word to read.
+    if (/[・/]/.test(k.reading ?? "")) return;
+    const at = soundAt(k.reading, kana);
+    if (at === -1 || !k.meaning) return;
+    const entry = { order, kana: k.reading, meaning: k.meaning, source: "kaishi", at };
+    if (k.audio && at === 0) candidates.push({ ...entry, audio: k.audio, rank: starts++ === 0 ? 0 : 2 });
+    else if (k.audio) candidates.push({ ...entry, audio: k.audio, rank: middles++ < 2 ? 1 : 2 });
+    else if (startsWithSound(k.reading, kana)) candidates.push({ ...entry, rank: 3 });
+  });
+  jlpt.forEach((row, order) => {
+    if (!startsWithSound(row.reading, kana)) return;
+    candidates.push({ rank: 4, order, row, kana: row.reading, source: `jlpt-n${row.level}`, at: row.reading.indexOf(kana) });
+  });
+  candidates.sort((a, b) => a.rank - b.rank || a.order - b.order);
+
   const chosen = [];
   const seen = new Set();
-  const take = (reading, meaning, source) => {
-    if (chosen.length >= count || !meaning || seen.has(reading) || !startsWithSound(reading, kana)) return;
-    seen.add(reading);
-    chosen.push({ kana: reading, meaning, source });
-  };
-  for (const k of kaishi) take(k.reading, k.meaning, "kaishi");
-  for (const row of jlpt) {
+  for (const c of candidates) {
     if (chosen.length >= count) break;
-    if (!startsWithSound(row.reading, kana)) continue;
-    take(row.reading, meaningOf(row), `jlpt-n${row.level}`);
+    if (seen.has(c.kana)) continue;
+    // Looked up only for a list word that would be taken: JMdict is large.
+    const meaning = c.row ? meaningOf(c.row) : c.meaning;
+    if (!meaning) continue;
+    seen.add(c.kana);
+    chosen.push({ kana: c.kana, meaning, source: c.source, ...(c.audio ? { audio: c.audio } : {}), at: c.at });
   }
   return chosen;
 }

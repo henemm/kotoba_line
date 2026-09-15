@@ -136,6 +136,10 @@ const out = {
   kanaExamples: has("word_examples")
     ? one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND word_examples IS NOT NULL")
     : "absent",
+  // v83: examples carry the Kaishi recording they were chosen for.
+  kanaExampleAudio: has("word_examples")
+    ? one(`SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND word_examples LIKE '%"audio"%'`)
+    : "absent",
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
@@ -202,6 +206,13 @@ NODE
       warn "npm run import-kana" "no kana card has example words — the kana import needs running again"
     elif [[ ${F_kanaExamples} != absent && ${F_kana:-0} -gt 0 ]]; then
       ok "${F_kanaExamples} kana cards with example words"
+    fi
+    # v83: 91 of them with a recorded word (86 hiragana + 5 katakana, measured
+    # 2026-09-15). None means the examples are still v78's, chosen without.
+    if [[ ${F_kanaExampleAudio} != absent && ${F_kanaExamples:-0} -gt 0 && ${F_kanaExampleAudio:-0} -eq 0 ]]; then
+      warn "npm run import-kana" "no kana example word has its recording — the kana import needs running again (v83)"
+    elif [[ ${F_kanaExampleAudio} != absent && ${F_kanaExamples:-0} -gt 0 ]]; then
+      ok "${F_kanaExampleAudio} kana cards with a recorded example word"
     fi
 
     if [[ ${F_tagged:-0} -eq 0 && ${F_cards:-0} -gt 0 ]]; then

@@ -61,7 +61,12 @@ describe("♪ acknowledges the tap and plays from the cache (#116)", () => {
     assert.doesNotMatch(bodyOf(session, "drawCard"), /\bprime\(card/);
     const primes = (fn) => bodyOf(session, fn).match(/prime\(([^;]*)\);/)?.[1];
     // v66: and not a sentence the card will not offer (`showsSentence`).
-    assert.equal(primes("drawChoose"), "card.word_audio, showsSentence(card, japanese) && card.sentence_audio");
+    // v83: and a kana card's example words, which 選ぶ plays once she has
+    // answered (`exampleAudio` is empty for every other card).
+    assert.equal(
+      primes("drawChoose"),
+      "card.word_audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card)",
+    );
     assert.equal(primes("drawListen"), "card.sentence_audio");
     assert.equal(primes("drawSpeak"), "useSentence ? card.sentence_audio : card.word_audio");
     assert.equal(primes("drawType"), "card.word_audio");
