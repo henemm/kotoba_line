@@ -205,9 +205,8 @@ function tabBar() {
           "aria-current": state.tab === tab.key ? "page" : undefined,
           onclick: () => goToTab(tab.key),
         },
-        el("span.dot"),
-        el("span.label", { text: tab.label }),
-        state.jokerBadge && tab.key === "stats" ? el("span.joker-badge") : null,
+        // Inside the label, so it hangs off the word however wide the word is.
+        el("span.label", {}, tab.label, state.jokerBadge && tab.key === "stats" ? el("span.joker-badge") : null),
       ),
     ),
   );

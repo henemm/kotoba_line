@@ -1,5 +1,12 @@
 [
   {
+    "version": "v85",
+    "summary": "Die Leiste unten ist aufgeräumt.",
+    "notes": [
+      "Über Decks, Suche, Statistik und Einstellungen stehen keine Punkte mehr. Wo du gerade bist, siehst du am Feld hinter dem Wort."
+    ]
+  },
+  {
     "version": "v84",
     "summary": "Die einzelnen Kana hörst du jetzt als echte Aufnahme.",
     "notes": [
