@@ -2942,8 +2942,13 @@
    the "Practise starred" footer gone it runs under the capsule like the other
    tabs, fade included, and keeps the same space clear at its end so the last
    row can be scrolled out from under it. */
-.words .browse-list {
-  padding-bottom: var(--tabbar-space);
+/* #168: a last box rather than padding-bottom, which Safari on the iPhone
+   leaves out of the scroll — see base.css. Less the list's 16px gap, which
+   the box brings with it. */
+.words .browse-list::after {
+  content: "";
+  flex: none;
+  height: calc(var(--tabbar-space) - 16px);
 }
 
 /* Her own words at the top of the idle list. The list already carries the
