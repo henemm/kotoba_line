@@ -333,6 +333,15 @@ function overflow(keys, max) {
   return keys.length <= max ? [] : keys.slice(0, keys.length - max);
 }
 
+/**
+ * KanjiVG's stroke-order drawings (#158) share this cache but not its cap.
+ * There are 148, about 2 KB each, and they never change; counted, they would
+ * take half of the 300 places and push out recordings ten times their size,
+ * which she would then download again on mobile data.
+ */
+const isDrawing = (request) => new URL(request.url).pathname.includes("/media/kanjivg-");
+
 async function evict(cache) {
-  for (const key of overflow(await cache.keys(), MEDIA_MAX)) await cache.delete(key);
+  const recordings = (await cache.keys()).filter((key) => !isDrawing(key));
+  for (const key of overflow(recordings, MEDIA_MAX)) await cache.delete(key);
 }

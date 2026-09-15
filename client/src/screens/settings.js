@@ -56,7 +56,8 @@ async function countCachedAudio() {
   try {
     if (!(await caches.has("kotoba-media"))) return 0;
     const cache = await caches.open("kotoba-media");
-    return (await cache.keys()).length;
+    // Recordings only: the kana decks' stroke-order drawings live here too (#158).
+    return (await cache.keys()).filter((key) => !new URL(key.url).pathname.includes("/media/kanjivg-")).length;
   } catch {
     return undefined;
   }
