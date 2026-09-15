@@ -1,5 +1,12 @@
 [
   {
+    "version": "v80",
+    "summary": "Richtig ist jetzt grün, falsch bleibt rot.",
+    "notes": [
+      "Die Striche oben beim Üben und in der Zusammenfassung zeigen richtige Antworten jetzt grün. Vorher hatten sie die Farbe der Übung, und bei „Bedeutung wählen“ war das ein Orange, das man kaum von Rot unterscheiden konnte."
+    ]
+  },
+  {
     "version": "v79",
     "summary": "„Laut sagen“ nimmt nichts mehr auf.",
     "notes": [
