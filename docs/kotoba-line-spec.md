@@ -381,9 +381,12 @@ Level:          level n starts at 100 * n * (n + 1) / 2 XP
 **Streak = consecutive days with at least 10 reviews.** Two details that are
 easy to get wrong and painful to fix later:
 
-- **Fix the day boundary to `Asia/Tokyo`, server-side.** Not device-local
-  time, not UTC. Device timezone changes, and a streak that resets because a
-  phone switched zones is the kind of bug that ends the habit.
+- **The day starts at midnight in the device's time zone, computed
+  server-side.** Not UTC, and not a rolling 24 hours. The device sends the name
+  of its zone with each request; the server works out the day from
+  `reviewed_at`. *Changed 2026-09-15 (#122):* this said "fixed to
+  `Asia/Tokyo`"; the product owner ruled local time the right default, as in
+  any app of this kind. A request that sends no zone gets Tokyo.
 - **Compute the streak on the server** from `reviewed_at`, and send it with
   `/api/stats`. The client displays it and never calculates it, so an offline
   device cannot show a streak that the log does not support.

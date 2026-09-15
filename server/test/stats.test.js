@@ -5,29 +5,50 @@ import {
   levelForXp,
   levelThreshold,
   maturityBand,
-  nextDay,
   statsForUser,
   streakFromDays,
-  tokyoDay,
   xpFromEvents,
 } from "../src/stats.js";
+import { DEFAULT_TIME_ZONE, dayIn, nextDay, startOfDay, validTimeZone } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
 
 const DAY = 86400;
 
-describe("the day boundary is Asia/Tokyo (§8a)", () => {
+describe("the day boundary is midnight in the device's zone (§8a, #122)", () => {
   it("puts late-evening UTC into the next Tokyo day", () => {
     // Tokyo is UTC+9, so 15:00Z is already midnight there.
-    assert.equal(tokyoDay(Date.parse("2026-03-14T14:59:00Z") / 1000), "2026-03-14");
-    assert.equal(tokyoDay(Date.parse("2026-03-14T15:00:00Z") / 1000), "2026-03-15");
+    assert.equal(dayIn(Date.parse("2026-03-14T14:59:00Z") / 1000, "Asia/Tokyo"), "2026-03-14");
+    assert.equal(dayIn(Date.parse("2026-03-14T15:00:00Z") / 1000, "Asia/Tokyo"), "2026-03-15");
   });
 
-  it("does not follow the device or UTC", () => {
-    // A review at 08:00 Tokyo on the 15th is still the 14th in UTC.
+  it("is the same moment on a different day in another zone, not UTC's day", () => {
+    // 23:00Z on the 14th: 08:00 on the 15th in Tokyo, midnight in Berlin.
     const t = Date.parse("2026-03-14T23:00:00Z") / 1000;
-    assert.equal(new Date(t * 1000).toISOString().slice(0, 10), "2026-03-14");
-    assert.equal(tokyoDay(t), "2026-03-15");
+    assert.equal(dayIn(t, "Asia/Tokyo"), "2026-03-15");
+    assert.equal(dayIn(t, "Europe/Berlin"), "2026-03-15");
+    assert.equal(dayIn(t - 1, "Europe/Berlin"), "2026-03-14");
+    assert.equal(dayIn(t, "UTC"), "2026-03-14");
+  });
+
+  it("starts a day at its midnight, across the clocks changing", () => {
+    assert.equal(startOfDay("2026-03-15", "Asia/Tokyo"), Date.parse("2026-03-14T15:00:00Z") / 1000);
+    assert.equal(startOfDay("2026-07-01", "Europe/Berlin"), Date.parse("2026-06-30T22:00:00Z") / 1000);
+    // Berlin's clocks go forward at 02:00 on 29 March and back at 03:00 on 25 October.
+    assert.equal(startOfDay("2026-03-29", "Europe/Berlin"), Date.parse("2026-03-28T23:00:00Z") / 1000);
+    assert.equal(startOfDay("2026-03-30", "Europe/Berlin"), Date.parse("2026-03-29T22:00:00Z") / 1000);
+    assert.equal(startOfDay("2026-10-26", "Europe/Berlin"), Date.parse("2026-10-25T23:00:00Z") / 1000);
+    // Santiago skips from 00:00 to 01:00 on 6 September 2026: the day starts at 01:00.
+    const santiago = startOfDay("2026-09-06", "America/Santiago");
+    assert.equal(dayIn(santiago, "America/Santiago"), "2026-09-06");
+    assert.equal(dayIn(santiago - 1, "America/Santiago"), "2026-09-05");
+  });
+
+  it("falls back to Tokyo for a zone it does not know", () => {
+    assert.equal(validTimeZone("Europe/Berlin"), "Europe/Berlin");
+    for (const bad of [undefined, "", "Not/AZone", "x".repeat(65), ["Asia/Tokyo"]]) {
+      assert.equal(validTimeZone(bad), DEFAULT_TIME_ZONE);
+    }
   });
 
   it("steps across a month and a leap day", () => {

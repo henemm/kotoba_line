@@ -13,7 +13,7 @@ import { when } from "../src/screens/settings.js";
 import { byFrequencyThenId, matchesQuery } from "../src/screens/browse.js";
 import { offlineStatus } from "../src/outbox.js";
 import { unwrap } from "../src/store.js";
-import { describe as describeResume, isResumable, tokyoDay } from "../src/resume.js";
+import { describe as describeResume, isResumable, localDay } from "../src/resume.js";
 import { activeLabel, isDefault, scopeOf, summaryLine } from "../src/screens/choose-set.js";
 import { accentLabel, accentsOf, contour } from "../src/pitch.js";
 import { signedOutCopy } from "../src/screens/signed-out.js";
@@ -821,24 +821,30 @@ describe("an unfinished session (51)", () => {
     ...over,
   });
 
-  it("is offered inside four hours, on the same Tokyo day", () => {
-    assert.equal(isResumable(saved(), at(`${DAY}T12:00:00+09:00`)), true);
+  // The app leaves the zone to the device; the tests name one, because the
+  // machine running them is not in Tokyo.
+  const TOKYO = "Asia/Tokyo";
+
+  it("is offered inside four hours, on the same day", () => {
+    assert.equal(isResumable(saved(), at(`${DAY}T12:00:00+09:00`), TOKYO), true);
   });
 
   it("expires after four hours", () => {
-    assert.equal(isResumable(saved(), at(`${DAY}T13:30:00+09:00`)), false);
+    assert.equal(isResumable(saved(), at(`${DAY}T13:30:00+09:00`), TOKYO), false);
   });
 
-  it("expires at the Tokyo day boundary even when four hours have not passed", () => {
-    // Started at 23:00 Tokyo, reopened at 01:00: two hours later, but the
-    // streak has already turned over and the queue with it.
+  it("expires at midnight even when four hours have not passed", () => {
+    // Started at 23:00, reopened at 01:00: two hours later, but the streak
+    // has already turned over and the queue with it.
     const late = saved({ at: at(`${DAY}T23:00:00+09:00`) });
-    assert.equal(isResumable(late, at("2026-09-11T01:00:00+09:00")), false);
+    assert.equal(isResumable(late, at("2026-09-11T01:00:00+09:00"), TOKYO), false);
+    // The same two moments in Berlin are 16:00 and 18:00 on one day.
+    assert.equal(isResumable(late, at("2026-09-11T01:00:00+09:00"), "Europe/Berlin"), true);
   });
 
   it("is not offered when there is nothing left of it", () => {
-    assert.equal(isResumable(saved({ index: 4 }), at(`${DAY}T09:30:00+09:00`)), false);
-    assert.equal(isResumable(saved({ cardIds: [] }), at(`${DAY}T09:30:00+09:00`)), false);
+    assert.equal(isResumable(saved({ index: 4 }), at(`${DAY}T09:30:00+09:00`), TOKYO), false);
+    assert.equal(isResumable(saved({ cardIds: [] }), at(`${DAY}T09:30:00+09:00`), TOKYO), false);
     assert.equal(isResumable(undefined), false);
   });
 
@@ -849,10 +855,13 @@ describe("an unfinished session (51)", () => {
   });
 
   it("uses the same day boundary as the streak", () => {
-    // §8a counts days in Asia/Tokyo. A session and the day it counts towards
-    // must not disagree about when the day ended.
-    assert.equal(tokyoDay(at("2026-09-10T14:59:00Z")), "2026-09-10");
-    assert.equal(tokyoDay(at("2026-09-10T15:00:00Z")), "2026-09-11");
+    // The server counts days from midnight in the zone api.js sends it (#122).
+    // A session and the day it counts towards must not disagree about when
+    // the day ended.
+    assert.equal(localDay(at("2026-09-10T14:59:00Z"), TOKYO), "2026-09-10");
+    assert.equal(localDay(at("2026-09-10T15:00:00Z"), TOKYO), "2026-09-11");
+    assert.equal(localDay(at("2026-09-10T21:59:00Z"), "Europe/Berlin"), "2026-09-10");
+    assert.equal(localDay(at("2026-09-10T22:00:00Z"), "Europe/Berlin"), "2026-09-11");
   });
 });
 

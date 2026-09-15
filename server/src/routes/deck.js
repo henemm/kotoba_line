@@ -19,6 +19,7 @@ import {
   setStar,
   starredAmong,
 } from "../queue.js";
+import { timeZoneOf } from "../day.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
 import { updateDeckSettings } from "../deck-settings.js";
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
@@ -165,7 +166,9 @@ export default async function deckRoutes(app) {
       preHandler: app.requireUser,
     },
     async (req) => {
-      const answer = queueForUser(db, req.user.id, req.query);
+      // Today is the device's day (#122): it bounds the new cards allowed.
+      const timeZone = timeZoneOf(req);
+      const answer = queueForUser(db, req.user.id, { ...req.query, timeZone });
 
       // Screen 41 prints, under each of めくる's four buttons, the interval
       // that button would give. It rides along with the queue rather than
@@ -190,7 +193,7 @@ export default async function deckRoutes(app) {
       // tab draws "Next cards due" and the counted offers, so they come with
       // that answer rather than costing the tab another request.
       if (!answer.filtered && answer.cardIds.length === 0) {
-        answer.outlook = outlookForUser(db, req.user.id, undefined, req.query);
+        answer.outlook = outlookForUser(db, req.user.id, undefined, { ...req.query, timeZone });
       }
       return answer;
     },
@@ -198,7 +201,7 @@ export default async function deckRoutes(app) {
 
   /** #137: her decks with their cards for today — the practise tab's first screen. */
   app.get("/api/decks", { preHandler: app.requireUser }, async (req) => ({
-    decks: decksForUser(db, req.user.id),
+    decks: decksForUser(db, req.user.id, undefined, timeZoneOf(req)),
   }));
 
   /** #137: one deck's ways of practising and daily limit, from its options sheet. */

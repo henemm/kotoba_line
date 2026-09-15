@@ -1,7 +1,7 @@
 import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 import { deckSettings } from "./deck-settings.js";
 import { MY_WORDS, ownDecks } from "./decks.js";
-import { nextDay, tokyoDay } from "./stats.js";
+import { DEFAULT_TIME_ZONE, dayIn, nextDay, startOfDay } from "./day.js";
 // The client's own module, not a copy (v69): the image puts client/src/romaji.js
 // and pitch.js at /client/src, the same place relative to src/ as in the repo.
 import { romajiQuery, searchRomaji } from "../../client/src/romaji.js";
@@ -148,7 +148,7 @@ function filterClause({ deckKey, deck, list, tag }, params, userId) {
 }
 
 export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() / 1000), random = Math.random) {
-  const { mode, deckKey, deck, list, tag, only } = opts;
+  const { mode, deckKey, deck, list, tag, only, timeZone = DEFAULT_TIME_ZONE } = opts;
   const filtered = isFiltered({ tag, only });
 
   const requested = Number.isInteger(opts.limit) ? opts.limit : MAX_SESSION_LENGTH;
@@ -164,6 +164,12 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   // How many new cards were introduced today — in this deck, when there is
   // one — so the daily cap is a cap on the day rather than on the session.
+  //
+  // Today is the calendar day on her device, from its midnight (#122). It was
+  // the last 24 hours, so ten new cards at 22:00 still used up ten of the next
+  // morning's. One boundary for both halves: "first answered today" only means
+  // that if "before today" is the same moment.
+  const dayStart = startOfDay(dayIn(now, timeZone), timeZone);
   const scopeParams = [];
   const scopeSql = inDeck ? filterClause({ deckKey }, scopeParams, userId) : "";
   const introducedToday = db
@@ -175,7 +181,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
             SELECT card_id FROM review_events
              WHERE user_id = ? AND reviewed_at < ?)${scopeSql}`,
     )
-    .get(userId, now - DAY, userId, now - DAY, ...scopeParams).n;
+    .get(userId, dayStart, userId, dayStart, ...scopeParams).n;
 
   const starredOnly = only === "starred";
 
@@ -285,7 +291,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
  * today" is the queue's own count for that deck, so a number on the list is
  * always the session the deck page then starts.
  */
-export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
+export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), timeZone = DEFAULT_TIME_ZONE) {
   // What each way of practising can ask in this deck, the rule playableIn
   // (client/src/screens/session.js) applies card by card: 聞く needs a sentence
   // with a translation, 書く a reading. Counted so the deck's options can say
@@ -312,7 +318,7 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
       const scope = parseDeckKey(key);
       const row = count.get(userId, scope.deck, userId, id ?? null, id ?? null);
       if (row.cards === 0 && !own) return undefined;
-      const { today } = queueForUser(db, userId, { deckKey: key }, now);
+      const { today } = queueForUser(db, userId, { deckKey: key, timeZone }, now);
       return {
         key,
         id,
@@ -328,29 +334,37 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     .filter(Boolean);
 }
 
-const tokyoTime = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-const tokyoWeekday = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", weekday: "short" });
-const tokyoDate = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", day: "numeric", month: "short" });
+/** The three ways of saying a moment, one set per time zone. */
+const whenFormatters = new Map();
+
+function whenFormat(timeZone) {
+  let f = whenFormatters.get(timeZone);
+  if (!f) {
+    f = {
+      time: new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
+      weekday: new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short" }),
+      date: new Intl.DateTimeFormat("en-GB", { timeZone, day: "numeric", month: "short" }),
+    };
+    whenFormatters.set(timeZone, f);
+  }
+  return f;
+}
 
 /**
- * "tomorrow 06:00" — when a moment falls, said the way design 10 says it, in
- * Tokyo (§8a) whatever the device's clock thinks. Today and tomorrow by name,
- * the rest of the week by weekday, anything later by date.
+ * "tomorrow 06:00" — when a moment falls, said the way design 10 says it, on
+ * the clock of the device that asked (#122). Today and tomorrow by name, the
+ * rest of the week by weekday, anything later by date.
  */
-export function whenInTokyo(at, now) {
-  const today = tokyoDay(now);
-  const day = tokyoDay(at);
+export function whenOnClock(at, now, timeZone = DEFAULT_TIME_ZONE) {
+  const f = whenFormat(timeZone);
+  const today = dayIn(now, timeZone);
+  const day = dayIn(at, timeZone);
   let label;
   if (day === today) label = "today";
   else if (day === nextDay(today)) label = "tomorrow";
-  else if (at - now < 6 * DAY) label = tokyoWeekday.format(at * 1000);
-  else label = tokyoDate.format(at * 1000);
-  return `${label} ${tokyoTime.format(at * 1000)}`;
+  else if (at - now < 6 * DAY) label = f.weekday.format(at * 1000);
+  else label = f.date.format(at * 1000);
+  return `${label} ${f.time.format(at * 1000)}`;
 }
 
 /**
@@ -359,19 +373,19 @@ export function whenInTokyo(at, now) {
  *   ahead    cards due within two days — the "Practise ahead" count
  *   lapsed   cards missed in the last three days — "Recent mistakes"
  *   nextDue  `{ count, at, when }`: when the next card falls due, and how many
- *            fall due that same Tokyo day — "28 · tomorrow 06:00"
+ *            fall due that same day — "28 · tomorrow 06:00"
  *
  * The two counts come from `queueForUser` itself, so an offer can never
  * promise a number its session then does not deliver. `nextDue` counts only
  * cards the scheduler has seen: new cards are not "due", they are allowed, and
  * the allowance is a different sentence.
  */
-export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), { deckKey, deck, list } = {}) {
+export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), { deckKey, deck, list, timeZone = DEFAULT_TIME_ZONE } = {}) {
   // Within the deck or list she practises in (#137), like the queue it stands
   // in for: an offer counted over every card would promise a session of cards
   // her lines never show.
-  const ahead = queueForUser(db, userId, { deckKey, deck, list, only: "ahead" }, now).available;
-  const lapsed = queueForUser(db, userId, { deckKey, deck, list, only: "lapsed" }, now).available;
+  const ahead = queueForUser(db, userId, { deckKey, deck, list, only: "ahead", timeZone }, now).available;
+  const lapsed = queueForUser(db, userId, { deckKey, deck, list, only: "lapsed", timeZone }, now).available;
 
   const visible = visibleTo(userId);
   const scope = [];
@@ -381,11 +395,11 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
 
   let nextDue = null;
   if (at) {
-    const endOfThatDay = Math.floor(Date.parse(`${nextDay(tokyoDay(at))}T00:00:00+09:00`) / 1000);
+    const endOfThatDay = startOfDay(nextDay(dayIn(at, timeZone)), timeZone);
     const { n } = db
       .prepare(`SELECT count(*) AS n ${scheduled} AND s.due_at > ? AND s.due_at < ?`)
       .get(userId, ...visible.params, ...scope, now, endOfThatDay);
-    nextDue = { count: n, at, when: whenInTokyo(at, now) };
+    nextDue = { count: n, at, when: whenOnClock(at, now, timeZone) };
   }
 
   return { ahead, lapsed, nextDue };
