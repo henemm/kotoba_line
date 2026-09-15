@@ -850,6 +850,46 @@
   }
 }
 
+/* #151: a deck of hers beside the sidebar. Two columns that scroll on their
+   own: what to practise on the left, "Cards in this deck" with its search on
+   the right, and the name and Options across the top. `.split` is set by
+   practise.js only with the sidebar on screen and a card list to show;
+   Kaishi's page stays the one-column page above. */
+.deck-page.split {
+  --gutter: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  padding-bottom: 0;
+}
+.deck-page.split > .deck-head {
+  grid-column: 1 / -1;
+  padding-left: 40px;
+  padding-right: 40px;
+}
+.deck-main,
+.deck-side {
+  min-height: 0;
+  overflow-y: auto;
+}
+/* A column, as the page is on the phone: its rows ("More options") stretch to
+   the width rather than shrinking to their words. */
+.deck-main {
+  display: flex;
+  flex-direction: column;
+  padding: 0 12px 32px;
+}
+.deck-side {
+  padding: 0 12px 0 0;
+}
+.deck-side .deck-cards {
+  padding-top: 0;
+}
+#app:has(> nav.sidebar) .deck-add-card {
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
 /* A deck's options (#137): top right on its page, where Noji keeps a deck's
    menu, and a sheet of switches like Settings. */
 .deck-title-row {
@@ -2123,6 +2163,18 @@
 .sheet-actions .btn.solid {
   background: var(--ink);
   color: var(--night);
+}
+
+/* #151: on a window 700pt and wider a sheet keeps to the column rather than
+   running the width of the window — beside the sidebar that was 1180pt of
+   sheet for a name field. Centred, like the update sheet already was. */
+@media (min-width: 700px) {
+  .sheet-scrim {
+    justify-content: center;
+  }
+  .sheet-scrim > .sheet {
+    max-width: var(--column);
+  }
 }
 
 /* #150: drawn only on the iPad card, below. */

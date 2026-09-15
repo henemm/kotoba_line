@@ -109,6 +109,15 @@ and the × asks once. What remains is deliberate, and short.
   reference. 選ぶ's answers go in two columns from 1000 pt. Sign-in, the
   summary, the card form and the sheets keep the 560 pt column, and below
   700 pt (Split View, Slide Over) everything is the phone layout, as before.
+- **A landscape iPad has a sidebar instead of the tab bar** (#151, v72). At
+  1000 pt and wider — a landscape iPad, or a 12.9" one upright — the four tabs
+  are rows in a 300 pt sidebar on the recessed ground, with her decks and
+  today's counts under them and "New deck" last. A deck opens beside it with
+  no "‹ Decks" step; one of her decks shows what to practise and its cards in
+  two columns that scroll separately. Kaishi, which lists no cards, keeps the
+  one-column page. The session, the card form and the sheets take the screen
+  as before. Turning the iPad upright is the 700 pt page with the tab bar, and
+  the open deck and a search she has started stay.
 - **52's dismissal is the session's ×.** The drawn frame is cropped, so the
   control the note calls for ("she can dismiss it") is not in it. The app
   already has one word for leaving a screen, and a second one here would teach
