@@ -114,7 +114,12 @@ async function request(path, { method = "GET", body, signal } = {}) {
       method,
       signal: controller.signal,
       credentials: "same-origin",
-      headers: body ? { "content-type": "application/json" } : undefined,
+      headers: {
+        // The zone, not the date (#122): the server counts "today" from
+        // midnight where the device is, but from the log's own timestamps.
+        "x-time-zone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(body ? { "content-type": "application/json" } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     text = await res.text();

@@ -281,7 +281,7 @@ export function practiseScreen({
             {},
             el("span.label", { text: "Next cards due" }),
             // Design 10: "28 · tomorrow 06:00". The wording of the time is the
-            // server's, in Tokyo (§8a), not this device's clock.
+            // server's, in the zone this device sent it (§8a, #122).
             el("span.value.tabular", { text: `${nextDue.count} · ${nextDue.when}` }),
           )
         : null,

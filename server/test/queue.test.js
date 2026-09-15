@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, outlookForUser, queueForUser, setStar, shuffle, whenInTokyo } from "../src/queue.js";
+import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, outlookForUser, queueForUser, setStar, shuffle, whenOnClock } from "../src/queue.js";
+import { dayIn, startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
 import { openDatabase } from "../src/db.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
@@ -143,6 +144,27 @@ describe("queueForUser", () => {
     await app.close();
   });
 
+  it("gives a new day its whole allowance, from midnight on her clock (#122)", async () => {
+    const { app, db, user } = await fixture();
+    // Ten new cards at 22:00 in Tokyo; the next morning at 06:00 is 8 hours
+    // later. The last 24 hours still held them; the day does not.
+    const evening = Math.floor(Date.parse("2025-10-08T22:00:00+09:00") / 1000);
+    const morning = Math.floor(Date.parse("2025-10-09T06:00:00+09:00") / 1000);
+    const events = Array.from({ length: 10 }, (_, i) => ({
+      id: uid(i), card_id: i + 1, mode: "choose", rating: 3, reviewed_at: evening + i,
+    }));
+    ingestEvents(db, user.id, events, evening + 60);
+
+    const tokyo = queueForUser(db, user.id, { limit: 60, timeZone: "Asia/Tokyo" }, morning, () => 0);
+    assert.equal(tokyo.cardIds.filter((id) => id > 10).length, 15, "all 15 of today's new cards");
+
+    // The same moments in Berlin: 15:00 and 23:00 the same day, so the ten
+    // were today's there, and 5 remain.
+    const berlin = queueForUser(db, user.id, { limit: 60, timeZone: "Europe/Berlin" }, morning, () => 0);
+    assert.equal(berlin.cardIds.filter((id) => id > 10).length, 5);
+    await app.close();
+  });
+
   it("does not cap a session she chose (§5a)", async () => {
     const { app, db, user } = await fixture();
     const events = Array.from({ length: 15 }, (_, i) => ({
@@ -256,13 +278,15 @@ describe("queueForUser", () => {
 });
 
 describe("the nothing-due outlook (design 10; #90, #91)", () => {
-  // NOW is 2025-10-09 17:53:20 in Tokyo.
-  it("says when in Tokyo, by name, by weekday, then by date", () => {
-    assert.equal(whenInTokyo(NOW + 3600, NOW), "today 18:53");
+  // NOW is 2025-10-09 17:53:20 in Tokyo, 10:53:20 in Berlin.
+  it("says when on the device's clock, by name, by weekday, then by date", () => {
+    assert.equal(whenOnClock(NOW + 3600, NOW), "today 18:53", "Tokyo without a zone");
     const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
-    assert.equal(whenInTokyo(tomorrowSix, NOW), "tomorrow 06:00");
-    assert.equal(whenInTokyo(tomorrowSix + 2 * DAY, NOW), "Sun 06:00");
-    assert.equal(whenInTokyo(tomorrowSix + 20 * DAY, NOW), "30 Oct 06:00");
+    assert.equal(whenOnClock(tomorrowSix, NOW, "Asia/Tokyo"), "tomorrow 06:00");
+    assert.equal(whenOnClock(tomorrowSix + 2 * DAY, NOW, "Asia/Tokyo"), "Sun 06:00");
+    assert.equal(whenOnClock(tomorrowSix + 20 * DAY, NOW, "Asia/Tokyo"), "30 Oct 06:00");
+    // Tokyo's 06:00 tomorrow is 23:00 tonight in Berlin.
+    assert.equal(whenOnClock(tomorrowSix, NOW, "Europe/Berlin"), "today 23:00");
   });
 
   it("counts the offers with the queue's own rules, and finds the next due day", async () => {
@@ -270,7 +294,7 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
     const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
     setState(db, user.id, 1, { dueAt: tomorrowSix });
     setState(db, user.id, 2, { dueAt: tomorrowSix + 3600 });
-    setState(db, user.id, 3, { dueAt: tomorrowSix + 17 * 3600, lapses: 1, lastReview: NOW - DAY }); // 23:00, same Tokyo day
+    setState(db, user.id, 3, { dueAt: tomorrowSix + 17 * 3600, lapses: 1, lastReview: NOW - DAY }); // 23:00, the same day in Tokyo
     setState(db, user.id, 4, { dueAt: tomorrowSix + 19 * 3600 });                                    // 01:00 the day after
     setState(db, user.id, 5, { dueAt: NOW + 10 * DAY });
 
@@ -500,7 +524,9 @@ describe("the endpoints", () => {
     const now = Math.floor(Date.now() / 1000);
     // The daily allowance spent, and one card due in an hour.
     await app.inject({ method: "PATCH", url: "/api/settings", headers: { cookie }, payload: { newPerDay: 5 } });
-    const events = [1, 2, 3, 4, 5].map((id) => ({ id: uid(100 + id), card_id: id, mode: "flip", rating: 4, reviewed_at: now - 60 }));
+    // At `now`, not a minute before: the allowance is the calendar day's (#122),
+    // and a minute before can be yesterday.
+    const events = [1, 2, 3, 4, 5].map((id) => ({ id: uid(100 + id), card_id: id, mode: "flip", rating: 4, reviewed_at: now }));
     ingestEvents(db, user.id, events, now);
     setState(db, user.id, 6, { dueAt: now + 3600 });
 
@@ -513,6 +539,27 @@ describe("the endpoints", () => {
     assert.equal(ahead.statusCode, 200);
     assert.deepEqual(ahead.json().cardIds, [6]);
     assert.equal(ahead.json().outlook, undefined, "only an unfiltered empty day carries it");
+    await app.close();
+  });
+
+  it("counts the day in the zone the device sends, and Tokyo without one (#122)", async () => {
+    const { app, db, config, user } = await fixture();
+    const cookie = await signIn(app, config);
+    // Five new cards a minute before midnight in Berlin: yesterday there, for
+    // certain. The route runs on the real clock, so whether that minute is
+    // still today in Tokyo depends on the hour the test runs — and the
+    // expectation says so rather than hoping.
+    const now = Math.floor(Date.now() / 1000);
+    const at = startOfDay(dayIn(now, "Europe/Berlin"), "Europe/Berlin") - 60;
+    const events = [1, 2, 3, 4, 5].map((id) => ({ id: uid(200 + id), card_id: id, mode: "flip", rating: 3, reviewed_at: at }));
+    ingestEvents(db, user.id, events, now);
+    const inTokyo = dayIn(at, "Asia/Tokyo") === dayIn(now, "Asia/Tokyo") ? 10 : 15;
+
+    const today = async (headers) =>
+      (await app.inject({ method: "GET", url: "/api/decks", headers: { cookie, ...headers } })).json().decks[0].today;
+    assert.equal((await today({ "x-time-zone": "Europe/Berlin" })).fresh, 15);
+    assert.equal((await today({})).fresh, inTokyo, "a shell from before #122 keeps Tokyo");
+    assert.equal((await today({ "x-time-zone": "Not/AZone" })).fresh, inTokyo, "a zone Intl does not know is Tokyo, not a 500");
     await app.close();
   });
 

@@ -1,4 +1,5 @@
 import { visibleTo } from "./cards.js";
+import { DEFAULT_TIME_ZONE, dayIn, nextDay } from "./day.js";
 
 /**
  * XP, levels, streak and jokers (§8a).
@@ -23,30 +24,6 @@ const MAX_JOKERS = 3;
 /** Rating 1 is "again". Everything above it was a successful recall (§6). */
 const isCorrect = (rating) => rating >= 2;
 
-/**
- * The day an event belongs to, fixed to Asia/Tokyo (§8a).
- *
- * Not device-local and not UTC: a streak that resets because a phone changed
- * timezone is the kind of bug that ends the habit. `en-CA` formats as
- * YYYY-MM-DD, which sorts and compares as a string.
- */
-const tokyoFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-export function tokyoDay(unixSeconds) {
-  return tokyoFormatter.format(new Date(unixSeconds * 1000));
-}
-
-/** Step a YYYY-MM-DD string forward one day, staying in that calendar. */
-export function nextDay(day) {
-  const [y, m, d] = day.split("-").map(Number);
-  const next = new Date(Date.UTC(y, m - 1, d + 1));
-  return next.toISOString().slice(0, 10);
-}
 
 /**
  * XP from the whole event log.
@@ -109,7 +86,7 @@ export function levelFloor(level) {
  * jokers as §8a describes.
  *
  * Today never breaks the streak: the day is not over, and a streak that
- * collapses at midnight Tokyo time because she has not practised *yet* would
+ * collapses at midnight because she has not practised *yet* would
  * be wrong every morning.
  *
  * The streak counts **days practised, not days elapsed**. A joker keeps the run
@@ -214,7 +191,7 @@ export function maturityBand(state) {
  * couple of aggregate queries — at a few hundred thousand rows this is well
  * under a millisecond, and it cannot drift.
  */
-export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
+export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000), timeZone = DEFAULT_TIME_ZONE) {
   const events = db
     .prepare(
       `SELECT id, card_id, rating, reviewed_at
@@ -228,14 +205,15 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
 
   const reviewsPerDay = new Map();
   for (const e of events) {
-    const day = tokyoDay(e.reviewed_at);
+    const day = dayIn(e.reviewed_at, timeZone);
     reviewsPerDay.set(day, (reviewsPerDay.get(day) ?? 0) + 1);
   }
   const qualifyingDays = [...reviewsPerDay]
     .filter(([, n]) => n >= REVIEWS_PER_QUALIFYING_DAY)
     .map(([day]) => day);
 
-  const streak = streakFromDays(qualifyingDays, tokyoDay(now));
+  const today = dayIn(now, timeZone);
+  const streak = streakFromDays(qualifyingDays, today);
 
   const states = db
     .prepare("SELECT card_id, due_at, last_review, reps FROM card_state WHERE user_id = ?")
@@ -317,7 +295,7 @@ export function statsForUser(db, userId, now = Math.floor(Date.now() / 1000)) {
     // missed days ended the streak, otherwise null (#89). Shown once per
     // lastDay, like jokerGap.
     streakReset: streak.streakReset,
-    reviewsToday: reviewsPerDay.get(tokyoDay(now)) ?? 0,
+    reviewsToday: reviewsPerDay.get(today) ?? 0,
     reviewsPerQualifyingDay: REVIEWS_PER_QUALIFYING_DAY,
     cardsSeen: seenCardIds.size,
     maturity,

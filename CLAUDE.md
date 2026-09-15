@@ -109,8 +109,14 @@ refuses instead. If work is merged and not live, that is why.
 **Deck data is never committed.** No `.apkg`, no audio, no SQLite file. See
 `.gitignore`; the import fetches ~110 MB and writes ~75 MB of audio.
 
-**The day boundary is Asia/Tokyo, computed server-side** (§8a). Streaks, jokers
-and "due today" all depend on it. Never derive it from the device clock.
+**The day boundary is midnight in the device's time zone, computed
+server-side** (§8a, #122). Streaks, jokers, "reviews today" and the new cards a
+day allows all depend on it. The device sends its zone name (`X-Time-Zone`,
+`client/src/api.js`); the server does the arithmetic in `server/src/day.js`
+from the log's timestamps, never from a date the device reports. This was a
+day fixed to Asia/Tokyo until Henning ruled local time the right default
+(2026-09-15) — do not put Tokyo back as a "fix". A request without the header
+still gets Tokyo.
 
 ## Topics
 

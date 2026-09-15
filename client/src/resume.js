@@ -16,15 +16,19 @@ import { getMeta, setMeta } from "./store.js";
 
 const KEY = "session.open";
 
-/** 51: "four hours or at the Tokyo day boundary, whichever comes first". */
+/** 51: "four hours or at the day boundary, whichever comes first". */
 export const RESUME_WINDOW_MS = 4 * 60 * 60 * 1000;
 
 /**
- * The Tokyo day a moment falls in — the same boundary §8a uses for the streak,
- * so a session and the day it counts towards cannot disagree.
+ * The day a moment falls on, on this device's clock — the same day the server
+ * counts the streak and the new cards in, because api.js sends it this
+ * device's time zone (#122). So a session and the day it counts towards
+ * cannot disagree. `timeZone` is for the tests; the app leaves it out.
  */
-export function tokyoDay(ms) {
-  return new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
+export function localDay(ms, timeZone = undefined) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(
+    new Date(ms),
+  );
 }
 
 /**
@@ -33,11 +37,11 @@ export function tokyoDay(ms) {
  * Past either edge the remaining cards are simply due again and the row is
  * gone: a queue built yesterday is a queue the scheduler has since revised.
  */
-export function isResumable(saved, now = Date.now()) {
+export function isResumable(saved, now = Date.now(), timeZone = undefined) {
   if (!saved?.cardIds?.length) return false;
   if (saved.index >= saved.cardIds.length) return false;
   if (now - saved.at > RESUME_WINDOW_MS) return false;
-  return tokyoDay(saved.at) === tokyoDay(now);
+  return localDay(saved.at, timeZone) === localDay(now, timeZone);
 }
 
 /** "4 of 20 done, 20 minutes ago" — 51's second line. */

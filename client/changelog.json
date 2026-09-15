@@ -1,5 +1,13 @@
 [
   {
+    "version": "v73",
+    "summary": "A new day in the app starts at midnight, on your own clock.",
+    "notes": [
+      "New cards for today come back at midnight, not 24 hours after you learned the last ones. Words you learned late in the evening no longer use up the next morning's.",
+      "Your streak, today's reviews and times like “tomorrow 06:00” follow the clock on your phone too."
+    ]
+  },
+  {
     "version": "v72",
     "summary": "On an iPad held sideways, your decks are on the left and the deck you are in is on the right.",
     "notes": [
