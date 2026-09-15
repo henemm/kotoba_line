@@ -1,5 +1,15 @@
 [
   {
+    "version": "v83",
+    "summary": "Bei Hiragana hörst du jetzt echte Beispielwörter.",
+    "notes": [
+      "Hinten auf den Hiragana-Karten stehen bis zu drei Wörter mit dem Laut – eins, das damit anfängt, und oft zwei, in denen er mitten im Wort vorkommt. Der Laut ist im Wort farbig markiert.",
+      "Mit ♪ neben dem Wort hörst du es von einer japanischen Sprecherin, so wie bei den Kaishi-Karten. Das gibt es bei 86 von 104 Hiragana.",
+      "Bei „Bedeutung wählen“ siehst und hörst du das jetzt auch, sobald du geantwortet hast.",
+      "Bei Katakana gibt es erst wenige Wörter mit Aufnahme."
+    ]
+  },
+  {
     "version": "v82",
     "summary": "Die Hiragana- und Katakana-Seiten lassen sich jetzt scrollen.",
     "notes": [

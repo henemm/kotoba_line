@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { pickDistractors } from "../src/deck.js";
 import { isKana, showsScript, shownWord } from "../src/script.js";
-import { flipsMeaningFirst, kanaExamples, meaningPool, strokeFiles } from "../src/screens/session.js";
+import { exampleAudio, flipsMeaningFirst, kanaExamples, meaningPool, soundParts, strokeFiles } from "../src/screens/session.js";
 
 // Pure logic only: what the kana card's back looks like was checked in WebKit.
 const kana = (word, reading, deck = "hiragana", rank = 1) => ({
@@ -80,6 +80,27 @@ describe("kana cards (#158)", () => {
     assert.deepEqual(kanaExamples(ka), []);
     assert.deepEqual(kanaExamples({ ...ka, word_examples: "{not json" }), []);
     assert.deepEqual(kanaExamples({ ...ka, word_examples: JSON.stringify([{ kana: "か" }]) }), [], "an entry without a meaning is left out");
+  });
+
+  it("marks the kana inside its example word, and never in the wrong place (v83)", () => {
+    assert.deepEqual(soundParts("かさ", "か", 0), [{ text: "か", mark: true }, { text: "さ" }]);
+    assert.deepEqual(soundParts("さかな", "か", 1), [{ text: "さ" }, { text: "か", mark: true }, { text: "な" }]);
+    assert.deepEqual(soundParts("かんしゃ", "しゃ", 2), [{ text: "かん" }, { text: "しゃ", mark: true }]);
+    assert.deepEqual(soundParts("かさ", "か", undefined), [{ text: "かさ" }], "a v78 example has no place: unmarked");
+    assert.deepEqual(soundParts("かさ", "か", 1), [{ text: "かさ" }], "a place that is not the kana: unmarked");
+  });
+
+  it("fetches the example words' recordings with the card, and only real file names (v83)", () => {
+    const card = {
+      ...ka,
+      word_examples: JSON.stringify([
+        { kana: "かお", meaning: "face", audio: "kao.mp3", at: 0 },
+        { kana: "なか", meaning: "inside", at: 1 },
+        { kana: "あか", meaning: "red", audio: 7, at: 1 },
+      ]),
+    };
+    assert.deepEqual(exampleAudio(card), ["kao.mp3"]);
+    assert.deepEqual(exampleAudio(ka), []);
   });
 
   it("names the stroke-order drawings the way the import writes them", () => {

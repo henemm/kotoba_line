@@ -98,12 +98,18 @@ export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples
 export function kanaExamples(db, { jlpt, jmdictWords }) {
   const kaishi = db
     .prepare(
-      `SELECT word, word_furigana, word_reading, word_meaning FROM cards
+      `SELECT word, word_furigana, word_reading, word_meaning, word_audio FROM cards
         WHERE deck = 'kaishi' AND deleted_at IS NULL AND word_meaning IS NOT NULL
         ORDER BY frequency_rank IS NULL, frequency_rank, id`,
     )
     .all()
-    .map((c) => ({ reading: kanaReading(c.word_furigana) ?? c.word_reading ?? c.word, meaning: c.word_meaning }));
+    // v83: the card's own recording travels with the word, so a word written
+    // twice in Kaishi (もう, 聞く) keeps the recording of the card it came from.
+    .map((c) => ({
+      reading: kanaReading(c.word_furigana) ?? c.word_reading ?? c.word,
+      meaning: c.word_meaning,
+      audio: c.word_audio ?? undefined,
+    }));
   const meaningOf = makeMeaningLookup(jmdictWords);
   return new Map(kanaCards().map((card) => [card.id, pickExamples(card, { kaishi, jlpt, meaningOf })]));
 }

@@ -1872,6 +1872,42 @@
 .kana-example-meaning {
   color: var(--ink-muted);
 }
+/* v83: three examples with a speaker each made the back of a kana taller than
+   the phone — measured at 394 × 852, な's back pushed the intervals under
+   めくる's buttons off the screen, and なる broke between な and る beside a
+   two-line meaning. So a grid: the word never wraps, the meaning takes what
+   is left at a smaller size, and the speaker is a size down from the card's. */
+.kana-examples {
+  gap: 2px;
+  width: 100%;
+  max-width: 360px;
+}
+.kana-example {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+.kana-example .jp {
+  white-space: nowrap;
+}
+.kana-example-meaning {
+  font-size: 14px;
+  line-height: 1.3;
+}
+.kana-example .speaker.small {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+}
+/* v83: the kana inside its example word, in the line colour — the same way a
+   revealed sentence marks its word. */
+.kana-example .kana-hit {
+  color: var(--rail);
+  font-weight: 700;
+}
 /* めくる: the back of the card. */
 .reading {
   font-size: 20px;

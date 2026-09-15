@@ -645,6 +645,18 @@ export function sessionScreen({
               area.append(revealedSentence(card));
             }
 
+            // v83 (#158): a kana's sound was the question, so it stays silent
+            // until she has answered — and then she hears it and the words
+            // that carry it, as on the back of めくる. Henning: the sound was
+            // there in めくる and not here.
+            if (isKana(card)) {
+              area.querySelector(".word")?.replaceWith(
+                el("div.word-line", {}, wordHeading(card), kanaSpeaker(card)),
+              );
+              area.append(kanaExampleBlock(card) ?? "");
+              if (readAloud) voice(card.word, null);
+            }
+
             // #57: this used to schedule the next card on a fixed 900/2400ms
             // pause, cutting the confirmation sentence off on nearly every
             // correct answer (real recordings run 1.6-4.5s). Henning's call
@@ -670,7 +682,7 @@ export function sessionScreen({
     // "Read cards aloud" governs what happens on its own. The ♪ button still
     // works with it off — tapping it is an explicit request, and a setting
     // about automatic sound should not disable a control just pressed.
-    prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio);
+    prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card));
     // Only a recording, like the speaker below. Until v66 a card without one
     // was read by the phone's voice with no button to hear it again — on her
     // Noji lists, a Japanese voice reading romaji (Henning, 2026-09-14).
@@ -1027,7 +1039,7 @@ export function sessionScreen({
         // "what does it say" — a romaji line here does not spoil the flip.
         romajiLine(card),
       );
-      if (kana) prime(...strokeFiles(card));
+      if (kana) prime(...strokeFiles(card), ...exampleAudio(card));
       else if (readAloud) voice(card.word, card.word_audio);
     }
 
@@ -1068,7 +1080,11 @@ export function sessionScreen({
     return block;
   }
 
-  /** Up to two words that start with this kana, each read in kana, with its meaning. */
+  /**
+   * Up to three words with this kana, each read in kana with its meaning, the
+   * kana marked where it is and a speaker where Kaishi has the recording —
+   * import/lib/examples.js chooses them (v83).
+   */
   function kanaExampleBlock(card) {
     const examples = kanaExamples(card);
     if (examples.length === 0) return null;
@@ -1076,10 +1092,31 @@ export function sessionScreen({
       "div.kana-examples.reveal",
       {},
       el("span.prompt-label", { text: "Zum Beispiel" }),
-      examples.map(({ kana, meaning }) =>
-        el("div.kana-example", {}, el("span.jp", { text: kana }), el("span.kana-example-meaning", { text: meaning })),
+      examples.map((example) =>
+        el(
+          "div.kana-example",
+          {},
+          el("span.jp", {}, ...markedSound(example.kana, card.word, example.at)),
+          el("span.kana-example-meaning", { text: example.meaning }),
+          // v83: a native speaker saying the word, where Kaishi has the
+          // recording — never the phone's voice for a whole word, which would
+          // teach its pronunciation as if it were one.
+          example.audio
+            ? speaker(example.kana, example.audio, { small: true, label: `${example.kana} hören` })
+            : null,
+        ),
       ),
     );
+  }
+
+  /**
+   * A lone kana, read by the phone's voice. Synthesis, not a recording: no
+   * free recording of every kana exists — Wikimedia Commons has 71 of the 104
+   * sounds and none of the yōon (researched 2026-09-15) — and a lone kana is
+   * Japanese text the phone's voice reads as that sound.
+   */
+  function kanaSpeaker(card) {
+    return speaker(card.word, null, { small: true, label: "Kana hören" });
   }
 
   /**
@@ -1105,10 +1142,7 @@ export function sessionScreen({
           "div.word-line",
           {},
           wordHeading(card),
-          // Synthesis, not a recording: no free set of single-kana recordings
-          // exists (Wikimedia Commons has a and e), and a lone kana is Japanese
-          // text the phone's voice reads as that sound.
-          speaker(card.word, null, { small: true, label: "Kana hören" }),
+          kanaSpeaker(card),
         ),
         cardRule(),
         el("div.meaning.kana-reading.reveal", { text: card.word_meaning }),
@@ -1602,6 +1636,32 @@ export function kanaExamples(card) {
   } catch {
     return [];
   }
+}
+
+/** The recordings of a kana card's example words (v83), to fetch with the card. */
+export function exampleAudio(card) {
+  return kanaExamples(card)
+    .map((e) => e.audio)
+    .filter((file) => typeof file === "string" && file);
+}
+
+/**
+ * An example word cut round the kana it is an example of (v83), so the sound
+ * can be marked where it is — at the start, or inside the word. `at` is the
+ * import's (`soundAt`); an example without one, or with one that does not
+ * point at the kana, is left unmarked rather than marked in the wrong place.
+ */
+export function soundParts(text, kana, at) {
+  if (!text || !kana || !Number.isInteger(at) || at < 0 || !text.startsWith(kana, at)) return [{ text }];
+  return [
+    { text: text.slice(0, at) },
+    { text: kana, mark: true },
+    { text: text.slice(at + kana.length) },
+  ].filter((part) => part.text);
+}
+
+function markedSound(text, kana, at) {
+  return soundParts(text, kana, at).map((part) => (part.mark ? el("span.kana-hit", { text: part.text }) : part.text));
 }
 
 /** The sentence without the deck's `<b>` marking, for comparing what was said. */
