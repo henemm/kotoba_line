@@ -35,9 +35,9 @@ const TABS = [
   // deck is also where its cards are added; Words is left with finding a word
   // across all of them, and the stars.
   { key: "practise", label: "Decks" },
-  { key: "words", label: "Search" },
-  { key: "stats", label: "Stats" },
-  { key: "settings", label: "Settings" },
+  { key: "words", label: "Suche" },
+  { key: "stats", label: "Statistik" },
+  { key: "settings", label: "Einstellungen" },
 ];
 
 const app = document.getElementById("app");
@@ -234,7 +234,7 @@ function sideBar() {
   const decksRows = el("div.side-decks");
   const nav = el(
     "nav.sidebar",
-    { "aria-label": "Tabs and decks" },
+    { "aria-label": "Tabs und Decks" },
     el("div.side-name", { lang: japanese ? "ja" : undefined, text: appName(japanese) }),
     el(
       "div.side-tabs",
@@ -254,7 +254,7 @@ function sideBar() {
         ),
       ),
     ),
-    el("span.side-label", { text: "Your decks" }),
+    el("span.side-label", { text: "Deine Decks" }),
     decksRows,
   );
 
@@ -277,7 +277,7 @@ function sideBar() {
         "button.side-row.side-new",
         { type: "button", onclick: openNewDeck },
         el("span.side-plus", { "aria-hidden": "true", text: "+" }),
-        el("span.label", { text: "New deck" }),
+        el("span.label", { text: "Neues Deck" }),
       ),
     );
   fill(state.lastDecks);
@@ -541,16 +541,16 @@ function emptyDeck({ id, name }) {
 
 /** What a deck request's failure says, in her words (#137). */
 function deckProblem(err, name) {
-  if (err instanceof OfflineError) return "That needs a connection: your decks are on the server, not just this phone.";
-  if (err instanceof ApiError && err.status === 409) return `You already have a deck called “${name}”.`;
-  return "That did not work. Try again in a moment.";
+  if (err instanceof OfflineError) return "Dafür brauchst du Internet: Deine Decks liegen auf dem Server, nicht nur auf diesem Handy.";
+  if (err instanceof ApiError && err.status === 409) return `Du hast schon ein Deck namens „${name}“.`;
+  return "Das hat nicht geklappt. Versuch es gleich noch einmal.";
 }
 
 /** "New deck" on the deck list (#137): a name, then straight into the empty deck. */
 function openNewDeck() {
   state.sheet = deckNameSheet({
-    title: "New deck",
-    action: "Create deck",
+    title: "Neues Deck",
+    action: "Deck anlegen",
     onSubmit: async (name) => {
       try {
         const { deck } = await api.createDeck(name);
@@ -569,9 +569,9 @@ function openNewDeck() {
 function openRenameDeck() {
   const deck = state.deck;
   state.sheet = deckNameSheet({
-    title: "Rename deck",
+    title: "Deck umbenennen",
     name: deck.name,
-    action: "Save",
+    action: "Speichern",
     onSubmit: async (name) => {
       try {
         const { deck: renamed } = await api.renameDeck(deck.id, name);
@@ -658,8 +658,8 @@ function openCardActions(card, { onChanged } = {}) {
   });
   const failed = (err, what) =>
     err instanceof OfflineError
-      ? `${what} a card needs a connection: it is on the server, not just this phone.`
-      : `That did not work. Try again in a moment.`;
+      ? `${what} braucht Internet: Die Karte liegt auf dem Server, nicht nur auf diesem Handy.`
+      : `Das hat nicht geklappt. Versuch es gleich noch einmal.`;
   state.sheet = cardActionsSheet({
     card,
     japanese: state.settings.japaneseScript,
@@ -672,7 +672,7 @@ function openCardActions(card, { onChanged } = {}) {
       try {
         await api.updateCard(card.id, bodyOf(deck.id));
       } catch (err) {
-        return failed(err, "Moving");
+        return failed(err, "Eine Karte verschieben");
       }
       state.sheet = undefined;
       await afterChange();
@@ -682,7 +682,7 @@ function openCardActions(card, { onChanged } = {}) {
       try {
         await api.deleteCard(card.id);
       } catch (err) {
-        return failed(err, "Deleting");
+        return failed(err, "Eine Karte löschen");
       }
       state.sheet = undefined;
       await afterChange();
@@ -896,7 +896,7 @@ function wordsScreen() {
           "div.sheet",
           { role: "dialog" },
           el("h2.sheet-title", { text: row.word_meaning ?? "" }),
-          el("p.sheet-body", { text: "This card is not on this phone yet. Connect to the internet once, then try again." }),
+          el("p.sheet-body", { text: "Diese Karte ist noch nicht auf diesem Handy. Geh einmal ins Internet und versuch es dann noch einmal." }),
           el("div.sheet-actions", {}, el("button.btn.solid", { type: "button", text: "OK", onclick: closeSheet })),
         ),
       );
@@ -969,7 +969,7 @@ function resumeSession(saved) {
   // before decks had one ends on the deck list.
   const key = state.filters.deckKey;
   const known = state.lastDecks.find((d) => d.key === key);
-  state.deck = key ? (known ?? { key, name: key === "kaishi" ? "Kaishi" : key.startsWith("list:") ? key.slice(5) : "Your deck" }) : undefined;
+  state.deck = key ? (known ?? { key, name: key === "kaishi" ? "Kaishi" : key.startsWith("list:") ? key.slice(5) : "Dein Deck" }) : undefined;
   state.deckCards = undefined;
   state.session = { mode: saved.mode, filters: state.filters, resuming: saved };
   state.summary = undefined;

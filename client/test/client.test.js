@@ -100,30 +100,31 @@ describe("the level bar", () => {
 describe("the joker-spent notice (designs 04/19, #86)", () => {
   it("says what the design says for one day", () => {
     const { headline, body } = jokerNoticeCopy({ days: 1, streak: 13, jokers: 2 });
-    assert.equal(headline, "Yesterday had no reviews. One joker covered it.");
-    assert.equal(body, "Your streak is at 13 days and unbroken. Two jokers left; five days in a row earns another.");
+    // German since v75; design 04/19's sentences, translated.
+    assert.equal(headline, "Gestern hast du nichts wiederholt. Ein Joker hat den Tag abgedeckt.");
+    assert.equal(body, "Deine Serie hält: 13 Tage. Zwei Joker übrig; fünf Tage am Stück bringen einen neuen.");
   });
 
   it("names several days, and a balance of one or none", () => {
     assert.equal(
       jokerNoticeCopy({ days: 3, streak: 20, jokers: 0 }).headline,
-      "Three days had no reviews. Three jokers covered them.",
+      "Drei Tage ohne Wiederholung. Drei Joker haben sie abgedeckt.",
     );
-    assert.match(jokerNoticeCopy({ days: 2, streak: 11, jokers: 1 }).body, /One joker left;/);
-    assert.match(jokerNoticeCopy({ days: 1, streak: 5, jokers: 0 }).body, /^Your streak is at 5 days and unbroken\. No jokers left;/);
-    assert.match(jokerNoticeCopy({ days: 1, streak: 1, jokers: 0 }).body, /at 1 day and/);
+    assert.match(jokerNoticeCopy({ days: 2, streak: 11, jokers: 1 }).body, /Ein Joker übrig;/);
+    assert.match(jokerNoticeCopy({ days: 1, streak: 5, jokers: 0 }).body, /^Deine Serie hält: 5 Tage\. Kein Joker mehr übrig;/);
+    assert.match(jokerNoticeCopy({ days: 1, streak: 1, jokers: 0 }).body, /: 1 Tag\./);
   });
 
   it("says design 08's sentences when a gap ended the streak (#89)", () => {
     const four = streakResetCopy({ days: 4, cards: 486, level: 7, streak: 0 });
-    assert.equal(four.headline, "Four days without reviews, and no joker left to cover them.");
-    assert.equal(four.body, "The streak is back to zero. Nothing else changed: 486 cards, level 7, and the schedule picked up where it was.");
-    assert.equal(four.next, "Ten reviews today starts the next one. Five days in a row earns a joker back.");
+    assert.equal(four.headline, "Vier Tage ohne Wiederholung, und kein Joker mehr, der sie abdeckt.");
+    assert.equal(four.body, "Die Serie ist wieder bei null. Sonst hat sich nichts geändert: 486 Karten, Level 7, und dein Lernplan macht weiter, wo er war.");
+    assert.equal(four.next, "Zehn Wiederholungen heute starten die nächste. Fünf Tage am Stück bringen einen Joker zurück.");
     // 08's note: "1 day → 'A day without reviews'".
-    assert.equal(streakResetCopy({ days: 1, cards: 10, level: 2, streak: 0 }).headline, "A day without reviews, and no joker left to cover it.");
-    assert.match(streakResetCopy({ days: 12, cards: 1, level: 1, streak: 0 }).headline, /^12 days/);
-    assert.match(streakResetCopy({ days: 2, cards: 1, level: 1, streak: 0 }).body, /1 card,/);
-    assert.match(streakResetCopy({ days: 2, cards: 10, level: 2, streak: 1 }).next, /^Today already counts as day one\./);
+    assert.equal(streakResetCopy({ days: 1, cards: 10, level: 2, streak: 0 }).headline, "Ein Tag ohne Wiederholung, und kein Joker mehr, der ihn abdeckt.");
+    assert.match(streakResetCopy({ days: 12, cards: 1, level: 1, streak: 0 }).headline, /^12 Tage/);
+    assert.match(streakResetCopy({ days: 2, cards: 1, level: 1, streak: 0 }).body, /1 Karte,/);
+    assert.match(streakResetCopy({ days: 2, cards: 10, level: 2, streak: 1 }).next, /^Heute zählt schon als Tag eins\./);
   });
 
   it("draws held, then spent, then empty slots — three in all", () => {
@@ -309,14 +310,15 @@ describe("the diagnostics clock", () => {
   it("shows a time for today and a date for anything older", () => {
     const now = new Date("2026-09-09T20:00:00");
     assert.match(when(at("2026-09-09T09:38:00"), now), /^\d{2}:\d{2}$/);
-    assert.match(when(at("2026-09-04T09:38:00"), now), /^\d{2} \w{3,4}$/);
+    // German since v75: "04. Sept."
+    assert.match(when(at("2026-09-04T09:38:00"), now), /^\d{2}\. \p{L}{3,4}\.?$/u);
   });
 
   it("does not call yesterday evening today just because the clock is close", () => {
     // The trap is comparing elapsed hours rather than calendar days: 23:50
     // and 00:10 are ten hours apart in neither direction that matters.
     const now = new Date("2026-09-09T00:10:00");
-    assert.match(when(at("2026-09-08T23:50:00"), now), /^\d{2} \w{3,4}$/);
+    assert.match(when(at("2026-09-08T23:50:00"), now), /^\d{2}\. \p{L}{3,4}\.?$/u);
   });
 });
 
@@ -328,24 +330,24 @@ describe("the offline strip's three states (design 25)", () => {
   });
 
   it("states the queue depth when offline", () => {
-    assert.equal(text({ online: false, waiting: 14 }), "Offline · 14 reviews waiting");
+    assert.equal(text({ online: false, waiting: 14 }), "Offline · 14 Wiederholungen warten");
     assert.equal(text({ online: false, waiting: 0 }), "Offline");
   });
 
   it("counts what was sent, not what is left", () => {
     // The one arithmetic mistake this strip can make, and the version before
     // this put the waiting count next to the word "sent".
-    assert.equal(text({ online: true, waiting: 0, justSent: 14 }), "Synced · 14 reviews sent");
+    assert.equal(text({ online: true, waiting: 0, justSent: 14 }), "Synchronisiert · 14 Wiederholungen gesendet");
   });
 
   it("does not claim to be offline when the outbox is merely stuck", () => {
-    assert.equal(text({ online: true, waiting: 3 }), "3 reviews waiting to send");
+    assert.equal(text({ online: true, waiting: 3 }), "3 Wiederholungen warten aufs Senden");
     assert.equal(offlineStatus({ online: true, waiting: 3 }).tone, "offline");
   });
 
   it("says review, not reviews, for one", () => {
-    assert.equal(text({ online: false, waiting: 1 }), "Offline · 1 review waiting");
-    assert.equal(text({ online: true, justSent: 1 }), "Synced · 1 review sent");
+    assert.equal(text({ online: false, waiting: 1 }), "Offline · 1 Wiederholung wartet");
+    assert.equal(text({ online: true, justSent: 1 }), "Synchronisiert · 1 Wiederholung gesendet");
   });
 });
 
@@ -355,7 +357,7 @@ describe("signed out by the server (design 52)", () => {
   it("says signed out, not offline — the server is reachable", () => {
     assert.equal(
       text({ online: true, waiting: 14, signedOut: true }),
-      "Signed out · 14 reviews waiting",
+      "Abgemeldet · 14 Wiederholungen warten",
     );
   });
 
@@ -364,42 +366,43 @@ describe("signed out by the server (design 52)", () => {
     // (the "Synced · N sent" case above) is why this is worth a test.
     assert.equal(
       text({ online: true, waiting: 3, justSent: 14, signedOut: true }),
-      "Signed out · 3 reviews waiting",
+      "Abgemeldet · 3 Wiederholungen warten",
     );
   });
 
   it("drops the count when there is nothing waiting", () => {
-    assert.equal(text({ online: true, waiting: 0, signedOut: true }), "Signed out");
+    assert.equal(text({ online: true, waiting: 0, signedOut: true }), "Abgemeldet");
   });
 
   it("says review, not reviews, for one", () => {
-    assert.equal(text({ online: true, waiting: 1, signedOut: true }), "Signed out · 1 review waiting");
+    assert.equal(text({ online: true, waiting: 1, signedOut: true }), "Abgemeldet · 1 Wiederholung wartet");
   });
 
   it("prefers offline, because she cannot sign in without a connection", () => {
     assert.equal(
       text({ online: false, waiting: 14, signedOut: true }),
-      "Offline · 14 reviews waiting",
+      "Offline · 14 Wiederholungen warten",
     );
   });
 
   it("puts the same waiting count in the paragraph as in the bar", () => {
     const { title, body } = signedOutCopy(14);
-    assert.equal(title, "Sign in again to keep syncing");
-    assert.match(body, /^Your session on the server ran out\./);
-    assert.match(body, /The 14 answers waiting here are safe on this device/);
-    assert.match(body, /will send as soon as you are back in\.$/);
+    assert.equal(title, "Melde dich wieder an, damit weiter synchronisiert wird");
+    assert.match(body, /^Deine Anmeldung auf dem Server ist abgelaufen\./);
+    assert.match(body, /Die 14 Antworten, die hier warten, sind auf diesem Gerät sicher und werden gesendet/);
+    assert.match(body, /sobald du wieder angemeldet bist\.$/);
   });
 
-  it("reads as English for a single answer", () => {
-    assert.match(signedOutCopy(1).body, /The one answer waiting here is safe/);
+  it("reads as correct German for a single answer", () => {
+    // "ist … und wird", not "ist … und werden" — the first German draft said that.
+    assert.match(signedOutCopy(1).body, /Die eine Antwort, die hier wartet, ist auf diesem Gerät sicher und wird gesendet,/);
   });
 
   it("promises nothing it cannot keep when the outbox is empty", () => {
     const { body } = signedOutCopy(0);
-    assert.equal(body, "Your session on the server ran out. Nothing is waiting to send.");
+    assert.equal(body, "Deine Anmeldung auf dem Server ist abgelaufen. Es wartet nichts darauf, gesendet zu werden.");
     // No count, and nothing about answers being safe: there are none.
-    assert.doesNotMatch(body, /answer/);
+    assert.doesNotMatch(body, /Antwort/);
   });
 
   it("does not claim to know when she practised", () => {
@@ -631,12 +634,13 @@ describe("the interval under a rating button (41)", () => {
   it("is coarse on purpose", () => {
     // The number exists to be compared with the three beside it. "2.4d" would
     // claim a precision the scheduler does not.
-    assert.equal(formatInterval(30), "<1m");
-    assert.equal(formatInterval(360), "6m");
-    assert.equal(formatInterval(5400), "2h");
-    assert.equal(formatInterval(691200), "8d");
-    assert.equal(formatInterval(5184000), "2mo");
-    assert.equal(formatInterval(40000000), "1y");
+    assert.equal(formatInterval(30), "<1 Min");
+    assert.equal(formatInterval(360), "6 Min");
+    assert.equal(formatInterval(5400), "2 Std");
+    assert.equal(formatInterval(86400), "1 Tag");
+    assert.equal(formatInterval(691200), "8 Tage");
+    assert.equal(formatInterval(5184000), "2 Monate");
+    assert.equal(formatInterval(40000000), "1 Jahr");
   });
 
   it("is absent rather than invented when the scheduler said nothing", () => {
@@ -646,8 +650,8 @@ describe("the interval under a rating button (41)", () => {
 
   it("never rounds a real wait down to zero", () => {
     // 59 seconds is still a wait; "0m" under a button would read as "now".
-    assert.equal(formatInterval(59), "<1m");
-    assert.equal(formatInterval(60), "1m");
+    assert.equal(formatInterval(59), "<1 Min");
+    assert.equal(formatInterval(60), "1 Min");
   });
 });
 
@@ -655,11 +659,11 @@ describe("what the leaving sheet says (50)", () => {
   it("counts in words that agree with the number", () => {
     assert.equal(
       leavingCopy(1),
-      "The card you answered is already saved. The rest go back in the queue.",
+      "Die Karte, die du beantwortet hast, ist schon gespeichert. Der Rest kommt wieder in die Reihe.",
     );
     assert.equal(
       leavingCopy(4),
-      "The 4 cards you answered are already saved. The rest go back in the queue.",
+      "Die 4 Karten, die du beantwortet hast, sind schon gespeichert. Der Rest kommt wieder in die Reihe.",
     );
   });
 });
@@ -732,33 +736,35 @@ describe("what a chosen set is called (36, 39)", () => {
   it("names every dimension inside a deck, defaults included (#137)", () => {
     // The sheet's own line states what the scheduler chose rather than going
     // blank. The deck is not one of them: it was chosen on the deck list.
-    assert.equal(summaryLine({ deckKey: "kaishi" }), "any topic · due today");
-    // A set saved by v60–v62 still says where it was.
+    assert.equal(summaryLine({ deckKey: "kaishi" }), "jedes Thema · heute fällig");
+    // A set saved by v60–v62 still says where it was. The topic is drawn in
+    // German (client/src/topics.js) and stays "konbini" in the data.
     assert.equal(
       summaryLine({ deck: "personal", tag: "konbini", only: "starred" }),
-      "my deck · konbini · starred",
+      "mein Deck · Konbini · markiert",
     );
+    assert.equal(summaryLine({ deckKey: "kaishi", tag: "food" }), "Essen · heute fällig");
   });
 
   it("truncates from the left, because the last-set filter is the live one", () => {
     assert.equal(
       summaryLine({ deck: "kaishi", tag: "konbini", only: "starred" }, { max: 2 }),
-      "… · konbini · starred",
+      "… · Konbini · markiert",
     );
   });
 
   it("carries only what she changed onto the session's dashed rule", () => {
     // 39 reads "Your set · konbini". Naming the untouched defaults there would
     // make a one-filter session look like an elaborate one.
-    assert.equal(activeLabel({ tag: "konbini" }), "konbini");
-    assert.equal(activeLabel({ tag: "konbini", only: "starred" }), "konbini · Starred");
+    assert.equal(activeLabel({ tag: "konbini" }), "Konbini");
+    assert.equal(activeLabel({ tag: "host family", only: "starred" }), "Gastfamilie · Markiert");
     assert.equal(activeLabel({}), "");
   });
 
   it("names a session of cards due in the next two days, which the sheet cannot choose (#90)", () => {
-    assert.equal(activeLabel({ only: "ahead" }), "Due in two days");
-    assert.equal(summaryLine({ only: "ahead" }), "any topic · due in two days");
-    assert.equal(summaryLine({ only: "lapsed" }), "any topic · lapsed");
+    assert.equal(activeLabel({ only: "ahead" }), "In zwei Tagen fällig");
+    assert.equal(summaryLine({ only: "ahead" }), "jedes Thema · in zwei Tagen fällig");
+    assert.equal(summaryLine({ only: "lapsed" }), "jedes Thema · vergessen");
   });
 
   it("knows when nothing was chosen at all", () => {
@@ -769,8 +775,8 @@ describe("what a chosen set is called (36, 39)", () => {
 
   it("calls one of her lists by its own name (#137)", () => {
     const list = { deck: "personal", list: "100 vokabeln" };
-    assert.equal(summaryLine(list), "100 vokabeln · any topic · due today");
-    assert.equal(activeLabel({ ...list, only: "new" }), "100 vokabeln · New");
+    assert.equal(summaryLine(list), "100 vokabeln · jedes Thema · heute fällig");
+    assert.equal(activeLabel({ ...list, only: "new" }), "100 vokabeln · Neu");
   });
 
   it("keeps the deck, and lets the topic and the only go (#137)", () => {
@@ -782,12 +788,12 @@ describe("what a chosen set is called (36, 39)", () => {
 describe("a chosen set's summary (40)", () => {
   it("says which it was, and what is still waiting", () => {
     assert.equal(
-      chosenSentence({ chosenLabel: "konbini", stillDue: 22 }),
-      "Your konbini set, not today's reviews. 22 cards are still due.",
+      chosenSentence({ chosenLabel: "Konbini", stillDue: 22 }),
+      "Deine Auswahl „Konbini“, nicht die Wiederholungen von heute. 22 Karten sind noch fällig.",
     );
     assert.equal(
-      chosenSentence({ chosenLabel: "konbini", stillDue: 1 }),
-      "Your konbini set, not today's reviews. 1 card is still due.",
+      chosenSentence({ chosenLabel: "Konbini", stillDue: 1 }),
+      "Deine Auswahl „Konbini“, nicht die Wiederholungen von heute. 1 Karte ist noch fällig.",
     );
   });
 
@@ -795,8 +801,8 @@ describe("a chosen set's summary (40)", () => {
     // At which point the two buttons collapse into one, because there is
     // nothing to carry on to.
     assert.equal(
-      chosenSentence({ chosenLabel: "konbini", stillDue: 0 }),
-      "Your konbini set, not today's reviews. Nothing else is due today.",
+      chosenSentence({ chosenLabel: "Konbini", stillDue: 0 }),
+      "Deine Auswahl „Konbini“, nicht die Wiederholungen von heute. Heute ist nichts anderes mehr fällig.",
     );
   });
 
@@ -804,8 +810,8 @@ describe("a chosen set's summary (40)", () => {
     // Offline the count is unknowable, and inventing one would be worse than
     // leaving the sentence short.
     assert.equal(
-      chosenSentence({ chosenLabel: "konbini" }),
-      "Your konbini set, not today's reviews.",
+      chosenSentence({ chosenLabel: "Konbini" }),
+      "Deine Auswahl „Konbini“, nicht die Wiederholungen von heute.",
     );
   });
 });
@@ -849,9 +855,10 @@ describe("an unfinished session (51)", () => {
   });
 
   it("says how far she got and how long ago", () => {
-    assert.equal(describeResume(saved(), at(`${DAY}T09:20:00+09:00`)), "1 of 4 done, 20 minutes ago");
-    assert.equal(describeResume(saved(), at(`${DAY}T09:00:30+09:00`)), "1 of 4 done, just now");
-    assert.equal(describeResume(saved(), at(`${DAY}T11:00:00+09:00`)), "1 of 4 done, 2 hours ago");
+    assert.equal(describeResume(saved(), at(`${DAY}T09:20:00+09:00`)), "1 von 4 geschafft, vor 20 Minuten");
+    assert.equal(describeResume(saved(), at(`${DAY}T09:00:30+09:00`)), "1 von 4 geschafft, gerade eben");
+    assert.equal(describeResume(saved(), at(`${DAY}T09:01:00+09:00`)), "1 von 4 geschafft, vor 1 Minute");
+    assert.equal(describeResume(saved(), at(`${DAY}T11:00:00+09:00`)), "1 von 4 geschafft, vor 2 Stunden");
   });
 
   it("uses the same day boundary as the streak", () => {
@@ -918,7 +925,7 @@ describe("the pitch contour (#21)", () => {
 
   it("reports both accents where the deck gives two", () => {
     assert.deepEqual(accentsOf({ word_pitch: "0,2" }), [0, 2]);
-    assert.equal(accentLabel({ word_pitch: "0,2" }), "[0 or 2]");
+    assert.equal(accentLabel({ word_pitch: "0,2" }), "[0 oder 2]");
     assert.equal(accentLabel({ word_pitch: "2" }), "[2]");
     assert.equal(accentLabel({}), undefined);
     assert.deepEqual(accentsOf({ word_pitch: null }), []);

@@ -375,9 +375,11 @@ function whenFormat(timeZone) {
   let f = whenFormatters.get(timeZone);
   if (!f) {
     f = {
-      time: new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
-      weekday: new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short" }),
-      date: new Intl.DateTimeFormat("en-GB", { timeZone, day: "numeric", month: "short" }),
+      // German since v75 (Henning, 2026-09-15: every control in German).
+      // The container's Node has full ICU: "Do", "30. Okt." measured there.
+      time: new Intl.DateTimeFormat("de-DE", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
+      weekday: new Intl.DateTimeFormat("de-DE", { timeZone, weekday: "short" }),
+      date: new Intl.DateTimeFormat("de-DE", { timeZone, day: "numeric", month: "short" }),
     };
     whenFormatters.set(timeZone, f);
   }
@@ -385,7 +387,7 @@ function whenFormat(timeZone) {
 }
 
 /**
- * "tomorrow 06:00" — when a moment falls, said the way design 10 says it, on
+ * "morgen 06:00" — when a moment falls, said the way design 10 says it, on
  * the clock of the device that asked (#122). Today and tomorrow by name, the
  * rest of the week by weekday, anything later by date.
  */
@@ -394,8 +396,8 @@ export function whenOnClock(at, now, timeZone = DEFAULT_TIME_ZONE) {
   const today = dayIn(now, timeZone);
   const day = dayIn(at, timeZone);
   let label;
-  if (day === today) label = "today";
-  else if (day === nextDay(today)) label = "tomorrow";
+  if (day === today) label = "heute";
+  else if (day === nextDay(today)) label = "morgen";
   else if (at - now < 6 * DAY) label = f.weekday.format(at * 1000);
   else label = f.date.format(at * 1000);
   return `${label} ${f.time.format(at * 1000)}`;

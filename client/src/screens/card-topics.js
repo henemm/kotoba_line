@@ -1,6 +1,7 @@
 import { OfflineError, api } from "../api.js";
 import { say } from "../audio.js";
 import { showsScript, shownWord } from "../script.js";
+import { topicLabel } from "../topics.js";
 import { el, render } from "../ui/dom.js";
 
 /**
@@ -69,14 +70,14 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
           card.word_audio
             ? el("button.topics-hear", {
                 type: "button",
-                "aria-label": `Hear ${shownWord(card, japanese)}`,
+                "aria-label": `${shownWord(card, japanese)} anhören`,
                 text: "♪",
                 onclick: () => say(undefined, card.word_audio),
               })
             : null,
           el("button.topics-close", {
             type: "button",
-            "aria-label": "Close",
+            "aria-label": "Schließen",
             text: "×",
             onclick: onClose,
           }),
@@ -85,25 +86,25 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
           ? el(
               "div.topics-deck",
               {},
-              el("span.set-label", { text: deckTags.length === 1 ? "Topic" : "Topics" }),
+              el("span.set-label", { text: deckTags.length === 1 ? "Thema" : "Themen" }),
               el(
                 "div.chips",
                 {},
-                deckTags.map((t) => el("span.chip.fixed", { text: t })),
+                deckTags.map((t) => el("span.chip.fixed", { text: topicLabel(t) })),
               ),
             )
           : null,
         el(
           "div.topics-mine",
           {},
-          el("span.set-label", { text: "Your topics" }),
+          el("span.set-label", { text: "Deine Themen" }),
           el(
             "div.chips",
             {},
             offered.map((tag) =>
               el("button.chip", {
                 type: "button",
-                text: tag,
+                text: topicLabel(tag),
                 "aria-pressed": String(chosen.has(tag)),
                 onclick: () => {
                   if (chosen.has(tag)) chosen.delete(tag);
@@ -116,7 +117,7 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
               ? newTagField()
               : el("button.chip.new-tag", {
                   type: "button",
-                  text: "+ new",
+                  text: "+ neu",
                   onclick: () => {
                     coining = true;
                     draw();
@@ -131,7 +132,7 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
           {},
           el("button.btn.solid", {
             type: "button",
-            text: saving ? "…" : "Save",
+            text: saving ? "…" : "Speichern",
             disabled: saving,
             onclick: save,
           }),
@@ -152,10 +153,10 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
   function newTagField() {
     const input = el("input.chip.new-tag-input", {
       type: "text",
-      placeholder: "topic",
+      placeholder: "Thema",
       autocapitalize: "none",
       autocorrect: "off",
-      "aria-label": "Name a new topic",
+      "aria-label": "Neues Thema benennen",
     });
     fields.newTag = input;
 
@@ -196,8 +197,8 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
     } catch (err) {
       problem =
         err instanceof OfflineError
-          ? "Topics need a connection — they live on the server, not just this phone."
-          : "That did not save.";
+          ? "Für Themen brauchst du eine Verbindung – sie liegen auf dem Server, nicht nur auf diesem Handy."
+          : "Das Speichern hat nicht geklappt.";
     }
     saving = false;
     draw();

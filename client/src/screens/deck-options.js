@@ -25,8 +25,8 @@ const NEW_PER_DAY_CHOICES = [5, 10, 15, 20, 30];
 const MAX_PER_DAY_CHOICES = [null, 20, 30, 50, 100];
 
 const CANNOT = {
-  listen: "Not possible here: no example sentences with a translation",
-  type: "Not possible here: no words with a reading to check against",
+  listen: "Hier nicht möglich: keine Beispielsätze mit Übersetzung",
+  type: "Hier nicht möglich: keine Wörter mit Lesung zum Prüfen",
 };
 
 export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, onDelete, onClose }) {
@@ -36,7 +36,7 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
   const scrim = el("div.sheet-scrim.deck-options", {
     onclick: (e) => e.target === e.currentTarget && onClose?.(),
   });
-  const sheet = el("div.sheet", { role: "dialog", "aria-label": `Options for ${deck.name}` });
+  const sheet = el("div.sheet", { role: "dialog", "aria-label": `Optionen für ${deck.name}` });
   scrim.append(sheet);
   draw();
 
@@ -52,10 +52,10 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
       el(
         "div.options-head",
         {},
-        el("h2.sheet-title", { text: `Ways to practise “${deck.name}”` }),
-        el("button.options-done", { type: "button", text: "Done", onclick: () => onClose?.() }),
+        el("h2.sheet-title", { text: `Übungen für „${deck.name}“` }),
+        el("button.options-done", { type: "button", text: "Fertig", onclick: () => onClose?.() }),
       ),
-      el("p.sheet-body", { text: "Only for this deck." }),
+      el("p.sheet-body", { text: "Nur für dieses Deck." }),
       el(
         "div.options-list",
         {},
@@ -68,9 +68,9 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           const last = shown && on.length === 1;
           const count = ways[mode.key];
           const note = !can
-            ? CANNOT[mode.key] ?? "Not possible here"
+            ? CANNOT[mode.key] ?? "Hier nicht möglich"
             : mode.key === "type" && count < deck.cards
-              ? `${num(count)} of ${num(deck.cards)} cards can be typed`
+              ? `${num(count)} von ${num(deck.cards)} Karten lassen sich tippen`
               : null;
           return el(
             "div.option-row",
@@ -86,7 +86,7 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
               type: "button",
               role: "switch",
               "aria-checked": String(shown),
-              "aria-label": `Show ${mode.en}`,
+              "aria-label": `${mode.en} anzeigen`,
               disabled: !can || last,
               onclick: () =>
                 change({
@@ -96,7 +96,7 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           );
         }),
       ),
-      el("span.options-label", { id: "new-per-day-label", text: "New cards per day" }),
+      el("span.options-label", { id: "new-per-day-label", text: "Neue Karten pro Tag" }),
       el(
         "div.choice",
         { role: "group", "aria-labelledby": "new-per-day-label" },
@@ -109,29 +109,29 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           }),
         ),
       ),
-      el("span.options-label", { id: "max-per-day-label", text: "Max cards per day" }),
+      el("span.options-label", { id: "max-per-day-label", text: "Höchstens pro Tag" }),
       el(
         "div.choice",
         { role: "group", "aria-labelledby": "max-per-day-label" },
         maxChoicesFor(settings.maxPerDay ?? null).map((n) =>
           el("button", {
             type: "button",
-            text: n === null ? "No limit" : String(n),
+            text: n === null ? "Unbegrenzt" : String(n),
             "aria-pressed": String(n === (settings.maxPerDay ?? null)),
             onclick: () => n !== (settings.maxPerDay ?? null) && change({ maxPerDay: n }),
           }),
         ),
       ),
-      el("p.options-hint", { text: "New and review cards together. You can always stop a session early." }),
+      el("p.options-hint", { text: "Neue und zu wiederholende Karten zusammen. Du kannst jederzeit früher aufhören." }),
       // #137: a deck of hers can be renamed and deleted here, where Noji keeps
       // a deck's menu. Kaishi is everyone's and cannot.
       deck.own && (onRename || onDelete)
         ? el(
             "div.options-deck",
             {},
-            el("span.options-label", { text: "This deck" }),
-            onRename ? el("button.action", { type: "button", text: "Rename", onclick: () => onRename() }) : null,
-            onDelete ? el("button.action.danger", { type: "button", text: "Delete deck", onclick: () => askToDelete() }) : null,
+            el("span.options-label", { text: "Dieses Deck" }),
+            onRename ? el("button.action", { type: "button", text: "Umbenennen", onclick: () => onRename() }) : null,
+            onDelete ? el("button.action.danger", { type: "button", text: "Deck löschen", onclick: () => askToDelete() }) : null,
           )
         : null,
     );
@@ -142,19 +142,19 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
     const n = deck.cards ?? 0;
     render(
       sheet,
-      el("h2.sheet-title", { text: `Delete “${deck.name}”?` }),
+      el("h2.sheet-title", { text: `„${deck.name}“ löschen?` }),
       el("p.sheet-body", {
         text:
           n > 0
-            ? `Its ${num(n)} ${n === 1 ? "card goes" : "cards go"} too. What you have already practised still counts towards your streak and XP.`
-            : "It has no cards.",
+            ? `${n === 1 ? "Die 1 Karte darin wird" : `Die ${num(n)} Karten darin werden`} mitgelöscht. Was du schon geübt hast, zählt weiter für deine Serie und deine XP.`
+            : "Es hat keine Karten.",
       }),
       el(
         "div.sheet-actions",
         {},
         el("button.btn", {
           type: "button",
-          text: "Delete",
+          text: "Löschen",
           onclick: async (e) => {
             e.currentTarget.disabled = true;
             // A sentence when it did not happen — offline, say — shown here.
@@ -162,7 +162,7 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
             if (problem) sheet.append(el("p.add-problem", { text: problem }));
           },
         }),
-        el("button.btn.solid", { type: "button", text: "Keep it", onclick: () => draw() }),
+        el("button.btn.solid", { type: "button", text: "Behalten", onclick: () => draw() }),
       ),
     );
   }

@@ -4,6 +4,7 @@ import { loadDeck } from "../deck.js";
 import { kaishiMatches, kaishiOf } from "../kaishi-match.js";
 import { inScript, showsScript, shownWord } from "../script.js";
 import { plainSentence } from "./session.js";
+import { topicLabel } from "../topics.js";
 import { acknowledged, el, render } from "../ui/dom.js";
 
 /**
@@ -136,19 +137,19 @@ export function addWordScreen({
   const header = el("div.add-head");
   const nextButton = el("button.btn-primary.add-next", {
     type: "button",
-    text: "Save and add next",
+    text: "Speichern und nächste",
     onclick: () => save({ next: true }),
   });
   function refreshHeader() {
     nextButton.disabled = !canSave();
     render(
       header,
-      el("button.add-cancel", { type: "button", text: "Cancel", onclick: onCancel }),
-      el("span.add-title", { text: editing ? "Edit card" : "Add a card" }),
+      el("button.add-cancel", { type: "button", text: "Abbrechen", onclick: onCancel }),
+      el("span.add-title", { text: editing ? "Karte bearbeiten" : "Karte hinzufügen" }),
       // 28: "Save stays #3D465C until word and meaning both have content."
       el("button.add-save", {
         type: "button",
-        text: saving ? "…" : "Save",
+        text: saving ? "…" : "Speichern",
         disabled: !canSave(),
         onclick: save,
       }),
@@ -167,19 +168,19 @@ export function addWordScreen({
       el(
         "div.add-body",
         {},
-        deck && !editing ? el("p.add-deck", { text: `Adding to “${deck.name}”` }) : null,
-        lastSaved ? el("p.add-saved", { text: `Saved: ${lastSaved}` }) : null,
-        group("German", el("div.field", {}, field("meaning", { placeholder: "The front of the card", lang: "de" }))),
+        deck && !editing ? el("p.add-deck", { text: `Neue Karte in „${deck.name}“` }) : null,
+        lastSaved ? el("p.add-saved", { text: `Gespeichert: ${lastSaved}` }) : null,
+        group("Deutsch", el("div.field", {}, field("meaning", { placeholder: "Die Vorderseite der Karte", lang: "de" }))),
         group(
-          "Japanese",
-          el("div.field.big", {}, field("word", { placeholder: japanese ? "日本語" : "Romaji or kana", big: true, lang: japanese ? "ja" : "romaji" })),
-          el("p.add-hint", { text: "In romaji or kana, the way you would write it in Noji." }),
+          "Japanisch",
+          el("div.field.big", {}, field("word", { placeholder: japanese ? "日本語" : "Romaji oder Kana", big: true, lang: japanese ? "ja" : "romaji" })),
+          el("p.add-hint", { text: "In Romaji oder Kana, so wie du es in Noji schreiben würdest." }),
           offers,
         ),
         ...(moreOpen
           ? [
               group(
-                "Reading · optional",
+                "Lesung · optional",
                 el("div.field", {}, field("reading", { placeholder: japanese ? "かな" : "Kana" })),
               ),
               sentenceGroup(),
@@ -195,11 +196,11 @@ export function addWordScreen({
             el("p.add-note", {
               // Said because it is the question she would have: correcting a
               // word does not throw away what she already knows of it.
-              text: "Changing a card keeps its progress.",
+              text: "Wenn du eine Karte änderst, bleibt dein Lernstand erhalten.",
             }),
             el("button.btn-secondary.add-delete", {
               type: "button",
-              text: "Delete this card",
+              text: "Diese Karte löschen",
               disabled: saving,
               onclick: askToDelete,
             }),
@@ -212,7 +213,7 @@ export function addWordScreen({
               // Said before she commits rather than after: a card she writes has
               // no recording unless she takes Kaishi's (v70), and since v66 romaji
               // is never read by a guessing voice.
-              text: "Where Kaishi has the word, you can give your card its recording. Otherwise a word in kana or kanji is read by the phone's Japanese voice; romaji stays silent.",
+              text: "Wenn Kaishi das Wort hat, kannst du seine Aufnahme für deine Karte übernehmen. Sonst liest die japanische Stimme des Handys Kana und Kanji vor; Romaji bleibt stumm.",
             }),
           ),
     );
@@ -256,7 +257,7 @@ export function addWordScreen({
     const hear = (k) =>
       el("button.kaishi-hear", {
         type: "button",
-        "aria-label": `Hear ${shownWord(k, japanese)}`,
+        "aria-label": `${shownWord(k, japanese)} anhören`,
         text: "♪",
         ...acknowledged(() => {
           unlock();
@@ -266,7 +267,7 @@ export function addWordScreen({
     if (link) {
       render(
         offers,
-        el("span.kaishi-label", { text: "Recording from Kaishi" }),
+        el("span.kaishi-label", { text: "Aufnahme aus Kaishi" }),
         el(
           "div.kaishi-row.linked",
           {},
@@ -274,7 +275,7 @@ export function addWordScreen({
           hear(link),
           el("button.kaishi-use", {
             type: "button",
-            text: "Remove",
+            text: "Entfernen",
             onclick: () => {
               dropLink();
               drawOffers();
@@ -288,7 +289,7 @@ export function addWordScreen({
     if (found.length === 0) return render(offers);
     render(
       offers,
-      el("span.kaishi-label", { text: found.length === 1 ? "Kaishi has this word" : "Kaishi has these words" }),
+      el("span.kaishi-label", { text: found.length === 1 ? "Kaishi hat dieses Wort" : "Kaishi hat diese Wörter" }),
       ...found.map((k) =>
         el(
           "div.kaishi-row",
@@ -297,8 +298,8 @@ export function addWordScreen({
           hear(k),
           el("button.kaishi-use", {
             type: "button",
-            text: "Use",
-            "aria-label": `Use the recording of ${shownWord(k, japanese)}, “${k.word_meaning}”`,
+            text: "Übernehmen",
+            "aria-label": `Aufnahme von ${shownWord(k, japanese)} übernehmen, „${k.word_meaning}“`,
             onclick: () => {
               link = k;
               drawOffers();
@@ -307,7 +308,7 @@ export function addWordScreen({
         ),
       ),
       el("p.kaishi-note", {
-        text: found.length === 1 ? "Only if it means your German: its recording comes with your card." : "Pick the one that means your German: its recording comes with your card.",
+        text: found.length === 1 ? "Nur wenn es dein Deutsch bedeutet: Seine Aufnahme kommt dann auf deine Karte." : "Wähl das, was dein Deutsch bedeutet: Seine Aufnahme kommt dann auf deine Karte.",
       }),
     );
   }
@@ -325,22 +326,22 @@ export function addWordScreen({
       el(
         "div.sheet",
         {},
-        el("h2.sheet-title", { text: `Delete ${shownWord(card, japanese)}?` }),
+        el("h2.sheet-title", { text: `${shownWord(card, japanese)} löschen?` }),
         el("p.sheet-body", {
-          text: "It leaves your deck and your sessions. What you have already practised still counts towards your streak and XP.",
+          text: "Die Karte verschwindet aus deinem Deck und deinen Übungen. Was du schon geübt hast, zählt weiter für deine Serie und deine XP.",
         }),
         el(
           "div.sheet-actions",
           {},
           el("button.btn", {
             type: "button",
-            text: "Delete",
+            text: "Löschen",
             onclick: () => {
               sheet.remove();
               remove();
             },
           }),
-          el("button.btn.solid", { type: "button", text: "Keep it", onclick: () => sheet.remove() }),
+          el("button.btn.solid", { type: "button", text: "Behalten", onclick: () => sheet.remove() }),
         ),
       ),
     );
@@ -358,8 +359,8 @@ export function addWordScreen({
     } catch (err) {
       problem =
         err instanceof OfflineError
-          ? "Deleting a card needs a connection — it is on the server, not just this phone."
-          : "That did not delete.";
+          ? "Zum Löschen brauchst du eine Verbindung – die Karte liegt auf dem Server, nicht nur auf diesem Handy."
+          : "Das Löschen hat nicht geklappt.";
     }
     saving = false;
     draw();
@@ -376,16 +377,16 @@ export function addWordScreen({
           fields.reading?.focus();
         },
       },
-      el("span", { text: "Reading, example sentence, topic" }),
+      el("span", { text: "Lesung, Beispielsatz, Thema" }),
       el("span.chevron", { text: "›" }),
     );
   }
 
   function sentenceGroup() {
     return group(
-      "Example sentence",
-      el("div.field", {}, field("sentence", { placeholder: japanese ? "文を書く" : "In Japanese", big: false })),
-      el("div.field", {}, field("sentenceMeaning", { placeholder: "What it means", lang: "en" })),
+      "Beispielsatz",
+      el("div.field", {}, field("sentence", { placeholder: japanese ? "文を書く" : "Auf Japanisch", big: false })),
+      el("div.field", {}, field("sentenceMeaning", { placeholder: "Was er bedeutet", lang: "en" })),
       // 29: the speaker reads it back, which is the only honest way to check
       // the synthesis got the reading right — and if it did not, the reading
       // field is what fixes it.
@@ -393,7 +394,7 @@ export function addWordScreen({
       inScript(draft.sentence.trim() || draft.reading.trim() || draft.word.trim())
         ? el("button.add-speak", {
             type: "button",
-            text: "♪ Hear it",
+            text: "♪ Anhören",
             ...acknowledged(() => {
               unlock();
               say(draft.sentence.trim() || draft.reading.trim() || draft.word.trim(), null, {
@@ -407,14 +408,14 @@ export function addWordScreen({
 
   function topicGroup() {
     return group(
-      "Topic",
+      "Thema",
       el(
         "div.chips.add-chips",
         {},
         tags.map(({ tag }) =>
           el("button.chip", {
             type: "button",
-            text: tag,
+            text: topicLabel(tag),
             "aria-pressed": String(chosen.has(tag)),
             onclick: () => {
               if (chosen.has(tag)) chosen.delete(tag);
@@ -429,7 +430,7 @@ export function addWordScreen({
         // app's, and it looks like one.
         coining ? newTagField() : el("button.chip.new-tag", {
           type: "button",
-          text: "+ new",
+          text: "+ neu",
           onclick: () => {
             coining = true;
             draw();
@@ -443,10 +444,10 @@ export function addWordScreen({
   function newTagField() {
     const input = el("input.chip.new-tag-input", {
       type: "text",
-      placeholder: "topic",
+      placeholder: "Thema",
       autocapitalize: "none",
       autocorrect: "off",
-      "aria-label": "Name a new topic",
+      "aria-label": "Neues Thema benennen",
     });
     fields.newTag = input;
 
@@ -530,9 +531,9 @@ export function addWordScreen({
       problem =
         err instanceof OfflineError
           ? editing
-            ? "Changing a card needs a connection — it is on the server, not just this phone."
-            : "Adding a card needs a connection — it goes on the server, not just this phone."
-          : "That did not save.";
+            ? "Zum Ändern brauchst du eine Verbindung – die Karte liegt auf dem Server, nicht nur auf diesem Handy."
+            : "Zum Hinzufügen brauchst du eine Verbindung – die Karte kommt auf den Server, nicht nur auf dieses Handy."
+          : "Das Speichern hat nicht geklappt.";
     }
     saving = false;
     draw();

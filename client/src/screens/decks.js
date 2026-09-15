@@ -32,7 +32,7 @@ export function decksScreen({
   const root = el("div.practise.decks");
   const list = el("div.deck-list", {}, el("div.loading", { text: "…" }));
 
-  render(root, el("h1.decks-title", { text: "Your decks" }), resumeRow(), list);
+  render(root, el("h1.decks-title", { text: "Deine Decks" }), resumeRow(), list);
   load();
 
   async function load() {
@@ -45,7 +45,7 @@ export function decksScreen({
 
   function fill(outcome) {
     if (outcome.error || !outcome.value) {
-      render(list, el("p.deck-problem", { text: "Couldn't load your decks. Check the connection and come back to this tab." }));
+      render(list, el("p.deck-problem", { text: "Deine Decks konnten nicht geladen werden. Prüf die Verbindung und komm dann zu diesem Tab zurück." }));
       return;
     }
     const rows = outcome.value.decks ?? [];
@@ -59,11 +59,11 @@ export function decksScreen({
             "span.copy",
             {},
             el("span.name", { text: deck.name }),
-            el("span.sub", { text: `${num(deck.cards)} ${deck.cards === 1 ? "card" : "cards"} · ${num(deck.seen)} seen` }),
+            el("span.sub", { text: `${num(deck.cards)} ${deck.cards === 1 ? "Karte" : "Karten"} · ${num(deck.seen)} gesehen` }),
           ),
           el("span.today", {
             text: num(deck.today?.total ?? 0),
-            "aria-label": `${deck.today?.total ?? 0} for today`,
+            "aria-label": `${deck.today?.total ?? 0} für heute`,
           }),
           el("span.chevron", { "aria-hidden": "true", text: "›" }),
         ),
@@ -73,10 +73,10 @@ export function decksScreen({
             "button.deck-row.deck-new",
             { type: "button", onclick: onNewDeck },
             el("span.deck-new-plus", { "aria-hidden": "true", text: "+" }),
-            el("span.copy", {}, el("span.name", { text: "New deck" })),
+            el("span.copy", {}, el("span.name", { text: "Neues Deck" })),
           )
         : null,
-      rows.length > 0 ? el("p.deck-hint", { text: "The number is how many cards are waiting today." }) : null,
+      rows.length > 0 ? el("p.deck-hint", { text: "Die Zahl zeigt, wie viele Karten heute warten." }) : null,
     );
   }
 
@@ -90,7 +90,7 @@ export function decksScreen({
       el(
         "span.copy",
         {},
-        el("span.name", { text: `Carry on with ${modeName(mode, japanese)}` }),
+        el("span.name", { text: `Weitermachen mit ${modeName(mode, japanese)}` }),
         el("span.sub", { text: describe(resumable) }),
       ),
       el("span.chevron", { "aria-hidden": "true", text: "›" }),

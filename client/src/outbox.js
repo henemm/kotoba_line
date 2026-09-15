@@ -120,10 +120,11 @@ async function doFlush() {
  * no bar.
  */
 export function offlineStatus({ online, waiting = 0, justSent = 0, signedOut = false }) {
-  const reviews = (n) => `${n} review${n === 1 ? "" : "s"}`;
+  const reviews = (n) => `${n} ${n === 1 ? "Wiederholung" : "Wiederholungen"}`;
+  const wait = (n) => (n === 1 ? "wartet" : "warten");
 
   if (!online) {
-    return { tone: "offline", text: waiting > 0 ? `Offline · ${reviews(waiting)} waiting` : "Offline" };
+    return { tone: "offline", text: waiting > 0 ? `Offline · ${reviews(waiting)} ${wait(waiting)}` : "Offline" };
   }
   // 52, and it is checked after `online` on purpose: with no connection she
   // cannot sign in either, and "Offline" is the state she can act on. The
@@ -132,17 +133,17 @@ export function offlineStatus({ online, waiting = 0, justSent = 0, signedOut = f
   if (signedOut) {
     return {
       tone: "offline",
-      text: waiting > 0 ? `Signed out · ${reviews(waiting)} waiting` : "Signed out",
+      text: waiting > 0 ? `Abgemeldet · ${reviews(waiting)} ${wait(waiting)}` : "Abgemeldet",
     };
   }
   if (justSent > 0) {
-    return { tone: "synced", text: `Synced · ${reviews(justSent)} sent` };
+    return { tone: "synced", text: `Synchronisiert · ${reviews(justSent)} gesendet` };
   }
   // Online with events still queued: the flush has not run, or the server
   // refused them. Claiming "offline" would be untrue and saying nothing would
   // hide a stuck outbox.
   if (waiting > 0) {
-    return { tone: "offline", text: `${reviews(waiting)} waiting to send` };
+    return { tone: "offline", text: `${reviews(waiting)} ${wait(waiting)} aufs Senden` };
   }
   return null;
 }

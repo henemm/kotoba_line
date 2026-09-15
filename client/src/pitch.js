@@ -72,9 +72,9 @@ export function accentsOf(card) {
     .filter((n) => Number.isInteger(n));
 }
 
-/** "[2]", or "[0 or 2]" where the deck gives two. */
+/** "[2]", or "[0 oder 2]" where the deck gives two. */
 export function accentLabel(card) {
   const accents = accentsOf(card);
   if (accents.length === 0) return undefined;
-  return `[${accents.join(" or ")}]`;
+  return `[${accents.join(" oder ")}]`;
 }

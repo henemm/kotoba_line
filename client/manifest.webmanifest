@@ -1,8 +1,8 @@
 {
   "name": "ことばライン",
   "short_name": "ことばライン",
-  "description": "Four practice modes over one Japanese deck.",
-  "lang": "en",
+  "description": "Fünf Arten, japanische Vokabeln zu üben.",
+  "lang": "de",
   "display": "standalone",
   "start_url": "/kotoba/",
   "scope": "/kotoba/",

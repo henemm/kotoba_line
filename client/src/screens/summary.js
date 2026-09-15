@@ -42,7 +42,7 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
             "div.chosen-rule",
             {},
             el("span.dash"),
-            el("span.chosen-text", { text: `Your set · ${result.chosenLabel}` }),
+            el("span.chosen-text", { text: `Deine Auswahl · ${result.chosenLabel}` }),
             el("span.dash.long"),
           )
         : null,
@@ -63,8 +63,8 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
         "div.figures",
         {},
         figure(result.xpGained != null ? `+${num(result.xpGained)}` : "—", "XP"),
-        figure(mmss(result.seconds), "Minutes"),
-        figure(String(result.newCards ?? 0), "New"),
+        figure(mmss(result.seconds), "Minuten"),
+        figure(String(result.newCards ?? 0), "Neu"),
       ),
       // At zero missed the block is dropped and the three figures centre on
       // their own.
@@ -72,7 +72,7 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
         ? el(
             "div.missed-list",
             {},
-            el("span.mono-label", { text: "Worth another look" }),
+            el("span.mono-label", { text: "Nochmal ansehen" }),
             shown.map((card) =>
               el(
                 "div.missed-row",
@@ -83,7 +83,7 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
                 el("span.missed-en", { text: card.word_meaning }),
               ),
             ),
-            more > 0 ? el("div.missed-more", { text: `and ${more} more` }) : null,
+            more > 0 ? el("div.missed-more", { text: `und ${more} weitere` }) : null,
           )
         : null,
       // 40: "finishing a chosen set is not finishing the day". The sentence
@@ -94,15 +94,15 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
         : null,
       result.synced === false
         ? el("p.summary-note", {
-            text: "Saved on this device. It will reach the server when the connection does.",
+            text: "Auf diesem Gerät gespeichert. Es wird übertragen, sobald du wieder Verbindung hast.",
           })
         : null,
     ),
     result.chosenLabel ? chosenFoot(result, { onDone, onCarryOn }) : el(
       "div.summary-foot",
       {},
-      el("button.summary-done", { type: "button", text: "Done", onclick: onDone }),
-      el("button.summary-again", { type: "button", text: "Again", onclick: onAgain }),
+      el("button.summary-done", { type: "button", text: "Fertig", onclick: onDone }),
+      el("button.summary-again", { type: "button", text: "Nochmal", onclick: onAgain }),
     ),
   );
 
@@ -115,10 +115,10 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
  * due today'" — and the two buttons collapse into one.
  */
 export function chosenSentence({ chosenLabel, stillDue }) {
-  const set = `Your ${chosenLabel} set, not today's reviews.`;
+  const set = `Deine Auswahl „${chosenLabel}“, nicht die Wiederholungen von heute.`;
   if (stillDue === undefined) return set;
-  if (stillDue === 0) return `${set} Nothing else is due today.`;
-  return `${set} ${num(stillDue)} ${stillDue === 1 ? "card is" : "cards are"} still due.`;
+  if (stillDue === 0) return `${set} Heute ist nichts anderes mehr fällig.`;
+  return `${set} ${num(stillDue)} ${stillDue === 1 ? "Karte ist" : "Karten sind"} noch fällig.`;
 }
 
 /**
@@ -131,7 +131,7 @@ function chosenFoot({ stillDue }, { onDone, onCarryOn }) {
     return el(
       "div.summary-foot.stacked",
       {},
-      el("button.btn-primary", { type: "button", text: "Done for now", onclick: onDone }),
+      el("button.btn-primary", { type: "button", text: "Fertig für jetzt", onclick: onDone }),
     );
   }
   return el(
@@ -139,10 +139,10 @@ function chosenFoot({ stillDue }, { onDone, onCarryOn }) {
     {},
     el("button.btn-primary", {
       type: "button",
-      text: `Carry on with ${num(stillDue)} due`,
+      text: `Weitermachen mit ${num(stillDue)} fälligen`,
       onclick: onCarryOn,
     }),
-    el("button.summary-done", { type: "button", text: "Done for now", onclick: onDone }),
+    el("button.summary-done", { type: "button", text: "Fertig für jetzt", onclick: onDone }),
   );
 }
 
@@ -155,8 +155,8 @@ function greeting({ right, total }) {
 /** #135: the same three, for the script switched off. */
 function greetingInEnglish({ right, total }) {
   const share = total > 0 ? right / total : 0;
-  if (share === 1) return "Perfect!";
-  return share >= 0.7 ? "Well done!" : "See you tomorrow!";
+  if (share === 1) return "Perfekt!";
+  return share >= 0.7 ? "Gut gemacht!" : "Bis morgen!";
 }
 
 function figure(value, label) {
@@ -186,7 +186,7 @@ function levelUpOverlay({ levelUp }) {
 
   render(
     overlay,
-    el("span.levelup-label", { text: "Level up" }),
+    el("span.levelup-label", { text: "Level aufgestiegen" }),
     el(
       "div.levelup-numbers",
       {},
@@ -199,7 +199,7 @@ function levelUpOverlay({ levelUp }) {
       {},
       el("span.levelup-xp", { text: `${num(levelUp.xp)} XP` }),
       el("span.levelup-since", {
-        text: `${num(levelUp.cardsSince)} cards since level ${levelUp.from}`,
+        text: `${num(levelUp.cardsSince)} Karten seit Level ${levelUp.from}`,
       }),
     ),
   );

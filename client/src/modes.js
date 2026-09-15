@@ -7,11 +7,13 @@
  * one aloud and one typed.
  */
 export const MODES = [
-  { key: "choose", jp: "選ぶ", en: "Pick the meaning", colour: "var(--line-choose)" },
-  { key: "listen", jp: "聞く", en: "Listen only", colour: "var(--line-listen)" },
-  { key: "speak", jp: "話す", en: "Say it aloud", colour: "var(--line-speak)" },
-  { key: "type", jp: "書く", en: "Type the Japanese", colour: "var(--line-type)" },
-  { key: "flip", jp: "めくる", en: "Flip the card", colour: "var(--line-flip)" },
+  // `en` is the name in her interface language — German since Henning,
+  // 2026-09-15. The key kept its old name; it is read in many places.
+  { key: "choose", jp: "選ぶ", en: "Bedeutung wählen", colour: "var(--line-choose)" },
+  { key: "listen", jp: "聞く", en: "Nur hören", colour: "var(--line-listen)" },
+  { key: "speak", jp: "話す", en: "Laut sagen", colour: "var(--line-speak)" },
+  { key: "type", jp: "書く", en: "Japanisch tippen", colour: "var(--line-type)" },
+  { key: "flip", jp: "めくる", en: "Karte umdrehen", colour: "var(--line-flip)" },
 ];
 
 export const modeByKey = (key) => MODES.find((m) => m.key === key);

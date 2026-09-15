@@ -501,9 +501,13 @@ actually asks for after using it.
 
 ## 12. Open decisions
 
-- ~~Interface language.~~ **Decided: English throughout.** Her phone and
-  system language are English, and she learned Japanese through English, so
-  Kaishi's English glosses need no translation.
+- ~~Interface language.~~ **Decided: German throughout** (Henning,
+  2026-09-15, v75: "alles was aktuell Englisch ist an Bedienelementen auf
+  deutsch"). This reverses the first decision, "English throughout", made
+  when she was assumed to learn through English. She learns German → Japanese
+  (Noji). Controls, labels, messages and the changelog are German, addressed
+  as "du". Deck *content* is a separate question: Kaishi's glosses are still
+  English until #134 brings German meanings from Wadoku.
 - **Pitch accent.** Kaishi carries pitch accent data in a separate field. It
   is genuinely useful for pronunciation and genuinely off-putting to
   beginners. Import the field, hide it, add a toggle later.

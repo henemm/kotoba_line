@@ -1,4 +1,5 @@
 import { OfflineError, api } from "../api.js";
+import { byTopicLabel, topicLabel } from "../topics.js";
 import { el, num, render } from "../ui/dom.js";
 
 /** The level bar is drawn as twelve segments however far apart the levels are. */
@@ -9,10 +10,10 @@ const TOPICS_BEFORE_TRUNCATION = 5;
 
 const MATURITY = [
   // Tokens, not colours: the ramp turns round in the light palette (v65).
-  { key: "new", label: "New", colour: "var(--band-new)" },
-  { key: "learning", label: "Learning", colour: "var(--band-learning)" },
-  { key: "young", label: "Young", colour: "var(--band-young)" },
-  { key: "mature", label: "Mature", colour: "var(--band-mature)" },
+  { key: "new", label: "Neu", colour: "var(--band-new)" },
+  { key: "learning", label: "Am Lernen", colour: "var(--band-learning)" },
+  { key: "young", label: "Jung", colour: "var(--band-young)" },
+  { key: "mature", label: "Gefestigt", colour: "var(--band-mature)" },
 ];
 
 /**
@@ -46,12 +47,14 @@ export function endDotOffset(pct) {
  * five the rest go behind a rule.
  */
 export function visibleTopics(topics, expanded, limit = TOPICS_BEFORE_TRUNCATION) {
-  const seen = (topics ?? []).filter((t) => t.seen > 0);
+  // In the order of the names she reads (v75): the server sends them by the
+  // English keys, which in German is no order at all.
+  const seen = (topics ?? []).filter((t) => t.seen > 0).sort((a, b) => byTopicLabel(a.tag, b.tag));
   const shown = expanded ? seen : seen.slice(0, limit);
   return { seen, shown, hidden: seen.length - shown.length };
 }
 
-const NUMBER_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+const NUMBER_WORDS = ["Kein", "Ein", "Zwei", "Drei", "Vier", "Fünf", "Sechs", "Sieben", "Acht", "Neun", "Zehn"];
 const numberWord = (n) => NUMBER_WORDS[n] ?? String(n);
 
 /**
@@ -62,13 +65,13 @@ const numberWord = (n) => NUMBER_WORDS[n] ?? String(n);
 export function jokerNoticeCopy({ days, streak, jokers }) {
   const headline =
     days === 1
-      ? "Yesterday had no reviews. One joker covered it."
-      : `${numberWord(days)} days had no reviews. ${numberWord(days)} jokers covered them.`;
+      ? "Gestern hast du nichts wiederholt. Ein Joker hat den Tag abgedeckt."
+      : `${numberWord(days)} Tage ohne Wiederholung. ${numberWord(days)} Joker haben sie abgedeckt.`;
   const left =
     jokers === 0
-      ? "No jokers left"
-      : `${numberWord(jokers)} ${jokers === 1 ? "joker" : "jokers"} left`;
-  const body = `Your streak is at ${num(streak)} ${streak === 1 ? "day" : "days"} and unbroken. ${left}; five days in a row earns another.`;
+      ? "Kein Joker mehr übrig"
+      : `${numberWord(jokers)} Joker übrig`;
+  const body = `Deine Serie hält: ${num(streak)} ${streak === 1 ? "Tag" : "Tage"}. ${left}; fünf Tage am Stück bringen einen neuen.`;
   return { headline, body };
 }
 
@@ -81,13 +84,13 @@ export function jokerNoticeCopy({ days, streak, jokers }) {
 export function streakResetCopy({ days, cards, level, streak }) {
   const headline =
     days === 1
-      ? "A day without reviews, and no joker left to cover it."
-      : `${numberWord(days)} days without reviews, and no joker left to cover them.`;
-  const body = `The streak is back to zero. Nothing else changed: ${num(cards)} ${cards === 1 ? "card" : "cards"}, level ${level}, and the schedule picked up where it was.`;
+      ? "Ein Tag ohne Wiederholung, und kein Joker mehr, der ihn abdeckt."
+      : `${numberWord(days)} Tage ohne Wiederholung, und kein Joker mehr, der sie abdeckt.`;
+  const body = `Die Serie ist wieder bei null. Sonst hat sich nichts geändert: ${num(cards)} ${cards === 1 ? "Karte" : "Karten"}, Level ${level}, und dein Lernplan macht weiter, wo er war.`;
   const next =
     streak > 0
-      ? "Today already counts as day one. Five days in a row earns a joker back."
-      : "Ten reviews today starts the next one. Five days in a row earns a joker back.";
+      ? "Heute zählt schon als Tag eins. Fünf Tage am Stück bringen einen Joker zurück."
+      : "Zehn Wiederholungen heute starten die nächste. Fünf Tage am Stück bringen einen Joker zurück.";
   return { headline, body, next };
 }
 
@@ -132,7 +135,7 @@ export function jokerSpentScreen({ stats, onContinue }) {
       el(
         "div.joker-notice-slots",
         {},
-        el("span.mono-label", { text: "Jokers" }),
+        el("span.mono-label", { text: "Joker" }),
         el(
           "div.joker-slots",
           {},
@@ -141,7 +144,7 @@ export function jokerSpentScreen({ stats, onContinue }) {
             kind === "filled"
               ? el("span.slot.filled", {}, el("span.diamond"))
               : kind === "spent"
-                ? el("span.slot.spent", {}, el("span.slot-label", { text: "spent" }))
+                ? el("span.slot.spent", {}, el("span.slot-label", { text: "verbraucht" }))
                 : el("span.slot.empty"),
           ),
         ),
@@ -156,13 +159,13 @@ export function jokerSpentScreen({ stats, onContinue }) {
         "div.joker-notice-streak",
         {},
         el("span.tabular", { text: num(stats.streak) }),
-        el("span.joker-notice-streak-label", { text: "day streak\ncontinues" }),
+        el("span.joker-notice-streak-label", { text: "Tage in Folge\nSerie hält" }),
       ),
     ),
     el(
       "div.joker-notice-foot",
       {},
-      el("button.btn-primary", { type: "button", text: "Continue", onclick: onContinue }),
+      el("button.btn-primary", { type: "button", text: "Weiter", onclick: onContinue }),
     ),
   );
 }
@@ -198,7 +201,7 @@ export function streakResetScreen({ stats, onContinue }) {
       el(
         "div.joker-notice-slots",
         {},
-        el("span.mono-label", { text: "Jokers" }),
+        el("span.mono-label", { text: "Joker" }),
         el(
           "div.joker-slots",
           {},
@@ -217,16 +220,16 @@ export function streakResetScreen({ stats, onContinue }) {
         "div.joker-notice-streak",
         {},
         el("span.tabular", { text: num(stats.streak) }),
-        el("span.joker-notice-streak-label", { text: "day\nstreak" }),
+        el("span.joker-notice-streak-label", { text: "Tage\nSerie" }),
         el("span.tabular.streak-reset-longest", { text: num(stats.longestStreak) }),
-        el("span.joker-notice-streak-label", { text: "longest" }),
+        el("span.joker-notice-streak-label", { text: "längste" }),
       ),
       el("p.streak-reset-next", { text: next }),
     ),
     el(
       "div.joker-notice-foot",
       {},
-      el("button.btn-primary", { type: "button", text: "Continue", onclick: onContinue }),
+      el("button.btn-primary", { type: "button", text: "Weiter", onclick: onContinue }),
     ),
   );
 }
@@ -257,12 +260,12 @@ export function statsScreen({ onBrowse } = {}) {
       // she made, offline or not (§25 and the same reasoning as `.browse-note`).
       render(
         root,
-        el("div.stats-head", { text: "Stats" }),
+        el("div.stats-head", { text: "Statistik" }),
         el("p.stats-offline", {
           text:
             err instanceof OfflineError
-              ? "These numbers come from the server. They will be here when the connection is."
-              : "Could not load stats.",
+              ? "Diese Zahlen kommen vom Server. Sie sind da, sobald du wieder Internet hast."
+              : "Die Statistik konnte nicht geladen werden.",
         }),
       );
       return;
@@ -273,7 +276,7 @@ export function statsScreen({ onBrowse } = {}) {
   function draw() {
     render(
       root,
-      el("div.stats-head", { text: "Stats" }),
+      el("div.stats-head", { text: "Statistik" }),
       el(
         "div.stats-body",
         {},
@@ -314,8 +317,8 @@ export function statsScreen({ onBrowse } = {}) {
       el(
         "div.level-scale",
         {},
-        el("span", { text: `level ${data.level} · ${num(data.xpForLevel)}` }),
-        el("span", { text: `${num(remaining)} XP to level ${data.level + 1}` }),
+        el("span", { text: `Level ${data.level} · ${num(data.xpForLevel)}` }),
+        el("span", { text: `${num(remaining)} XP bis Level ${data.level + 1}` }),
       ),
     );
   }
@@ -325,8 +328,8 @@ export function statsScreen({ onBrowse } = {}) {
     return el(
       "section.tiles",
       {},
-      tile(data.streak, "day streak"),
-      tile(data.longestStreak, "longest", true),
+      tile(data.streak, "Tage in Folge"),
+      tile(data.longestStreak, "längste Serie", true),
     );
   }
 
@@ -350,8 +353,8 @@ export function statsScreen({ onBrowse } = {}) {
       el(
         "div.jokers-head",
         {},
-        el("span.jokers-title", { text: "Jokers" }),
-        el("span.jokers-count", { text: `${held} of 3` }),
+        el("span.jokers-title", { text: "Joker" }),
+        el("span.jokers-count", { text: `${held} von 3` }),
       ),
       el(
         "div.joker-slots",
@@ -366,8 +369,8 @@ export function statsScreen({ onBrowse } = {}) {
       ),
       el("p.jokers-note", {
         text: full
-          ? "Full. Further consecutive days earn nothing until one is spent."
-          : "One every five days in a row, three at most. A missed day spends one and the streak keeps running.",
+          ? "Voll. Weitere Tage am Stück bringen nichts, bis einer verbraucht ist."
+          : "Einer für je fünf Tage am Stück, höchstens drei. Ein verpasster Tag verbraucht einen, und die Serie läuft weiter.",
       }),
     );
   }
@@ -383,7 +386,7 @@ export function statsScreen({ onBrowse } = {}) {
     const head = el(
       onBrowse ? "button.section-head.tappable" : "div.section-head",
       onBrowse ? { type: "button", onclick: onBrowse } : {},
-      el("span.section-title", { text: "Cards seen" }),
+      el("span.section-title", { text: "Karten gesehen" }),
       el("span.section-value.tabular", { text: num(data.cardsSeen) }),
       onBrowse ? el("span.section-chevron", { text: "›" }) : null,
     );
@@ -397,7 +400,7 @@ export function statsScreen({ onBrowse } = {}) {
         {},
         head,
         el("div.maturity-empty"),
-        el("p.section-note", { text: "Nothing reviewed yet. The bands fill in as cards mature." }),
+        el("p.section-note", { text: "Noch nichts wiederholt. Die Balken füllen sich, wenn sich Karten festigen." }),
       );
     }
 
@@ -444,7 +447,7 @@ export function statsScreen({ onBrowse } = {}) {
     const head = el(
       "div.section-head",
       {},
-      el("span.section-title", { text: "Topics" }),
+      el("span.section-title", { text: "Themen" }),
       seen.length > TOPICS_BEFORE_TRUNCATION
         ? el("span.section-count", { text: String(seen.length) })
         : null,
@@ -456,7 +459,7 @@ export function statsScreen({ onBrowse } = {}) {
         {},
         head,
         el("p.section-note", {
-          text: "Topics appear once a card carrying that tag has been reviewed.",
+          text: "Ein Thema erscheint, sobald du eine Karte daraus wiederholt hast.",
         }),
       );
     }
@@ -477,7 +480,7 @@ export function statsScreen({ onBrowse } = {}) {
               },
             },
             el("span.line"),
-            el("span.text", { text: topicsExpanded ? "Show less" : `${hidden} more` }),
+            el("span.text", { text: topicsExpanded ? "Weniger zeigen" : `${hidden} weitere` }),
             el("span.line"),
           )
         : null,
@@ -497,7 +500,7 @@ export function statsScreen({ onBrowse } = {}) {
       el(
         "div.topic-head",
         {},
-        el("span.topic-name", { text: topic.tag }),
+        el("span.topic-name", { text: topicLabel(topic.tag) }),
         el("span.topic-count", { text: `${num(topic.seen)} / ${num(topic.total)}` }),
       ),
       el(

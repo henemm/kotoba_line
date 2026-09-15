@@ -1,5 +1,13 @@
 [
   {
+    "version": "v75",
+    "summary": "Die App spricht jetzt Deutsch.",
+    "notes": [
+      "Alle Knöpfe, Tabs und Hinweise sind auf Deutsch – zum Beispiel „Einstellungen“ statt „Settings“ und „Nur hören“ statt „Listen only“.",
+      "Die Bedeutungen in Kaishi sind noch Englisch. Deutsche Bedeutungen kommen später."
+    ]
+  },
+  {
     "version": "v74",
     "summary": "A deck's page is simpler: tap how you want to practise, and you start.",
     "notes": [

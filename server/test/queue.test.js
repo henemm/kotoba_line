@@ -280,13 +280,13 @@ describe("queueForUser", () => {
 describe("the nothing-due outlook (design 10; #90, #91)", () => {
   // NOW is 2025-10-09 17:53:20 in Tokyo, 10:53:20 in Berlin.
   it("says when on the device's clock, by name, by weekday, then by date", () => {
-    assert.equal(whenOnClock(NOW + 3600, NOW), "today 18:53", "Tokyo without a zone");
+    assert.equal(whenOnClock(NOW + 3600, NOW), "heute 18:53", "Tokyo without a zone");
     const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
-    assert.equal(whenOnClock(tomorrowSix, NOW, "Asia/Tokyo"), "tomorrow 06:00");
-    assert.equal(whenOnClock(tomorrowSix + 2 * DAY, NOW, "Asia/Tokyo"), "Sun 06:00");
-    assert.equal(whenOnClock(tomorrowSix + 20 * DAY, NOW, "Asia/Tokyo"), "30 Oct 06:00");
+    assert.equal(whenOnClock(tomorrowSix, NOW, "Asia/Tokyo"), "morgen 06:00");
+    assert.equal(whenOnClock(tomorrowSix + 2 * DAY, NOW, "Asia/Tokyo"), "So 06:00");
+    assert.equal(whenOnClock(tomorrowSix + 20 * DAY, NOW, "Asia/Tokyo"), "30. Okt. 06:00");
     // Tokyo's 06:00 tomorrow is 23:00 tonight in Berlin.
-    assert.equal(whenOnClock(tomorrowSix, NOW, "Europe/Berlin"), "today 23:00");
+    assert.equal(whenOnClock(tomorrowSix, NOW, "Europe/Berlin"), "heute 23:00");
   });
 
   it("counts the offers with the queue's own rules, and finds the next due day", async () => {
@@ -301,7 +301,7 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
     const o = outlookForUser(db, user.id, NOW);
     assert.equal(o.ahead, 4, "cards 1–4 are due within two days");
     assert.equal(o.lapsed, 1);
-    assert.deepEqual(o.nextDue, { count: 3, at: tomorrowSix, when: "tomorrow 06:00" });
+    assert.deepEqual(o.nextDue, { count: 3, at: tomorrowSix, when: "morgen 06:00" });
     await app.close();
   });
 

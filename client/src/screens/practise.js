@@ -1,10 +1,11 @@
 import { answerSoon } from "../api.js";
 import { modeName, visibleModes } from "../script.js";
+import { topicLabel } from "../topics.js";
 import { activeLabel, isDefault } from "./choose-set.js";
 import { el, num, render } from "../ui/dom.js";
 
 /** "1 card", "20 cards" — design 10's offers lead with the count. */
-const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
+const cards = (n) => `${n} ${n === 1 ? "Karte" : "Karten"}`;
 
 /**
  * There is no "How long" any more (v74, #123 reversed). It stood beside "14
@@ -19,11 +20,11 @@ const cards = (n) => `${n} ${n === 1 ? "card" : "cards"}`;
  * lernen" does, rather than the name of a setting.
  */
 const START_LABELS = {
-  choose: "Pick the meanings",
-  listen: "Listen to the cards",
-  speak: "Say the cards aloud",
-  type: "Type the words",
-  flip: "Flip the cards",
+  choose: "Bedeutungen wählen",
+  listen: "Karten anhören",
+  speak: "Karten laut sagen",
+  type: "Wörter tippen",
+  flip: "Karten umdrehen",
 };
 
 function startLabel(mode) {
@@ -152,7 +153,7 @@ export function practiseScreen({
       render(top);
       // In the number's place, so nothing below moves when one becomes the
       // other. A count that could not be had is not zero.
-      render(today, el("div.deck-today-state", { text: outcome ? "Couldn't check" : "Checking…" }));
+      render(today, el("div.deck-today-state", { text: outcome ? "Konnte nicht prüfen" : "Wird geprüft …" }));
       return;
     }
     const { due, today: counts, outlook, stats, maxReached } = outcome.value;
@@ -160,13 +161,13 @@ export function practiseScreen({
     render(
       today,
       el("span.deck-today-n.tabular", { text: num(total) }),
-      el("span.deck-today-label", { text: total === 1 ? "card for today" : "cards for today" }),
+      el("span.deck-today-label", { text: total === 1 ? "Karte für heute" : "Karten für heute" }),
       counts
         ? el(
             "div.deck-today-split",
             {},
-            part(counts.fresh, "new"),
-            part(counts.review, "to review"),
+            part(counts.fresh, "neu"),
+            part(counts.review, "zu wiederholen"),
           )
         : null,
     );
@@ -185,7 +186,7 @@ export function practiseScreen({
   function maxNote(reached) {
     if (!reached) return null;
     return el("p.deck-max-note", {
-      text: "That's today's maximum for this deck. You can change it in Options.",
+      text: "Das ist das Maximum für heute in diesem Deck. Du kannst es unter Optionen ändern.",
     });
   }
 
@@ -196,16 +197,16 @@ export function practiseScreen({
    */
   function addButton() {
     if (!deck?.own || !onAddCard) return null;
-    return el("button.deck-add-card", { type: "button", onclick: onAddCard, text: "+ Add card" });
+    return el("button.deck-add-card", { type: "button", onclick: onAddCard, text: "+ Karte hinzufügen" });
   }
 
   function emptyDeck() {
     return el(
       "div.deck-empty",
       {},
-      el("p.deck-empty-title", { text: "No cards in this deck yet." }),
-      el("p.deck-empty-body", { text: "Write the German on the front and the Japanese on the back, like in Noji." }),
-      onAddCard ? el("button.deck-start", { type: "button", onclick: onAddCard, text: "Add the first card" }) : null,
+      el("p.deck-empty-title", { text: "In diesem Deck sind noch keine Karten." }),
+      el("p.deck-empty-body", { text: "Schreib das Deutsche auf die Vorderseite und das Japanische auf die Rückseite, wie in Noji." }),
+      onAddCard ? el("button.deck-start", { type: "button", onclick: onAddCard, text: "Erste Karte hinzufügen" }) : null,
     );
   }
 
@@ -219,13 +220,13 @@ export function practiseScreen({
       "div.deck-head",
       {},
       onBack
-        ? el("button.deck-back", { type: "button", "aria-label": "Your decks", onclick: onBack, text: "‹ Decks" })
+        ? el("button.deck-back", { type: "button", "aria-label": "Deine Decks", onclick: onBack, text: "‹ Decks" })
         : null,
       el(
         "div.deck-title-row",
         {},
         el("h1.deck-name", { text: deck?.name ?? "" }),
-        onOptions ? el("button.deck-options-button", { type: "button", onclick: onOptions, text: "Options" }) : null,
+        onOptions ? el("button.deck-options-button", { type: "button", onclick: onOptions, text: "Optionen" }) : null,
       ),
     );
   }
@@ -239,7 +240,7 @@ export function practiseScreen({
     // row that is shown always has cards behind it (#90).
     if (ahead > 0) {
       offers.push(
-        offer("Practise ahead", `${cards(ahead)} due in the next two days`, () =>
+        offer("Vorausüben", `${cards(ahead)} in den nächsten zwei Tagen fällig`, () =>
           onStart({ only: "ahead" }),
         ),
       );
@@ -250,7 +251,7 @@ export function practiseScreen({
     const behind = deck?.key === "kaishi" ? weakestTopic(stats) : undefined;
     if (behind) {
       offers.push(
-        offer("Drill a topic", `${behind.tag} is furthest behind, ${behind.seen} of ${behind.total}`, () =>
+        offer("Thema üben", `${topicLabel(behind.tag)} liegt am weitesten zurück, ${behind.seen} von ${behind.total}`, () =>
           onDrillTopic(),
         ),
       );
@@ -258,7 +259,7 @@ export function practiseScreen({
 
     if (lapsed > 0) {
       offers.push(
-        offer("Recent mistakes", `${cards(lapsed)} missed in the last three days`, () =>
+        offer("Letzte Fehler", `${cards(lapsed)} in den letzten drei Tagen nicht gewusst`, () =>
           onStart({ only: "lapsed" }),
         ),
       );
@@ -269,7 +270,7 @@ export function practiseScreen({
         ? el(
             "div.next-due",
             {},
-            el("span.label", { text: "Next cards due" }),
+            el("span.label", { text: "Nächste fällige Karten" }),
             // Design 10: "28 · tomorrow 06:00". The wording of the time is the
             // server's, in the zone this device sent it (§8a, #122).
             el("span.value.tabular", { text: `${nextDue.count} · ${nextDue.when}` }),
@@ -301,7 +302,7 @@ export function practiseScreen({
     return el(
       "button.deck-more",
       { type: "button", onclick: onChooseSet },
-      el("span", { text: chosen ? `Only: ${activeLabel({ tag: filters.tag, only: filters.only })}` : "More options" }),
+      el("span", { text: chosen ? `Nur: ${activeLabel({ tag: filters.tag, only: filters.only })}` : "Weitere Auswahl" }),
       el("span.chevron", { "aria-hidden": "true", text: "›" }),
     );
   }
@@ -328,7 +329,7 @@ export function practiseScreen({
     return el(
       "div.deck-ways",
       {},
-      el("span.set-label", { text: "Start practising" }),
+      el("span.set-label", { text: "Üben" }),
       el(
         "div.deck-ways-list",
         {},
@@ -365,12 +366,12 @@ export function practiseScreen({
       render(
         note,
         el("span.sound-state", {
-          text: readAloud ? "Sound on — cards are read aloud." : "Sound off — tap ♪ on a card to hear it.",
+          text: readAloud ? "Ton an – Karten werden vorgelesen." : "Ton aus – tippe auf ♪, um eine Karte zu hören.",
         }),
         onReadAloud
           ? el("button.sound-switch", {
               type: "button",
-              text: readAloud ? "Turn off" : "Turn on",
+              text: readAloud ? "Ausschalten" : "Einschalten",
               onclick: () => {
                 readAloud = !readAloud;
                 onReadAloud(readAloud);
