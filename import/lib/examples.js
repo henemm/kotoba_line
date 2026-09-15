@@ -12,6 +12,9 @@
  *    with the lists, 62 (measured 2026-09-15). Their meaning is the first sense
  *    of the word's entry in JMdict (EDRDG, CC BY-SA 4.0), which lists the most
  *    common sense first.
+ * 3. (v87) Native speakers' recordings of JLPT words Kaishi has no recording
+ *    of, from Lingua Libre and Tofugu — lib/example-sounds.js — with their
+ *    meaning from JMdict as in 2.
  *
  * English for now, like Kaishi's glosses; German comes with #134.
  */
@@ -156,7 +159,10 @@ export function makeMeaningLookup(jmdictWords) {
  *
  * `kaishi` are Kaishi cards (their reading already worked out, and `audio`,
  * the file of the card's own recording, where it has one), most common first;
- * `jlpt` are JLPT rows in N5, N4, N3 order. A hiragana card looks at readings
+ * `recorded` are words with a native speaker's recording from elsewhere
+ * (lib/example-sounds.js, v87: `reading`, `meaning`, `audio`, `source`), in
+ * order of preference, and they rank as Kaishi's recorded words do, after
+ * them; `jlpt` are JLPT rows in N5, N4, N3 order. A hiragana card looks at readings
  * in hiragana, a katakana card at readings in katakana, so テレビ is never an
  * example for て.
  *
@@ -166,30 +172,37 @@ export function makeMeaningLookup(jmdictWords) {
  * counts too (Henning: two or three of those "could be very revealing, just
  * because it sounds different"). Up to three, in this order:
  *
- *   1. a Kaishi word with a recording that starts with the kana
- *   2. up to two Kaishi words with a recording that have it later (`soundAt`)
+ *   1. a recorded word that starts with the kana
+ *   2. up to two recorded words that have it later (`soundAt`)
  *   3. more recorded words that start with it
  *   4. any other word that starts with it, Kaishi before the lists — as v78
  *
- * A word without a recording still has to start with the kana: a silent word
- * with the sound somewhere inside shows less than one that begins with it.
- * `at` is where the sound is, so the card can mark it.
+ * Within each, Kaishi's recordings come before `recorded`. A word without a
+ * recording still has to start with the kana: a silent word with the sound
+ * somewhere inside shows less than one that begins with it. `at` is where the
+ * sound is, so the card can mark it.
+ *
+ * The two level windows are deliberate (v87): `recorded` holds words from N5
+ * to N1, `jlpt` only N5–N3. Hearing the sound is what an example is for, so a
+ * recorded N2 word is worth a place a silent one is not.
  */
-export function pickExamples(card, { kaishi = [], jlpt = [], meaningOf }, count = 3) {
+export function pickExamples(card, { kaishi = [], recorded = [], jlpt = [], meaningOf }, count = 3) {
   const kana = card.word;
   const candidates = [];
   let starts = 0;
   let middles = 0;
-  kaishi.forEach((k, order) => {
+  const offer = (k, order, source) => {
     // A reading that is two readings (なに・なん) is not one word to read.
     if (/[・/]/.test(k.reading ?? "")) return;
     const at = soundAt(k.reading, kana);
     if (at === -1 || !k.meaning) return;
-    const entry = { order, kana: k.reading, meaning: k.meaning, source: "kaishi", at };
+    const entry = { order, kana: k.reading, meaning: k.meaning, source, at };
     if (k.audio && at === 0) candidates.push({ ...entry, audio: k.audio, rank: starts++ === 0 ? 0 : 2 });
     else if (k.audio) candidates.push({ ...entry, audio: k.audio, rank: middles++ < 2 ? 1 : 2 });
     else if (startsWithSound(k.reading, kana)) candidates.push({ ...entry, rank: 3 });
-  });
+  };
+  kaishi.forEach((k, order) => offer(k, order, "kaishi"));
+  recorded.forEach((k, order) => k.audio && offer(k, kaishi.length + order, k.source));
   jlpt.forEach((row, order) => {
     if (!startsWithSound(row.reading, kana)) return;
     candidates.push({ rank: 4, order, row, kana: row.reading, source: `jlpt-n${row.level}`, at: row.reading.indexOf(kana) });

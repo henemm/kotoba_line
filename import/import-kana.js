@@ -25,12 +25,15 @@
  * The kana's own sounds (v84) are recordings from Wikimedia Commons, each
  * pinned by the original's sha1 and brought to one loudness on the way in
  * (lib/kana-sounds.js). They are written before the cards, so a card never
- * points at a recording that is not on disk.
+ * points at a recording that is not on disk. So are the example words'
+ * recordings from Lingua Libre and Tofugu (v87, lib/example-sounds.js).
  */
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { openDatabase } from "../server/src/db.js";
 import { kanaReading } from "../client/src/screens/session.js";
+import { EXAMPLE_SOUNDS, TOFUGU_COMMIT, exampleSoundName } from "./lib/example-sounds.js";
 import { makeMeaningLookup, parseJlptCsv, pickExamples } from "./lib/examples.js";
 import { kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
 import { COMMONS_UPLOADER, KANA_SOUNDS, kanaSoundFile, soundMediaName } from "./lib/kana-sounds.js";
@@ -108,8 +111,13 @@ export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples
   return changed;
 }
 
-/** Example words for every kana card, from Kaishi in `db` and the given JLPT rows and JMdict words. */
-export function kanaExamples(db, { jlpt, jmdictWords }) {
+/**
+ * Example words for every kana card, from Kaishi in `db`, the given JLPT rows
+ * and JMdict words, and `sounds` — rows of lib/example-sounds.js whose files
+ * are on disk (v87). A sound whose word JMdict does not give a meaning for is
+ * left out, as a list word would be.
+ */
+export function kanaExamples(db, { jlpt, jmdictWords, sounds = [] }) {
   const kaishi = db
     .prepare(
       `SELECT word, word_furigana, word_reading, word_meaning, word_audio FROM cards
@@ -125,7 +133,13 @@ export function kanaExamples(db, { jlpt, jmdictWords }) {
       audio: c.word_audio ?? undefined,
     }));
   const meaningOf = makeMeaningLookup(jmdictWords);
-  return new Map(kanaCards().map((card) => [card.id, pickExamples(card, { kaishi, jlpt, meaningOf })]));
+  const recorded = sounds.map((s) => ({
+    reading: s.reading,
+    meaning: meaningOf({ written: s.written, reading: s.reading }),
+    audio: exampleSoundName(s),
+    source: s.source,
+  }));
+  return new Map(kanaCards().map((card) => [card.id, pickExamples(card, { kaishi, recorded, jlpt, meaningOf })]));
 }
 
 async function loadExampleSources() {
@@ -204,6 +218,60 @@ async function writeSounds(mediaDir) {
   return { written: missing.length, kept: KANA_SOUNDS.length - missing.length };
 }
 
+/** Git's object id for a file's content — what a GitHub tree lists for it. */
+const gitBlobSha = (buf) => createHash("sha1").update(`blob ${buf.length}\0`).update(buf).digest("hex");
+
+/**
+ * The example words' recordings (v87), levelled, as `example-<hash>.mp3`.
+ *
+ * Lingua Libre's come as Wikimedia's MP3 transcode of the Commons original,
+ * after Commons confirms the original's sha1 and that its uploader is the
+ * speaker the file is named for. Tofugu's come from the pinned commit, and
+ * their bytes have to hash to the pinned blob. Either way a different file
+ * stops the import: the gain steps were measured on these. A file already on
+ * disk is left alone.
+ */
+async function writeExampleSounds(mediaDir) {
+  mkdirSync(mediaDir, { recursive: true });
+  const missing = EXAMPLE_SOUNDS.filter((s) => !existsSync(join(mediaDir, exampleSoundName(s))));
+  const commons = missing.filter((s) => s.source === "lingualibre");
+  const info = new Map();
+  for (let i = 0; i < commons.length; i += 50) {
+    const titles = commons.slice(i, i + 50).map((s) => `File:${s.file}`);
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&prop=imageinfo&iiprop=sha1|url|user&titles=${encodeURIComponent(titles.join("|"))}`;
+    const res = await politeFetch(url);
+    if (!res.ok) throw new Error(`Wikimedia Commons: HTTP ${res.status} (${url})`);
+    const { query } = await res.json();
+    const asked = new Map((query.normalized ?? []).map((n) => [n.to, n.from]));
+    for (const page of query.pages) info.set(asked.get(page.title) ?? page.title, page.imageinfo?.[0]);
+  }
+  for (const [n, sound] of missing.entries()) {
+    let url;
+    if (sound.source === "lingualibre") {
+      const found = info.get(`File:${sound.file}`);
+      if (!found) throw new Error(`Wikimedia Commons has no File:${sound.file} (${sound.reading})`);
+      if (found.sha1 !== sound.hash || found.user !== sound.speaker) {
+        throw new Error(
+          `File:${sound.file} is not the recording pinned in lib/example-sounds.js: sha1 ${found.sha1}, uploaded by ${found.user}`,
+        );
+      }
+      const [h, hh, name] = new URL(found.url).pathname.split("/").slice(-3);
+      url = `https://upload.wikimedia.org/wikipedia/commons/transcoded/${h}/${hh}/${name}/${name}.mp3`;
+    } else {
+      url = `https://raw.githubusercontent.com/tofugu/japanese-vocabulary-pronunciation-audio/${TOFUGU_COMMIT}/${sound.file.split("/").map(encodeURIComponent).join("/")}`;
+    }
+    if (n > 0 && sound.source === "lingualibre") await sleep(2000);
+    const res = await politeFetch(url);
+    if (!res.ok) throw new Error(`${sound.reading}: HTTP ${res.status} (${url})`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (sound.source === "tofugu" && gitBlobSha(buf) !== sound.hash) {
+      throw new Error(`${sound.file} at ${TOFUGU_COMMIT} is not the recording pinned in lib/example-sounds.js`);
+    }
+    writeFileSync(join(mediaDir, exampleSoundName(sound)), withGain(buf, sound.steps));
+  }
+  return { written: missing.length, kept: EXAMPLE_SOUNDS.length - missing.length };
+}
+
 async function writeStrokes(mediaDir) {
   mkdirSync(mediaDir, { recursive: true });
   let written = 0;
@@ -238,11 +306,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.stdout.write("Example words left as they are (--no-examples)\n");
   } else {
     const sources = await loadExampleSources();
-    examples = kanaExamples(db, sources);
+    // v87: on disk before any card names them, like the kana sounds below.
+    const { written, kept } = await writeExampleSounds(mediaDir);
+    process.stdout.write(`Example word recordings (Lingua Libre, Tofugu): ${written} written, ${kept} already there, in ${mediaDir}\n`);
+    examples = kanaExamples(db, { ...sources, sounds: EXAMPLE_SOUNDS });
     for (const deck of ["hiragana", "katakana"]) {
       const cards = kanaCards().filter((c) => c.deck === deck);
       const withOne = cards.filter((c) => examples.get(c.id).length > 0).length;
-      process.stdout.write(`Examples (${deck}): ${withOne} of ${cards.length} cards have one\n`);
+      const heard = cards.filter((c) => examples.get(c.id).some((e) => e.audio)).length;
+      process.stdout.write(`Examples (${deck}): ${withOne} of ${cards.length} cards have one, ${heard} a recorded one\n`);
     }
   }
   let sounds = false;

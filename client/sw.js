@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v86";
+const VERSION = "v87";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -348,7 +348,8 @@ const isDrawing = (request) => new URL(request.url).pathname.includes("/media/ka
  * 71 files of 13–42 KB, 1.8 MB together, never changing, and played on every
  * kana card she reviews. Counted, a week of Kaishi words would push them out
  * and she would fetch あ again on mobile data. The example words' recordings
- * on a kana card are Kaishi's, ordinary recordings, and do count.
+ * on a kana card — Kaishi's, and since v87 Lingua Libre's and Tofugu's as
+ * `example-*` — are ordinary recordings, and do count.
  */
 const isKanaSound = (request) => new URL(request.url).pathname.includes("/media/kana-");
 

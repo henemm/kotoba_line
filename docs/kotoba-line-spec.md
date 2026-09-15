@@ -390,6 +390,16 @@ The example words (v78) are chosen by the import and stored on the card
 with the lists it is 62. Settings → Quellen carries the attributions the
 licences ask for.
 
+A recorded word goes first, and only a recorded word may have the sound
+inside it rather than at its start (v83). Since v87 the recordings are not
+only Kaishi's: `import/lib/example-sounds.js` pins 57 native speakers'
+recordings of JLPT words (N5–N1) from Lingua Libre — only speakers who state
+Japanese as their native language — and from Tofugu/WaniKani, both CC BY-SA
+4.0, levelled like the kana sounds. Lingua Libre's learners' recordings are
+left out on purpose. Tofugu has a Tokyo and a Kansai voice; the Tokyo one is
+preferred, not required. That takes katakana from 5 to 37 cards with a
+recorded example (23 with the sound inside) and hiragana from 86 to 96.
+
 ---
 
 ## 8a. XP, levels and streak

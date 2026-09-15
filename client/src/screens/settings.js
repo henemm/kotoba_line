@@ -404,6 +404,13 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
         // v84: public domain asks for nothing; the line is there so she knows
         // whose voice it is.
         ["Wikimedia Commons", "Aussprache der einzelnen Kana – Aufnahmen von Hakatanoshio117117, gemeinfrei"],
+        // v87: CC BY-SA asks for the attribution, and the speakers are named
+        // because it is their voice she hears.
+        ["Lingua Libre", "Aussprache von Beispielwörtern der Kana – Aufnahmen von 葵心 und Higa4, Wikimedia Commons, CC BY-SA 4.0"],
+        [
+          "Tofugu und WaniKani",
+          "Aussprache von Beispielwörtern der Kana – github.com/tofugu/japanese-vocabulary-pronunciation-audio, CC BY-SA 4.0",
+        ],
         ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
         [
           "JMdict",
