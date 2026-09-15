@@ -130,8 +130,11 @@ cd ~/kotoba_line && ops/status.sh
 
 **Start here, every time.** It reads the database and the filesystem and prints
 what is actually true — which migrations are applied, which shell is on disk,
-whether the columns the import fills are empty, whether nginx can read the
-audio — and ends with the commands still to run, in order. It changes nothing.
+whether the running API container has the repository's server code,
+dependencies and compose file (#162), whether the columns the import fills are
+empty, whether nginx can read the audio — and ends with the commands still to
+run, in order. It changes nothing. The one thing it cannot see is a change to
+`ops/Dockerfile` itself; a release that makes one has to say so.
 
 It exists because these instructions used to arrive as prose: "this one needs
 the full deploy", "this one needs a re-import". Prose is exactly the thing an
