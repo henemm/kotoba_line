@@ -100,6 +100,15 @@ and the × asks once. What remains is deliberate, and short.
   when she practised, and at nine in the evening that would be a small lie in
   the middle of a reassurance. It says "the 14 answers waiting here" instead,
   which keeps the count — the part of the sentence that is doing the work.
+- **iPad uses more of its width** (#150, v71). The 560 pt column was 47 % of a
+  landscape iPad and 68 % of a portrait one. At 700 pt and wider the tab
+  screens are a 700 pt page, and a deck's page puts "cards for today" and "How
+  long" side by side. The session (16) is a card: a rounded surface up to
+  900 pt wide with めくる's front high on it, a rule, the answer, and the
+  ratings in one row under it — Noji's layout, which Henning sent as the
+  reference. 選ぶ's answers go in two columns from 1000 pt. Sign-in, the
+  summary, the card form and the sheets keep the 560 pt column, and below
+  700 pt (Split View, Slide Over) everything is the phone layout, as before.
 - **52's dismissal is the session's ×.** The drawn frame is cropped, so the
   control the note calls for ("she can dismiss it") is not in it. The app
   already has one word for leaving a screen, and a second one here would teach

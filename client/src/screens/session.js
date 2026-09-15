@@ -406,7 +406,8 @@ export function sessionScreen({
 
   function drawCard() {
     const card = queue[index];
-    const area = el("div.card-area");
+    // The mode on the card is for the iPad card's layout (#150, screens.css).
+    const area = el("div.card-area", { dataset: { mode } });
     const answers = el("div.options");
 
     render(root, chrome(), area, answers);
@@ -1118,6 +1119,15 @@ export function sessionScreen({
     );
   }
 
+  /**
+   * The rule between a card's front and its answer (#150). Drawn only where
+   * the card is a surface of its own — an iPad, like Noji — and `display:
+   * none` on the phone, where it takes no space and no gap.
+   */
+  function cardRule() {
+    return el("hr.card-rule.reveal", { "aria-hidden": "true" });
+  }
+
   function revealFlip(card, area, answers) {
     const meaningFirst = flipsMeaningFirst(card);
     // #113: the word stays where the front showed it — or, with the meaning on
@@ -1128,6 +1138,7 @@ export function sessionScreen({
         area,
         el("span.prompt-label", { text: "In Japanese" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
+        cardRule(),
         el(
           "div.word-line.reveal",
           {},
@@ -1160,6 +1171,7 @@ export function sessionScreen({
         // through `kanaReading` unchanged.
         reading(card.word_furigana || card.word_reading, card.word, card),
         romajiLine(card),
+        cardRule(),
         el("div.meaning.reveal", { text: card.word_meaning }),
         revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
@@ -1295,10 +1307,13 @@ export function sessionScreen({
       area.style.paddingTop = "0px";
       const natural = offset();
       if (natural === undefined) return;
-      const wanted = Math.max(before - natural, 0);
+      // #150: on the iPad the card is a surface with its own padding, and
+      // text squeezed onto its edge would look like a mistake. 0 on the phone.
+      const floor = parseFloat(getComputedStyle(area).getPropertyValue("--held-floor")) || 0;
+      const wanted = Math.max(before - natural, floor);
       area.style.paddingTop = `${wanted}px`;
       const over = screen.offsetHeight - fits;
-      if (over > 0) area.style.paddingTop = `${Math.max(wanted - over, 0)}px`;
+      if (over > 0) area.style.paddingTop = `${Math.max(wanted - over, floor)}px`;
     };
   }
 
