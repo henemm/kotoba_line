@@ -1,5 +1,12 @@
 [
   {
+    "version": "v98",
+    "summary": "Aufnahme-Buttons zeigen jetzt richtig an, welche Aufnahme läuft.",
+    "notes": [
+      "Beide Aufnahme-Buttons zeigten „Stopp“ an, sobald einer davon lief – der falsche hätte die Aufnahme mit der falschen Stimme gespeichert. Jetzt ist nur noch der Button zu sehen, der gerade aufnimmt."
+    ]
+  },
+  {
     "version": "v97",
     "summary": "Kleine Korrektur an der Aufnahme-Funktion von eben.",
     "notes": [

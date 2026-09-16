@@ -1233,11 +1233,32 @@ export function sessionScreen({
   function recordingBlock(card) {
     const box = el("div.recording-block");
     let controller = null;
+    // Which button started it — not the same thing as which button was
+    // tapped to stop it. Both buttons used to read the same shared
+    // `controller` and both showed "Stopp" at once, so stopping the *other*
+    // one uploaded her own attempt labelled as a native speaker's (Henning,
+    // 2026-09-16, screenshot). One recording at a time, and only the button
+    // that started it can be the one that stops it.
+    let recordingKind = null;
     let busy = false;
 
     const draw = (status) => {
       const sources = sourcesFor(card);
       const nativeCount = sources.filter((s) => s.kind === "native").length;
+      const button = (kind, label) => {
+        const active = recordingKind === kind;
+        // Recording "own" hides the native button outright rather than
+        // disabling it (and the reverse): a disabled "Stopp" next to a live
+        // one is exactly the confusing pair this replaces.
+        if (controller && !active) return null;
+        if (kind === "native" && !active && nativeCount >= 3) return null;
+        return el("button.btn.small.ghost", {
+          type: "button",
+          text: active ? "Stopp" : label,
+          disabled: busy,
+          onclick: () => (active ? onStop() : onStart(kind)),
+        });
+      };
       render(
         box,
         sources.length
@@ -1272,41 +1293,43 @@ export function sessionScreen({
           ? el(
               "div.recording-actions",
               {},
-              el("button.btn.small.ghost", { type: "button", text: controller ? "Stopp" : "Ihre Aussprache aufnehmen", disabled: busy, onclick: () => onTap("own") }),
-              nativeCount < 3
-                ? el("button.btn.small.ghost", { type: "button", text: controller ? "Stopp" : "Muttersprachler aufnehmen", disabled: busy, onclick: () => onTap("native") })
-                : null,
+              button("own", "Ihre Aussprache aufnehmen"),
+              button("native", "Muttersprachler aufnehmen"),
             )
           : null,
         status ? el("p.recording-status", { text: status }) : null,
       );
     };
 
-    async function onTap(kind) {
-      if (controller) {
-        busy = true;
-        draw("wird hochgeladen …");
-        try {
-          const blob = await controller.stop();
-          controller = null;
-          const id = uuid();
-          const { recording } = await api.addRecording(card.id, kind, id, blob);
-          if (!recordings.has(card.id)) recordings.set(card.id, []);
-          if (recording) recordings.get(card.id).push({ ...recording, card_id: card.id });
-          busy = false;
-          draw(null);
-        } catch (err) {
-          controller = null;
-          busy = false;
-          draw(err?.body?.error === "native_limit" ? "Schon drei Muttersprachler-Aufnahmen." : "Konnte die Aufnahme nicht speichern.");
-        }
-        return;
-      }
+    async function onStart(kind) {
       try {
         controller = await startRecording();
+        recordingKind = kind;
         draw("Aufnahme läuft …");
       } catch (err) {
         draw(`Mikrofon nicht verfügbar: ${err.name ?? err.message}`);
+      }
+    }
+
+    async function onStop() {
+      const kind = recordingKind;
+      busy = true;
+      draw("wird hochgeladen …");
+      try {
+        const blob = await controller.stop();
+        controller = null;
+        recordingKind = null;
+        const id = uuid();
+        const { recording } = await api.addRecording(card.id, kind, id, blob);
+        if (!recordings.has(card.id)) recordings.set(card.id, []);
+        if (recording) recordings.get(card.id).push({ ...recording, card_id: card.id });
+        busy = false;
+        draw(null);
+      } catch (err) {
+        controller = null;
+        recordingKind = null;
+        busy = false;
+        draw(err?.body?.error === "native_limit" ? "Schon drei Muttersprachler-Aufnahmen." : "Konnte die Aufnahme nicht speichern.");
       }
     }
 
