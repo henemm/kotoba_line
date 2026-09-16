@@ -21,8 +21,6 @@
  * sound played back as the answer itself.
  */
 
-import { exampleSoundName } from "./example-sounds.js";
-
 export const VOICEVOX_SPEAKER = 30; // No.7, アナウンス
 export const VOICEVOX_CREDIT = "VOICEVOX:No.7";
 
@@ -125,10 +123,15 @@ const ROWS = [
 ];
 
 /**
- * `exampleSoundName` (example-sounds.js) names a file after `sound.hash`,
- * the source file's own sha1 for a downloaded recording. There is no source
- * file here, so this stands in: a hash of the reading, long enough that 92
- * words do not collide (checked in kana-yoon-sounds.test.js's sibling test).
+ * `exampleSoundName` (example-sounds.js) names a downloaded recording
+ * `example-<hash>.mp3`, after the source file's own sha1. There is no source
+ * file here, so a hash of the reading stands in — long enough that 92 words
+ * do not collide (checked in this file's test) — but with `generated-`
+ * inserted, unlike that name: a listing of the media directory itself should
+ * say which voice a file is, not only the pinned tables here and in
+ * `word_examples`/Settings → Quellen (Henning, 2026-09-16: it must stay
+ * recognisable after the fact which voices came from where). The ID3 tag
+ * `writeGeneratedExampleSounds` writes says the same thing inside the file.
  */
 function nameHash(reading) {
   let h = 0;
@@ -144,7 +147,7 @@ export const GENERATED_EXAMPLE_SOUNDS = ROWS.map(([reading, pitch]) => ({
   hash: nameHash(reading),
 }));
 
-export const generatedExampleSoundName = (sound) => exampleSoundName(sound);
+export const generatedExampleSoundName = (sound) => `example-generated-${sound.hash}.mp3`;
 
 /**
  * The audio_query for one word, with VOICEVOX's own accent guess overridden

@@ -5,11 +5,15 @@ import { yoonSoundFile, yoonSoundMediaName } from "../lib/kana-yoon-sounds.js";
 
 describe("kana-yoon-sounds (#183)", () => {
   it("names a yōon's file by both characters' code points, unlike a single kana", () => {
-    assert.equal(yoonSoundMediaName("きゃ"), "kana-0304d-03083.mp3");
+    assert.equal(yoonSoundMediaName("きゃ"), "kana-generated-0304d-03083.mp3");
     // き alone (soundMediaName in kana-sounds.js) would collide with きゃ, きゅ, きょ
     // on one code point; this is why yōon get their own naming function.
     assert.notEqual(yoonSoundMediaName("きゃ"), yoonSoundMediaName("きゅ"));
     assert.notEqual(yoonSoundMediaName("きゃ"), yoonSoundMediaName("きょ"));
+  });
+
+  it("marks the file as generated in its name, apart from the 71 human recordings", () => {
+    assert.match(yoonSoundMediaName("きゃ"), /^kana-generated-/);
   });
 
   it("gives hiragana and katakana yōon the same file", () => {

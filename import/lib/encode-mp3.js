@@ -12,9 +12,17 @@
 
 import { spawn } from "node:child_process";
 
-/** `wav` encoded to mono 44.1 kHz MP3 (CBR-ish VBR quality 4), no CRC — what `mp3gain.js` requires. */
-export function encodeMp3(wav) {
+/**
+ * `wav` encoded to mono 44.1 kHz MP3 (CBR-ish VBR quality 4), no CRC — what
+ * `mp3gain.js` requires. `metadata` (e.g. `{ artist: "VOICEVOX:No.7" }`)
+ * becomes an ID3v2 tag ahead of the audio frames — `mp3gain.js`'s
+ * `audioStart` already skips one — so a file's own bytes still say which
+ * voice it is after it has left the filename and the pinned tables behind
+ * (Henning, 2026-09-16: recognisable after the fact which voices are which).
+ */
+export function encodeMp3(wav, metadata = {}) {
   return new Promise((resolve, reject) => {
+    const metaArgs = Object.entries(metadata).flatMap(([k, v]) => ["-metadata", `${k}=${v}`]);
     const ffmpeg = spawn("ffmpeg", [
       "-hide_banner",
       "-loglevel", "error",
@@ -23,6 +31,7 @@ export function encodeMp3(wav) {
       "-qscale:a", "4",
       "-ar", "44100",
       "-ac", "1",
+      ...metaArgs,
       "-f", "mp3",
       "pipe:1",
     ]);

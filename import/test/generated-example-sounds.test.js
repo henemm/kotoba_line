@@ -12,9 +12,9 @@ describe("generated-example-sounds (#183, gap a)", () => {
     }
   });
 
-  it("names every row's file uniquely, with the ordinary example- prefix (not kana-, which sw.js keeps outside the cache cap)", () => {
+  it("names every row's file uniquely, with the ordinary example- prefix (not kana-, which sw.js keeps outside the cache cap) and a generated- marker apart from the human recordings", () => {
     const names = GENERATED_EXAMPLE_SOUNDS.map(generatedExampleSoundName);
     assert.equal(new Set(names).size, names.length);
-    for (const n of names) assert.match(n, /^example-[0-9a-f]+\.mp3$/);
+    for (const n of names) assert.match(n, /^example-generated-[0-9a-f]+\.mp3$/);
   });
 });

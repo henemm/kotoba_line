@@ -35,11 +35,15 @@ export const PAUSE_LENGTH_SCALE = 2.2;
  * Where a yōon's recording is written: both characters' code points, unlike
  * the single-character `soundMediaName` in `kana-sounds.js` — きゃ, きゅ and
  * きょ share き's code point and would collide on one. Still hiragana, still
- * the `kana-` prefix sw.js recognises, so きゃ and キャ share one file.
+ * starts with the `kana-` prefix sw.js recognises, so きゃ and キャ share one
+ * file — but with `generated-` inserted, so a listing of the media directory
+ * itself says which voice it is, not only the pinned tables here and in
+ * `word_examples`/Settings → Quellen (Henning, 2026-09-16: it must stay
+ * recognisable after the fact which voices came from where).
  */
 export function yoonSoundMediaName(kana) {
   const codes = [...toHiragana(kana)].map((c) => c.codePointAt(0).toString(16).padStart(5, "0"));
-  return `kana-${codes.join("-")}.mp3`;
+  return `kana-generated-${codes.join("-")}.mp3`;
 }
 
 const files = new Map(YOON.map(([kana]) => [kana, yoonSoundMediaName(kana)]));

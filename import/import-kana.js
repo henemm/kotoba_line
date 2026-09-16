@@ -45,9 +45,10 @@ import { MNEMONICS, mnemonicAssetName, mnemonicFor, mnemonicMediaName } from "./
 import { makeMeaningLookup, parseJlptCsv, pickExamples } from "./lib/examples.js";
 import { YOON, kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
 import { COMMONS_UPLOADER, KANA_SOUNDS, kanaSoundFile, soundMediaName } from "./lib/kana-sounds.js";
-import { yoonAudioQuery, yoonSoundMediaName, yoonSynthesize } from "./lib/kana-yoon-sounds.js";
+import { VOICEVOX_CREDIT, yoonAudioQuery, yoonSoundMediaName, yoonSynthesize } from "./lib/kana-yoon-sounds.js";
 import {
   GENERATED_EXAMPLE_SOUNDS,
+  VOICEVOX_CREDIT as EXAMPLE_VOICEVOX_CREDIT,
   generatedAudioQuery,
   generatedExampleSoundName,
   generatedSynthesize,
@@ -264,7 +265,7 @@ async function writeYoonSounds(mediaDir, voicevoxUrl) {
       );
     }
     const steps = gainSteps(activeLevel(parseWav(wav)));
-    const mp3 = withGain(await encodeMp3(wav), steps);
+    const mp3 = withGain(await encodeMp3(wav, { artist: VOICEVOX_CREDIT, comment: "Generated audio, not a human recording (#183)" }), steps);
     writeFileSync(join(mediaDir, yoonSoundMediaName(kana)), mp3);
   }
   return { written: missing.length, kept: YOON.length - missing.length };
@@ -346,7 +347,10 @@ async function writeGeneratedExampleSounds(mediaDir, voicevoxUrl) {
       );
     }
     const steps = gainSteps(activeLevel(parseWav(wav)));
-    const mp3 = withGain(await encodeMp3(wav), steps);
+    const mp3 = withGain(
+      await encodeMp3(wav, { artist: EXAMPLE_VOICEVOX_CREDIT, comment: "Generated audio, not a human recording (#183)" }),
+      steps,
+    );
     writeFileSync(join(mediaDir, generatedExampleSoundName(sound)), mp3);
   }
   return { written: missing.length, kept: GENERATED_EXAMPLE_SOUNDS.length - missing.length };
