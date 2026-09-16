@@ -73,7 +73,7 @@ describe("migration 016: her lists become decks", () => {
     for (const file of readdirSync(migrations).filter((f) => f.endsWith(".sql") && f > "016_decks.sql").sort()) {
       db.exec(readFileSync(new URL(file, migrations), "utf8"));
     }
-    const expected = { hiddenModes: ["speak", "type"], newPerDay: 15, maxPerDay: null };
+    const expected = { hiddenModes: ["speak", "type"], newPerDay: 15, maxPerDay: null, extraNew: 0, extraNewDay: null };
     assert.deepEqual(deckSettings(db, her.id, `deck:${idOf(her.id, "100 vokabeln")}`), expected);
     assert.deepEqual(deckSettings(db, her.id, "list:100 vokabeln"), expected, "and the old key reads the same row");
   });

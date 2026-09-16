@@ -24,7 +24,7 @@ describe("the kana decks (#158)", () => {
     assert.equal(hiragana.own, false);
     assert.equal(hiragana.cards, 104);
     assert.deepEqual(hiragana.ways, { choose: 104, listen: 0, speak: 0, type: 0, flip: 104 });
-    assert.deepEqual(hiragana.settings, { hiddenModes: [], newPerDay: 5, maxPerDay: null });
+    assert.deepEqual(hiragana.settings, { hiddenModes: [], newPerDay: 5, maxPerDay: null, extraNew: 0, extraNewDay: null });
     assert.deepEqual(hiragana.today, { total: 5, fresh: 5, review: 0, learning: 0, mastered: 0 });
     await app.close();
   });

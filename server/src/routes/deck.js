@@ -19,9 +19,9 @@ import {
   setStar,
   starredAmong,
 } from "../queue.js";
-import { timeZoneOf } from "../day.js";
+import { dayIn, timeZoneOf } from "../day.js";
 import { VALID_MODES, previewIntervals } from "../scheduler.js";
-import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, updateDeckSettings } from "../deck-settings.js";
+import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, releaseNewCards, updateDeckSettings } from "../deck-settings.js";
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 
@@ -234,6 +234,33 @@ export default async function deckRoutes(app) {
     async (req, reply) => {
       const { deckKey, ...patch } = req.body;
       const settings = updateDeckSettings(db, req.user.id, deckKey, patch);
+      if (!settings) return reply.code(404).send({ error: "not_found" });
+      return { settings };
+    },
+  );
+
+  /**
+   * More new cards for today (#179, v90): one more batch of the deck's own
+   * daily number, for her device's day. The deck page asks for this when
+   * nothing is due and she wants to keep going — it raises today's allowance
+   * rather than starting a session of its own, so what follows is her ordinary
+   * practice, in the ways she has chosen.
+   */
+  app.post(
+    "/api/decks/new-cards",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["deckKey"],
+          properties: { deckKey: { type: "string", pattern: DECK_KEY_PATTERN } },
+        },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const settings = releaseNewCards(db, req.user.id, req.body.deckKey, dayIn(Math.floor(Date.now() / 1000), timeZoneOf(req)));
       if (!settings) return reply.code(404).send({ error: "not_found" });
       return { settings };
     },

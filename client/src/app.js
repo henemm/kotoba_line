@@ -279,6 +279,20 @@ function currentScreen() {
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
+      // #179: one more batch of new cards into today. The deck's own settings
+      // are kept in step so the page can say how big the next batch is, and
+      // the numbers are thrown away so the page redraws with cards on it.
+      onReleaseNew: () =>
+        api
+          .releaseNewCards(state.deck.key)
+          .then(({ settings }) => {
+            if (state.deck) state.deck = { ...state.deck, settings };
+          })
+          .catch(() => {})
+          .finally(() => {
+            numbersChanged();
+            renderApp();
+          }),
       numbers: practiseNumbers(),
       // #118: a rebuild used to put her back at the top — under her finger,
       // mid-swipe, whenever the settings, the own-deck count or a sync

@@ -161,9 +161,15 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // Without a deck — a phone still on v62 — the overall limit covers everything.
   const inDeck = parseDeckKey(deckKey) !== undefined;
   const ofDeck = inDeck ? deckSettings(db, userId, deckKey) : undefined;
+  const dayKey = dayIn(now, timeZone);
+  // What she released for today on the deck page (#179, v90) is added to the
+  // deck's own allowance, for that day only: the limit paces her, it does not
+  // stop her. A release from another day counts for nothing.
+  const releasedToday = ofDeck?.extraNewDay === dayKey ? ofDeck.extraNew : 0;
   const newPerDay =
-    ofDeck?.newPerDay ??
-    (db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15);
+    (ofDeck?.newPerDay ??
+      (db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15)) +
+    releasedToday;
 
   // How many new cards were introduced today — in this deck, when there is
   // one — so the daily cap is a cap on the day rather than on the session.
@@ -172,7 +178,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // the last 24 hours, so ten new cards at 22:00 still used up ten of the next
   // morning's. One boundary for both halves: "first answered today" only means
   // that if "before today" is the same moment.
-  const dayStart = startOfDay(dayIn(now, timeZone), timeZone);
+  const dayStart = startOfDay(dayKey, timeZone);
   const scopeParams = [];
   const scopeSql = inDeck ? filterClause({ deckKey }, scopeParams, userId) : "";
   const introducedToday = db
