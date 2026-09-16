@@ -210,6 +210,10 @@ const out = {
     : "absent",
   // v84: a kana's own recording, from Wikimedia Commons.
   kanaSound: one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL AND word_audio IS NOT NULL"),
+  // v88: the picture on the back of a basic kana card (#177).
+  kanaMnemonic: has("word_mnemonic")
+    ? one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL AND word_mnemonic IS NOT NULL")
+    : "absent",
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
@@ -295,6 +299,12 @@ NODE
     elif [[ ${F_kana:-0} -gt 0 ]]; then
       ok "${F_kanaSound} kana cards with their own recording"
     fi
+    # v88: 92 of 208 — the 46 basic kana of each script (#177).
+    if [[ ${F_kanaMnemonic} != absent && ${F_kana:-0} -gt 0 && ${F_kanaMnemonic:-0} -lt 92 ]]; then
+      warn "npm run import-kana" "${F_kanaMnemonic:-0} of 92 kana cards have their picture — the kana import needs running again (v88)"
+    elif [[ ${F_kanaMnemonic} != absent && ${F_kana:-0} -gt 0 ]]; then
+      ok "${F_kanaMnemonic} kana cards with a picture"
+    fi
 
     if [[ ${F_tagged:-0} -eq 0 && ${F_cards:-0} -gt 0 ]]; then
       warn "npm run tag" "no card carries a topic"
@@ -332,6 +342,13 @@ if [[ -d $MEDIA_DIR ]]; then
     warn "npm run import-kana" "${kanaSounds:-0} of 71 kana recordings in $MEDIA_DIR"
   else
     ok "${kanaSounds} kana recordings"
+  fi
+  # v88: the kana pictures, copied out of import/assets/mnemonics.
+  mnemonics=$(find "$MEDIA_DIR" -name 'mnemonic-*.png' 2>/dev/null | wc -l | tr -d ' ')
+  if [[ ${mnemonics:-0} -lt 92 ]]; then
+    warn "npm run import-kana" "${mnemonics:-0} of 92 kana pictures in $MEDIA_DIR"
+  else
+    ok "${mnemonics} kana pictures"
   fi
   # v87: the example words' recordings from Lingua Libre and Tofugu
   # (import/lib/example-sounds.js).

@@ -655,7 +655,9 @@ export function sessionScreen({
               );
               const note = kanaSynthNote(card);
               if (note) area.querySelector(".word-line")?.after(note);
-              area.append(kanaExampleBlock(card) ?? "");
+              // v88: the picture comes with the answer here for the same
+              // reason — on the front it would give the reading away.
+              area.append(kanaMnemonicBlock(card) ?? "", kanaExampleBlock(card) ?? "");
               if (readAloud) voice(card.word, card.word_audio);
             }
 
@@ -1087,6 +1089,33 @@ export function sessionScreen({
   }
 
   /**
+   * The picture that holds a kana's shape (#177, v88): B. Domangue's drawing
+   * with the kana laid over it, and her hook under it, from the import
+   * (`import/lib/kana-mnemonics.js`). Only the 46 basic kana of each script
+   * have one; dakuten and yōon show nothing rather than a borrowed picture.
+   *
+   * It is on the answer, never the front — and it is always there, not only
+   * while the card is new. Henning (2026-09-16): "sie stören ja auch nicht",
+   * and a picture that comes and goes on its own is one more thing to work out.
+   * A file missing or not yet cached takes the block away, as the stroke order
+   * does, rather than leaving a broken image.
+   */
+  function kanaMnemonicBlock(card) {
+    const picture = kanaMnemonic(card);
+    if (!picture) return null;
+    const block = el("div.kana-mnemonic.reveal");
+    const hide = () => block.remove();
+    render(
+      block,
+      el("img.kana-mnemonic-picture", { src: mediaUrl(picture.file), alt: "", onerror: hide }),
+      picture.hook ? el("span.kana-mnemonic-hook", { text: picture.hook }) : null,
+      // CC BY-SA 4.0 asks for the attribution wherever the drawing is shown.
+      el("span.kana-credit", { text: "Merkbild: B. Domangue (CC BY-SA 4.0)" }),
+    );
+    return block;
+  }
+
+  /**
    * Up to three words with this kana, each read in kana with its meaning, the
    * kana marked where it is and a speaker where Kaishi has the recording —
    * import/lib/examples.js chooses them (v83).
@@ -1163,6 +1192,7 @@ export function sessionScreen({
         kanaSynthNote(card),
         cardRule(),
         el("div.meaning.kana-reading.reveal", { text: card.word_meaning }),
+        kanaMnemonicBlock(card),
         strokeOrder(card),
         kanaExampleBlock(card),
       );
@@ -1666,6 +1696,24 @@ export function promptAudio(card) {
 /** A kana whose ♪ is the phone's voice: one of the sounds with no recording (v84). */
 export function kanaSynthesised(card) {
   return isKana(card) && !card.word_audio;
+}
+
+/**
+ * A kana card's picture and its hook (#177, v88), as `npm run import-kana`
+ * stored them: `{ file, hook }`, or null where the card has none — every card
+ * but the 46 basic kana of each script. Unreadable is none, never an error on
+ * a card.
+ */
+export function kanaMnemonic(card) {
+  if (!card?.word_mnemonic) return null;
+  try {
+    const picture = JSON.parse(card.word_mnemonic);
+    // The hook is optional: ク has a drawing and deliberately no words
+    // (import/lib/kana-mnemonics.js).
+    return picture?.file ? picture : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The recordings of a kana card's example words (v83), to fetch with the card. */

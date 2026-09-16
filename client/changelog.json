@@ -1,5 +1,16 @@
 [
   {
+    "version": "v88",
+    "summary": "Zu jedem Kana gibt es jetzt ein Merkbild.",
+    "notes": [
+      "Wenn du eine Karte umdrehst, siehst du eine kleine Zeichnung, in der das Zeichen steckt: き ist ein Schlüssel (key), ぬ sind Nudeln mit Stäbchen (noodles).",
+      "Bei „Bedeutung wählen“ kommt das Bild, nachdem du geantwortet hast.",
+      "Die Merksätze sind englisch, weil sie über den Klang des englischen Wortes funktionieren.",
+      "Zeichen mit ゛ oder kleinem ゃ haben kein eigenes Bild. Sie bestehen ja aus den Grundzeichen.",
+      "Gezeichnet hat die Bilder B. Domangue. Sie stehen unter einer freien Lizenz."
+    ]
+  },
+  {
     "version": "v87",
     "summary": "Mehr Beispielwörter bei den Kana kannst du jetzt anhören.",
     "notes": [

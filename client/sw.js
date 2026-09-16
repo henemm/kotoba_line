@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v87";
+const VERSION = "v88";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -353,7 +353,14 @@ const isDrawing = (request) => new URL(request.url).pathname.includes("/media/ka
  */
 const isKanaSound = (request) => new URL(request.url).pathname.includes("/media/kana-");
 
+/**
+ * The kana pictures (v88, #177) are outside the cap on the same grounds: 92
+ * files of about 8 KB, 936 KB together, fixed, and on the back of every basic
+ * kana card.
+ */
+const isMnemonic = (request) => new URL(request.url).pathname.includes("/media/mnemonic-");
+
 async function evict(cache) {
-  const recordings = (await cache.keys()).filter((key) => !isDrawing(key) && !isKanaSound(key));
+  const recordings = (await cache.keys()).filter((key) => !isDrawing(key) && !isKanaSound(key) && !isMnemonic(key));
   for (const key of overflow(recordings, MEDIA_MAX)) await cache.delete(key);
 }
