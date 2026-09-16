@@ -337,11 +337,20 @@ if [[ -d $MEDIA_DIR ]]; then
     ok "$total audio files, all readable by nginx"
   fi
   # v84: the kana sounds are written by the kana import, not the deck's.
-  kanaSounds=$(find "$MEDIA_DIR" -name 'kana-*.mp3' 2>/dev/null | wc -l | tr -d ' ')
-  if [[ ${kanaSounds:-0} -lt 71 ]]; then
-    warn "npm run import-kana" "${kanaSounds:-0} of 71 kana recordings in $MEDIA_DIR"
+  # v92 (#183) added the 33 yōon, generated rather than downloaded and named
+  # `kana-generated-*` for it — kept apart here so it stays visible which
+  # voices are which, not only in the pinned tables and Settings → Quellen.
+  kanaSoundsHuman=$(find "$MEDIA_DIR" -name 'kana-*.mp3' ! -name 'kana-generated-*' 2>/dev/null | wc -l | tr -d ' ')
+  kanaSoundsGenerated=$(find "$MEDIA_DIR" -name 'kana-generated-*.mp3' 2>/dev/null | wc -l | tr -d ' ')
+  if [[ ${kanaSoundsHuman:-0} -lt 71 ]]; then
+    warn "npm run import-kana" "${kanaSoundsHuman:-0} of 71 kana recordings (Wikimedia Commons) in $MEDIA_DIR"
   else
-    ok "${kanaSounds} kana recordings"
+    ok "${kanaSoundsHuman} kana recordings (Wikimedia Commons)"
+  fi
+  if [[ ${kanaSoundsGenerated:-0} -lt 33 ]]; then
+    warn "npm run import-kana" "${kanaSoundsGenerated:-0} of 33 yōon recordings (VOICEVOX:No.7, generated) in $MEDIA_DIR"
+  else
+    ok "${kanaSoundsGenerated} yōon recordings (VOICEVOX:No.7, generated)"
   fi
   # v88: the kana pictures, copied out of import/assets/mnemonics.
   mnemonics=$(find "$MEDIA_DIR" -name 'mnemonic-*.png' 2>/dev/null | wc -l | tr -d ' ')
@@ -351,12 +360,19 @@ if [[ -d $MEDIA_DIR ]]; then
     ok "${mnemonics} kana pictures"
   fi
   # v87: the example words' recordings from Lingua Libre and Tofugu
-  # (import/lib/example-sounds.js).
-  exampleSounds=$(find "$MEDIA_DIR" -name 'example-*.mp3' 2>/dev/null | wc -l | tr -d ' ')
-  if [[ ${exampleSounds:-0} -lt 57 ]]; then
-    warn "npm run import-kana" "${exampleSounds:-0} of 57 example word recordings in $MEDIA_DIR"
+  # (import/lib/example-sounds.js). v93 (#183) added 92 generated ones, named
+  # `example-generated-*` so they stay visibly apart from the human ones.
+  exampleSoundsHuman=$(find "$MEDIA_DIR" -name 'example-*.mp3' ! -name 'example-generated-*' 2>/dev/null | wc -l | tr -d ' ')
+  exampleSoundsGenerated=$(find "$MEDIA_DIR" -name 'example-generated-*.mp3' 2>/dev/null | wc -l | tr -d ' ')
+  if [[ ${exampleSoundsHuman:-0} -lt 57 ]]; then
+    warn "npm run import-kana" "${exampleSoundsHuman:-0} of 57 example word recordings (Lingua Libre, Tofugu) in $MEDIA_DIR"
   else
-    ok "${exampleSounds} example word recordings"
+    ok "${exampleSoundsHuman} example word recordings (Lingua Libre, Tofugu)"
+  fi
+  if [[ ${exampleSoundsGenerated:-0} -lt 92 ]]; then
+    warn "npm run import-kana" "${exampleSoundsGenerated:-0} of 92 example word recordings (VOICEVOX:No.7, generated) in $MEDIA_DIR"
+  else
+    ok "${exampleSoundsGenerated} example word recordings (VOICEVOX:No.7, generated)"
   fi
 else
   warn "npm run import" "no $MEDIA_DIR yet"
