@@ -265,7 +265,20 @@ export function practiseScreen({
 
   function nothingDue(outlook, stats) {
     const offers = [];
-    const { ahead = 0, lapsed = 0, nextDue } = outlook ?? {};
+    const { ahead = 0, lapsed = 0, fresh = 0, nextDue } = outlook ?? {};
+
+    // Charlotte, 2026-09-16: "Ich hätte auch gerne das ich weiter lernen kann
+    // wenn ich möchte und nicht erst morgen um 11:30". The day's new cards are
+    // capped so that a big day does not come back as a bigger one three days
+    // later — but the cap is there to pace her, not to stop her. This starts a
+    // session of cards she has never seen, which the cap does not apply to
+    // (`only: "new"`, server/src/queue.js). It was always reachable through
+    // Wähle ein Set → Neu; now it is where she runs out.
+    if (fresh > 0) {
+      offers.push(
+        offer(newLabel(), `${cards(fresh)}, die du noch nicht gelernt hast`, () => onStart({ only: "new" })),
+      );
+    }
 
     // "If a row has nothing behind it the row is dropped, not disabled." Both
     // counts are the server's own count of the session the row starts, so a
@@ -310,6 +323,11 @@ export function practiseScreen({
         : null,
       offers.length > 0 ? el("div.offers", {}, offers) : null,
     ];
+  }
+
+  /** What a kana deck teaches is characters, not words (#158). */
+  function newLabel() {
+    return deck?.key === "hiragana" || deck?.key === "katakana" ? "Mehr neue Zeichen" : "Mehr neue Wörter";
   }
 
   function offer(title, detail, onClick) {

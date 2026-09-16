@@ -1,5 +1,14 @@
 [
   {
+    "version": "v89",
+    "summary": "Du kannst weiterlernen, wenn du möchtest.",
+    "notes": [
+      "Wenn für heute nichts mehr dran ist, steht auf der Deck-Seite jetzt „Mehr neue Zeichen“ beziehungsweise „Mehr neue Wörter“. Damit lernst du weiter, auch wenn das Tagespensum schon geschafft ist.",
+      "Darunter steht, wie viele Karten du in diesem Deck noch nie gesehen hast.",
+      "Am Tagespensum selbst ändert sich nichts. Es ist nur kein Schlusspunkt mehr."
+    ]
+  },
+  {
     "version": "v88",
     "summary": "Zu jedem Kana gibt es jetzt ein Merkbild.",
     "notes": [
