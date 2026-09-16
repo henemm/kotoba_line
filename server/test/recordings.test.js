@@ -69,20 +69,21 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     assert.deepEqual(result, { ok: false, reason: "not_found" });
   });
 
-  it("caps native recordings at 3, own recordings unlimited", async () => {
+  it("caps own and native recordings at one each (#185, 2026-09-16: \"nur ein Muttersprachler\")", async () => {
     const { db } = await testApp();
     const user = await seedUser(db);
     seedCards(db, 1);
 
-    for (const label of ["n1", "n2", "n3"]) {
-      const r = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid(label), audio: wav(), mediaDir, encode: stubEncode });
-      assert.equal(r.ok, true, label);
-    }
-    const fourth = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("n4"), audio: wav(), mediaDir, encode: stubEncode });
-    assert.deepEqual(fourth, { ok: false, reason: "native_limit" });
+    const n1 = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("n1"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.equal(n1.ok, true);
+    const n2 = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("n2"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.deepEqual(n2, { ok: false, reason: "native_limit" });
 
-    const own = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("o1"), audio: wav(), mediaDir, encode: stubEncode });
-    assert.equal(own.ok, true, "own is not capped by the native limit");
+    // Not shared with native's count — a second "own" still goes through.
+    const o1 = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("o1"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.equal(o1.ok, true, "own is not capped by the native limit");
+    const o2 = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("o2"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.deepEqual(o2, { ok: false, reason: "own_limit" }, "own is capped at one too, now");
   });
 
   it("retrying the same id is a no-op, not a duplicate or an error", async () => {
@@ -97,7 +98,7 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     assert.equal(db.prepare("SELECT count(*) n FROM card_recordings WHERE id = ?").get(uid("r")).n, 1);
   });
 
-  it("a deleted recording no longer counts towards the native limit, and a repeat delete is a no-op", async () => {
+  it("a deleted recording no longer counts towards the limit, and a repeat delete is a no-op", async () => {
     const { db } = await testApp();
     const user = await seedUser(db);
     seedCards(db, 1);
@@ -106,10 +107,10 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     assert.equal(removeRecording(db, user.id, a.recording.id).ok, true);
     assert.equal(removeRecording(db, user.id, a.recording.id).ok, true, "deleting again is a no-op, not an error");
 
-    for (const label of ["d2", "d3", "d4"]) {
-      const r = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid(label), audio: wav(), mediaDir, encode: stubEncode });
-      assert.equal(r.ok, true, label);
-    }
+    const d2 = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("d2"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.equal(d2.ok, true, "the slot freed up once the old one was deleted");
+    const d3 = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("d3"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.deepEqual(d3, { ok: false, reason: "native_limit" });
   });
 
   it("cannot delete someone else's recording", async () => {
@@ -162,29 +163,28 @@ describe("POST /api/cards/:cardId/recordings", () => {
     await app.close();
   });
 
-  it("rejects a fourth native recording with 422", async () => {
+  it("rejects a second native recording with 422", async () => {
     const { app, db, config } = await testApp({ practiceDir: mediaDir });
     const user = await seedUser(db);
     seedCards(db, 1);
     const cookie = await signIn(app, config);
 
-    for (const label of ["k1", "k2", "k3"]) {
-      const res = await app.inject({
-        method: "POST",
-        url: "/api/cards/1/recordings?kind=native&id=" + uid(label),
-        headers: { cookie, "content-type": "audio/webm" },
-        payload: wav(),
-      });
-      assert.equal(res.statusCode, 201, label);
-    }
-    const fourth = await app.inject({
+    const first = await app.inject({
       method: "POST",
-      url: "/api/cards/1/recordings?kind=native&id=" + uid("k4"),
+      url: "/api/cards/1/recordings?kind=native&id=" + uid("k1"),
       headers: { cookie, "content-type": "audio/webm" },
       payload: wav(),
     });
-    assert.equal(fourth.statusCode, 422);
-    assert.equal(fourth.json().error, "native_limit");
+    assert.equal(first.statusCode, 201);
+
+    const second = await app.inject({
+      method: "POST",
+      url: "/api/cards/1/recordings?kind=native&id=" + uid("k2"),
+      headers: { cookie, "content-type": "audio/webm" },
+      payload: wav(),
+    });
+    assert.equal(second.statusCode, 422);
+    assert.equal(second.json().error, "native_limit");
     await app.close();
   });
 });

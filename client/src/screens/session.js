@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { mediaUrl, prime, say, stop, unlock } from "../audio.js";
+import { mediaUrl, playTracked, prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
@@ -1248,185 +1248,218 @@ export function sessionScreen({
   }
 
   /**
-   * The three possible voices for a card's pronunciation (#183 follow-up),
-   * in a fixed order: her own latest attempt, a generated recording if the
-   * card's own audio is one (#183 named `kana-generated-`/`example-generated-`
-   * so this can tell — an ordinary human recording is not part of this row,
-   * it already has its own ♪), then up to three native speakers'.
+   * Her own and a native speaker's recording for a card — one of each at
+   * most (#185, 2026-09-16: "nur ein Muttersprachler, das ist einfacher").
+   * Not the whole history: `own`/`native` are only ever the latest, which
+   * is also all a single circle can show.
    */
   function sourcesFor(card) {
-    const own = (recordings.get(card.id) ?? []).filter((r) => r.kind === "own");
-    const native = (recordings.get(card.id) ?? []).filter((r) => r.kind === "native");
-    const sources = [];
-    // Every one of her own attempts, oldest first — not only the latest.
-    // Henning, 2026-09-16 (#185): a blind attempt on the front and a second
-    // one on the back, made to compare, are two different answers, and
-    // showing only the newer one made the older simply disappear.
-    own.forEach((r, i) => sources.push({ kind: "own", label: `Ihre eigene${own.length > 1 ? ` ${i + 1}` : ""}`, file: r.file, id: r.id }));
-    if (card.word_audio && /^(kana|example)-generated-/.test(card.word_audio)) {
-      sources.push({ kind: "synth", label: "Synthetisch", file: card.word_audio });
-    }
-    native.forEach((r, i) => sources.push({ kind: "native", label: `Muttersprachler${native.length > 1 ? ` ${i + 1}` : ""}`, file: r.file, id: r.id }));
-    return sources;
+    const list = recordings.get(card.id) ?? [];
+    return {
+      own: list.filter((r) => r.kind === "own").at(-1),
+      native: list.filter((r) => r.kind === "native").at(-1),
+    };
   }
 
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  /** `el()` cannot make real SVG nodes (`createElement`, not
+   * `createElementNS`) and `className` on an `SVGElement` is not a plain
+   * string, so the progress ring is built by hand instead. */
+  function svgEl(tag, attrs) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    return node;
+  }
+  const RING_CIRCUMFERENCE = 144.5; // 2π × the ring's r=23
+
   /**
-   * The recording controls and the colour-coded comparison row (#183
-   * follow-up, design discussion 2026-09-16). Called from every page that
-   * shows a card's Japanese word and is not a kana card (which has its own
-   * recordings already) — both sides of 話す, both sides of めくる for a
-   * word-first card and only the reveal for a meaning-first one, on any deck,
-   * hers or not (Henning, 2026-09-16: "alle Decks") — a Kaishi card already
-   * has a professional recording, but comparing her own attempt against it is
-   * exactly the point. Manages its own re-renders, the same way
-   * `microphoneTest()` in settings.js does, so recording one card does not
-   * re-run the whole flip.
+   * The recording controls (#183 follow-up, redesigned with Henning
+   * 2026-09-16 after two earlier shapes both turned out not to be what he
+   * meant — a rectangular text button, then a plain coloured circle with no
+   * empty/filled state — worked out this time against a clickable mockup
+   * before anything shipped). Called from every page that shows a card's
+   * Japanese word and is not a kana card (which has its own recordings
+   * already) — both sides of 話す, both sides of めくる for a word-first
+   * card, only the reveal for a meaning-first one, and 選ぶ/聞く/書く — on
+   * any deck, hers or not ("alle Decks"): a Kaishi card already has a
+   * professional recording, but comparing her own attempt against it is
+   * exactly the point.
+   *
+   * One circle per voice, always both present (never hidden or removed —
+   * that was the source of the "neighbouring circle twitches" bug: a flex
+   * row re-centres when a sibling appears, disappears, or changes width).
+   * A record button is always red at rest, a red square while capturing,
+   * the voice's own colour only once there is something to play — and
+   * playing looks exactly like every other ♪ in the app, because that is
+   * what it is. Re-recording replaces via the × (with a confirmation, not
+   * a long press — this app has none anywhere else and it is not reliable
+   * on a phone browser).
    */
   function recordingBlock(card) {
     if (!recordingEnabled) return null;
     const box = el("div.recording-block");
-    let controller = null;
-    // Which button started it — not the same thing as which button was
-    // tapped to stop it. Both buttons used to read the same shared
-    // `controller` and both showed "Stopp" at once, so stopping the *other*
-    // one uploaded her own attempt labelled as a native speaker's (Henning,
-    // 2026-09-16, screenshot). One recording at a time, and only the button
-    // that started it can be the one that stops it.
-    let recordingKind = null;
-    let busy = false;
-    // Set the moment a button is tapped, cleared once `startRecording()`
-    // resolves or fails — the gap `getUserMedia` takes to answer. Without
-    // this a second tap in that gap (a fumbled double-tap, or the other
-    // button) opened a second stream nothing here kept a reference to, so
-    // stopping the one `controller` pointed at left the first running
-    // forever (Charlotte, 2026-09-16 — the mic stayed lit after a finished
-    // recording).
-    let starting = false;
 
-    const draw = (status) => {
-      const sources = sourcesFor(card);
-      const nativeCount = sources.filter((s) => s.kind === "native").length;
-      // A round icon button in the same family as ♪ (`.speaker`), not a
-      // rectangular text button — Henning, 2026-09-16: the record controls
-      // were the one place on a card that did not look like the rest of it.
-      // The colour is the same one the chip below turns into once the
-      // recording exists, so a glance already says whose it will be.
-      const button = (kind, caption) => {
-        const active = recordingKind === kind;
-        // Recording "own" hides the native button outright rather than
-        // disabling it (and the reverse): a disabled "Stopp" next to a live
-        // one is exactly the confusing pair this replaces. Also while a tap
-        // is still waiting on the microphone — the other button hides then
-        // too, not only once `controller` exists.
-        if ((controller || starting) && !active) return null;
-        if (kind === "native" && !active && nativeCount >= 3) return null;
-        const recording = active && controller;
-        return el(
-          "div.record-group",
-          {},
-          el(`button.record-btn.record-btn-${kind}${recording ? ".recording" : ""}`, {
-            type: "button",
-            "aria-label": recording ? `${caption}: Aufnahme beenden` : active ? "Verbindet …" : `${caption} aufnehmen`,
-            text: recording ? "■" : "●",
-            disabled: busy || (active && starting),
-            onclick: () => (active ? (controller ? onStop() : undefined) : onStart(kind)),
-          }),
-          el("span.record-caption", { text: caption }),
-        );
-      };
-      render(
-        box,
-        sources.length
-          ? el(
-              "div.recording-chips",
-              {},
-              sources.map((s) =>
-                el(
-                  "div.recording-chip",
-                  { style: { "--rec": `var(--rec-${s.kind})` } },
-                  el(
-                    "button",
-                    { type: "button", onclick: () => say(card.word, s.file), "aria-label": `${s.label} anhören` },
-                    el("span", { text: "▶" }),
-                    el("span", { text: s.label }),
-                  ),
-                  // Only her own and native recordings carry an id: a generated
-                  // recording (#183) is not hers to delete from here.
-                  s.id
-                    ? el("button.recording-chip-remove", {
-                        type: "button",
-                        text: "×",
-                        "aria-label": `${s.label} löschen`,
-                        onclick: () => onDelete(s.id),
-                      })
-                    : null,
-                ),
-              ),
-            )
-          : null,
-        canRecord()
-          ? el(
-              "div.recording-actions",
-              {},
-              button("own", "Ihre eigene"),
-              button("native", "Muttersprachler"),
-            )
-          : null,
-        status ? el("p.recording-status", { text: status }) : null,
+    // Shared between both voices: recording into the one mic stream while
+    // the other voice's file plays back would let the recording pick up
+    // the playback, and starting a second stream mid-capture cuts the
+    // first one off (recording.js's startRecording() releases whatever
+    // stream came before it). So only one voice may be doing anything —
+    // recording or playing — at a time; the other's button just disables.
+    let activeKind = null;
+
+    function voice(kind, caption) {
+      const root = el("div.voice", { class: kind });
+      const ringFg = svgEl("circle", { class: "ring-fg", cx: 29, cy: 29, r: 23 });
+      const ring = svgEl("svg", { class: "voice-ring", viewBox: "0 0 58 58" });
+      ring.append(svgEl("circle", { class: "ring-bg", cx: 29, cy: 29, r: 23 }), ringFg);
+      const btn = el("button.voice-btn", { type: "button", onclick: onTap });
+      const del = el("button.voice-delete", {
+        type: "button",
+        text: "×",
+        "aria-label": `${caption} löschen`,
+        onclick: () => {
+          confirm.hidden = false;
+        },
+      });
+      const captionEl = el("span.voice-caption", { text: caption });
+      const statusEl = el("span.voice-status");
+      const confirm = el(
+        "div.voice-confirm",
+        { hidden: true },
+        el("button.yes", { type: "button", text: "Wirklich löschen", onclick: onConfirmYes }),
+        el("button.no", {
+          type: "button",
+          text: "Abbrechen",
+          onclick: () => {
+            confirm.hidden = true;
+          },
+        }),
       );
-    };
+      root.append(el("div.voice-dial", {}, ring, btn, del), captionEl, statusEl, confirm);
 
-    async function onStart(kind) {
-      if (controller || starting) return;
-      starting = true;
-      recordingKind = kind;
-      draw(null);
-      try {
-        controller = await startRecording();
-        starting = false;
-        draw("Aufnahme läuft …");
-      } catch (err) {
-        starting = false;
-        recordingKind = null;
-        draw(`Mikrofon nicht verfügbar: ${err.name ?? err.message}`);
+      let controller = null;
+      let starting = false;
+      // empty | recording | uploading | filled | playing | deleting
+      let state = sourcesFor(card)[kind] ? "filled" : "empty";
+
+      function paint() {
+        const disabledBySibling = activeKind && activeKind !== kind;
+        const iconState = state === "recording" ? "recording" : state === "filled" || state === "playing" ? "filled" : "empty";
+        btn.disabled = disabledBySibling || starting || state === "uploading" || state === "deleting";
+        btn.classList.toggle("recording", iconState === "recording");
+        btn.classList.toggle("filled", iconState === "filled");
+        btn.textContent = iconState === "recording" ? "■" : iconState === "filled" ? "♪" : "●";
+        btn.setAttribute(
+          "aria-label",
+          iconState === "recording" ? `${caption}: Aufnahme beenden` : iconState === "filled" ? `${caption}, abspielen` : `${caption} aufnehmen`,
+        );
+        del.hidden = iconState !== "filled" || state === "recording" || state === "playing";
+        ringFg.classList.toggle("recording", state === "recording");
+        ringFg.classList.toggle("playing", state === "playing");
+        if (state !== "recording" && state !== "playing") ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE);
       }
+
+      function setStatus(text) {
+        statusEl.textContent = text ?? "";
+      }
+
+      function onTap() {
+        if (state === "empty") return onStart();
+        if (state === "recording") return onStop();
+        // filled or already playing — a second tap restarts it from the
+        // beginning, the same as every other ♪ in the app.
+        if (state === "filled" || state === "playing") return onPlay();
+      }
+
+      async function onStart() {
+        if (activeKind || starting) return;
+        if (!canRecord()) {
+          setStatus("Aufnahme wird von diesem Browser nicht unterstützt.");
+          return;
+        }
+        starting = true;
+        activeKind = kind;
+        paint();
+        try {
+          controller = await startRecording();
+          starting = false;
+          state = "recording";
+          paint();
+        } catch (err) {
+          starting = false;
+          activeKind = null;
+          setStatus(`Mikrofon nicht verfügbar: ${err.name ?? err.message}`);
+          paint();
+        }
+      }
+
+      async function onStop() {
+        state = "uploading";
+        setStatus("wird hochgeladen …");
+        paint();
+        try {
+          const blob = await controller.stop();
+          controller = null;
+          activeKind = null;
+          const id = uuid();
+          const { recording } = await api.addRecording(card.id, kind, id, blob);
+          if (!recordings.has(card.id)) recordings.set(card.id, []);
+          if (recording) recordings.get(card.id).push({ ...recording, card_id: card.id });
+          setStatus(null);
+          state = "filled";
+          paint();
+        } catch (err) {
+          controller = null;
+          activeKind = null;
+          setStatus(err?.body?.error === `${kind}_limit` ? "Da ist schon eine Aufnahme." : "Konnte die Aufnahme nicht speichern.");
+          state = sourcesFor(card)[kind] ? "filled" : "empty";
+          paint();
+        }
+      }
+
+      function onPlay() {
+        const rec = sourcesFor(card)[kind];
+        if (!rec) return;
+        activeKind = kind;
+        state = "playing";
+        ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE); // restart from empty, even mid-play
+        paint();
+        playTracked(rec.file, {
+          onProgress: (p) => {
+            ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE - RING_CIRCUMFERENCE * p);
+          },
+          onEnded: () => {
+            activeKind = null;
+            state = "filled";
+            paint();
+          },
+        });
+      }
+
+      async function onConfirmYes() {
+        confirm.hidden = true;
+        const rec = sourcesFor(card)[kind];
+        if (!rec) return;
+        state = "deleting";
+        setStatus("wird gelöscht …");
+        paint();
+        try {
+          await api.deleteRecording(card.id, rec.id);
+          const list = recordings.get(card.id) ?? [];
+          recordings.set(card.id, list.filter((r) => r.id !== rec.id));
+        } catch {
+          // Left in place: a failed delete is not silently pretended to have worked.
+        }
+        setStatus(null);
+        state = sourcesFor(card)[kind] ? "filled" : "empty";
+        paint();
+      }
+
+      paint();
+      return root;
     }
 
-    async function onStop() {
-      const kind = recordingKind;
-      busy = true;
-      draw("wird hochgeladen …");
-      try {
-        const blob = await controller.stop();
-        controller = null;
-        recordingKind = null;
-        const id = uuid();
-        const { recording } = await api.addRecording(card.id, kind, id, blob);
-        if (!recordings.has(card.id)) recordings.set(card.id, []);
-        if (recording) recordings.get(card.id).push({ ...recording, card_id: card.id });
-        busy = false;
-        draw(null);
-      } catch (err) {
-        controller = null;
-        recordingKind = null;
-        busy = false;
-        draw(err?.body?.error === "native_limit" ? "Schon drei Muttersprachler-Aufnahmen." : "Konnte die Aufnahme nicht speichern.");
-      }
-    }
-
-    async function onDelete(id) {
-      draw("wird gelöscht …");
-      try {
-        await api.deleteRecording(card.id, id);
-        const list = recordings.get(card.id) ?? [];
-        recordings.set(card.id, list.filter((r) => r.id !== id));
-      } catch {
-        // Left in place: a failed delete is not silently pretended to have worked.
-      }
-      draw(null);
-    }
-
-    draw(null);
+    box.append(voice("own", "Ihre eigene"), voice("native", "Muttersprachler"));
     return box;
   }
 
