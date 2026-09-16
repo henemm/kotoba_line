@@ -1878,10 +1878,14 @@
 /* Always visible once a recording exists, never behind a long press — that
    does not exist anywhere else in this app and is not reliable on a phone
    browser to begin with (Henning, 2026-09-16). Asks before it deletes. */
+/* -10px, not -2px: the ring (.voice-ring, positioned separately) already
+   overhangs the 44px button by 7px on every side, so a badge placed only
+   2px past the button's own edge lands inside the ring's circle, not
+   outside it — measured on the deployed v108, screenshot, 2026-09-16. */
 .voice-delete {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -10px;
+  right: -10px;
   width: 20px;
   height: 20px;
   border-radius: 50%;

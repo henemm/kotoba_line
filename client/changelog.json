@@ -1,5 +1,12 @@
 [
   {
+    "version": "v110",
+    "summary": "Das × saß mitten im Ring statt klar außerhalb.",
+    "notes": [
+      "Der Ring um den Aufnahme-Kreis ragt etwas über den Knopf hinaus, und das × zum Löschen saß nur knapp daneben – mitten im Ring statt sauber außerhalb, wie vorher die kleine Zahl. Jetzt sitzt es weiter draußen."
+    ]
+  },
+  {
     "version": "v109",
     "summary": "Fix von eben: das × und die Löschen-Rückfrage waren immer sichtbar.",
     "notes": [
