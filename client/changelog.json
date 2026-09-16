@@ -1,5 +1,12 @@
 [
   {
+    "version": "v107",
+    "summary": "Aufnahme jetzt auch bei „Japanisch tippen“ — die letzte Übungsart.",
+    "notes": [
+      "Nachdem du das Wort getippt (oder dir die Antwort gezeigt) hast, kannst du dich jetzt auch dort aufnehmen und mit deiner eigenen oder einer Muttersprachler-Aufnahme vergleichen. Damit gibt es die Aufnahme-Funktion jetzt bei allen fünf Übungsarten."
+    ]
+  },
+  {
     "version": "v106",
     "summary": "Aufnahme jetzt auch bei „Bedeutung wählen“ und „Nur hören“.",
     "notes": [
