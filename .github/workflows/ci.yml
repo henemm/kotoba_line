@@ -25,6 +25,12 @@ jobs:
 
       - run: npm ci
 
+      # #183 follow-up: recordings.test.js encodes a real upload through
+      # ffmpeg (server/src/audio-encode.js) rather than stubbing it, on
+      # purpose — that test is what caught the missing binary in the API
+      # image before Henning did. ubuntu-latest does not ship it.
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Test
         run: npm test
 
