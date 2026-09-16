@@ -11,6 +11,7 @@ import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
+import { canRecord, startRecording } from "../recording.js";
 
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
@@ -143,6 +144,9 @@ export function sessionScreen({
   // Card ids she has starred, for the ★ in the chrome (#35). Comes down with
   // the queue, because the cached deck is public and cannot carry it.
   let starred = new Set();
+  // Her own and a native speaker's recordings (#183 follow-up), by card id —
+  // the same reasoning as starred: per-user, comes down with the queue.
+  let recordings = new Map();
 
   begin();
 
@@ -179,6 +183,11 @@ export function sessionScreen({
       pool = [...deck.values()];
       intervals = q.intervals ?? {};
       starred = new Set(q.starred ?? []);
+      recordings = new Map();
+      for (const r of q.recordings ?? []) {
+        if (!recordings.has(r.card_id)) recordings.set(r.card_id, []);
+        recordings.get(r.card_id).push(r);
+      }
       const ids = resuming?.cardIds ?? q.cardIds;
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
@@ -1192,6 +1201,132 @@ export function sessionScreen({
   }
 
   /**
+   * The three possible voices for a card's pronunciation (#183 follow-up),
+   * in a fixed order: her own latest attempt, a generated recording if the
+   * card's own audio is one (#183 named `kana-generated-`/`example-generated-`
+   * so this can tell — an ordinary human recording is not part of this row,
+   * it already has its own ♪), then up to three native speakers'.
+   */
+  function sourcesFor(card) {
+    const own = (recordings.get(card.id) ?? []).filter((r) => r.kind === "own");
+    const native = (recordings.get(card.id) ?? []).filter((r) => r.kind === "native");
+    const sources = [];
+    if (own.length) {
+      const latest = own[own.length - 1];
+      sources.push({ kind: "own", label: "Ihre eigene", file: latest.file, id: latest.id });
+    }
+    if (card.word_audio && /^(kana|example)-generated-/.test(card.word_audio)) {
+      sources.push({ kind: "synth", label: "Synthetisch", file: card.word_audio });
+    }
+    native.forEach((r, i) => sources.push({ kind: "native", label: `Muttersprachler${native.length > 1 ? ` ${i + 1}` : ""}`, file: r.file, id: r.id }));
+    return sources;
+  }
+
+  /**
+   * The recording controls and the colour-coded comparison row (#183
+   * follow-up, design discussion 2026-09-16). Only where a card is in her
+   * own deck (`revealFlip`'s meaningFirst branch) — that is where a word can
+   * have no pronunciation at all today, romaji with nothing to check it
+   * against. Manages its own re-renders, the same way `microphoneTest()` in
+   * settings.js does, so recording one card does not re-run the whole flip.
+   */
+  function recordingBlock(card) {
+    const box = el("div.recording-block");
+    let controller = null;
+    let busy = false;
+
+    const draw = (status) => {
+      const sources = sourcesFor(card);
+      const nativeCount = sources.filter((s) => s.kind === "native").length;
+      render(
+        box,
+        sources.length
+          ? el(
+              "div.recording-chips",
+              {},
+              sources.map((s) =>
+                el(
+                  "div.recording-chip",
+                  { style: { "--rec": `var(--rec-${s.kind})` } },
+                  el(
+                    "button",
+                    { type: "button", onclick: () => say(card.word, s.file), "aria-label": `${s.label} anhören` },
+                    el("span", { text: "▶" }),
+                    el("span", { text: s.label }),
+                  ),
+                  // Only her own and native recordings carry an id: a generated
+                  // recording (#183) is not hers to delete from here.
+                  s.id
+                    ? el("button.recording-chip-remove", {
+                        type: "button",
+                        text: "×",
+                        "aria-label": `${s.label} löschen`,
+                        onclick: () => onDelete(s.id),
+                      })
+                    : null,
+                ),
+              ),
+            )
+          : null,
+        canRecord()
+          ? el(
+              "div.recording-actions",
+              {},
+              el("button.btn.small.ghost", { type: "button", text: controller ? "Stopp" : "Ihre Aussprache aufnehmen", disabled: busy, onclick: () => onTap("own") }),
+              nativeCount < 3
+                ? el("button.btn.small.ghost", { type: "button", text: controller ? "Stopp" : "Muttersprachler aufnehmen", disabled: busy, onclick: () => onTap("native") })
+                : null,
+            )
+          : null,
+        status ? el("p.recording-status", { text: status }) : null,
+      );
+    };
+
+    async function onTap(kind) {
+      if (controller) {
+        busy = true;
+        draw("wird hochgeladen …");
+        try {
+          const blob = await controller.stop();
+          controller = null;
+          const id = uuid();
+          const { recording } = await api.addRecording(card.id, kind, id, blob);
+          if (!recordings.has(card.id)) recordings.set(card.id, []);
+          if (recording) recordings.get(card.id).push({ ...recording, card_id: card.id });
+          busy = false;
+          draw(null);
+        } catch (err) {
+          controller = null;
+          busy = false;
+          draw(err?.body?.error === "native_limit" ? "Schon drei Muttersprachler-Aufnahmen." : "Konnte die Aufnahme nicht speichern.");
+        }
+        return;
+      }
+      try {
+        controller = await startRecording();
+        draw("Aufnahme läuft …");
+      } catch (err) {
+        draw(`Mikrofon nicht verfügbar: ${err.name ?? err.message}`);
+      }
+    }
+
+    async function onDelete(id) {
+      draw("wird gelöscht …");
+      try {
+        await api.deleteRecording(card.id, id);
+        const list = recordings.get(card.id) ?? [];
+        recordings.set(card.id, list.filter((r) => r.id !== id));
+      } catch {
+        // Left in place: a failed delete is not silently pretended to have worked.
+      }
+      draw(null);
+    }
+
+    draw(null);
+    return box;
+  }
+
+  /**
    * The rule between a card's front and its answer (#150). Drawn only where
    * the card is a surface of its own — an iPad, like Noji — and `display:
    * none` on the phone, where it takes no space and no gap.
@@ -1238,6 +1373,7 @@ export function sessionScreen({
         ),
         reading(card.word_furigana || card.word_reading, card.word, card),
         romajiLine(card),
+        recordingBlock(card),
         revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );

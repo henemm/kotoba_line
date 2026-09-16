@@ -1770,6 +1770,72 @@
   }
 }
 
+/* Her own, synthetic and native-speaker recordings (#183 follow-up):
+   colour-coded chips to compare, plus the two record buttons. Only on a
+   card in her own deck (revealFlip's meaningFirst branch). */
+.recording-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.recording-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.recording-chip {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--rec);
+  border-radius: 999px;
+  padding-left: 10px;
+  overflow: hidden;
+}
+.recording-chip button:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--rec);
+  font: 500 13px/1 var(--ui);
+  padding: 6px 4px 6px 0;
+}
+.recording-chip:active {
+  background: color-mix(in srgb, var(--rec) 16%, transparent);
+}
+.recording-chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font: 500 13px/1 var(--ui);
+  padding: 6px 10px 6px 4px;
+}
+.recording-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.recording-actions .btn {
+  font: 500 13px/1 var(--ui);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+}
+.recording-actions .btn.ghost {
+  background: var(--surface-hi);
+  color: var(--ink);
+}
+.recording-actions .btn:disabled {
+  opacity: 0.5;
+}
+.recording-status {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
 /* On a revealed card the speaker sits beside the thing it plays rather than
    under it, so it stays clear of the reading she is there to check. 44px is a
    comfortable target on a phone without competing with the word, which at

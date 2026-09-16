@@ -1,5 +1,12 @@
 [
   {
+    "version": "v96",
+    "summary": "Bei deinen eigenen Karten: Aussprache aufnehmen.",
+    "notes": [
+      "Beim Umdrehen einer eigenen Karte kannst du jetzt deine Aussprache aufnehmen – oder, wenn du mit jemandem gemeinsam übst, die richtige Aussprache direkt aufnehmen lassen (bis zu drei Personen pro Karte). Alle Aufnahmen lassen sich einzeln abspielen und wieder löschen."
+    ]
+  },
+  {
     "version": "v95",
     "summary": "Einstellungen → Diagnose kann jetzt das Mikrofon testen.",
     "notes": [
