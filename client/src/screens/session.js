@@ -1261,7 +1261,12 @@ export function sessionScreen({
     const draw = (status) => {
       const sources = sourcesFor(card);
       const nativeCount = sources.filter((s) => s.kind === "native").length;
-      const button = (kind, label) => {
+      // A round icon button in the same family as ♪ (`.speaker`), not a
+      // rectangular text button — Henning, 2026-09-16: the record controls
+      // were the one place on a card that did not look like the rest of it.
+      // The colour is the same one the chip below turns into once the
+      // recording exists, so a glance already says whose it will be.
+      const button = (kind, caption) => {
         const active = recordingKind === kind;
         // Recording "own" hides the native button outright rather than
         // disabling it (and the reverse): a disabled "Stopp" next to a live
@@ -1270,12 +1275,19 @@ export function sessionScreen({
         // too, not only once `controller` exists.
         if ((controller || starting) && !active) return null;
         if (kind === "native" && !active && nativeCount >= 3) return null;
-        return el("button.btn.small.ghost", {
-          type: "button",
-          text: active ? (controller ? "Stopp" : "Verbindet …") : label,
-          disabled: busy || (active && starting),
-          onclick: () => (active ? (controller ? onStop() : undefined) : onStart(kind)),
-        });
+        const recording = active && controller;
+        return el(
+          "div.record-group",
+          {},
+          el(`button.record-btn.record-btn-${kind}${recording ? ".recording" : ""}`, {
+            type: "button",
+            "aria-label": recording ? `${caption}: Aufnahme beenden` : active ? "Verbindet …" : `${caption} aufnehmen`,
+            text: recording ? "■" : "●",
+            disabled: busy || (active && starting),
+            onclick: () => (active ? (controller ? onStop() : undefined) : onStart(kind)),
+          }),
+          el("span.record-caption", { text: caption }),
+        );
       };
       render(
         box,
@@ -1311,8 +1323,8 @@ export function sessionScreen({
           ? el(
               "div.recording-actions",
               {},
-              button("own", "Ihre Aussprache aufnehmen"),
-              button("native", "Muttersprachler aufnehmen"),
+              button("own", "Ihre eigene"),
+              button("native", "Muttersprachler"),
             )
           : null,
         status ? el("p.recording-status", { text: status }) : null,

@@ -1,5 +1,12 @@
 [
   {
+    "version": "v102",
+    "summary": "Die Aufnahme-Knöpfe sehen jetzt so aus wie der Rest der App.",
+    "notes": [
+      "Statt zweier rechteckiger Knöpfe gibt es jetzt runde Aufnahme-Knöpfe, im selben Stil wie der Noten-Knopf zum Abspielen – einer für deine eigene Aussprache, einer für einen Muttersprachler, jeweils in der Farbe, die die Aufnahme danach auch als Chip trägt."
+    ]
+  },
+  {
     "version": "v101",
     "summary": "Aussprache aufnehmen geht jetzt bei jeder Karte, nicht nur bei deinen eigenen.",
     "notes": [
