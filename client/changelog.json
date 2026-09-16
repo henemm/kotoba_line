@@ -1,5 +1,12 @@
 [
   {
+    "version": "v92",
+    "summary": "きゃ, きゅ, きょ und Co. klingen jetzt gleichmäßiger.",
+    "notes": [
+      "Die 33 Kana mit ゃ/ゅ/ょ (きゃ, しゅ, ちょ …) wurden bisher live von der Handystimme vorgelesen. Jetzt spielt die App eine vorab erstellte Aufnahme ab – wie bei den anderen Kana."
+    ]
+  },
+  {
     "version": "v91",
     "summary": "Tippe auf ein Merkbild, dann wird es groß.",
     "notes": [

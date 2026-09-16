@@ -8,8 +8,9 @@
  * and found them human. Each says its kana three times, about a second apart,
  * and they are kept that way — Henning: "die Wiederholungen sehr sinnvoll".
  *
- * Not here: the 33 yōon (きゃ …). No free human recording of them exists, so
- * the phone's voice reads them and the card says so (47).
+ * Not here: the 33 yōon (きゃ …), which have a generated recording instead
+ * (#183, `lib/kana-yoon-sounds.js` says why that is defensible for these and
+ * not for a whole word).
  *
  * Each row: the hiragana, the Commons file, the sha1 Commons reports for
  * that original, and the gain steps (×1.5 dB, lib/mp3gain.js) it gets.
@@ -33,6 +34,9 @@
  * tied to the transcode's bytes: Wikimedia may re-encode it, and the level of
  * the same recording stays the same.
  */
+
+import { toHiragana } from "./kana.js";
+import { yoonSoundFile } from "./kana-yoon-sounds.js";
 
 export const COMMONS_UPLOADER = "Hakatanoshio117117";
 
@@ -114,10 +118,6 @@ export const KANA_SOUNDS = ROWS.map(([kana, commons, sha1, steps]) => ({ kana, c
 
 const recorded = new Set(ROWS.map(([kana]) => kana));
 
-/** Hiragana for a kana of either script: the katakana block sits 0x60 above. */
-const toHiragana = (text) =>
-  [...text].map((c) => (c >= "ァ" && c <= "ヶ" ? String.fromCodePoint(c.codePointAt(0) - 0x60) : c)).join("");
-
 /**
  * Where a sound's recording is written: the hiragana's code point, like the
  * drawings (`kanjivg-03042.svg`), so あ and ア share `kana-03042.mp3`. Not the
@@ -126,8 +126,8 @@ const toHiragana = (text) =>
  */
 export const soundMediaName = (kana) => `kana-${toHiragana(kana).codePointAt(0).toString(16).padStart(5, "0")}.mp3`;
 
-/** A kana card's recording, or null for a sound with none (the yōon). */
+/** A kana card's recording: a person's (71 sounds) or a generated one (the 33 yōon, #183). */
 export function kanaSoundFile(kana) {
   const hiragana = toHiragana(kana);
-  return recorded.has(hiragana) ? soundMediaName(hiragana) : null;
+  return recorded.has(hiragana) ? soundMediaName(hiragana) : yoonSoundFile(kana);
 }

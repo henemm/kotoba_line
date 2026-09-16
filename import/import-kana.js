@@ -8,6 +8,7 @@
  *   npm run import-kana -- --no-strokes      # no stroke-order drawings
  *   npm run import-kana -- --no-examples     # keep the example words as they are
  *   npm run import-kana -- --no-sounds       # keep the kana recordings as they are
+ *   npm run import-kana -- --voicevox http://127.0.0.1:50021   # only if the 33 yōon files are missing
  *
  * Re-runnable. A card's id comes from its characters (lib/kana.js), so a
  * second run finds the same rows, and only a row whose content changed gets a
@@ -26,7 +27,11 @@
  * pinned by the original's sha1 and brought to one loudness on the way in
  * (lib/kana-sounds.js). They are written before the cards, so a card never
  * points at a recording that is not on disk. So are the example words'
- * recordings from Lingua Libre and Tofugu (v87, lib/example-sounds.js).
+ * recordings from Lingua Libre and Tofugu (v87, lib/example-sounds.js), and
+ * the 33 yōon — generated through a local VOICEVOX rather than downloaded
+ * (v92, #183, lib/kana-yoon-sounds.js says why a generated recording is
+ * defensible for these and only these). A file already on disk is left
+ * alone here too, so VOICEVOX only has to be running for the first import.
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -36,8 +41,11 @@ import { kanaReading } from "../client/src/screens/session.js";
 import { EXAMPLE_SOUNDS, TOFUGU_COMMIT, exampleSoundName } from "./lib/example-sounds.js";
 import { MNEMONICS, mnemonicAssetName, mnemonicFor, mnemonicMediaName } from "./lib/kana-mnemonics.js";
 import { makeMeaningLookup, parseJlptCsv, pickExamples } from "./lib/examples.js";
-import { kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
+import { YOON, kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
 import { COMMONS_UPLOADER, KANA_SOUNDS, kanaSoundFile, soundMediaName } from "./lib/kana-sounds.js";
+import { yoonAudioQuery, yoonSoundMediaName, yoonSynthesize } from "./lib/kana-yoon-sounds.js";
+import { encodeMp3 } from "./lib/encode-mp3.js";
+import { activeLevel, gainSteps, parseWav } from "./lib/wav-level.js";
 import { withGain } from "./lib/mp3gain.js";
 import { readCentralDirectory, readEntry } from "./lib/zip.js";
 
@@ -224,6 +232,35 @@ async function writeSounds(mediaDir) {
   return { written: missing.length, kept: KANA_SOUNDS.length - missing.length };
 }
 
+/**
+ * The 33 yōon (#183): generated once through a local VOICEVOX
+ * (docker run -p 127.0.0.1:50021:50021 voicevox/voicevox_engine:cpu-ubuntu20.04-latest),
+ * levelled to the same target as the Commons recordings, and then left
+ * alone, exactly like `writeSounds` above. Skips VOICEVOX entirely once all
+ * 33 files exist, so an ordinary re-import needs no container running.
+ */
+async function writeYoonSounds(mediaDir, voicevoxUrl) {
+  mkdirSync(mediaDir, { recursive: true });
+  const missing = YOON.filter(([kana]) => !existsSync(join(mediaDir, yoonSoundMediaName(kana))));
+  for (const [kana] of missing) {
+    let wav;
+    try {
+      const query = await yoonAudioQuery(kana, voicevoxUrl);
+      wav = await yoonSynthesize(query, voicevoxUrl);
+    } catch (err) {
+      throw new Error(
+        `VOICEVOX at ${voicevoxUrl} is unreachable, needed for ${kana}. Start it with ` +
+          `'docker run -d --rm -p 127.0.0.1:50021:50021 voicevox/voicevox_engine:cpu-ubuntu20.04-latest' ` +
+          `and retry, or pass --voicevox. (${err.message})`,
+      );
+    }
+    const steps = gainSteps(activeLevel(parseWav(wav)));
+    const mp3 = withGain(await encodeMp3(wav), steps);
+    writeFileSync(join(mediaDir, yoonSoundMediaName(kana)), mp3);
+  }
+  return { written: missing.length, kept: YOON.length - missing.length };
+}
+
 /** Git's object id for a file's content — what a GitHub tree lists for it. */
 const gitBlobSha = (buf) => createHash("sha1").update(`blob ${buf.length}\0`).update(buf).digest("hex");
 
@@ -354,6 +391,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const { written, kept } = await writeSounds(mediaDir);
     sounds = true;
     process.stdout.write(`Kana recordings (Wikimedia Commons): ${written} written, ${kept} already there, in ${mediaDir}\n`);
+    const voicevoxUrl = args.voicevox ?? process.env.VOICEVOX_URL ?? "http://127.0.0.1:50021";
+    const yoon = await writeYoonSounds(mediaDir, voicevoxUrl);
+    process.stdout.write(`Yōon recordings (VOICEVOX:No.7, generated): ${yoon.written} written, ${yoon.kept} already there, in ${mediaDir}\n`);
   }
   let mnemonics = false;
   if (args["no-mnemonics"]) {

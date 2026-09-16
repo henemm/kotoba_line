@@ -43,7 +43,7 @@ const DAKUTEN = [
   ["ぱ", "pa"], ["ぴ", "pi"], ["ぷ", "pu"], ["ぺ", "pe"], ["ぽ", "po"],
 ];
 
-const YOON = [
+export const YOON = [
   ["きゃ", "kya"], ["きゅ", "kyu"], ["きょ", "kyo"],
   ["しゃ", "sha"], ["しゅ", "shu"], ["しょ", "sho"],
   ["ちゃ", "cha"], ["ちゅ", "chu"], ["ちょ", "cho"],
@@ -60,6 +60,10 @@ const YOON = [
 /** Hiragana to katakana: the two blocks sit 0x60 apart, character for character. */
 export const toKatakana = (text) =>
   [...text].map((c) => String.fromCodePoint(c.codePointAt(0) + 0x60)).join("");
+
+/** Katakana to hiragana, character for character; a hiragana input is unchanged. */
+export const toHiragana = (text) =>
+  [...text].map((c) => (c >= "ァ" && c <= "ヶ" ? String.fromCodePoint(c.codePointAt(0) - 0x60) : c)).join("");
 
 /**
  * A kana card's id, from its characters (#158; rule 4 in CLAUDE.md).

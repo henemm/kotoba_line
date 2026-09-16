@@ -4,6 +4,7 @@ import { openDatabase } from "../../server/src/db.js";
 import { strokeMediaName, writeKanaCards } from "../import-kana.js";
 import { kanaCards, kanaId, strokeCharacters, strokeFile, toKatakana } from "../lib/kana.js";
 import { KANA_SOUNDS, kanaSoundFile, soundMediaName } from "../lib/kana-sounds.js";
+import { yoonSoundFile, yoonSoundMediaName } from "../lib/kana-yoon-sounds.js";
 import { toRomaji } from "../../client/src/romaji.js";
 
 describe("the kana decks (#158)", () => {
@@ -90,23 +91,32 @@ describe("the kana's own recordings (v84)", () => {
     assert.equal(kanaSoundFile("ぢ"), "kana-03062.mp3");
     assert.notEqual(kanaSoundFile("ぢ"), kanaSoundFile("じ"));
     assert.equal(kanaSoundFile("ヲ"), "kana-03092.mp3");
-    assert.equal(kanaSoundFile("きゃ"), null);
-    assert.equal(kanaSoundFile("キャ"), null);
     assert.equal(soundMediaName("ン"), "kana-03093.mp3");
   });
 
-  it("writes the recording onto 142 cards, and a second run changes nothing", () => {
+  it("falls back to a yōon's generated recording, hiragana and katakana sharing one file (#183)", () => {
+    assert.equal(kanaSoundFile("きゃ"), yoonSoundMediaName("きゃ"));
+    assert.equal(kanaSoundFile("キャ"), yoonSoundFile("きゃ"));
+    assert.equal(kanaSoundFile("きゃ"), kanaSoundFile("キャ"));
+    assert.notEqual(kanaSoundFile("きゃ"), kanaSoundFile("きゅ"));
+  });
+
+  it("writes the recording onto 208 cards, and a second run changes nothing", () => {
     const db = openDatabase(":memory:");
     writeKanaCards(db, 1000);
     const withSound = () =>
       db.prepare("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND word_audio IS NOT NULL").get().n;
     assert.equal(withSound(), 0);
-    assert.equal(writeKanaCards(db, 2000, undefined, { sounds: true }), 142);
-    assert.equal(withSound(), 142);
+    assert.equal(writeKanaCards(db, 2000, undefined, { sounds: true }), 208);
+    assert.equal(withSound(), 208);
     assert.equal(db.prepare("SELECT word_audio FROM cards WHERE id = ?").get(kanaId("ア")).word_audio, "kana-03042.mp3");
+    assert.equal(
+      db.prepare("SELECT word_audio FROM cards WHERE id = ?").get(kanaId("キャ")).word_audio,
+      yoonSoundMediaName("きゃ"),
+    );
     assert.equal(writeKanaCards(db, 3000, undefined, { sounds: true }), 0);
     assert.equal(writeKanaCards(db, 4000), 0, "--no-sounds leaves them where they are");
-    assert.equal(withSound(), 142);
+    assert.equal(withSound(), 208);
     db.close();
   });
 });
