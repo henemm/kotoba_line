@@ -1,5 +1,12 @@
 [
   {
+    "version": "v95",
+    "summary": "Einstellungen → Diagnose kann jetzt das Mikrofon testen.",
+    "notes": [
+      "Ein neuer Test unter Einstellungen → Diagnose nimmt kurz etwas auf und spielt es sofort wieder ab – nichts wird verschickt. Vorbereitung für eine Aufnahme-Funktion, die noch nicht fertig ist."
+    ]
+  },
+  {
     "version": "v94",
     "summary": "Vorbereitung für eine neue Funktion (noch nicht sichtbar).",
     "notes": [

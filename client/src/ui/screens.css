@@ -2893,6 +2893,25 @@
   justify-content: space-between;
   gap: 16px;
 }
+.mic-test-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+.mic-test-row .btn.small {
+  font: 500 12px/1 var(--ui);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--rec-own);
+  color: var(--night);
+}
+.mic-test-row audio {
+  height: 28px;
+  flex: 1;
+  min-width: 0;
+}
 
 /* iPad (26): the same column, centred, type up about 15%. */
 @media (min-width: 700px) {
