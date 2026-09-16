@@ -244,6 +244,14 @@ app does that and does not tell her she has finished for today.
 The daily new-card limit applies to unfiltered sessions only. A deliberately
 chosen session is never capped.
 
+**And the way out is where she runs into the wall** (v89, #179). Charlotte,
+2026-09-16: "Ich hätte auch gerne das ich weiter lernen kann wenn ich möchte
+und nicht erst morgen um 11:30". So a deck page with nothing due offers "Mehr
+neue Zeichen" / "Mehr neue Wörter" beside Vorausüben and Letzte Fehler, with
+the number of cards in that deck she has never seen (`outlook.fresh`). It
+starts the `only=new` session above. The limit still paces an ordinary day; it
+is no longer a full stop.
+
 ---
 
 ## 6. Scheduling

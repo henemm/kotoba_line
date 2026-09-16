@@ -307,7 +307,31 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
 
   it("has no next due card for someone who has never reviewed", async () => {
     const { app, db, user } = await fixture();
-    assert.deepEqual(outlookForUser(db, user.id, NOW), { ahead: 0, lapsed: 0, nextDue: null });
+    const o = outlookForUser(db, user.id, NOW);
+    assert.equal(o.ahead, 0);
+    assert.equal(o.lapsed, 0);
+    assert.equal(o.nextDue, null);
+    // #179: everything is unseen, so there is always more to learn.
+    assert.ok(o.fresh > 0);
+    await app.close();
+  });
+
+  it("offers the cards she has never seen, past the day's allowance (#179)", async () => {
+    const { app, db, user } = await fixture();
+    // The day's new cards are used up, and nothing is due.
+    db.prepare("UPDATE user_settings SET new_per_day = 5 WHERE user_id = ?").run(user.id);
+    for (let card = 1; card <= 5; card++) {
+      db.prepare(
+        "INSERT INTO review_events (id, user_id, card_id, mode, rating, reviewed_at, received_at) VALUES (?, ?, ?, 'flip', 3, ?, ?)",
+      ).run(`e${card}`, user.id, card, NOW - 60, NOW - 60);
+      setState(db, user.id, card, { dueAt: NOW + 10 * DAY });
+    }
+
+    const o = outlookForUser(db, user.id, NOW);
+    assert.equal(o.ahead, 0, "nothing due within two days");
+    assert.ok(o.fresh > 0, "but unseen cards are still offered");
+    // Within one deck it counts that deck's own unseen cards.
+    assert.ok(outlookForUser(db, user.id, NOW, { deckKey: "kaishi" }).fresh > 0);
     await app.close();
   });
 
@@ -315,7 +339,10 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
     const { app, db, user } = await fixture();
     const yuki = await seedUser(db, { handle: "yuki", pin: "112233" });
     setState(db, yuki.id, 31, { dueAt: NOW + 3600 }); // card 31 is mira's own word
-    assert.deepEqual(outlookForUser(db, yuki.id, NOW), { ahead: 0, lapsed: 0, nextDue: null });
+    const o = outlookForUser(db, yuki.id, NOW);
+    assert.equal(o.ahead, 0);
+    assert.equal(o.lapsed, 0);
+    assert.equal(o.nextDue, null);
     await app.close();
   });
 });

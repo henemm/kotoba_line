@@ -495,6 +495,10 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
   // her lines never show.
   const ahead = queueForUser(db, userId, { deckKey, deck, list, only: "ahead", timeZone }, now).available;
   const lapsed = queueForUser(db, userId, { deckKey, deck, list, only: "lapsed", timeZone }, now).available;
+  // Cards she has never seen, past the day's allowance (#179). `only: "new"` is
+  // a set she chose, so the daily limit does not apply to it — that is what
+  // makes this an offer rather than a promise the queue would break.
+  const fresh = queueForUser(db, userId, { deckKey, deck, list, only: "new", timeZone }, now).available;
 
   const visible = visibleTo(userId);
   const scope = [];
@@ -511,7 +515,7 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
     nextDue = { count: n, at, when: whenOnClock(at, now, timeZone) };
   }
 
-  return { ahead, lapsed, nextDue };
+  return { ahead, lapsed, fresh, nextDue };
 }
 
 /**
