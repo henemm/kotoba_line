@@ -67,9 +67,15 @@ export async function addRecording(db, userId, { cardId, kind, id, audio, mediaD
     if (n >= NATIVE_LIMIT) return { ok: false, reason: "native_limit" };
   }
 
-  const file = `practice-${kind}-${id}.mp3`;
+  // Written under practice/ (config.practiceDir — its own :rw mount, #183
+  // follow-up's own commit says why), but nginx serves the whole media tree
+  // from one alias, so the client's plain media/<file> resolution needs the
+  // subdirectory *in* the name it is given — mediaUrl() (audio.js) does not
+  // know this directory exists.
+  const name = `${kind}-${id}.mp3`;
+  const file = `practice/${name}`;
   const mp3 = await encode(audio, { comment: `Recorded in the app, kind=${kind} (#183 follow-up)` });
-  await writeFile(join(mediaDir, file), mp3, { mode: 0o644 });
+  await writeFile(join(mediaDir, name), mp3, { mode: 0o644 });
 
   db.prepare(
     `INSERT INTO card_recordings (id, user_id, card_id, kind, file, recorded_at)

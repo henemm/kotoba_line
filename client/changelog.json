@@ -1,5 +1,12 @@
 [
   {
+    "version": "v97",
+    "summary": "Kleine Korrektur an der Aufnahme-Funktion von eben.",
+    "notes": [
+      "Eine gerade erst aufgenommene Aussprache wurde nicht gefunden (falscher Pfad). Behoben, bevor es dir aufgefallen wäre."
+    ]
+  },
+  {
     "version": "v96",
     "summary": "Bei deinen eigenen Karten: Aussprache aufnehmen.",
     "notes": [

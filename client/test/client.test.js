@@ -302,6 +302,12 @@ describe("where the audio lives", () => {
     assert.ok(!url.includes(" "));
     assert.equal(decodeURIComponent(url), "/kotoba/media/私_ワタシ━_0_NHK-2016.mp3");
   });
+
+  it("keeps a recording's practice/ subdirectory as a path, not an escaped slash (#183 follow-up)", () => {
+    const url = mediaUrl("practice/own-11112222-3333-4444-5555-666677778888.mp3", "https://host/kotoba/");
+    assert.equal(url, "/kotoba/media/practice/own-11112222-3333-4444-5555-666677778888.mp3");
+    assert.ok(!url.includes("%2F"));
+  });
 });
 
 describe("the diagnostics clock", () => {

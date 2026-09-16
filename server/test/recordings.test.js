@@ -50,8 +50,11 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     const result = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("a"), audio: wav(), mediaDir, encode: stubEncode });
 
     assert.equal(result.ok, true);
-    assert.match(result.recording.file, /^practice-own-9f8e7d6c-5b4a-4321-8765-00000000000a\.mp3$/);
-    assert.deepEqual(readFileSync(join(mediaDir, result.recording.file)), wav());
+    // "practice/" the way mediaUrl() (client/src/audio.js) needs it — the
+    // actual file is written directly in mediaDir, which *is* practice/ here
+    // (config.practiceDir), not a second nested one.
+    assert.match(result.recording.file, /^practice\/own-9f8e7d6c-5b4a-4321-8765-00000000000a\.mp3$/);
+    assert.deepEqual(readFileSync(join(mediaDir, "own-9f8e7d6c-5b4a-4321-8765-00000000000a.mp3")), wav());
   });
 
   it("refuses a card she cannot see", async () => {
@@ -148,8 +151,8 @@ describe("POST /api/cards/:cardId/recordings", () => {
 
     assert.equal(res.statusCode, 201, res.body);
     const { recording } = res.json();
-    assert.match(recording.file, /^practice-own-.*\.mp3$/);
-    const bytes = readFileSync(join(config.practiceDir, recording.file));
+    assert.match(recording.file, /^practice\/own-.*\.mp3$/);
+    const bytes = readFileSync(join(config.practiceDir, recording.file.replace(/^practice\//, "")));
     // ffmpeg writes an ID3v2 tag (the `comment` metadata) ahead of the MP3
     // frames — not the WAV bytes sent in, proof it actually ran through ffmpeg.
     assert.equal(bytes.toString("latin1", 0, 3), "ID3", "not an MP3 file — ffmpeg did not actually encode it");

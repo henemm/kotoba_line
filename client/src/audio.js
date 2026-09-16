@@ -17,7 +17,11 @@
 export function mediaUrl(file, base) {
   const docBase =
     base ?? (typeof document !== "undefined" ? document.baseURI : "http://localhost/kotoba/");
-  return new URL(`media/${encodeURIComponent(file)}`, docBase).pathname;
+  // Every name here was flat until #183 follow-up's practice/<file> — encoded
+  // whole, "/" would become %2F and 404. Each segment is still encoded, a
+  // recording's own id included.
+  const path = file.split("/").map(encodeURIComponent).join("/");
+  return new URL(`media/${path}`, docBase).pathname;
 }
 
 let unlocked = false;
