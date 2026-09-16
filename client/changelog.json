@@ -1,5 +1,12 @@
 [
   {
+    "version": "v103",
+    "summary": "Bei „Laut sagen“ kannst du dich jetzt auf beiden Seiten aufnehmen.",
+    "notes": [
+      "Vorher gab es die Aufnahme-Knöpfe bei „Laut sagen“ gar nicht. Jetzt kannst du dich schon aufnehmen, bevor du die Antwort siehst – und diese Aufnahme bleibt auch auf der Antwortseite sichtbar, zum Vergleich mit der richtigen Aussprache."
+    ]
+  },
+  {
     "version": "v102",
     "summary": "Die Aufnahme-Knöpfe sehen jetzt so aus wie der Rest der App.",
     "notes": [
