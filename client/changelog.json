@@ -1,5 +1,12 @@
 [
   {
+    "version": "v108",
+    "summary": "Die Aufnahme-Knöpfe komplett neu: runder Kreis statt Chip-Liste.",
+    "notes": [
+      "Ein Aufnahme-Knopf pro Stimme (Ihre eigene, Muttersprachler) – rot in Ruhe, rotes Quadrat während der Aufnahme, danach eine farbige Note wie überall sonst in der App. Antippen spielt ab, mit einem Ring, der sich beim Abspielen füllt. Ein × mit Rückfrage löscht eine Aufnahme, statt langem Drücken. Und: pro Stimme jetzt nur noch eine Aufnahme, neu aufnehmen ersetzt die alte."
+    ]
+  },
+  {
     "version": "v107",
     "summary": "Aufnahme jetzt auch bei „Japanisch tippen“ — die letzte Übungsart.",
     "notes": [

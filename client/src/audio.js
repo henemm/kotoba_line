@@ -114,3 +114,22 @@ export function stop() {
   }
   if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
 }
+
+/**
+ * Play one recording with progress as it goes (#185's voice circles, whose
+ * ring fills at the pace of the recording itself, not a guessed duration).
+ * Assigned to the same `current` as `say()`, so leaving the card still stops
+ * it. `onProgress` gets 0..1; `onEnded` fires once, on completion or on a
+ * failure to play (a card with no audio is ordinary elsewhere, but a voice
+ * circle only calls this once it already knows a file exists).
+ */
+export function playTracked(file, { onProgress, onEnded } = {}) {
+  stop();
+  const audio = new Audio(mediaUrl(file));
+  current = audio;
+  audio.addEventListener("timeupdate", () => {
+    if (audio.duration) onProgress?.(audio.currentTime / audio.duration);
+  });
+  audio.addEventListener("ended", () => onEnded?.());
+  audio.play().catch(() => onEnded?.());
+}

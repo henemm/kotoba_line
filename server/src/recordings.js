@@ -15,7 +15,10 @@ import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 
 export const KINDS = ["own", "native"];
-export const NATIVE_LIMIT = 3;
+/** One of each voice at most (#185, 2026-09-16: "nur ein Muttersprachler,
+ * das ist einfacher") — re-recording replaces via a delete first, on both
+ * kinds equally, not only native. */
+export const RECORDING_LIMIT = 1;
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -60,12 +63,10 @@ export async function addRecording(db, userId, { cardId, kind, id, audio, mediaD
   if (!visibleCard(db, userId, cardId)) return { ok: false, reason: "not_found" };
   if (db.prepare("SELECT 1 FROM card_recordings WHERE id = ?").get(id)) return { ok: true, already: true };
 
-  if (kind === "native") {
-    const { n } = db
-      .prepare("SELECT count(*) n FROM card_recordings WHERE user_id = ? AND card_id = ? AND kind = 'native' AND deleted_at IS NULL")
-      .get(userId, cardId);
-    if (n >= NATIVE_LIMIT) return { ok: false, reason: "native_limit" };
-  }
+  const { n } = db
+    .prepare("SELECT count(*) n FROM card_recordings WHERE user_id = ? AND card_id = ? AND kind = ? AND deleted_at IS NULL")
+    .get(userId, cardId, kind);
+  if (n >= RECORDING_LIMIT) return { ok: false, reason: `${kind}_limit` };
 
   // Written under practice/ (config.practiceDir — its own :rw mount, #183
   // follow-up's own commit says why), but nginx serves the whole media tree

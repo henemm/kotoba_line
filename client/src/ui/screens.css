@@ -1770,124 +1770,183 @@
   }
 }
 
-/* Her own, synthetic and native-speaker recordings (#183 follow-up):
-   colour-coded chips to compare, plus the two record buttons. On the
-   reveal side of every card in revealFlip, not only her own deck. */
+/* Her own and a native speaker's recording (#183 follow-up), compared
+   against the card's own pronunciation. Redesigned with Henning,
+   2026-09-16, after the first two shapes (rectangular text buttons, then
+   plain coloured circles) both turned out not to be what he meant — this
+   round went through an artifact mockup he could tap through before
+   anything shipped. On the reveal side of every card in revealFlip, not
+   only her own deck (and both sides of 話す/めくる, and 選ぶ/聞く/書く).
+
+   One recording per voice: re-recording replaces via delete rather than
+   accumulating, so a single circle can always show its whole state — no
+   separate chip row, no count to reconcile with what the circle shows. */
 .recording-block {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 28px;
   margin-top: 4px;
 }
-.recording-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.recording-chip {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--rec);
-  border-radius: 999px;
-  padding-left: 10px;
-  overflow: hidden;
-}
-.recording-chip button:first-child {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: var(--rec);
-  font: 500 13px/1 var(--ui);
-  padding: 6px 4px 6px 0;
-}
-.recording-chip:active {
-  background: color-mix(in srgb, var(--rec) 16%, transparent);
-}
-.recording-chip-remove {
-  border: none;
-  background: transparent;
-  color: var(--ink-muted);
-  font: 500 13px/1 var(--ui);
-  padding: 6px 10px 6px 4px;
-}
-.recording-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-/* A round icon button, the same 44px as `.speaker.small` — not a rectangular
-   text button (Henning, 2026-09-16, #185): every other control that plays or
-   captures sound on a card looks like this one. The colour is `--rec-own` /
-   `--rec-native`, the same one a finished recording's chip carries. */
-.record-group {
+.voice {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-}
-.record-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 0;
-  color: #fff;
-  font-size: 15px;
-  flex: none;
-  display: grid;
-  place-items: center;
-}
-.record-btn-own {
-  background: var(--rec-own);
-}
-.record-btn-native {
-  background: var(--rec-native);
-}
-.record-btn:disabled {
-  opacity: 0.5;
-}
-.record-btn:active {
-  transform: scale(0.92);
-}
-/* Recording: the button turns into the stop square, with a ring around it
-   that pulses — the same "acknowledge the tap" idea `.speaker` uses, kept
-   going for as long as the recording runs rather than fading once. */
-.record-btn.recording {
+  gap: 6px;
   position: relative;
 }
-.record-btn.recording::after {
-  content: "";
-  position: absolute;
-  inset: -5px;
-  border-radius: inherit;
-  border: 2px solid currentColor;
-  animation: record-pulse 1.4s ease-out infinite;
+.voice-dial {
+  position: relative;
+  width: 44px;
+  height: 44px;
 }
-@keyframes record-pulse {
-  from {
-    opacity: 0.7;
-    transform: scale(0.85);
-  }
+/* The ring is a few px outside the button's own edge, never the button's
+   own border — "the button changes colour" and "the ring animates" stay
+   two separate signals, the way a camera app's shutter does. */
+.voice-ring {
+  position: absolute;
+  inset: -7px;
+  width: 58px;
+  height: 58px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.voice-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.voice-ring .ring-bg {
+  stroke: var(--surface-hi);
+}
+.voice-ring .ring-fg {
+  stroke: var(--no);
+  stroke-linecap: round;
+  stroke-dasharray: 144.5;
+  stroke-dashoffset: 144.5;
+}
+/* Recording: an indeterminate lap, however long she actually talks —
+   Henning, 2026-09-16: the same calm pace as playback, not a fast spinner. */
+.voice-ring .ring-fg.recording {
+  stroke-dasharray: 34 110.5;
+  animation: voice-ring-chase 2.2s linear infinite;
+}
+@keyframes voice-ring-chase {
   to {
-    opacity: 0;
-    transform: scale(1.25);
+    stroke-dashoffset: -144.5;
   }
+}
+/* Playing: no keyframe animation — the JS sets stroke-dashoffset straight
+   from the audio element's own timeupdate, so the ring fills exactly as
+   fast as the recording actually plays, however long that is. */
+.voice-ring .ring-fg.playing {
+  stroke: var(--rec);
 }
 @media (prefers-reduced-motion: reduce) {
-  .record-btn.recording::after {
+  .voice-ring .ring-fg.recording {
     animation: none;
     opacity: 0.6;
   }
 }
-.record-caption {
-  font: 500 12px/1.2 var(--ui);
-  color: var(--ink-muted);
+/* Always red at rest — the universal record affordance, Henning,
+   2026-09-16 — a red square while capturing, and the voice's own colour
+   only once there is a recording to play. */
+.voice-btn {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0;
+  background: var(--surface-hi);
+  color: var(--no);
+  font-size: 15px;
+  display: grid;
+  place-items: center;
 }
-.recording-status {
+.voice-btn:active {
+  transform: scale(0.94);
+}
+.voice-btn:disabled {
+  opacity: 0.5;
+}
+.voice-btn.recording {
+  background: var(--no);
+  color: #fff;
   font-size: 13px;
+}
+.voice-btn.filled {
+  background: var(--rec);
+  color: #fff;
+  font-size: 17px;
+}
+/* Always visible once a recording exists, never behind a long press — that
+   does not exist anywhere else in this app and is not reliable on a phone
+   browser to begin with (Henning, 2026-09-16). Asks before it deletes. */
+.voice-delete {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
   color: var(--ink-muted);
-  margin: 0;
+  border: 1px solid var(--ink-dim);
+  font-size: 12px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+/* Fixed widths, not just a minimum: two different-length status strings
+   ("antippen: abspielen" vs "wird hochgeladen …") on a flex row centred on
+   its content re-centre the whole row when one child's text changes width,
+   which reads as the neighbouring circle twitching (Henning, 2026-09-16). */
+.voice-caption {
+  font: 500 12.5px/1.2 var(--ui);
+  color: var(--ink-muted);
+  width: 84px;
+  text-align: center;
+}
+.voice-status {
+  font-size: 11px;
+  color: var(--ink-dim);
+  min-height: 14px;
+  width: 84px;
+  text-align: center;
+}
+.voice.own {
+  --rec: var(--rec-own);
+}
+.voice.native {
+  --rec: var(--rec-native);
+}
+/* Absolutely positioned, not a flow child: its own width (wider than the
+   84px column) must never change what the row centres on — the same
+   jitter fix as the caption and status above. */
+.voice-confirm {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  white-space: nowrap;
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+.voice-confirm button {
+  font: 500 12px/1 var(--ui);
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: 0;
+}
+.voice-confirm .yes {
+  background: var(--no);
+  color: #fff;
+}
+.voice-confirm .no {
+  background: var(--surface-hi);
+  color: var(--ink);
 }
 
 /* On a revealed card the speaker sits beside the thing it plays rather than
