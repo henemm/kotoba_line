@@ -63,6 +63,8 @@ export function practiseScreen({
   onStart,
   onDrillTopic,
   onChooseSet,
+  // #179: take one more batch of new cards into today, in this deck.
+  onReleaseNew,
   filters = {},
   readAloud = true,
   onReadAloud,
@@ -270,13 +272,17 @@ export function practiseScreen({
     // Charlotte, 2026-09-16: "Ich hätte auch gerne das ich weiter lernen kann
     // wenn ich möchte und nicht erst morgen um 11:30". The day's new cards are
     // capped so that a big day does not come back as a bigger one three days
-    // later — but the cap is there to pace her, not to stop her. This starts a
-    // session of cards she has never seen, which the cap does not apply to
-    // (`only: "new"`, server/src/queue.js). It was always reachable through
-    // Wähle ein Set → Neu; now it is where she runs out.
-    if (fresh > 0) {
+    // later — but the cap paces her, it does not stop her.
+    //
+    // It *releases* the next batch rather than starting a session of its own
+    // (v90, after v89 did start one): what she wants is her ordinary practice
+    // to carry on, in the ways she has chosen, not a set called "Deine
+    // Auswahl". So the tap raises today's allowance and the page redraws with
+    // cards for today on it — the same page she would see in the morning.
+    if (fresh > 0 && onReleaseNew) {
+      const batch = Math.min(fresh, deck?.settings?.newPerDay ?? fresh);
       offers.push(
-        offer(newLabel(), `${cards(fresh)}, die du noch nicht gelernt hast`, () => onStart({ only: "new" })),
+        offer(newLabel(), `${cards(batch)} für heute dazunehmen · ${cards(fresh)} noch nicht gelernt`, onReleaseNew),
       );
     }
 

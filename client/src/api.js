@@ -172,6 +172,8 @@ export const api = {
   decks: () => request("/decks"),
   updateDeckSettings: (deckKey, patch) =>
     request("/decks/settings", { method: "PATCH", body: { deckKey, ...patch } }),
+  // #179: one more batch of new cards for today, in this deck.
+  releaseNewCards: (deckKey) => request("/decks/new-cards", { method: "POST", body: { deckKey } }),
   // #137: her own decks, made, renamed and deleted from the app.
   createDeck: (name) => request("/decks", { method: "POST", body: { name } }),
   renameDeck: (id, name) => request(`/decks/${id}`, { method: "PATCH", body: { name } }),

@@ -202,8 +202,8 @@ describe("settings of one deck (#137, migration 014)", () => {
     db.prepare("UPDATE user_settings SET new_per_day = 20 WHERE user_id = ?").run(user.id);
     const { decks } = await json("/api/decks");
     const byName = Object.fromEntries(decks.map((d) => [d.name, d]));
-    assert.deepEqual(byName.Kaishi.settings, { hiddenModes: [], newPerDay: 20, maxPerDay: null });
-    assert.deepEqual(byName.long.settings, { hiddenModes: [], newPerDay: 10, maxPerDay: null });
+    assert.deepEqual(byName.Kaishi.settings, { hiddenModes: [], newPerDay: 20, maxPerDay: null, extraNew: 0, extraNewDay: null });
+    assert.deepEqual(byName.long.settings, { hiddenModes: [], newPerDay: 10, maxPerDay: null, extraNew: 0, extraNewDay: null });
     assert.equal(byName.long.today.fresh, 10, "a list of 14 new words offers 10 today");
     await app.close();
   });
@@ -239,7 +239,7 @@ describe("settings of one deck (#137, migration 014)", () => {
   it("stores the ways of practising per deck, and never all five hidden", async () => {
     const { app, cookie, json } = await signedIn();
     const res = await patch(app, cookie, { deckKey: "list:list a", hiddenModes: ["type", "choose"] });
-    assert.deepEqual(res.json().settings, { hiddenModes: ["choose", "type"], newPerDay: 10, maxPerDay: null });
+    assert.deepEqual(res.json().settings, { hiddenModes: ["choose", "type"], newPerDay: 10, maxPerDay: null, extraNew: 0, extraNewDay: null });
     const { decks } = await json("/api/decks");
     assert.deepEqual(decks.find((d) => d.key === "kaishi").settings.hiddenModes, [], "another deck is not touched");
     assert.equal((await patch(app, cookie, { deckKey: "list:list a", hiddenModes: ["choose", "listen", "speak", "type", "flip"] })).statusCode, 400);

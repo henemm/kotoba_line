@@ -1,5 +1,14 @@
 [
   {
+    "version": "v90",
+    "summary": "„Mehr neue Zeichen“ nimmt sie einfach ins Tagespensum.",
+    "notes": [
+      "Vorher startete der Knopf eine eigene Runde mit allen ungelernten Karten. Jetzt nimmt er die nächste Portion ins Pensum von heute – danach übst du ganz normal weiter, mit deinen gewohnten Übungsarten.",
+      "Eine Portion ist so groß wie dein Tagespensum in diesem Deck. Du kannst den Knopf mehrmals antippen.",
+      "Morgen ist alles wieder wie vorher."
+    ]
+  },
+  {
     "version": "v89",
     "summary": "Du kannst weiterlernen, wenn du möchtest.",
     "notes": [

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, outlookForUser, queueForUser, setStar, shuffle, whenOnClock } from "../src/queue.js";
+import { releaseNewCards } from "../src/deck-settings.js";
 import { dayIn, startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
 import { openDatabase } from "../src/db.js";
@@ -332,6 +333,22 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
     assert.ok(o.fresh > 0, "but unseen cards are still offered");
     // Within one deck it counts that deck's own unseen cards.
     assert.ok(outlookForUser(db, user.id, NOW, { deckKey: "kaishi" }).fresh > 0);
+
+    // v90: taking the offer releases one more batch for *that* day, and the
+    // ordinary queue — not a chosen set — then has cards in it again.
+    const today = dayIn(NOW, "Asia/Tokyo");
+    assert.equal(queueForUser(db, user.id, { deckKey: "kaishi", timeZone: "Asia/Tokyo" }, NOW).cardIds.length, 0);
+    const after = releaseNewCards(db, user.id, "kaishi", today);
+    assert.equal(after.extraNew, 5, "one batch, the deck's own daily number");
+    assert.equal(after.extraNewDay, today);
+    assert.equal(queueForUser(db, user.id, { deckKey: "kaishi", timeZone: "Asia/Tokyo" }, NOW).cardIds.length, 5);
+
+    // Tapping it again takes another batch; yesterday's release counts for
+    // nothing, and a different device zone is a different day.
+    assert.equal(releaseNewCards(db, user.id, "kaishi", today).extraNew, 10);
+    assert.equal(queueForUser(db, user.id, { deckKey: "kaishi", timeZone: "Asia/Tokyo" }, NOW).cardIds.length, 10);
+    assert.equal(releaseNewCards(db, user.id, "kaishi", "2000-01-01").extraNew, 5, "another day starts again");
+    assert.equal(queueForUser(db, user.id, { deckKey: "kaishi", timeZone: "Asia/Tokyo" }, NOW).cardIds.length, 0);
     await app.close();
   });
 

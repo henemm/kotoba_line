@@ -248,9 +248,16 @@ chosen session is never capped.
 2026-09-16: "Ich hätte auch gerne das ich weiter lernen kann wenn ich möchte
 und nicht erst morgen um 11:30". So a deck page with nothing due offers "Mehr
 neue Zeichen" / "Mehr neue Wörter" beside Vorausüben and Letzte Fehler, with
-the number of cards in that deck she has never seen (`outlook.fresh`). It
-starts the `only=new` session above. The limit still paces an ordinary day; it
-is no longer a full stop.
+the number of cards in that deck she has never seen (`outlook.fresh`).
+
+It **releases** the next batch instead of starting a session of its own — v89
+started an `only=new` session, and Henning's call the same day was that this
+is the wrong shape: what she wants is her ordinary practice to carry on, not a
+set called "Deine Auswahl". So the tap raises *today's* allowance by one more
+batch, the deck's own daily number (`deck_settings.extra_new` for
+`extra_new_day`, migration 021), and the page redraws with cards for today on
+it. Tapping it again takes another batch; tomorrow the deck is back to its own
+pace. The limit still paces an ordinary day; it is no longer a full stop.
 
 ---
 

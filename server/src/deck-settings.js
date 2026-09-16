@@ -32,7 +32,9 @@ export function deckSettings(db, userId, key) {
   // An old spelling ('list:<name>') reads the same row as 'deck:<id>' (migration 016).
   const deckKey = canonicalDeckKey(db, userId, key) ?? key;
   const row = db
-    .prepare("SELECT hidden_modes, new_per_day, max_per_day FROM deck_settings WHERE user_id = ? AND deck_key = ?")
+    .prepare(
+      "SELECT hidden_modes, new_per_day, max_per_day, extra_new, extra_new_day FROM deck_settings WHERE user_id = ? AND deck_key = ?",
+    )
     .get(userId, deckKey);
   let fallback = isKanaDeck(deckKey) ? KANA_NEW_PER_DAY : LIST_NEW_PER_DAY;
   if (deckKey === "kaishi") {
@@ -42,7 +44,44 @@ export function deckSettings(db, userId, key) {
     hiddenModes: row ? JSON.parse(row.hidden_modes) : [],
     newPerDay: row?.new_per_day ?? fallback,
     maxPerDay: row?.max_per_day ?? null,
+    // What she released on top of the allowance, and the day it was for
+    // (#179, migration 021). Whether that day is today is the caller's
+    // question — it depends on the device's zone.
+    extraNew: row?.extra_new ?? 0,
+    extraNewDay: row?.extra_new_day ?? null,
   };
+}
+
+/**
+ * Raise the deck's allowance for today by one more batch (#179, v90).
+ *
+ * "One batch" is the deck's own daily number, so tapping it twice on the kana
+ * decks releases ten and the rhythm of the deck is what grows. `day` is her
+ * device's calendar day (§8a); a row left over from another day starts again
+ * at that batch rather than adding to it.
+ */
+export function releaseNewCards(db, userId, key, day, now = Date.now()) {
+  const deckKey = canonicalDeckKey(db, userId, key);
+  if (!deckKey) return undefined;
+  const before = deckSettings(db, userId, deckKey);
+  const released = (before.extraNewDay === day ? before.extraNew : 0) + before.newPerDay;
+  db.prepare(
+    `INSERT INTO deck_settings (user_id, deck_key, hidden_modes, new_per_day, max_per_day, extra_new, extra_new_day, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (user_id, deck_key) DO UPDATE
+       SET extra_new = excluded.extra_new, extra_new_day = excluded.extra_new_day,
+           updated_at = excluded.updated_at`,
+  ).run(
+    userId,
+    deckKey,
+    JSON.stringify(before.hiddenModes),
+    before.newPerDay,
+    before.maxPerDay,
+    released,
+    day,
+    Math.floor(now / 1000),
+  );
+  return deckSettings(db, userId, deckKey);
 }
 
 /**
