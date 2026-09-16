@@ -778,6 +778,13 @@ export function sessionScreen({
       area,
       el("span.prompt-label", { text: "Sag es auf Japanisch" }),
       el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
+      // Recording her attempt *before* the answer shows is the blind version
+      // of what #32 already said about this mode: she has just tried to
+      // produce it, and hearing herself back is the only way to check it —
+      // and a card change (drawCard) is the only cleanup this front gets, so
+      // tapping "Antwort zeigen" mid-recording has to stop it itself
+      // (revealSpeak does, below).
+      recordingBlock(card),
     );
     render(
       answers,
@@ -794,6 +801,10 @@ export function sessionScreen({
   }
 
   function revealSpeak(card, area, answers, useSentence) {
+    // The front's recordingBlock is a different DOM node than the one about
+    // to be drawn here — replacing it does not stop a recording still
+    // running in it, same reasoning as drawCard() above.
+    stopAllRecording();
     const text = useSentence ? card.sentence : card.word;
     const audio = useSentence ? card.sentence_audio : card.word_audio;
 
@@ -816,6 +827,10 @@ export function sessionScreen({
             speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
           ),
       useSentence ? null : romajiLine(card),
+      // The front's own attempt (if she made one) is a fresh "own" source
+      // now, so it plays here too — same card, so sourcesFor(card) already
+      // carries it forward without anything extra.
+      recordingBlock(card),
     );
     if (readAloud) voice(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
