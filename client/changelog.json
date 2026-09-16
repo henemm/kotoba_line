@@ -1,5 +1,12 @@
 [
   {
+    "version": "v93",
+    "summary": "92 Beispielwörter bei Katakana-Karten haben jetzt einen Ton.",
+    "notes": [
+      "Bei vielen Katakana-Karten (アパート, ケーキ, サラダ …) hatte das Beispielwort keine Aufnahme. Jetzt hat ein Großteil davon einen erstellten Ton."
+    ]
+  },
+  {
     "version": "v92",
     "summary": "きゃ, きゅ, きょ und Co. klingen jetzt gleichmäßiger.",
     "notes": [

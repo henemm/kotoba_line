@@ -8,7 +8,7 @@
  *   npm run import-kana -- --no-strokes      # no stroke-order drawings
  *   npm run import-kana -- --no-examples     # keep the example words as they are
  *   npm run import-kana -- --no-sounds       # keep the kana recordings as they are
- *   npm run import-kana -- --voicevox http://127.0.0.1:50021   # only if the 33 yōon files are missing
+ *   npm run import-kana -- --voicevox http://127.0.0.1:50021   # only if new VOICEVOX audio is missing
  *
  * Re-runnable. A card's id comes from its characters (lib/kana.js), so a
  * second run finds the same rows, and only a row whose content changed gets a
@@ -28,10 +28,12 @@
  * (lib/kana-sounds.js). They are written before the cards, so a card never
  * points at a recording that is not on disk. So are the example words'
  * recordings from Lingua Libre and Tofugu (v87, lib/example-sounds.js), and
- * the 33 yōon — generated through a local VOICEVOX rather than downloaded
- * (v92, #183, lib/kana-yoon-sounds.js says why a generated recording is
- * defensible for these and only these). A file already on disk is left
- * alone here too, so VOICEVOX only has to be running for the first import.
+ * two generated sets through a local VOICEVOX rather than downloaded: the 33
+ * yōon (v92, #183, lib/kana-yoon-sounds.js says why a generated recording is
+ * defensible for these) and 92 example words whose pitch accent is agreed by
+ * two independent dictionaries (v93, #183 gap (a), lib/generated-example-sounds.js).
+ * A file already on disk is left alone here too, so VOICEVOX only has to be
+ * running for the first import.
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -44,6 +46,12 @@ import { makeMeaningLookup, parseJlptCsv, pickExamples } from "./lib/examples.js
 import { YOON, kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
 import { COMMONS_UPLOADER, KANA_SOUNDS, kanaSoundFile, soundMediaName } from "./lib/kana-sounds.js";
 import { yoonAudioQuery, yoonSoundMediaName, yoonSynthesize } from "./lib/kana-yoon-sounds.js";
+import {
+  GENERATED_EXAMPLE_SOUNDS,
+  generatedAudioQuery,
+  generatedExampleSoundName,
+  generatedSynthesize,
+} from "./lib/generated-example-sounds.js";
 import { encodeMp3 } from "./lib/encode-mp3.js";
 import { activeLevel, gainSteps, parseWav } from "./lib/wav-level.js";
 import { withGain } from "./lib/mp3gain.js";
@@ -127,9 +135,10 @@ export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples
 
 /**
  * Example words for every kana card, from Kaishi in `db`, the given JLPT rows
- * and JMdict words, and `sounds` — rows of lib/example-sounds.js whose files
- * are on disk (v87). A sound whose word JMdict does not give a meaning for is
- * left out, as a list word would be.
+ * and JMdict words, and `sounds` — rows of lib/example-sounds.js (v87) and
+ * lib/generated-example-sounds.js (v93, #183) whose files are on disk. A
+ * sound whose word JMdict does not give a meaning for is left out, as a list
+ * word would be.
  */
 export function kanaExamples(db, { jlpt, jmdictWords, sounds = [] }) {
   const kaishi = db
@@ -316,6 +325,34 @@ async function writeExampleSounds(mediaDir) {
 }
 
 /**
+ * The 92 generated example-word recordings (#183, gap (a)): the same local
+ * VOICEVOX as the yōon, one utterance per word, its accent forced to the
+ * pitch `lib/generated-example-sounds.js` pins — not VOICEVOX's own guess.
+ * Generated once, then left alone, like the yōon and the Commons recordings.
+ */
+async function writeGeneratedExampleSounds(mediaDir, voicevoxUrl) {
+  mkdirSync(mediaDir, { recursive: true });
+  const missing = GENERATED_EXAMPLE_SOUNDS.filter((s) => !existsSync(join(mediaDir, generatedExampleSoundName(s))));
+  for (const sound of missing) {
+    let wav;
+    try {
+      const query = await generatedAudioQuery(sound, voicevoxUrl);
+      wav = await generatedSynthesize(query, voicevoxUrl);
+    } catch (err) {
+      throw new Error(
+        `VOICEVOX at ${voicevoxUrl} is unreachable, needed for ${sound.reading}. Start it with ` +
+          `'docker run -d --rm -p 127.0.0.1:50021:50021 voicevox/voicevox_engine:cpu-ubuntu20.04-latest' ` +
+          `and retry, or pass --voicevox. (${err.message})`,
+      );
+    }
+    const steps = gainSteps(activeLevel(parseWav(wav)));
+    const mp3 = withGain(await encodeMp3(wav), steps);
+    writeFileSync(join(mediaDir, generatedExampleSoundName(sound)), mp3);
+  }
+  return { written: missing.length, kept: GENERATED_EXAMPLE_SOUNDS.length - missing.length };
+}
+
+/**
  * The kana pictures (v88, #177): copied out of the repository rather than
  * downloaded, because they are crops of one large chart (lib/kana-mnemonics.js
  * says why they are committed). A file already there is left alone, but one
@@ -368,6 +405,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const db = openDatabase(dbFile);
   const total = kanaCards().length;
+  const voicevoxUrl = args.voicevox ?? process.env.VOICEVOX_URL ?? "http://127.0.0.1:50021";
   let examples;
   if (args["no-examples"]) {
     process.stdout.write("Example words left as they are (--no-examples)\n");
@@ -376,7 +414,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // v87: on disk before any card names them, like the kana sounds below.
     const { written, kept } = await writeExampleSounds(mediaDir);
     process.stdout.write(`Example word recordings (Lingua Libre, Tofugu): ${written} written, ${kept} already there, in ${mediaDir}\n`);
-    examples = kanaExamples(db, { ...sources, sounds: EXAMPLE_SOUNDS });
+    const generated = await writeGeneratedExampleSounds(mediaDir, voicevoxUrl);
+    process.stdout.write(
+      `Example word recordings (VOICEVOX:No.7, generated, #183): ${generated.written} written, ${generated.kept} already there, in ${mediaDir}\n`,
+    );
+    examples = kanaExamples(db, { ...sources, sounds: [...EXAMPLE_SOUNDS, ...GENERATED_EXAMPLE_SOUNDS] });
     for (const deck of ["hiragana", "katakana"]) {
       const cards = kanaCards().filter((c) => c.deck === deck);
       const withOne = cards.filter((c) => examples.get(c.id).length > 0).length;
@@ -391,7 +433,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const { written, kept } = await writeSounds(mediaDir);
     sounds = true;
     process.stdout.write(`Kana recordings (Wikimedia Commons): ${written} written, ${kept} already there, in ${mediaDir}\n`);
-    const voicevoxUrl = args.voicevox ?? process.env.VOICEVOX_URL ?? "http://127.0.0.1:50021";
     const yoon = await writeYoonSounds(mediaDir, voicevoxUrl);
     process.stdout.write(`Yōon recordings (VOICEVOX:No.7, generated): ${yoon.written} written, ${yoon.kept} already there, in ${mediaDir}\n`);
   }

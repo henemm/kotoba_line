@@ -412,9 +412,13 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
           "Aussprache von Beispielwörtern der Kana – github.com/tofugu/japanese-vocabulary-pronunciation-audio, CC BY-SA 4.0",
         ],
         ["Merkbilder", "Zeichnungen zu den Kana – B. Domangue, Wikimedia Commons, CC BY-SA 4.0"],
-        // #183, v92: the 33 yōon have no free human recording anywhere, so
-        // these are generated – VOICEVOX's own terms require this credit line.
-        ["VOICEVOX:No.7", "Aussprache der Kana mit ゃゅょ (きゃ …) – generierte Sprachausgabe, voicevox.hiroshiba.jp"],
+        // #183, v92/v93: the 33 yōon and 92 example words have no free human
+        // recording anywhere, so these are generated – VOICEVOX's own terms
+        // require this credit line.
+        [
+          "VOICEVOX:No.7",
+          "Aussprache der Kana mit ゃゅょ (きゃ …) und einiger Beispielwörter – generierte Sprachausgabe, voicevox.hiroshiba.jp",
+        ],
         ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
         [
           "JMdict",
