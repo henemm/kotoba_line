@@ -1217,10 +1217,11 @@ export function sessionScreen({
     const own = (recordings.get(card.id) ?? []).filter((r) => r.kind === "own");
     const native = (recordings.get(card.id) ?? []).filter((r) => r.kind === "native");
     const sources = [];
-    if (own.length) {
-      const latest = own[own.length - 1];
-      sources.push({ kind: "own", label: "Ihre eigene", file: latest.file, id: latest.id });
-    }
+    // Every one of her own attempts, oldest first — not only the latest.
+    // Henning, 2026-09-16 (#185): a blind attempt on the front and a second
+    // one on the back, made to compare, are two different answers, and
+    // showing only the newer one made the older simply disappear.
+    own.forEach((r, i) => sources.push({ kind: "own", label: `Ihre eigene${own.length > 1 ? ` ${i + 1}` : ""}`, file: r.file, id: r.id }));
     if (card.word_audio && /^(kana|example)-generated-/.test(card.word_audio)) {
       sources.push({ kind: "synth", label: "Synthetisch", file: card.word_audio });
     }
@@ -1230,10 +1231,11 @@ export function sessionScreen({
 
   /**
    * The recording controls and the colour-coded comparison row (#183
-   * follow-up, design discussion 2026-09-16). Only where a card is in her
-   * own deck (`revealFlip`'s meaningFirst branch) — that is where a word can
-   * have no pronunciation at all today, romaji with nothing to check it
-   * against. Manages its own re-renders, the same way `microphoneTest()` in
+   * follow-up, design discussion 2026-09-16). On the reveal side of every
+   * card in `revealFlip`, hers or not (Henning, 2026-09-16: "alle Decks") —
+   * a Kaishi card already has a professional recording, but comparing her
+   * own attempt against it is exactly the point. Manages its own re-renders,
+   * the same way `microphoneTest()` in
    * settings.js does, so recording one card does not re-run the whole flip.
    */
   function recordingBlock(card) {
@@ -1445,6 +1447,7 @@ export function sessionScreen({
         romajiLine(card),
         cardRule(),
         el("div.meaning.reveal", { text: card.word_meaning }),
+        recordingBlock(card),
         revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );

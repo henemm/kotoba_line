@@ -1771,8 +1771,8 @@
 }
 
 /* Her own, synthetic and native-speaker recordings (#183 follow-up):
-   colour-coded chips to compare, plus the two record buttons. Only on a
-   card in her own deck (revealFlip's meaningFirst branch). */
+   colour-coded chips to compare, plus the two record buttons. On the
+   reveal side of every card in revealFlip, not only her own deck. */
 .recording-block {
   display: flex;
   flex-direction: column;

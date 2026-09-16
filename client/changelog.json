@@ -1,5 +1,12 @@
 [
   {
+    "version": "v101",
+    "summary": "Aussprache aufnehmen geht jetzt bei jeder Karte, nicht nur bei deinen eigenen.",
+    "notes": [
+      "Bei „Karte umdrehen“ kannst du dich jetzt auch bei Karten aus dem normalen Wörterbuch aufnehmen, nicht nur bei den Wörtern, die du selbst angelegt hast – zum Vergleich mit der professionellen Aufnahme. Und mehrere eigene Aufnahmen zu einer Karte bleiben jetzt alle sichtbar, statt dass eine neue die vorherige unsichtbar macht."
+    ]
+  },
+  {
     "version": "v100",
     "summary": "Mikrofon blieb nach der Aufnahme manchmal an.",
     "notes": [
