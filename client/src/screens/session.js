@@ -730,6 +730,14 @@ export function sessionScreen({
       // its settings description promises ("for reading it back") instead of
       // only after she has already answered.
       romajiLine(card),
+      // The word is right there to attempt, even though this mode asks about
+      // its meaning, not its sound (Henning, 2026-09-16 — weaker fit than
+      // 話す or めくる, but he wanted it offered anyway). Not for a kana card,
+      // same exclusion as everywhere else this feature appears. chooseFrom()
+      // never replaces `area`, so this stays put through the whole card,
+      // answered or not — no extra cleanup needed the way a flip to a
+      // reveal side does.
+      isKana(card) ? null : recordingBlock(card),
     ]);
   }
 
@@ -760,6 +768,10 @@ export function sessionScreen({
       card.sentence_audio
         ? el("span.prompt-label", { text: "Tippen, um es nochmal zu hören" })
         : el("p.synth-note", { text: SYNTH_CAPTION }),
+      // No text is ever shown here — the point is shadowing: hear it, then
+      // record herself saying it back (Henning, 2026-09-16, rated the same
+      // as offering it in 選ぶ). Same "not for kana" exclusion as elsewhere.
+      isKana(card) ? null : recordingBlock(card),
     ]);
   }
 
