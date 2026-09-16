@@ -1,5 +1,12 @@
 [
   {
+    "version": "v104",
+    "summary": "Bei „Karte umdrehen“ jetzt auch auf der Vorderseite aufnehmen.",
+    "notes": [
+      "Wenn eine Karte das japanische Wort schon auf der Vorderseite zeigt, kannst du dich jetzt auch schon dort aufnehmen, nicht erst nach dem Umdrehen – und die Aufnahme bleibt danach auf der Rückseite sichtbar."
+    ]
+  },
+  {
     "version": "v103",
     "summary": "Bei „Laut sagen“ kannst du dich jetzt auf beiden Seiten aufnehmen.",
     "notes": [
