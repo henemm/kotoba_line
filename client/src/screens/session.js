@@ -1105,9 +1105,36 @@ export function sessionScreen({
     if (!picture) return null;
     const block = el("div.kana-mnemonic.reveal");
     const hide = () => block.remove();
+    // Henning, 2026-09-16: the picture is small on the card, and at 132 × 84 a
+    // drawing like ぬ's noodles is hard to make out. Tapping it opens it as big
+    // as the screen allows; tapping again, or Escape, closes it. A button
+    // rather than an image with a handler, so it can be reached and told apart
+    // without sight.
+    const zoom = () => {
+      const close = () => {
+        sheet.remove();
+        document.removeEventListener("keydown", onKey);
+      };
+      const onKey = (event) => {
+        if (event.key === "Escape") close();
+      };
+      const sheet = el(
+        "div.mnemonic-zoom",
+        { role: "dialog", "aria-label": `Merkbild für ${card.word}`, onclick: close },
+        el("img", { src: mediaUrl(picture.file), alt: "" }),
+        picture.hook ? el("span.mnemonic-zoom-hook", { text: picture.hook }) : null,
+        el("span.mnemonic-zoom-close", { text: "Tippen zum Schließen" }),
+      );
+      document.addEventListener("keydown", onKey);
+      document.body.append(sheet);
+    };
     render(
       block,
-      el("img.kana-mnemonic-picture", { src: mediaUrl(picture.file), alt: "", onerror: hide }),
+      el(
+        "button.kana-mnemonic-open",
+        { type: "button", "aria-label": "Merkbild größer zeigen", onclick: zoom },
+        el("img.kana-mnemonic-picture", { src: mediaUrl(picture.file), alt: "", onerror: hide }),
+      ),
       picture.hook ? el("span.kana-mnemonic-hook", { text: picture.hook }) : null,
       // CC BY-SA 4.0 asks for the attribution wherever the drawing is shown.
       el("span.kana-credit", { text: "Merkbild: B. Domangue (CC BY-SA 4.0)" }),

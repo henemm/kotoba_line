@@ -1,5 +1,13 @@
 [
   {
+    "version": "v91",
+    "summary": "Tippe auf ein Merkbild, dann wird es groß.",
+    "notes": [
+      "Das kleine Bild auf der Rückseite einer Kana-Karte kannst du antippen. Es füllt dann den Bildschirm, mit dem Merksatz darunter.",
+      "Tippen schließt es wieder."
+    ]
+  },
+  {
     "version": "v90",
     "summary": "„Mehr neue Zeichen“ nimmt sie einfach ins Tagespensum.",
     "notes": [

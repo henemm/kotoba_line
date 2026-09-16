@@ -452,7 +452,20 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       // rows are how the device reports its own numbers while it is wrong.
       // See `src/viewport.js`; remove them once that question is settled.
       ...viewportReport().map(([label, value]) => diagnostic(label, value)),
+      // Which Japanese voice the phone actually offers a web app (#182).
+      // Henning asked whether the built-in voice is really as poor as we treat
+      // it; Safari hands out a different, smaller set of voices than the
+      // system has, so the only honest answer comes from her own device.
+      diagnostic("Japanische Stimmen", japaneseVoices()),
     );
+  }
+
+  /** The ja voices `speechSynthesis` offers here, by name — "keine" where there are none. */
+  function japaneseVoices() {
+    if (typeof speechSynthesis === "undefined") return "nicht verfügbar";
+    const ja = speechSynthesis.getVoices().filter((v) => v.lang?.toLowerCase().startsWith("ja"));
+    if (ja.length === 0) return "keine";
+    return ja.map((v) => `${v.name}${v.localService ? "" : " (online)"}`).join(", ");
   }
 
   const deckTotal = () => data.decks.reduce((n, d) => n + d.cards, 0);

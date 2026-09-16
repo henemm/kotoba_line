@@ -1952,8 +1952,15 @@
   max-width: 360px;
   text-align: left;
 }
-.kana-mnemonic-picture {
+.kana-mnemonic-open {
   grid-row: span 2;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.kana-mnemonic-picture {
   width: 132px;
   height: 84px;
   object-fit: contain;
@@ -1968,6 +1975,39 @@
 }
 .kana-mnemonic .kana-credit {
   align-self: start;
+}
+/* Tapped, the drawing fills the screen (#177): at 132 px a picture like ぬ's
+   noodles round a chopstick is a smudge. Over everything, including the tab
+   bar, and closed by a tap anywhere — there is nothing else to do here. */
+.mnemonic-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--night);
+}
+.mnemonic-zoom img {
+  width: 100%;
+  max-width: 560px;
+  max-height: 60vh;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+}
+.mnemonic-zoom-hook {
+  font-size: 18px;
+  text-align: center;
+  text-wrap: balance;
+}
+.mnemonic-zoom-close {
+  font-size: 13px;
+  color: var(--ink-muted);
 }
 .kana-strokes {
   display: flex;
