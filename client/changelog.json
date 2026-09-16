@@ -1,5 +1,12 @@
 [
   {
+    "version": "v106",
+    "summary": "Aufnahme jetzt auch bei „Bedeutung wählen“ und „Nur hören“.",
+    "notes": [
+      "Bei „Bedeutung wählen“ kannst du dich jetzt aufnehmen, während das Wort auf dem Bildschirm steht. Bei „Nur hören“ gibt es keinen Text – dafür kannst du dich direkt nach dem Hören aufnehmen, um nachzusprechen."
+    ]
+  },
+  {
     "version": "v105",
     "summary": "Die Aufnahme-Funktion lässt sich jetzt in den Einstellungen abschalten.",
     "notes": [
