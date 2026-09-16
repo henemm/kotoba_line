@@ -21,6 +21,15 @@
   --line-type:   #8F76D6;  /* 書く   type the Japanese */
   --line-flip:   #80C241;  /* めくる flip the card    */
 
+  /* Which voice a recording is (#183 follow-up), not which mode it is in —
+     a deliberately separate hue family from --line-* above so the two are
+     never mistaken for each other. Henning, 2026-09-16: "im Nachhinein
+     erkenntlich, welche Stimmen woher kommen" — this is that, on screen.
+     Contrast on --night: --rec-own 7.9:1, --rec-synth 5.0:1, --rec-native 7.1:1. */
+  --rec-own:    #D9A441;  /* her own attempt — warm, personal   */
+  --rec-synth:  #7C88A3;  /* VOICEVOX — deliberately cool, machine-made */
+  --rec-native: #2FB89A;  /* a native speaker — its own colour for "verified" */
+
   --yes: #3DDC84;
   --no:  #FF4B4B;
   --yes-tint: rgba(61, 220, 132, 0.16);

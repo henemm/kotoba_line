@@ -42,9 +42,16 @@ where her data lives and which nothing here ever overwrites.
 her data.
 
 ```sh
-sudo mkdir -p /srv/kotoba/{app,data,media}
+sudo mkdir -p /srv/kotoba/{app,data,media/practice}
 sudo chown -R "$USER" /srv/kotoba
 ```
+
+`media/practice` (#183 follow-up) is the one subdirectory the API container writes to at
+request time — mounted `:rw` in `ops/docker-compose.yml` while the rest of `media`
+stays `:ro`. If it is ever recreated after this step (Docker will make it itself,
+owned by root, the first time the container starts without it), `chown -R "$USER"`
+it again — the container runs as uid 1000 and cannot write into a root-owned
+directory.
 
 **2. nginx.** Copy the `limit_req_zone` line from `ops/nginx/kotoba.conf` into
 the `http` block, and the `location` blocks into the TLS server block for the

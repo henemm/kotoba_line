@@ -102,7 +102,11 @@ export function onSessionExpired(fn) {
   return () => expiredListeners.delete(fn);
 }
 
-async function request(path, { method = "GET", body, signal } = {}) {
+/**
+ * `blob` is a recording's raw bytes (#183 follow-up) — sent as-is, with its
+ * own content-type, rather than JSON.stringify'd like every other body here.
+ */
+async function request(path, { method = "GET", body, blob, signal } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   signal?.addEventListener("abort", () => controller.abort(), { once: true });
@@ -118,9 +122,9 @@ async function request(path, { method = "GET", body, signal } = {}) {
         // The zone, not the date (#122): the server counts "today" from
         // midnight where the device is, but from the log's own timestamps.
         "x-time-zone": Intl.DateTimeFormat().resolvedOptions().timeZone,
-        ...(body ? { "content-type": "application/json" } : {}),
+        ...(blob ? { "content-type": blob.type || "audio/webm" } : body ? { "content-type": "application/json" } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: blob ?? (body ? JSON.stringify(body) : undefined),
     });
     text = await res.text();
   } catch {
@@ -186,6 +190,11 @@ export const api = {
   setCardTags: (cardId, tags) =>
     request(`/cards/${cardId}/tags`, { method: "PUT", body: { tags } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
+  // #183 follow-up: her own or a native speaker's recording of one card, kept
+  // apart only by `kind` — both are made under her own session (recording.js).
+  addRecording: (cardId, kind, id, blob) =>
+    request(`/cards/${cardId}/recordings${query({ kind, id })}`, { method: "POST", blob }),
+  deleteRecording: (cardId, id) => request(`/cards/${cardId}/recordings/${id}`, { method: "DELETE" }),
   stats: () => request("/stats"),
   // #98: one card's own record — her reviews of it, and when it is due.
   cardHistory: (cardId) => request(`/cards/${cardId}/history`),

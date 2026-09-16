@@ -44,6 +44,9 @@ export async function sessionQueue(opts) {
       // on every card (#35), and a session on a train would otherwise draw all
       // of them empty — which reads as "nothing is starred", not as "unknown".
       starred: answer.starred,
+      // Her own and a native speaker's recordings (#183 follow-up) — same
+      // reasoning as starred: known offline, not "none" until the next sync.
+      recordings: answer.recordings,
       at: Date.now(),
     });
     return answer;
@@ -69,6 +72,7 @@ export async function sessionQueue(opts) {
       cardIds: answer.cardIds,
       intervals: answer.intervals,
       starred: answer.starred ?? [],
+      recordings: answer.recordings ?? [],
       stale: false,
     };
   }
@@ -92,6 +96,7 @@ async function fromCache(cached) {
     cardIds: stillToAnswer(cached, waiting, answered),
     intervals: cached.intervals,
     starred: cached.starred ?? [],
+    recordings: cached.recordings ?? [],
     stale: true,
     at: cached.at,
   };

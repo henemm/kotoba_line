@@ -20,6 +20,12 @@ ENV NODE_ENV=production \
     PORT=8080 \
     DATA_DIR=/data
 
+# #183 follow-up: encoding an uploaded recording to MP3
+# (server/src/audio-encode.js) shells out to this, the same way the import
+# scripts already do on the host — but this runs *in* the container, which
+# needs its own copy.
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules

@@ -1,5 +1,61 @@
 [
   {
+    "version": "v101",
+    "summary": "Aussprache aufnehmen geht jetzt bei jeder Karte, nicht nur bei deinen eigenen.",
+    "notes": [
+      "Bei „Karte umdrehen“ kannst du dich jetzt auch bei Karten aus dem normalen Wörterbuch aufnehmen, nicht nur bei den Wörtern, die du selbst angelegt hast – zum Vergleich mit der professionellen Aufnahme. Und mehrere eigene Aufnahmen zu einer Karte bleiben jetzt alle sichtbar, statt dass eine neue die vorherige unsichtbar macht."
+    ]
+  },
+  {
+    "version": "v100",
+    "summary": "Mikrofon blieb nach der Aufnahme manchmal an.",
+    "notes": [
+      "Wenn du zur nächsten Karte weiter warst, während noch aufgenommen wurde, lief das Mikrofon einfach weiter – auch wenn die Aufnahme selbst schon fertig aussah. Jetzt wird es beim Kartenwechsel und beim Verlassen immer abgeschaltet, und ein doppeltes Antippen von „Aufnehmen“ kann es nicht mehr verdoppeln."
+    ]
+  },
+  {
+    "version": "v99",
+    "summary": "Jede Aufnahme nach der ersten wurde nicht gespeichert.",
+    "notes": [
+      "Ab der zweiten Aufnahme auf einer Karte kam „Konnte die Aufnahme nicht speichern“ – nicht wegen des Löschens, sondern weil dasselbe Mikrofon-Signal mehrfach genutzt wurde. Jetzt bekommt jede Aufnahme ein frisches."
+    ]
+  },
+  {
+    "version": "v98",
+    "summary": "Aufnahme-Buttons zeigen jetzt richtig an, welche Aufnahme läuft.",
+    "notes": [
+      "Beide Aufnahme-Buttons zeigten „Stopp“ an, sobald einer davon lief – der falsche hätte die Aufnahme mit der falschen Stimme gespeichert. Jetzt ist nur noch der Button zu sehen, der gerade aufnimmt."
+    ]
+  },
+  {
+    "version": "v97",
+    "summary": "Kleine Korrektur an der Aufnahme-Funktion von eben.",
+    "notes": [
+      "Eine gerade erst aufgenommene Aussprache wurde nicht gefunden (falscher Pfad). Behoben, bevor es dir aufgefallen wäre."
+    ]
+  },
+  {
+    "version": "v96",
+    "summary": "Bei deinen eigenen Karten: Aussprache aufnehmen.",
+    "notes": [
+      "Beim Umdrehen einer eigenen Karte kannst du jetzt deine Aussprache aufnehmen – oder, wenn du mit jemandem gemeinsam übst, die richtige Aussprache direkt aufnehmen lassen (bis zu drei Personen pro Karte). Alle Aufnahmen lassen sich einzeln abspielen und wieder löschen."
+    ]
+  },
+  {
+    "version": "v95",
+    "summary": "Einstellungen → Diagnose kann jetzt das Mikrofon testen.",
+    "notes": [
+      "Ein neuer Test unter Einstellungen → Diagnose nimmt kurz etwas auf und spielt es sofort wieder ab – nichts wird verschickt. Vorbereitung für eine Aufnahme-Funktion, die noch nicht fertig ist."
+    ]
+  },
+  {
+    "version": "v94",
+    "summary": "Vorbereitung für eine neue Funktion (noch nicht sichtbar).",
+    "notes": [
+      "Technische Vorarbeit im Hintergrund. Es ändert sich für dich noch nichts."
+    ]
+  },
+  {
     "version": "v93",
     "summary": "92 Beispielwörter bei Katakana-Karten haben jetzt einen Ton.",
     "notes": [

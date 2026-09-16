@@ -26,6 +26,7 @@ import { watchViewport } from "./viewport.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
+import { stopAllRecording } from "./recording.js";
 
 // #123: four, where design 11 draws three. Words is where she searches, stars
 // and adds words; each of those used to be reached from somewhere else, and
@@ -213,6 +214,9 @@ function tabBar() {
 }
 
 function goToTab(key) {
+  // Leaving Settings mid mic-test used to leave its stream running — nothing
+  // else calls `stop()` on it once its screen is gone (#185, recording.js).
+  if (state.tab === "settings" && key !== "settings") stopAllRecording();
   if (key === "stats" && state.jokerBadge) {
     state.jokerBadge = false;
     setMeta("joker.badge", false);

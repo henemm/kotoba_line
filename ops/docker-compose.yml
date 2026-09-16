@@ -21,6 +21,7 @@ services:
       HOST: 0.0.0.0          # inside the container; the published port is loopback
       PORT: "8080"
       DATA_DIR: /data
+      PRACTICE_DIR: /media/practice
       COOKIE_PATH: /kotoba
       COOKIE_SECURE: "true"  # nginx terminates TLS in front of this
       LOG_LEVEL: info
@@ -31,6 +32,11 @@ services:
       # Audio. nginx serves it directly (§9) — mounted read-only so the API
       # can check what exists without being able to damage it.
       - /srv/kotoba/media:/media:ro
+      # Her and a native speaker's own recordings (#183 follow-up) are the one
+      # kind of audio the API itself writes, at request time — a second,
+      # narrower mount rather than loosening the :ro one above, so imported
+      # and generated audio stays something this process cannot touch.
+      - /srv/kotoba/media/practice:/media/practice:rw
 
     # An account is created with:
     #   docker compose -f ops/docker-compose.yml exec api node bin/adduser.js --handle mira

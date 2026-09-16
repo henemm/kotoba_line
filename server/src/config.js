@@ -19,6 +19,12 @@ export const config = {
   dataDir,
   dbFile: process.env.DB_FILE ?? join(dataDir, "kotoba.sqlite"),
 
+  // The rest of /media is mounted read-only into this container on purpose
+  // (ops/docker-compose.yml) — the API can check what exists but not touch
+  // imported or generated audio. `practiceDir` is a separate, writable
+  // mount, only for what this process itself creates (#183 follow-up).
+  practiceDir: process.env.PRACTICE_DIR ?? "./media/practice",
+
   // §10: httpOnly, Secure, SameSite=Lax, Path=/kotoba, one-year expiry.
   // COOKIE_SECURE exists only so the container can be exercised over plain
   // HTTP in development; in production nginx terminates TLS and it stays on.

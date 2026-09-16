@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { mkdirSync } from "node:fs";
 import { config as defaultConfig } from "./config.js";
 import { readCookie } from "./cookies.js";
 import { openDatabase } from "./db.js";
@@ -8,6 +9,7 @@ import eventRoutes from "./routes/events.js";
 import deckRoutes, { personalDeckRoutes } from "./routes/deck.js";
 import settingsRoutes from "./routes/settings.js";
 import statsRoutes from "./routes/stats.js";
+import recordingRoutes from "./routes/recordings.js";
 
 /**
  * Build the server. Takes an already-open database so tests can hand in an
@@ -16,6 +18,7 @@ import statsRoutes from "./routes/stats.js";
 export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   const database = db ?? openDatabase(config.dbFile);
   pruneExpiredSessions(database, config.sessionMaxAgeSeconds);
+  mkdirSync(config.practiceDir, { recursive: true });
 
   const app = Fastify({
     logger: logger ?? { level: config.logLevel },
@@ -50,6 +53,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   await app.register(deckRoutes);
   await app.register(personalDeckRoutes);
   await app.register(settingsRoutes);
+  await app.register(recordingRoutes);
 
   app.addHook("onClose", async () => database.close());
 

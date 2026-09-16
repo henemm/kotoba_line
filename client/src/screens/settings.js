@@ -4,6 +4,7 @@ import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
 import { sheetSummary, versionNumber } from "../whats-new.js";
 import { el, num, render } from "../ui/dom.js";
+import { canRecord, startRecording } from "../recording.js";
 
 /**
  * Which app shell this device is running, and which one it has ready.
@@ -464,7 +465,75 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       // it; Safari hands out a different, smaller set of voices than the
       // system has, so the only honest answer comes from her own device.
       diagnostic("Japanische Stimmen", japaneseVoices()),
+      microphoneTest(),
     );
+  }
+
+  /**
+   * A record-and-play-back-locally check (#183 follow-up) — nothing here is
+   * uploaded, it never leaves the device. Exists because there is nowhere
+   * else in the *installed* app to try `MediaRecorder`: a related API
+   * (`webkitSpeechRecognition` in 話す) crashed the installed app on her
+   * iPad and was removed outright (#155), so this has to be checked in the
+   * standalone context before the recording feature is wired into a session
+   * screen — and a plain test page cannot be opened from inside a standalone
+   * app, which has no address bar.
+   */
+  function microphoneTest() {
+    const box = el("div.mic-test");
+    let controller = null;
+    let audioUrl = null;
+    // Same guard as session.js's recordingBlock: without it a second tap in
+    // the gap before `startRecording()` resolves opens a stream nothing here
+    // keeps a reference to, and it never gets stopped (#185).
+    let starting = false;
+
+    const draw = (status) => {
+      render(
+        box,
+        el("div.diagnostic", {}, el("span", { text: "Mikrofon" }), el("span", { text: status })),
+        el(
+          "div.mic-test-row",
+          {},
+          el("button.btn.small", {
+            type: "button",
+            text: controller ? "Stopp" : starting ? "Verbindet …" : "2 Sek. testen",
+            disabled: starting,
+            onclick: onTap,
+          }),
+          audioUrl ? el("audio", { controls: true, src: audioUrl }) : null,
+        ),
+      );
+    };
+
+    async function onTap() {
+      if (controller) {
+        const blob = await controller.stop();
+        controller = null;
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        audioUrl = URL.createObjectURL(blob);
+        draw(`aufgenommen, ${Math.round(blob.size / 1024)} KB – zum Prüfen abspielen`);
+        return;
+      }
+      if (starting) return;
+      if (!canRecord()) {
+        draw("von diesem Browser nicht unterstützt");
+        return;
+      }
+      starting = true;
+      draw(null);
+      try {
+        controller = await startRecording();
+        starting = false;
+        draw("Aufnahme läuft – nochmal tippen zum Stoppen");
+      } catch (err) {
+        starting = false;
+        draw(`Fehler: ${err.name ?? err.message}`);
+      }
+    }
+
+    draw(canRecord() ? "bereit" : "von diesem Browser nicht unterstützt");
+    return box;
   }
 
   /** The ja voices `speechSynthesis` offers here, by name — "keine" where there are none. */
