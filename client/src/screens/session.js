@@ -1076,6 +1076,10 @@ export function sessionScreen({
         // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
         // "what does it say" — a romaji line here does not spoil the flip.
         romajiLine(card),
+        // The word is right there to attempt, same as revealFlip's word-first
+        // side already offers — not for a kana card, which has its own
+        // recordings (Commons, VOICEVOX) and was never part of this feature.
+        kana ? null : recordingBlock(card),
       );
       if (kana) prime(...strokeFiles(card), ...exampleAudio(card));
       else if (readAloud) voice(card.word, card.word_audio);
@@ -1246,12 +1250,15 @@ export function sessionScreen({
 
   /**
    * The recording controls and the colour-coded comparison row (#183
-   * follow-up, design discussion 2026-09-16). On the reveal side of every
-   * card in `revealFlip`, hers or not (Henning, 2026-09-16: "alle Decks") —
-   * a Kaishi card already has a professional recording, but comparing her
-   * own attempt against it is exactly the point. Manages its own re-renders,
-   * the same way `microphoneTest()` in
-   * settings.js does, so recording one card does not re-run the whole flip.
+   * follow-up, design discussion 2026-09-16). Called from every page that
+   * shows a card's Japanese word and is not a kana card (which has its own
+   * recordings already) — both sides of 話す, both sides of めくる for a
+   * word-first card and only the reveal for a meaning-first one, on any deck,
+   * hers or not (Henning, 2026-09-16: "alle Decks") — a Kaishi card already
+   * has a professional recording, but comparing her own attempt against it is
+   * exactly the point. Manages its own re-renders, the same way
+   * `microphoneTest()` in settings.js does, so recording one card does not
+   * re-run the whole flip.
    */
   function recordingBlock(card) {
     const box = el("div.recording-block");
@@ -1410,6 +1417,10 @@ export function sessionScreen({
   }
 
   function revealFlip(card, area, answers) {
+    // The front's own recordingBlock (word-first cards only) is a different
+    // DOM node than the one about to replace it — same reasoning as
+    // revealSpeak above.
+    stopAllRecording();
     const meaningFirst = flipsMeaningFirst(card);
     // #113: the word stays where the front showed it — or, with the meaning on
     // the front (#137), the meaning does, and the word comes in under it.
