@@ -29,11 +29,12 @@
  * recordings from Lingua Libre and Tofugu (v87, lib/example-sounds.js).
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { openDatabase } from "../server/src/db.js";
 import { kanaReading } from "../client/src/screens/session.js";
 import { EXAMPLE_SOUNDS, TOFUGU_COMMIT, exampleSoundName } from "./lib/example-sounds.js";
+import { MNEMONICS, mnemonicAssetName, mnemonicFor, mnemonicMediaName } from "./lib/kana-mnemonics.js";
 import { makeMeaningLookup, parseJlptCsv, pickExamples } from "./lib/examples.js";
 import { kanaCards, strokeCharacters, strokeFile } from "./lib/kana.js";
 import { COMMONS_UPLOADER, KANA_SOUNDS, kanaSoundFile, soundMediaName } from "./lib/kana-sounds.js";
@@ -79,12 +80,13 @@ function parseArgs(argv) {
  * `sounds` writes each card's recording into `word_audio` (v84); the caller
  * has put the files on disk first.
  */
-export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples, { sounds = false } = {}) {
+export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples, { sounds = false, mnemonics = false } = {}) {
   const fields = ["word", "word_reading", "word_meaning", "frequency_rank", "deck"];
   // Without `examples` (--no-examples, or a test of the cards alone) the
   // column is left as it is rather than cleared; `word_audio` likewise.
   if (examples) fields.push("word_examples");
   if (sounds) fields.push("word_audio");
+  if (mnemonics) fields.push("word_mnemonic");
   const existing = db.prepare(`SELECT ${fields.join(", ")}, deleted_at FROM cards WHERE id = ?`);
   const upsert = db.prepare(
     `INSERT INTO cards (id, ${fields.join(", ")}, updated_at)
@@ -101,6 +103,10 @@ export function writeKanaCards(db, now = Math.floor(Date.now() / 1000), examples
       const card = { ...kanaCard };
       if (examples) card.word_examples = found.length ? JSON.stringify(found) : null;
       if (sounds) card.word_audio = kanaSoundFile(kanaCard.word);
+      if (mnemonics) {
+        const picture = mnemonicFor(kanaCard.word);
+        card.word_mnemonic = picture ? JSON.stringify(picture) : null;
+      }
       const row = existing.get(card.id);
       const same = row && row.deleted_at == null && fields.every((k) => row[k] === card[k]);
       if (same) continue;
@@ -272,6 +278,30 @@ async function writeExampleSounds(mediaDir) {
   return { written: missing.length, kept: EXAMPLE_SOUNDS.length - missing.length };
 }
 
+/**
+ * The kana pictures (v88, #177): copied out of the repository rather than
+ * downloaded, because they are crops of one large chart (lib/kana-mnemonics.js
+ * says why they are committed). A file already there is left alone, but one
+ * whose bytes differ is replaced, so a corrected tile reaches the server.
+ */
+function writeMnemonics(mediaDir) {
+  mkdirSync(mediaDir, { recursive: true });
+  const from = new URL("./assets/mnemonics/", import.meta.url);
+  let written = 0;
+  let kept = 0;
+  for (const { kana } of MNEMONICS) {
+    const source = readFileSync(new URL(mnemonicAssetName(kana), from));
+    const dest = join(mediaDir, mnemonicMediaName(kana));
+    if (existsSync(dest) && readFileSync(dest).equals(source)) {
+      kept += 1;
+      continue;
+    }
+    writeFileSync(dest, source);
+    written += 1;
+  }
+  return { written, kept };
+}
+
 async function writeStrokes(mediaDir) {
   mkdirSync(mediaDir, { recursive: true });
   let written = 0;
@@ -325,7 +355,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     sounds = true;
     process.stdout.write(`Kana recordings (Wikimedia Commons): ${written} written, ${kept} already there, in ${mediaDir}\n`);
   }
-  const changed = writeKanaCards(db, undefined, examples, { sounds });
+  let mnemonics = false;
+  if (args["no-mnemonics"]) {
+    process.stdout.write("Kana pictures left as they are (--no-mnemonics)\n");
+  } else {
+    const { written, kept } = writeMnemonics(mediaDir);
+    mnemonics = true;
+    process.stdout.write(`Kana pictures (B. Domangue, CC BY-SA 4.0): ${written} written, ${kept} already there, in ${mediaDir}\n`);
+  }
+  const changed = writeKanaCards(db, undefined, examples, { sounds, mnemonics });
   db.close();
   process.stdout.write(`Kana cards: ${total} in ${dbFile}, ${changed} new or changed\n`);
 

@@ -1937,6 +1937,38 @@
   font-size: 34px;
   font-weight: 700;
 }
+/* v88 (#177): the picture that holds the kana's shape, beside its hook rather
+   than above it — the back of a kana card already carries the reading, the
+   stroke order and up to three example words, and v83 measured that stack
+   reaching the bottom of the phone. The drawing is line art on white, so it
+   keeps a white ground in both palettes and gets a rounded box instead. */
+.kana-mnemonic {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  width: 100%;
+  max-width: 360px;
+  text-align: left;
+}
+.kana-mnemonic-picture {
+  grid-row: span 2;
+  width: 132px;
+  height: 84px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px;
+}
+.kana-mnemonic-hook {
+  font-size: 14px;
+  line-height: 1.3;
+  align-self: end;
+}
+.kana-mnemonic .kana-credit {
+  align-self: start;
+}
 .kana-strokes {
   display: flex;
   flex-direction: column;

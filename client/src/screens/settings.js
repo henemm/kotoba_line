@@ -411,6 +411,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
           "Tofugu und WaniKani",
           "Aussprache von Beispielwörtern der Kana – github.com/tofugu/japanese-vocabulary-pronunciation-audio, CC BY-SA 4.0",
         ],
+        ["Merkbilder", "Zeichnungen zu den Kana – B. Domangue, Wikimedia Commons, CC BY-SA 4.0"],
         ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
         [
           "JMdict",

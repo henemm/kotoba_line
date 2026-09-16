@@ -381,7 +381,8 @@ re-encoding (`import/lib/kana-sounds.js`). It is in `word_audio`, shared by a
 hiragana card and its katakana, and 選ぶ keeps it silent until she has
 answered, because the sound is the answer. The 33 yōon have no free
 recording anywhere, so the phone's speech synthesis reads them, with 47's
-caption. Nothing on a kana card is generated — no mnemonics.
+caption. Nothing on a kana card is generated: the pictures below are drawn by
+a person and licensed, not invented here.
 
 The example words (v78) are chosen by the import and stored on the card
 (`word_examples`, migration 019): Kaishi words first, then the JLPT lists
@@ -399,6 +400,17 @@ Japanese as their native language — and from Tofugu/WaniKani, both CC BY-SA
 left out on purpose. Tofugu has a Tokyo and a Kansai voice; the Tokyo one is
 preferred, not required. That takes katakana from 5 to 37 cards with a
 recorded example (23 with the sound inside) and hiragana from 86 to 96.
+
+**Pictures** (v88, #177). Each of the 46 basic kana per script shows, on the
+answer side, a drawing that holds its shape with a short English hook — き a
+key, ぬ noodles round a chopstick. They are B. Domangue's "Japanese Kana
+Mnemonic Chart" (Wikimedia Commons, CC BY-SA 4.0), cut into one file per kana
+and committed under `import/assets/mnemonics` — the one place this project
+keeps media in git, because cutting a 7600 × 4200 PNG needs more than
+`import/` can do without dependencies. Dakuten and yōon have none. The
+picture is always shown once she has answered or turned the card over, never
+before, and never only while a card is new: a picture that comes and goes is
+one more rule to work out (Henning, 2026-09-16).
 
 ---
 

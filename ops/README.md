@@ -117,6 +117,8 @@ downloads) and stops if a file is not the pinned recording. Run it after
 would play a kana's recording before she has answered. Since v87 it also
 fetches 57 example-word recordings from Lingua Libre (Commons) and Tofugu
 (GitHub) as `example-*.mp3` (~1.3 MB, about a minute), pinned the same way.
+Since v88 it also copies the 92 kana pictures out of the repository
+(`import/assets/mnemonics`) into the media directory as `mnemonic-*.png`.
 Re-running it changes nothing that has not changed.
 
 `verify-import` samples twenty cards and checks their audio is really audio.

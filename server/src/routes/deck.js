@@ -86,7 +86,7 @@ export default async function deckRoutes(app) {
           `SELECT id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
                   sentence, sentence_furigana, sentence_meaning, sentence_audio,
                   frequency_rank, deck, owner_id, updated_at, deleted_at, list_name, deck_id,
-                  word_examples
+                  word_examples, word_mnemonic
              FROM cards
             WHERE updated_at > ?
             ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC

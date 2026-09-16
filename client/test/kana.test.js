@@ -6,6 +6,7 @@ import {
   exampleAudio,
   flipsMeaningFirst,
   kanaExamples,
+  kanaMnemonic,
   kanaSynthesised,
   meaningPool,
   promptAudio,
@@ -89,6 +90,14 @@ describe("kana cards (#158)", () => {
     assert.deepEqual(kanaExamples(ka), []);
     assert.deepEqual(kanaExamples({ ...ka, word_examples: "{not json" }), []);
     assert.deepEqual(kanaExamples({ ...ka, word_examples: JSON.stringify([{ kana: "か" }]) }), [], "an entry without a meaning is left out");
+  });
+
+  it("reads the picture the import stored, and survives a bad value (v88)", () => {
+    const picture = { file: "mnemonic-0304b.png", hook: "Cod." };
+    assert.deepEqual(kanaMnemonic({ ...ka, word_mnemonic: JSON.stringify(picture) }), picture);
+    assert.equal(kanaMnemonic(ka), null, "a card with none: no picture, not an error");
+    assert.equal(kanaMnemonic({ ...ka, word_mnemonic: "{not json" }), null);
+    assert.equal(kanaMnemonic({ ...ka, word_mnemonic: JSON.stringify({ file: "x.png" }) }), null, "a file without a hook is not one");
   });
 
   it("marks the kana inside its example word, and never in the wrong place (v83)", () => {
