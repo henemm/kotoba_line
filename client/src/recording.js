@@ -5,13 +5,18 @@
  * removed outright (#155, session.js's drawSpeak). `MediaRecorder` was
  * checked separately, on the real device, before any of this was written.
  *
- * `getUserMedia`'s permission prompt is asked again on every fresh page load
- * on iOS — a known Safari limitation, not fixable here — so the stream is
- * requested once and kept, not re-requested per card: a session going
- * through several cards with a person asks for the microphone once.
+ * `getUserMedia` is asked fresh for every recording, not once and reused —
+ * measured on the deployed server, 2026-09-16: reusing one `MediaStream`
+ * across several `MediaRecorder`s produced a first recording ffmpeg could
+ * read and every later one it rejected outright ("Invalid data found when
+ * processing input"), a known WebKit quirk with a stream a recorder has
+ * already been attached to. `getUserMedia`'s permission prompt does not
+ * re-ask within one page load (only across a fresh load, a separate iOS
+ * limitation, not fixable here), so asking again per recording costs
+ * nothing — no second prompt, and it sidesteps the corrupted-data case
+ * entirely. Each stream's tracks are stopped once its recording is done, so
+ * the microphone indicator does not stay lit between cards either.
  */
-
-let sharedStream = null;
 
 /** Whether this device can record at all — checked once, not assumed. */
 export function canRecord() {
@@ -39,9 +44,9 @@ function pickMimeType() {
  * app's audio follows.
  */
 export async function startRecording() {
-  if (!sharedStream) sharedStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const mimeType = pickMimeType();
-  const recorder = new MediaRecorder(sharedStream, mimeType ? { mimeType } : undefined);
+  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
   const chunks = [];
   recorder.addEventListener("dataavailable", (e) => {
     if (e.data.size > 0) chunks.push(e.data);
@@ -51,8 +56,14 @@ export async function startRecording() {
   return {
     stop: () =>
       new Promise((resolve, reject) => {
-        recorder.addEventListener("error", (e) => reject(e.error));
-        recorder.addEventListener("stop", () => resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" })));
+        recorder.addEventListener("error", (e) => {
+          for (const track of stream.getTracks()) track.stop();
+          reject(e.error);
+        });
+        recorder.addEventListener("stop", () => {
+          for (const track of stream.getTracks()) track.stop();
+          resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" }));
+        });
         recorder.stop();
       }),
   };

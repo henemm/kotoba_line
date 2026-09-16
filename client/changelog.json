@@ -1,5 +1,12 @@
 [
   {
+    "version": "v99",
+    "summary": "Jede Aufnahme nach der ersten wurde nicht gespeichert.",
+    "notes": [
+      "Ab der zweiten Aufnahme auf einer Karte kam „Konnte die Aufnahme nicht speichern“ – nicht wegen des Löschens, sondern weil dasselbe Mikrofon-Signal mehrfach genutzt wurde. Jetzt bekommt jede Aufnahme ein frisches."
+    ]
+  },
+  {
     "version": "v98",
     "summary": "Aufnahme-Buttons zeigen jetzt richtig an, welche Aufnahme läuft.",
     "notes": [
