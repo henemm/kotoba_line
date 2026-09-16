@@ -997,6 +997,12 @@ export function sessionScreen({
       // Always, whatever "Show romaji" says: she has most likely just typed
       // romaji, and this is the line to compare it with, letter by letter.
       romajiLine(card, true),
+      // The word only appears once she has typed (or asked to see) it — there
+      // is nothing to attempt on 書く's front the way there is on 話す's or
+      // めくる's, so this is reveal-only here (Henning, 2026-09-16, step 6:
+      // the one mode with no existing recording UI at all before this). Not
+      // for a kana card, same exclusion as everywhere else.
+      isKana(card) ? null : recordingBlock(card),
       // A meaning shared with another card (33 are): she typed a word that is
       // right, just not this card's. It counts, and says which.
       given && given.id !== card.id
