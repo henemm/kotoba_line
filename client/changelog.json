@@ -1,5 +1,12 @@
 [
   {
+    "version": "v109",
+    "summary": "Fix von eben: das × und die Löschen-Rückfrage waren immer sichtbar.",
+    "notes": [
+      "Seit v108 zeigte jede Karte mit Aufnahme-Kreisen das × und „Wirklich löschen?\" ständig an, auch ohne draufzutippen. Behoben."
+    ]
+  },
+  {
     "version": "v108",
     "summary": "Die Aufnahme-Knöpfe komplett neu: runder Kreis statt Chip-Liste.",
     "notes": [

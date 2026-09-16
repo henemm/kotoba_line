@@ -1893,6 +1893,17 @@
   display: grid;
   place-items: center;
 }
+/* Nothing else in this app has used the `hidden` attribute before — its
+   own `display: none` sits in the browser's default stylesheet at the same
+   specificity as a class selector, so an unguarded `display: grid`/`flex`
+   here wins the cascade (author styles come after the UA sheet) and the
+   attribute does nothing. Measured live, 2026-09-16: both circles' × and
+   confirm popover showed on every card, in every state, from the moment
+   v108 deployed. */
+.voice-delete[hidden],
+.voice-confirm[hidden] {
+  display: none;
+}
 /* Fixed widths, not just a minimum: two different-length status strings
    ("antippen: abspielen" vs "wird hochgeladen …") on a flex row centred on
    its content re-centre the whole row when one child's text changes width,
