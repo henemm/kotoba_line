@@ -1,5 +1,12 @@
 [
   {
+    "version": "v94",
+    "summary": "Vorbereitung für eine neue Funktion (noch nicht sichtbar).",
+    "notes": [
+      "Technische Vorarbeit im Hintergrund. Es ändert sich für dich noch nichts."
+    ]
+  },
+  {
     "version": "v93",
     "summary": "92 Beispielwörter bei Katakana-Karten haben jetzt einen Ton.",
     "notes": [

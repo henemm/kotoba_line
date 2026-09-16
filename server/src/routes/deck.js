@@ -24,6 +24,7 @@ import { VALID_MODES, previewIntervals } from "../scheduler.js";
 import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, releaseNewCards, updateDeckSettings } from "../deck-settings.js";
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
+import { recordingsAmong } from "../recordings.js";
 
 /**
  * The four intervals for each card, folded from its own history.
@@ -188,6 +189,13 @@ export default async function deckRoutes(app) {
       // connection still knows which of its cards are starred.
       if (answer.cardIds.length > 0) {
         answer.starred = starredAmong(db, req.user.id, answer.cardIds);
+      }
+
+      // Her own and a native speaker's recordings (#183 follow-up), the same
+      // shape and the same reason as starred above: per-user, not part of the
+      // public deck, wanted for exactly these cards.
+      if (answer.cardIds.length > 0) {
+        answer.recordings = recordingsAmong(db, req.user.id, answer.cardIds);
       }
 
       // Design 10 (#90, #91): an empty day's queue is exactly when the practise
