@@ -11,7 +11,7 @@ import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
-import { canRecord, startRecording } from "../recording.js";
+import { canRecord, startRecording, stopAllRecording } from "../recording.js";
 
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
@@ -382,6 +382,7 @@ export function sessionScreen({
   }
 
   function leave() {
+    stopAllRecording();
     // A pending advance would fire into a screen that no longer exists, draw a
     // card into a detached node, and — at the end of the queue — call finish()
     // on a session she has already left.
@@ -397,6 +398,11 @@ export function sessionScreen({
   // ── one card ────────────────────────────────────────────────────
 
   function drawCard() {
+    // A card can be graded while its own recordingBlock is still recording
+    // (grading is not gated on it) — the DOM node this replaces is the only
+    // thing that held it, so without this the mic stays live for the rest
+    // of the page load (Charlotte, 2026-09-16).
+    stopAllRecording();
     const card = queue[index];
     // The mode on the card is for the iPad card's layout (#150, screens.css).
     const area = el("div.card-area", { dataset: { mode } });
@@ -1241,6 +1247,14 @@ export function sessionScreen({
     // that started it can be the one that stops it.
     let recordingKind = null;
     let busy = false;
+    // Set the moment a button is tapped, cleared once `startRecording()`
+    // resolves or fails — the gap `getUserMedia` takes to answer. Without
+    // this a second tap in that gap (a fumbled double-tap, or the other
+    // button) opened a second stream nothing here kept a reference to, so
+    // stopping the one `controller` pointed at left the first running
+    // forever (Charlotte, 2026-09-16 — the mic stayed lit after a finished
+    // recording).
+    let starting = false;
 
     const draw = (status) => {
       const sources = sourcesFor(card);
@@ -1249,14 +1263,16 @@ export function sessionScreen({
         const active = recordingKind === kind;
         // Recording "own" hides the native button outright rather than
         // disabling it (and the reverse): a disabled "Stopp" next to a live
-        // one is exactly the confusing pair this replaces.
-        if (controller && !active) return null;
+        // one is exactly the confusing pair this replaces. Also while a tap
+        // is still waiting on the microphone — the other button hides then
+        // too, not only once `controller` exists.
+        if ((controller || starting) && !active) return null;
         if (kind === "native" && !active && nativeCount >= 3) return null;
         return el("button.btn.small.ghost", {
           type: "button",
-          text: active ? "Stopp" : label,
-          disabled: busy,
-          onclick: () => (active ? onStop() : onStart(kind)),
+          text: active ? (controller ? "Stopp" : "Verbindet …") : label,
+          disabled: busy || (active && starting),
+          onclick: () => (active ? (controller ? onStop() : undefined) : onStart(kind)),
         });
       };
       render(
@@ -1302,11 +1318,17 @@ export function sessionScreen({
     };
 
     async function onStart(kind) {
+      if (controller || starting) return;
+      starting = true;
+      recordingKind = kind;
+      draw(null);
       try {
         controller = await startRecording();
-        recordingKind = kind;
+        starting = false;
         draw("Aufnahme läuft …");
       } catch (err) {
+        starting = false;
+        recordingKind = null;
         draw(`Mikrofon nicht verfügbar: ${err.name ?? err.message}`);
       }
     }
@@ -1562,6 +1584,7 @@ export function sessionScreen({
   }
 
   async function finish() {
+    stopAllRecording();
     stop();
     // Finished sessions are not resumable, whatever the four-hour window says.
     forget().catch(() => {});

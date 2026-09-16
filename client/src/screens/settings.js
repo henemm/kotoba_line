@@ -483,6 +483,10 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     const box = el("div.mic-test");
     let controller = null;
     let audioUrl = null;
+    // Same guard as session.js's recordingBlock: without it a second tap in
+    // the gap before `startRecording()` resolves opens a stream nothing here
+    // keeps a reference to, and it never gets stopped (#185).
+    let starting = false;
 
     const draw = (status) => {
       render(
@@ -491,7 +495,12 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
         el(
           "div.mic-test-row",
           {},
-          el("button.btn.small", { type: "button", text: controller ? "Stopp" : "2 Sek. testen", onclick: onTap }),
+          el("button.btn.small", {
+            type: "button",
+            text: controller ? "Stopp" : starting ? "Verbindet …" : "2 Sek. testen",
+            disabled: starting,
+            onclick: onTap,
+          }),
           audioUrl ? el("audio", { controls: true, src: audioUrl }) : null,
         ),
       );
@@ -506,14 +515,19 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
         draw(`aufgenommen, ${Math.round(blob.size / 1024)} KB – zum Prüfen abspielen`);
         return;
       }
+      if (starting) return;
       if (!canRecord()) {
         draw("von diesem Browser nicht unterstützt");
         return;
       }
+      starting = true;
+      draw(null);
       try {
         controller = await startRecording();
+        starting = false;
         draw("Aufnahme läuft – nochmal tippen zum Stoppen");
       } catch (err) {
+        starting = false;
         draw(`Fehler: ${err.name ?? err.message}`);
       }
     }

@@ -1,5 +1,12 @@
 [
   {
+    "version": "v100",
+    "summary": "Mikrofon blieb nach der Aufnahme manchmal an.",
+    "notes": [
+      "Wenn du zur nächsten Karte weiter warst, während noch aufgenommen wurde, lief das Mikrofon einfach weiter – auch wenn die Aufnahme selbst schon fertig aussah. Jetzt wird es beim Kartenwechsel und beim Verlassen immer abgeschaltet, und ein doppeltes Antippen von „Aufnehmen“ kann es nicht mehr verdoppeln."
+    ]
+  },
+  {
     "version": "v99",
     "summary": "Jede Aufnahme nach der ersten wurde nicht gespeichert.",
     "notes": [
