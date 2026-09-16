@@ -1313,9 +1313,10 @@ export function sessionScreen({
       const ring = svgEl("svg", { class: "voice-ring", viewBox: "0 0 58 58" });
       ring.append(svgEl("circle", { class: "ring-bg", cx: 29, cy: 29, r: 23 }), ringFg);
       const btn = el("button.voice-btn", { type: "button", onclick: onTap });
+      // No text: the × is drawn in CSS (two crossed bars), not the "×"
+      // character — a text glyph's own centring depends on the font.
       const del = el("button.voice-delete", {
         type: "button",
-        text: "×",
         "aria-label": `${caption} löschen`,
         onclick: () => {
           confirm.hidden = false;

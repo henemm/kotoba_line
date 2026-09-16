@@ -1,5 +1,12 @@
 [
   {
+    "version": "v111",
+    "summary": "Das × sauberer: mehr Abstand, gezeichnet statt Schriftzeichen.",
+    "notes": [
+      "Das × berührte noch den farbigen Kreis. Jetzt mehr Abstand, und statt des Schriftzeichens „×\" zeichnet die App es selbst als zwei Striche – dadurch sitzt es wirklich mittig, unabhängig von der Schriftart."
+    ]
+  },
+  {
     "version": "v110",
     "summary": "Das × saß mitten im Ring statt klar außerhalb.",
     "notes": [

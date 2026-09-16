@@ -1877,25 +1877,42 @@
 }
 /* Always visible once a recording exists, never behind a long press — that
    does not exist anywhere else in this app and is not reliable on a phone
-   browser to begin with (Henning, 2026-09-16). Asks before it deletes. */
-/* -10px, not -2px: the ring (.voice-ring, positioned separately) already
-   overhangs the 44px button by 7px on every side, so a badge placed only
-   2px past the button's own edge lands inside the ring's circle, not
-   outside it — measured on the deployed v108, screenshot, 2026-09-16. */
+   browser to begin with (Henning, 2026-09-16). Asks before it deletes.
+   -20px, not -2px or -10px: measured against the deployed v108 and v109
+   screenshots, then checked at 3x in a side-by-side comparison of several
+   offsets before picking one — -10px still overlapped the note circle
+   itself, and -20px is the first that clears it with a visible gap without
+   reading as detached from it. The × is drawn as two crossed bars rather
+   than the "×" character: a text glyph's optical centre depends on the
+   font and does not sit in the middle of its own box the way a shape can. */
 .voice-delete {
   position: absolute;
-  top: -10px;
-  right: -10px;
+  top: -20px;
+  right: -20px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: var(--surface);
-  color: var(--ink-muted);
   border: 1px solid var(--ink-dim);
-  font-size: 12px;
-  line-height: 1;
   display: grid;
   place-items: center;
+}
+.voice-delete::before,
+.voice-delete::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 1.6px;
+  border-radius: 1px;
+  background: var(--ink-muted);
+}
+.voice-delete::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.voice-delete::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 /* Nothing else in this app has used the `hidden` attribute before — its
    own `display: none` sits in the browser's default stylesheet at the same
