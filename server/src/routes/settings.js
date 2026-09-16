@@ -30,6 +30,7 @@ const patchSchema = {
       speakSource: { type: "string", enum: SPEAK_SOURCES },
       japaneseScript: { type: "boolean" },
       appearance: { type: "string", enum: APPEARANCES },
+      recordingEnabled: { type: "boolean" },
       // #133: at most four of the five, so one line always remains.
       hiddenModes: {
         type: "array",

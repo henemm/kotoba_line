@@ -1,5 +1,12 @@
 [
   {
+    "version": "v105",
+    "summary": "Die Aufnahme-Funktion lässt sich jetzt in den Einstellungen abschalten.",
+    "notes": [
+      "Unter Einstellungen → Üben gibt es jetzt einen Schalter „Aufnahme-Funktion“. Ausgeschaltet verschwinden die Aufnahme-Knöpfe und die Vergleichs-Aufnahmen von allen Karten – an ist es wie bisher."
+    ]
+  },
+  {
     "version": "v104",
     "summary": "Bei „Karte umdrehen“ jetzt auch auf der Vorderseite aufnehmen.",
     "notes": [

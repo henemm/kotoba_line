@@ -116,6 +116,10 @@ export function sessionScreen({
   // #135: false shows words in romaji and sentences as sound only — see
   // `client/src/script.js` for why sentences are not romaji too.
   japanese = true,
+  // #185: off hides recordingBlock() everywhere in this session, chips and
+  // record buttons alike — not only the buttons, the same way turning off
+  // "Japanische Schrift" takes the pitch-accent and romaji rows with it.
+  recordingEnabled = true,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -1261,6 +1265,7 @@ export function sessionScreen({
    * re-run the whole flip.
    */
   function recordingBlock(card) {
+    if (!recordingEnabled) return null;
     const box = el("div.recording-block");
     let controller = null;
     // Which button started it — not the same thing as which button was

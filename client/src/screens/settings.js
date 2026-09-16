@@ -334,7 +334,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
    * until they touch it: the default stays "Sentence".
    */
   function practice() {
-    const { speakSource } = data.settings;
+    const { speakSource, recordingEnabled } = data.settings;
     return group(
       "Üben",
       el(
@@ -353,6 +353,11 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
             }),
           ),
         ),
+      ),
+      row(
+        "Aufnahme-Funktion",
+        "Deine eigene Aussprache aufnehmen und mit einem Muttersprachler oder der Karte vergleichen.",
+        toggle(recordingEnabled, "Aufnahme-Funktion", (on) => write({ recordingEnabled: on })),
       ),
     );
   }
