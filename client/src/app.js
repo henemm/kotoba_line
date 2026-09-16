@@ -121,6 +121,7 @@ const state = {
     hiddenModes: [],
     // #137, v65: the default Henning chose, and what index.html drew with.
     appearance: "light",
+    recordingEnabled: true,
   },
   online: navigator.onLine,
   // 52: the server is reachable and the cookie is not. Two flags, because the
@@ -1112,6 +1113,7 @@ function renderApp() {
       japanese: state.settings.japaneseScript,
       // #77: same reasoning — read here so every setting lives in one place.
       speakSource: state.settings.speakSource,
+      recordingEnabled: state.settings.recordingEnabled,
       onExit: () => {
         state.session = undefined;
         // Her answers change the count (#106).
