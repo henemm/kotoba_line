@@ -18,13 +18,17 @@ describe("the kana pictures (#177, v88)", () => {
     assert.equal(mnemonicFor("が"), null, "nor a dakuten");
   });
 
-  it("each carry the chart's own hook", () => {
+  it("each carry the chart's own hook, except the one dropped on purpose", () => {
     for (const { kana, hook } of MNEMONICS) {
+      if (hook === null) continue;
       assert.ok(hook.length > 2 && hook.length < 60, `${kana}: ${hook}`);
       assert.match(hook, /[.!"]$/, `${kana}: ${hook} ends as the chart writes it`);
     }
     assert.equal(mnemonicFor("き").hook, "Key.");
     assert.equal(MNEMONIC_SOURCE.licence, "CC BY-SA 4.0");
+    // ク keeps the drawing and loses the words (Henning, 2026-09-16).
+    assert.deepEqual(mnemonicFor("ク"), { file: "mnemonic-030af.png" });
+    assert.equal(MNEMONICS.filter((m) => m.hook === null).length, 1);
   });
 
   it("have their file in the repository, named by code point", () => {

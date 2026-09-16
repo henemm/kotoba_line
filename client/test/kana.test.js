@@ -97,7 +97,11 @@ describe("kana cards (#158)", () => {
     assert.deepEqual(kanaMnemonic({ ...ka, word_mnemonic: JSON.stringify(picture) }), picture);
     assert.equal(kanaMnemonic(ka), null, "a card with none: no picture, not an error");
     assert.equal(kanaMnemonic({ ...ka, word_mnemonic: "{not json" }), null);
-    assert.equal(kanaMnemonic({ ...ka, word_mnemonic: JSON.stringify({ file: "x.png" }) }), null, "a file without a hook is not one");
+    assert.deepEqual(
+      kanaMnemonic({ ...ka, word_mnemonic: JSON.stringify({ file: "mnemonic-030af.png" }) }),
+      { file: "mnemonic-030af.png" },
+      "ク has a drawing and no hook",
+    );
   });
 
   it("marks the kana inside its example word, and never in the wrong place (v83)", () => {

@@ -1108,7 +1108,7 @@ export function sessionScreen({
     render(
       block,
       el("img.kana-mnemonic-picture", { src: mediaUrl(picture.file), alt: "", onerror: hide }),
-      el("span.kana-mnemonic-hook", { text: picture.hook }),
+      picture.hook ? el("span.kana-mnemonic-hook", { text: picture.hook }) : null,
       // CC BY-SA 4.0 asks for the attribution wherever the drawing is shown.
       el("span.kana-credit", { text: "Merkbild: B. Domangue (CC BY-SA 4.0)" }),
     );
@@ -1708,7 +1708,9 @@ export function kanaMnemonic(card) {
   if (!card?.word_mnemonic) return null;
   try {
     const picture = JSON.parse(card.word_mnemonic);
-    return picture?.file && picture?.hook ? picture : null;
+    // The hook is optional: ク has a drawing and deliberately no words
+    // (import/lib/kana-mnemonics.js).
+    return picture?.file ? picture : null;
   } catch {
     return null;
   }

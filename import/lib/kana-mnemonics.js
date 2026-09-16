@@ -94,7 +94,11 @@ const ROWS = [
   ["オ", "Olympic torch."],
   ["カ", "Cod."],
   ["キ", "Key."],
-  ["ク", "Coonskin cap."],
+  // The chart's hook here is "Coonskin cap." — the drawing is the Davy Crockett
+  // hat, and the word is innocuous in that sense, but "coon" is a slur in
+  // others. Henning's call (2026-09-16): keep the drawing, drop the words. A
+  // row with no hook shows the picture alone.
+  ["ク", null],
   ["ケ", 'The letter "K."'],
   ["コ", "Comb."],
   ["サ", "Sock."],
@@ -145,8 +149,12 @@ export const mnemonicAssetName = (kana) => `${kana.codePointAt(0).toString(16).p
 
 const byKana = new Map(MNEMONICS.map((m) => [m.kana, m]));
 
-/** A kana card's picture and hook, or null where there is none (dakuten, yōon). */
+/**
+ * A kana card's picture, or null where there is none (dakuten, yōon). The hook
+ * is left out where the card has a picture but no words to go with it.
+ */
 export function mnemonicFor(kana) {
   const found = byKana.get(kana);
-  return found ? { file: mnemonicMediaName(kana), hook: found.hook } : null;
+  if (!found) return null;
+  return { file: mnemonicMediaName(kana), ...(found.hook ? { hook: found.hook } : {}) };
 }
