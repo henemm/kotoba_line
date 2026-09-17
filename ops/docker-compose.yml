@@ -8,6 +8,10 @@ services:
     build:
       context: ..
       dockerfile: ops/Dockerfile
+      # Set by ops/deploy.sh; shown in Settings → Diagnose → Server.
+      args:
+        KOTOBA_COMMIT: ${KOTOBA_COMMIT:-unknown}
+        KOTOBA_BUILT_AT: ${KOTOBA_BUILT_AT:-0}
     image: kotoba-line-server
     restart: unless-stopped
 

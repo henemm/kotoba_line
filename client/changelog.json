@@ -1,5 +1,12 @@
 [
   {
+    "version": "v119",
+    "summary": "In den Einstellungen zeigt „Server“ jetzt, wann der Server zuletzt aktualisiert wurde.",
+    "notes": [
+      "Unter Einstellungen → Diagnose stand bei „Server“ immer „1.0.0“. Jetzt steht dort das Datum der letzten Aktualisierung und eine kurze Kennung der Version."
+    ]
+  },
+  {
     "version": "v118",
     "summary": "Jetzt haben alle Wörter einen Ton – auch deine eigenen Karten ohne Aufnahme, gesprochen von einer Computerstimme.",
     "notes": [

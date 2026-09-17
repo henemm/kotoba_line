@@ -454,7 +454,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
    * will read.
    */
   function diagnostics() {
-    const { sync, version } = data;
+    const { sync } = data;
     return el(
       "div.diagnostics",
       {},
@@ -466,10 +466,11 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       diagnostic("Gespeicherte Audios", audioLine()),
       // Two versions, because they answer different questions and they are
       // routinely out of step: "App" is the shell this phone is running and
-      // changes only after the app is quit and reopened; "Server" is what the
-      // box is serving.
+      // changes only after the app is quit and reopened; "Server" is when the
+      // box was last deployed, and from which commit — not package.json's
+      // "1.0.0", which never moved (Henning, 2026-09-17).
       diagnostic("App", data.shell ?? SHELL_VERSION),
-      diagnostic("Server", version),
+      diagnostic("Server", serverBuildLine(data.build)),
       // The tab bar sometimes stops short of the bottom edge on her phone and
       // only a force quit clears it. It cannot be reproduced here — desktop
       // WebKit reports the full height for every viewport unit — so these three
@@ -622,6 +623,19 @@ function toggle(on, label, onChange, { disabled = false } = {}) {
 }
 
 /** A time the way the diagnostics block shows one: today as a clock, else a date. */
+/** "17.09.2026, 11:52 · d1772f7" — the "Server" diagnostic, from `/api/settings`'s `build`. */
+export function serverBuildLine(build) {
+  const parts = [];
+  if (build?.builtAt) {
+    const d = new Date(build.builtAt * 1000);
+    parts.push(
+      `${d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}, ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`,
+    );
+  }
+  if (build?.commit) parts.push(build.commit);
+  return parts.length ? parts.join(" · ") : "unbekannt";
+}
+
 export function when(unixSeconds, now = new Date()) {
   const d = new Date(unixSeconds * 1000);
   const sameDay =

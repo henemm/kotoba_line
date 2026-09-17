@@ -118,6 +118,12 @@ fi
 if $do_api; then
   say "API container"
   mkdir -p "$DATA_DIR" "$MEDIA_DIR"
+  # Settings → Diagnose → "Server" shows these (Henning, 2026-09-17: the row
+  # read "1.0.0" forever, from a package.json nobody bumps). What was
+  # deployed and when is the question that row is there to answer.
+  KOTOBA_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+  KOTOBA_BUILT_AT=$(date +%s)
+  export KOTOBA_COMMIT KOTOBA_BUILT_AT
   $COMPOSE up -d --build
 
   # #183: cron runs the word-sound generator from here, not from a clone —
