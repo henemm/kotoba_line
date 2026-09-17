@@ -11,6 +11,8 @@ import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
+import { wordSound } from "../sound.js";
+import { answerRecorder, attemptRow } from "../ui/answer-recorder.js";
 import { uuid, voiceCircle } from "../ui/voice-circle.js";
 import { stopAllRecording } from "../recording.js";
 
@@ -57,6 +59,12 @@ export const canSpeak = () =>
 /** 47: said plainly, because a synthetic voice mistaken for a recording
  *  teaches the wrong pronunciation. */
 const SYNTH_CAPTION = "Keine Aufnahme für diese Karte – vorgelesen von der japanischen Stimme des Handys";
+
+/** The line under a word's ♪ saying what kind of voice it plays (#185). */
+const SOURCE_CAPTION = {
+  native: "Muttersprachler-Aufnahme",
+  synth: "Computer-generierte Aussprache",
+};
 
 /**
  * An interval the way screen 41 prints it: `<1m`, `8m`, `2d`, `6d`, `3mo`.
@@ -111,9 +119,9 @@ export function sessionScreen({
   // #135: false shows words in romaji and sentences as sound only — see
   // `client/src/script.js` for why sentences are not romaji too.
   japanese = true,
-  // #185: off hides recordingBlock() everywhere in this session, chips and
-  // record buttons alike — not only the buttons, the same way turning off
-  // "Japanische Schrift" takes the pitch-accent and romaji rows with it.
+  // #185: off hides "Antwort aufnehmen" and the Muttersprachler chip
+  // everywhere in this session. What a ♪ plays is still labelled — that is
+  // about the card, not about recording.
   recordingEnabled = true,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
@@ -143,9 +151,15 @@ export function sessionScreen({
   // Card ids she has starred, for the ★ in the chrome (#35). Comes down with
   // the queue, because the cached deck is public and cannot carry it.
   let starred = new Set();
-  // Her own and a native speaker's recordings (#183 follow-up), by card id —
-  // the same reasoning as starred: per-user, comes down with the queue.
+  // A native speaker's recording per card id (#183 follow-up, #185) — the
+  // same reasoning as starred: per-user, comes down with the queue.
   let recordings = new Map();
+  // Her spoken attempt at the card on screen and the control recording it
+  // (#185, 2026-09-17) — held here, not in the DOM, because it has to
+  // survive the card turning; ui/answer-recorder.js says why it is never
+  // stored anywhere else.
+  let attempt = { url: null };
+  let recorder = null;
 
   begin();
 
@@ -184,8 +198,7 @@ export function sessionScreen({
       starred = new Set(q.starred ?? []);
       recordings = new Map();
       for (const r of q.recordings ?? []) {
-        if (!recordings.has(r.card_id)) recordings.set(r.card_id, []);
-        recordings.get(r.card_id).push(r);
+        if (r.kind === "native") recordings.set(r.card_id, r);
       }
       const ids = resuming?.cardIds ?? q.cardIds;
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
@@ -397,7 +410,7 @@ export function sessionScreen({
   // ── one card ────────────────────────────────────────────────────
 
   function drawCard() {
-    // A card can be graded while its own recordingBlock is still recording
+    // A card can be graded while a recording on it is still running
     // (grading is not gated on it) — the DOM node this replaces is the only
     // thing that held it, so without this the mic stays live for the rest
     // of the page load (Charlotte, 2026-09-16). The same is true of playing
@@ -405,6 +418,9 @@ export function sessionScreen({
     // leave a recording's own audio running audibly into the next card.
     stopAllRecording();
     stop();
+    if (attempt.url) URL.revokeObjectURL(attempt.url);
+    attempt = { url: null };
+    recorder = null;
     const card = queue[index];
     // The mode on the card is for the iPad card's layout (#150, screens.css).
     const area = el("div.card-area", { dataset: { mode } });
@@ -706,8 +722,9 @@ export function sessionScreen({
     // A kana's recording is loaded now, so it plays on a train after she has
     // answered — but neither played nor offered before: its sound is the
     // answer (v84, #158). `promptAudio` is that rule.
-    const audio = promptAudio(card);
-    prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card));
+    const kana = isKana(card);
+    const audio = kana ? promptAudio(card) : soundOf(card).file;
+    prime(kana ? card.word_audio : audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card));
     // Only a recording, like the speaker below. Until v66 a card without one
     // was read by the phone's voice with no button to hear it again — on her
     // Noji lists, a Japanese voice reading romaji (Henning, 2026-09-14).
@@ -716,26 +733,20 @@ export function sessionScreen({
     chooseFrom(card, "word_meaning", null, area, answers, [
       // #158: a kana has a reading, not a meaning.
       el("span.prompt-label", { text: isKana(card) ? "Wie liest man das?" : "Was bedeutet das?" }),
-      wordHeading(card),
+      kana ? wordHeading(card) : null,
       // 48: in 選ぶ the sound is a bonus, so with no recording the control is
       // absent rather than inert — "an inert button would invite a tap that
       // does nothing". No caption either, because nothing was promised, and no
       // synthesis: the synthetic voice belongs where she is listening for the
       // pronunciation, which in 選ぶ she is not.
-      audio ? speaker(card.word, audio) : null,
+      ...(kana ? [audio ? speaker(card.word, audio) : null] : wordSoundParts(card, {}, { line: false })),
       // The question here is meaning, not pronunciation, so a romaji line
       // gives nothing away — it just lets "Show romaji" do on the prompt what
       // its settings description promises ("for reading it back") instead of
       // only after she has already answered.
       romajiLine(card),
-      // The word is right there to attempt, even though this mode asks about
-      // its meaning, not its sound (Henning, 2026-09-16 — weaker fit than
-      // 話す or めくる, but he wanted it offered anyway). Not for a kana card,
-      // same exclusion as everywhere else this feature appears. chooseFrom()
-      // never replaces `area`, so this stays put through the whole card,
-      // answered or not — no extra cleanup needed the way a flip to a
-      // reveal side does.
-      isKana(card) ? null : recordingBlock(card),
+      // No "Antwort aufnehmen" (#185, 2026-09-17): the word is already on
+      // screen, so there is nothing to say from memory before the answer.
     ]);
   }
 
@@ -767,9 +778,11 @@ export function sessionScreen({
         ? el("span.prompt-label", { text: "Tippen, um es nochmal zu hören" })
         : el("p.synth-note", { text: SYNTH_CAPTION }),
       // No text is ever shown here — the point is shadowing: hear it, then
-      // record herself saying it back (Henning, 2026-09-16, rated the same
-      // as offering it in 選ぶ). Same "not for kana" exclusion as elsewhere.
-      isKana(card) ? null : recordingBlock(card),
+      // say it back and hear herself (Henning, 2026-09-16). The one mode
+      // where the attempt is not compared on a turned card: chooseFrom()
+      // never replaces `area`, so it simply stays beside the ♪ it copies.
+      // No Muttersprachler chip: the word is not on screen.
+      answerRecorderFor(card),
     ]);
   }
 
@@ -786,26 +799,18 @@ export function sessionScreen({
     // Decided once per card, at the prompt — not re-rolled at reveal, or a
     // "random" card could ask about the word and then reveal the sentence.
     const useSentence = speakUsesSentence(card, speakSource);
-    prime(useSentence ? card.sentence_audio : card.word_audio);
+    prime(useSentence ? card.sentence_audio : soundOf(card).file);
 
     render(
       area,
       el("span.prompt-label", { text: "Sag es auf Japanisch" }),
       el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
-      // Recording her attempt *before* the answer shows is the blind version
-      // of what #32 already said about this mode: she has just tried to
-      // produce it, and hearing herself back is the only way to check it —
-      // and a card change (drawCard) is the only cleanup this front gets, so
-      // tapping "Antwort zeigen" mid-recording has to stop it itself
-      // (revealSpeak does, below). Not for a kana card, same exclusion as
-      // everywhere else this feature appears — 話す is hidden for kana decks
-      // in deck-options.js, but playableIn() does not itself filter kana out
-      // of "speak" the way it does for "type"/"listen", so this is the only
-      // thing that would actually stop one reaching here (code review,
-      // 2026-09-17). No native circle here (Henning, 2026-09-17): the word
-      // is not on screen yet, so nobody could record its pronunciation
-      // correctly — only her own attempt makes sense on a blind front.
-      isKana(card) ? null : recordingBlock(card, { wordVisible: false }),
+      // She says it before she sees it (#185, 2026-09-17), and the reveal
+      // puts what she said beside the real thing. "Antwort zeigen" in the
+      // middle of a recording keeps it (thenReveal). Not for a kana card —
+      // 話す is hidden for kana decks in deck-options.js, but playableIn()
+      // does not filter kana out of "speak" (code review, 2026-09-17).
+      answerRecorderFor(card),
     );
     render(
       answers,
@@ -815,21 +820,22 @@ export function sessionScreen({
         el("button.btn.primary", {
           type: "button",
           text: "Antwort zeigen",
-          onclick: () => revealSpeak(card, area, answers, useSentence),
+          onclick: thenReveal(() => revealSpeak(card, area, answers, useSentence)),
         }),
       ),
     );
   }
 
   function revealSpeak(card, area, answers, useSentence) {
-    // The front's recordingBlock is a different DOM node than the one about
-    // to be drawn here — replacing it does not stop a recording still
-    // running in it, same reasoning as drawCard() above. Nor does it stop
-    // one already playing back (code review, 2026-09-17).
+    // The front's recorder is a different DOM node than the one about to be
+    // drawn here — replacing it does not stop a recording still running in
+    // it, same reasoning as drawCard() above (thenReveal has already kept
+    // what she said). Nor does it stop one playing back (code review,
+    // 2026-09-17).
     stopAllRecording();
     stop();
     const text = useSentence ? card.sentence : card.word;
-    const audio = useSentence ? card.sentence_audio : card.word_audio;
+    const audio = useSentence ? card.sentence_audio : soundOf(card).file;
 
     // #113: the question stays at the top, where she read it, and the answer
     // comes in under it — so the English is no longer repeated at the bottom.
@@ -838,23 +844,14 @@ export function sessionScreen({
       area,
       el("span.prompt-label", { text: "Sag es auf Japanisch" }),
       el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
-      useSentence
-        ? revealedSentence(card)
-        : el(
-            "div.word-line.reveal",
-            {},
-            wordHeading(card),
-            // 話す is the mode where hearing it back matters most: she has just
-            // tried to produce it, and the recording is the only way to find
-            // out whether what she said was right (#32).
-            speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
-          ),
+      // 話す is the mode where hearing it back matters most: she has just
+      // tried to produce it, and the recording is the only way to find out
+      // whether what she said was right (#32) — with her own attempt right
+      // beside it, if she recorded one (#185).
+      ...(useSentence
+        ? [revealedSentence(card), attemptRow(attempt)]
+        : wordSoundParts(card, { label: "Wort nochmal hören" }, { reveal: true, withAttempt: true })),
       useSentence ? null : romajiLine(card),
-      // The front's own attempt (if she made one) is a fresh "own" source
-      // now, so it plays here too — same card, so sourcesFor(card) already
-      // carries it forward without anything extra. Not for a kana card,
-      // same exclusion as the front above.
-      isKana(card) ? null : recordingBlock(card),
     );
     if (readAloud) voice(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
@@ -885,7 +882,7 @@ export function sessionScreen({
    * would be a button she cannot see. Return on the keyboard checks too.
    */
   function drawType(card, area, answers) {
-    prime(card.word_audio);
+    prime(soundOf(card).file);
     const input = el("input.field-input.jp.type-input", {
       type: "text",
       lang: "ja",
@@ -995,22 +992,13 @@ export function sessionScreen({
             el("span.typed-label", { text: correct ? "Richtig" : "Du hast getippt" }),
             el("p.typed-text.jp", { text: typed.trim() }),
           ),
-      el(
-        "div.word-line.reveal",
-        {},
-        wordHeading(card),
-        speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
-      ),
+      // No "Antwort aufnehmen" on 書く's front (#185, 2026-09-17): she
+      // produces the word by typing it, not by saying it.
+      ...wordSoundParts(card, { label: "Wort nochmal hören" }, { reveal: true }),
       reading(card.word_furigana || card.word_reading, card.word, card),
       // Always, whatever "Show romaji" says: she has most likely just typed
       // romaji, and this is the line to compare it with, letter by letter.
       romajiLine(card, true),
-      // The word only appears once she has typed (or asked to see) it — there
-      // is nothing to attempt on 書く's front the way there is on 話す's or
-      // めくる's, so this is reveal-only here (Henning, 2026-09-16, step 6:
-      // the one mode with no existing recording UI at all before this). Not
-      // for a kana card, same exclusion as everywhere else.
-      isKana(card) ? null : recordingBlock(card),
       // A meaning shared with another card (33 are): she typed a word that is
       // right, just not this card's. It counts, and says which.
       given && given.id !== card.id
@@ -1021,7 +1009,7 @@ export function sessionScreen({
     );
     // The word, not the sentence: the sound of what she just tried to write
     // is the thing worth hearing here.
-    if (readAloud) voice(card.word, card.word_audio);
+    if (readAloud) voice(card.word, soundOf(card).file);
 
     if (typed !== undefined && !correct) {
       render(
@@ -1087,21 +1075,18 @@ export function sessionScreen({
 
   /** めくる — the classic flashcard, and the only mode with four ratings. */
   function drawFlip(card, area, answers) {
-    prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio);
+    prime(isKana(card) ? card.word_audio : soundOf(card).file, showsSentence(card, japanese) && card.sentence_audio);
     if (flipsMeaningFirst(card)) {
       // No speaker and no reading aloud: the word is the answer. But she is
-      // meant to say it herself before turning the card — 話す already
-      // records the attempt on its front for exactly this reason (#32) — so
-      // this front gets the same recordingBlock, not only the reveal (Henning,
-      // 2026-09-17: this mode had fallen out of step with 話す). No native
-      // circle: the word is not on screen yet, so a friend or host-family
-      // member has nothing to read the pronunciation from — that voice only
-      // belongs where the word is already visible, same as the reveal.
+      // meant to say it herself before turning the card, the same as 話す
+      // (#32) — so this front records the attempt, and the back puts it
+      // beside the ♪ (#185, 2026-09-17). No Muttersprachler chip: the word
+      // is not on screen yet, so nobody has anything to read it from.
       render(
         area,
         el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
-        recordingBlock(card, { wordVisible: false }),
+        answerRecorderFor(card),
       );
     } else {
       // #158: a kana's sound is its reading, which is the answer — so the
@@ -1109,18 +1094,16 @@ export function sessionScreen({
       const kana = isKana(card);
       render(
         area,
-        wordHeading(card),
-        kana ? null : speaker(card.word, card.word_audio),
+        ...(kana ? [wordHeading(card)] : wordSoundParts(card, {}, { line: false })),
         // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
         // "what does it say" — a romaji line here does not spoil the flip.
         romajiLine(card),
-        // The word is right there to attempt, same as revealFlip's word-first
-        // side already offers — not for a kana card, which has its own
-        // recordings (Commons, VOICEVOX) and was never part of this feature.
-        kana ? null : recordingBlock(card),
+        // No "Antwort aufnehmen": the word is on screen, so there is nothing
+        // to say from memory (#185). A kana card has its own sounds (Commons,
+        // VOICEVOX) and was never part of this feature.
       );
       if (kana) prime(...strokeFiles(card), ...exampleAudio(card));
-      else if (readAloud) voice(card.word, card.word_audio);
+      else if (readAloud) voice(card.word, soundOf(card).file);
     }
 
     render(
@@ -1131,7 +1114,7 @@ export function sessionScreen({
         el("button.btn.primary", {
           type: "button",
           text: "Umdrehen",
-          onclick: () => revealFlip(card, area, answers),
+          onclick: thenReveal(() => revealFlip(card, area, answers)),
         }),
       ),
     );
@@ -1263,84 +1246,112 @@ export function sessionScreen({
     return kanaSynthesised(card) && canVoice(card.word, null) ? el("p.synth-note.reveal", { text: SYNTH_CAPTION }) : null;
   }
 
+  /** What this card's ♪ plays, and what kind of voice that is (#185). */
+  function soundOf(card) {
+    return wordSound(card, recordings.get(card.id));
+  }
+
+  /** "Antwort aufnehmen" on a front that asks her to say the answer (#185). */
+  function answerRecorderFor(card) {
+    if (!recordingEnabled || isKana(card)) return null;
+    recorder = answerRecorder(attempt);
+    return recorder?.root ?? null;
+  }
+
   /**
-   * Her own and a native speaker's recording for a card — one of each at
-   * most (#185, 2026-09-16: "nur ein Muttersprachler, das ist einfacher").
-   * Not the whole history: `own`/`native` are only ever the latest, which
-   * is also all a single circle can show.
+   * A reveal that keeps what she was saying: turning the card mid-recording
+   * is the natural end of an attempt, not a reason to throw it away. Once
+   * only — a second tap while the recording is being closed must not draw
+   * the answer twice.
    */
-  function sourcesFor(card) {
-    const list = recordings.get(card.id) ?? [];
-    return {
-      own: list.filter((r) => r.kind === "own").at(-1),
-      native: list.filter((r) => r.kind === "native").at(-1),
+  function thenReveal(reveal) {
+    let done = false;
+    return () => {
+      if (done) return;
+      done = true;
+      const running = recorder;
+      recorder = null;
+      if (running?.recording()) running.finish().then(reveal, reveal);
+      else reveal();
     };
   }
 
   /**
-   * The recording controls (#183 follow-up, redesigned with Henning
-   * 2026-09-16 after two earlier shapes both turned out not to be what he
-   * meant — a rectangular text button, then a plain coloured circle with no
-   * empty/filled state — worked out this time against a clickable mockup
-   * before anything shipped). The circles themselves live in
-   * `ui/voice-circle.js` (shared with the deck's card menu, #185 follow-up,
-   * 2026-09-17); this just wires them to a card's own recordings. Called
-   * from every page that shows a card's Japanese word and is not a kana
-   * card (which has its own recordings already) — both sides of 話す, both
-   * sides of めくる (a meaning-first card's front asks her to produce the
-   * word, same as 話す's front does), and 選ぶ/聞く/書く — on any deck, hers
-   * or not ("alle Decks"): a Kaishi card already has a professional
-   * recording, but comparing her own attempt against it is exactly the
-   * point.
+   * The word, its ♪, and what that ♪ is (#185, the layout agreed with Henning
+   * on 2026-09-17), for any non-kana side where the word is on screen:
    *
-   * One circle per voice. Both are present and neither is ever hidden or
-   * removed *after* the block is built (that was the source of the
-   * "neighbouring circle twitches" bug: a flex row re-centres when a sibling
-   * appears, disappears, or changes width) — but the native circle is left
-   * out from the start on a front where the word is not yet on screen
-   * (`{ wordVisible: false }`, 2026-09-17): nobody can record a
-   * pronunciation they cannot read, so only her own attempt is offered
-   * there, and that circle starts empty even if an earlier round already
-   * has one — a stored "own" attempt must not appear already filled on a
-   * front that is asking her to make a fresh one, un-blinding it before she
-   * tries.
+   * - The ♪ keeps the mode's colour. Which kind of voice it plays is a line
+   *   of text under it — turquoise "Muttersprachler-Aufnahme", grey-blue
+   *   "Computer-generierte Aussprache" — never a recolouring of the ♪.
+   * - No sound: no ♪ (absent, not inert). Unlike before #185 the phone's
+   *   voice does not stand in for a word here — it is not one of the two
+   *   sources. Measured first: none of her 1,102 cards is a Japanese-script
+   *   word without a recording; in Kaishi exactly one is (失礼します), and
+   *   that one card loses the synthetic ♪ it had. Sentences are deliberately
+   *   left alone: revealedSentence still lets the phone read one aloud (#32),
+   *   because #183 has not decided that question for sentences.
+   * - Unless the ♪ already plays the deck's own native recording, a quiet
+   *   chip offers a native one: "hinzufügen", or "bearbeiten" once she has
+   *   one. The chip opens the same circle as the deck's card menu. A card
+   *   whose deck recording is native (Kaishi, or one she linked) gets none
+   *   — found on 何, which has a real recording and was offered one anyway.
+   * - With `withAttempt`, her attempt from the front, right under the ♪.
+   *
+   * Returns the nodes to spread into a render: the word line, then the notes.
    */
-  function recordingBlock(card, { wordVisible = true } = {}) {
-    if (!recordingEnabled) return null;
-    const shared = { active: null };
-    const own = voiceCircle({
-      cardId: card.id,
-      kind: "own",
-      ariaLabel: "Ihre eigene",
-      emptyCaption: "Ihre eigene",
-      shared,
-      startsEmpty: !wordVisible,
-      getSource: () => sourcesFor(card).own,
-      setSource: (rec) => {
-        const list = (recordings.get(card.id) ?? []).filter((r) => r.kind !== "own");
-        if (rec) list.push(rec);
-        recordings.set(card.id, list);
-      },
-    });
-    const box = el("div.recording-block", {}, own.root);
-    if (wordVisible) {
-      box.append(
-        voiceCircle({
-          cardId: card.id,
-          kind: "native",
-          ariaLabel: "Muttersprachler",
-          emptyCaption: "Muttersprachler",
-          shared,
-          getSource: () => sourcesFor(card).native,
-          setSource: (rec) => {
-            const list = (recordings.get(card.id) ?? []).filter((r) => r.kind !== "native");
-            if (rec) list.push(rec);
-            recordings.set(card.id, list);
-          },
-        }).root,
+  function wordSoundParts(card, speakerOptions = {}, { reveal = false, withAttempt = false, line: inLine = true } = {}) {
+    const slot = el("span.speaker-slot");
+    const caption = el("span.sound-source");
+    const chipHost = el("div.native-chip-host");
+    const notes = el(`div.sound-notes${reveal ? ".reveal" : ""}`, {}, caption, withAttempt ? attemptRow(attempt) : null, chipHost);
+    // `line: false` for a front that sets the ♪ under the word, not beside it
+    // (選ぶ, めくる's word-first front) — the layout those had before #185.
+    const heading = wordHeading(card);
+    const line = inLine ? el(`div.word-line${reveal ? ".reveal" : ""}`, {}, heading, slot) : null;
+    let circle = null;
+
+    function paint() {
+      const sound = soundOf(card);
+      render(slot, sound.file ? speaker(card.word, sound.file, { small: reveal, ...speakerOptions }) : null);
+      caption.textContent = SOURCE_CAPTION[sound.source] ?? "";
+      caption.className = `sound-source ${sound.source}`;
+      if (circle) return; // open: it shows its own state, "bearbeiten" or not
+      render(
+        chipHost,
+        recordingEnabled && !sound.deckNative
+          ? el("button.native-chip", {
+              type: "button",
+              class: sound.recording ? "edit" : null,
+              text: sound.recording ? "Muttersprachler-Aufnahme bearbeiten" : "Muttersprachler-Aufnahme hinzufügen",
+              onclick: openCircle,
+            })
+          : null,
       );
     }
-    return box;
+
+    function openCircle() {
+      stop();
+      circle = voiceCircle({
+        cardId: card.id,
+        kind: "native",
+        ariaLabel: "Muttersprachler",
+        emptyCaption: "Muttersprachler-Aufnahme hinzufügen",
+        // The line above already says "Muttersprachler-Aufnahme".
+        filledCaption: "Antippen zum Abspielen",
+        shared: { active: null },
+        rowLayout: true,
+        getSource: () => recordings.get(card.id),
+        setSource: (rec) => {
+          if (rec) recordings.set(card.id, rec);
+          else recordings.delete(card.id);
+          paint();
+        },
+      });
+      render(chipHost, circle.root);
+    }
+
+    paint();
+    return inLine ? [line, notes] : [heading, slot, notes];
   }
 
   /**
@@ -1353,9 +1364,9 @@ export function sessionScreen({
   }
 
   function revealFlip(card, area, answers) {
-    // The front's own recordingBlock is a different DOM node than the one
-    // about to replace it — same reasoning as revealSpeak above, playback
-    // included (code review, 2026-09-17).
+    // The front's recorder or Muttersprachler circle is a different DOM node
+    // than the one about to replace it — same reasoning as revealSpeak above,
+    // playback included (code review, 2026-09-17).
     stopAllRecording();
     stop();
     const meaningFirst = flipsMeaningFirst(card);
@@ -1387,33 +1398,24 @@ export function sessionScreen({
         el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
         cardRule(),
-        el(
-          "div.word-line.reveal",
-          {},
-          wordHeading(card),
-          speaker(card.word, card.word_audio, { small: true, label: "Wort hören" }),
-        ),
+        // Her attempt from the front sits right under the ♪ (#185): that
+        // comparison is what turning the card is for.
+        ...wordSoundParts(card, { label: "Wort hören" }, { reveal: true, withAttempt: true }),
         reading(card.word_furigana || card.word_reading, card.word, card),
         romajiLine(card),
-        recordingBlock(card),
         revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );
-      if (readAloud) voice(card.word, card.word_audio);
+      if (readAloud) voice(card.word, soundOf(card).file);
     } else {
       render(
         area,
-        el(
-          // Not `.reveal`: this is the front, staying — it does not rise in.
-          "div.word-line",
-          {},
-          wordHeading(card),
-          // The front of the card carries this button; before #32 the flip took
-          // it away, so the one gesture that had worked a second earlier stopped
-          // working exactly when the reading was finally on screen to check it
-          // against.
-          speaker(card.word, card.word_audio, { small: true, label: "Wort nochmal hören" }),
-        ),
+        // Not `.reveal`: this is the front, staying — it does not rise in.
+        // The front of the card carries its ♪; before #32 the flip took it
+        // away, so the one gesture that had worked a second earlier stopped
+        // working exactly when the reading was finally on screen to check it
+        // against.
+        ...wordSoundParts(card, { small: true, label: "Wort nochmal hören" }),
         // `word_reading` for her own words (#85): `word_furigana` is Anki's
         // bracket notation and is always NULL on a card she wrote, so the
         // reading she typed was stored and never shown. Plain kana passes
@@ -1422,7 +1424,6 @@ export function sessionScreen({
         romajiLine(card),
         cardRule(),
         el("div.meaning.reveal", { text: card.word_meaning }),
-        recordingBlock(card),
         revealedSentence(card),
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );

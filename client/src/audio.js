@@ -131,9 +131,22 @@ export function stop() {
  * failure to play (a card with no audio is ordinary elsewhere, but a voice
  * circle only calls this once it already knows a file exists).
  */
-export function playTracked(file, { onProgress, onEnded } = {}) {
+export function playTracked(file, options) {
+  return track(mediaUrl(file), options);
+}
+
+/**
+ * The same, for audio that was never a file on the server: her attempt in
+ * "Antwort aufnehmen" (#185, 2026-09-17), an object URL that lives only as
+ * long as the card on screen (ui/answer-recorder.js).
+ */
+export function playUrl(url, options) {
+  return track(url, options);
+}
+
+function track(src, { onProgress, onEnded } = {}) {
   stop();
-  const audio = new Audio(mediaUrl(file));
+  const audio = new Audio(src);
   current = audio;
   // Cleared before every call to onEnded, on every path — a stop() that
   // lands after natural completion (or after an error already reported it)

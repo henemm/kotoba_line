@@ -61,13 +61,16 @@ describe("a revealed card can be heard again (#32)", () => {
   it("keeps the word's speaker after めくる flips the card", () => {
     // The front has one; before #32 the flip took it away, which is the shape
     // of the bug as reported.
-    assert.match(bodyOf("revealFlip"), /speaker\(\s*card\.word/);
+    // #185: through wordSoundParts, which draws the word, its ♪ and what
+    // kind of voice that ♪ is, on every non-kana side showing the word.
+    assert.match(bodyOf("revealFlip"), /wordSoundParts\(card/);
+    assert.match(bodyOf("wordSoundParts"), /speaker\(card\.word, sound\.file/);
   });
 
   it("gives 話す a speaker on a card that has no sentence", () => {
     // 話す reveals the sentence when there is one and the bare word when there
     // is not; the second branch is the one that had nothing to play.
-    assert.match(bodyOf("revealSpeak"), /speaker\(\s*card\.word/);
+    assert.match(bodyOf("revealSpeak"), /wordSoundParts\(card/);
   });
 
   it("leaves the speaker out where nothing honest could play (v66)", () => {
@@ -80,10 +83,17 @@ describe("a revealed card can be heard again (#32)", () => {
     // reading used to go ahead with the phone's voice anyway.
     // v84: the recording is `promptAudio(card)`, which is the word's except on
     // a kana card — and the speaker plays that same one.
+    // #185: on a non-kana card that recording is `soundOf(card).file` — the
+    // same one wordSoundParts' speaker plays.
     const choose = bodyOf("drawChoose");
-    assert.match(choose, /const audio = promptAudio\(card\);/);
+    assert.match(choose, /const audio = kana \? promptAudio\(card\) : soundOf\(card\)\.file;/);
     assert.match(choose, /if \(readAloud && audio\) say\(card\.word, audio\);/);
     assert.match(choose, /audio \? speaker\(card\.word, audio\) : null/);
+    assert.match(choose, /wordSoundParts\(card, {}, { line: false }\)/);
+    // …which draws the word itself, so the prompt must not draw it again
+    // (a first build showed "mono mono", caught in WebKit).
+    assert.match(choose, /kana \? wordHeading\(card\) : null/);
+    assert.match(bodyOf("wordSoundParts"), /sound\.file \? speaker\(/);
     // Everywhere else the reading goes through the same rule as the speaker.
     for (const fn of ["revealSpeak", "revealType", "drawFlip", "revealFlip"]) {
       assert.doesNotMatch(bodyOf(fn), /\bsay\(/, fn);

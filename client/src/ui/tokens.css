@@ -26,7 +26,7 @@
      never mistaken for each other. Henning, 2026-09-16: "im Nachhinein
      erkenntlich, welche Stimmen woher kommen" — this is that, on screen.
      Contrast on --night: --rec-own 7.9:1, --rec-synth 5.0:1, --rec-native 7.1:1. */
-  --rec-own:    #D9A441;  /* her own attempt — warm, personal   */
+  --rec-own:    #D9A441;  /* the Settings mic test only since #185 — her voice is not a source */
   --rec-synth:  #7C88A3;  /* VOICEVOX — deliberately cool, machine-made */
   --rec-native: #2FB89A;  /* a native speaker — its own colour for "verified" */
 

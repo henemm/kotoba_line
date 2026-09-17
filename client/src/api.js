@@ -190,8 +190,8 @@ export const api = {
   setCardTags: (cardId, tags) =>
     request(`/cards/${cardId}/tags`, { method: "PUT", body: { tags } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
-  // #183 follow-up: her own or a native speaker's recording of one card, kept
-  // apart only by `kind` — both are made under her own session (recording.js).
+  // #183 follow-up, #185: a native speaker's recording of one card, made under
+  // her own session (recording.js). Her own voice is never uploaded.
   addRecording: (cardId, kind, id, blob) =>
     request(`/cards/${cardId}/recordings${query({ kind, id })}`, { method: "POST", blob }),
   deleteRecording: (cardId, id) => request(`/cards/${cardId}/recordings/${id}`, { method: "DELETE" }),

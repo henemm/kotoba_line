@@ -1770,22 +1770,16 @@
   }
 }
 
-/* Her own and a native speaker's recording (#183 follow-up), compared
-   against the card's own pronunciation. Redesigned with Henning,
-   2026-09-16, after the first two shapes (rectangular text buttons, then
+/* A native speaker's recording (#183 follow-up), redesigned with Henning
+   2026-09-16 after the first two shapes (rectangular text buttons, then
    plain coloured circles) both turned out not to be what he meant — this
    round went through an artifact mockup he could tap through before
-   anything shipped. On the reveal side of every card in revealFlip, not
-   only her own deck (and both sides of 話す/めくる, and 選ぶ/聞く/書く).
+   anything shipped. Since #185 (2026-09-17) the circle opens from the chip
+   under a word's ♪ and from the deck's card menu; her own voice has no
+   circle, only the ephemeral recorder further down.
 
-   One recording per voice: re-recording replaces via delete rather than
-   accumulating, so a single circle can always show its whole state — no
-   separate chip row, no count to reconcile with what the circle shows. */
-.recording-block {
-  display: flex;
-  gap: 28px;
-  margin-top: 4px;
-}
+   One recording, not a history: re-recording replaces via delete, so a
+   single circle can always show its whole state. */
 .voice {
   display: flex;
   flex-direction: column;
@@ -1942,9 +1936,6 @@
   width: 84px;
   text-align: center;
 }
-.voice.own {
-  --rec: var(--rec-own);
-}
 .voice.native {
   --rec: var(--rec-native);
 }
@@ -2017,6 +2008,171 @@
 .voice.row .voice-confirm {
   left: 44px;
   transform: none;
+}
+
+/* What a word's ♪ plays (#185, the layout agreed 2026-09-17). The ♪ keeps
+   the mode's colour; the kind of voice is a quiet line of text under it,
+   so colour keeps meaning "which mode am I in". */
+.speaker-slot {
+  display: contents;
+}
+.sound-notes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.sound-notes:empty {
+  display: none;
+}
+.sound-source {
+  font: 500 12px/1.3 var(--ui);
+  text-align: center;
+}
+.sound-source:empty {
+  display: none;
+}
+.sound-source.native {
+  color: var(--rec-native);
+}
+.sound-source.synth {
+  color: var(--rec-synth);
+}
+/* Quiet on purpose: it only matters when someone is practising with her. */
+.native-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 13px;
+  border-radius: 17px;
+  border: 1px solid var(--rec-native);
+  background: transparent;
+  color: var(--rec-native);
+  font: 600 12.5px/1.2 var(--ui);
+}
+.native-chip::before {
+  content: "+";
+  font-weight: 700;
+}
+.native-chip.edit {
+  border-color: var(--ink-dim);
+  color: var(--ink-muted);
+}
+.native-chip.edit::before {
+  content: "✎";
+}
+.native-chip-host:empty {
+  display: none;
+}
+/* The circle's × sits 20px above and outside the dial (see .voice-delete);
+   without the margin it lands on "Deine Antwort" above it (measured in
+   WebKit at 394 px, 2026-09-17). */
+.native-chip-host .voice.row {
+  width: auto;
+  margin-top: 16px;
+}
+
+/* "Antwort aufnehmen" (#185): on a front that asks her to say the answer.
+   Nothing is uploaded, so there is no × and no confirmation — recording
+   again replaces. Red at rest, the same record affordance as the circle. */
+.answer-recorder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.answer-dial {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--surface-hi);
+  color: var(--no);
+  font-size: 20px;
+  display: grid;
+  place-items: center;
+}
+.answer-dial:active {
+  transform: scale(0.94);
+}
+.answer-dial:disabled {
+  opacity: 0.5;
+}
+.answer-recorder[data-state="recording"] .answer-dial,
+.answer-recorder[data-state="saving"] .answer-dial {
+  background: var(--no);
+  color: #fff;
+  font-size: 16px;
+  animation: answer-pulse 1.6s ease-in-out infinite;
+}
+.answer-recorder[data-state="recorded"] .answer-dial,
+.answer-recorder[data-state="playing"] .answer-dial {
+  color: var(--ink);
+  font-size: 17px;
+}
+@keyframes answer-pulse {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--no) 25%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .answer-recorder[data-state="recording"] .answer-dial {
+    animation: none;
+  }
+}
+.answer-caption {
+  font: 600 13px/1.2 var(--ui);
+  color: var(--ink);
+}
+.answer-again {
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 500 12.5px/1 var(--ui);
+  padding: 8px 10px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.answer-again[hidden] {
+  display: none;
+}
+.answer-status {
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+.answer-status:empty {
+  display: none;
+}
+/* Her attempt on the answer side, right under the ♪ it is compared with. */
+.attempt-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px 5px 5px;
+  border-radius: 20px;
+  background: var(--surface);
+  align-self: center;
+}
+.attempt-row button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--surface-hi);
+  color: var(--ink);
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+}
+.attempt-row.playing button {
+  background: var(--ink-dim);
+}
+.attempt-row span {
+  font: 500 12.5px/1 var(--ui);
+  color: var(--ink-muted);
 }
 
 /* On a revealed card the speaker sits beside the thing it plays rather than

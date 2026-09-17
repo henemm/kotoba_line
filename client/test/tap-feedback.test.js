@@ -63,14 +63,20 @@ describe("♪ acknowledges the tap and plays from the cache (#116)", () => {
     // v66: and not a sentence the card will not offer (`showsSentence`).
     // v83: and a kana card's example words, which 選ぶ plays once she has
     // answered (`exampleAudio` is empty for every other card).
+    // #185: a non-kana word primes what its ♪ will play (`soundOf(card).file`
+    // — the deck's recording, or a native one added on her device); a kana
+    // card keeps its own rule.
     assert.equal(
       primes("drawChoose"),
-      "card.word_audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card)",
+      "kana ? card.word_audio : audio, showsSentence(card, japanese) && card.sentence_audio, ...exampleAudio(card)",
     );
     assert.equal(primes("drawListen"), "card.sentence_audio");
-    assert.equal(primes("drawSpeak"), "useSentence ? card.sentence_audio : card.word_audio");
-    assert.equal(primes("drawType"), "card.word_audio");
-    assert.equal(primes("drawFlip"), "card.word_audio, showsSentence(card, japanese) && card.sentence_audio");
+    assert.equal(primes("drawSpeak"), "useSentence ? card.sentence_audio : soundOf(card).file");
+    assert.equal(primes("drawType"), "soundOf(card).file");
+    assert.equal(
+      primes("drawFlip"),
+      "isKana(card) ? card.word_audio : soundOf(card).file, showsSentence(card, japanese) && card.sentence_audio",
+    );
   });
 
   it("never makes say() wait before play()", () => {
