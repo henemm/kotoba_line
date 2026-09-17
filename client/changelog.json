@@ -1,5 +1,12 @@
 [
   {
+    "version": "v116",
+    "summary": "Der neue Muttersprachler-Knopf in der Kartenliste (v115) zeigte eine schon vorhandene Aufnahme fälschlich als leer an.",
+    "notes": [
+      "Behoben, direkt nach dem Ausliefern von v115 beim eigenen Test gefunden: der Knopf zeigte „hinzufügen“ statt „bearbeiten“, obwohl schon eine Muttersprachler-Aufnahme existierte."
+    ]
+  },
+  {
     "version": "v115",
     "summary": "Neu: Muttersprachler können jetzt direkt in der Kartenliste eine Aufnahme hinzufügen, ohne eine Übung zu starten.",
     "notes": [

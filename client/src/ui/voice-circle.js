@@ -211,5 +211,18 @@ export function voiceCircle({
 
   paint();
 
-  return { root, refresh: paint };
+  // For a caller whose `getSource()` only becomes accurate after an async
+  // fetch resolves (the deck menu: it has no recording data before that) —
+  // re-derives `state` from the now-current source and repaints. Guarded to
+  // idle states only, so a fetch that resolves late never clobbers an
+  // interaction already in progress (recording, uploading, playing, a
+  // pending delete).
+  function refresh() {
+    if (state === "empty" || state === "filled") {
+      state = getSource() ? "filled" : "empty";
+      paint();
+    }
+  }
+
+  return { root, refresh };
 }
