@@ -1,5 +1,13 @@
 [
   {
+    "version": "v120",
+    "summary": "Katakana-Beispielwörter sind wieder zu hören, und auch Kana-Karten haben jetzt „Antwort aufnehmen“.",
+    "notes": [
+      "Bei 65 Katakana-Karten spielten die Beispielwörter auf der Rückseite nichts – ein falscher Dateiname seit v93. Behoben.",
+      "Bei „Karte umdrehen“ in Hiragana und Katakana gibt es vorne jetzt „Antwort aufnehmen“: Zeichen sehen, Laut sagen, umdrehen und mit der Aufnahme vergleichen."
+    ]
+  },
+  {
     "version": "v119",
     "summary": "In den Einstellungen zeigt „Server“ jetzt, wann der Server zuletzt aktualisiert wurde.",
     "notes": [

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { openDatabase } from "../../server/src/db.js";
 import { kanaExamples, writeKanaCards } from "../import-kana.js";
 import { EXAMPLE_SOUNDS, exampleSoundName } from "../lib/example-sounds.js";
+import { GENERATED_EXAMPLE_SOUNDS, generatedExampleSoundName } from "../lib/generated-example-sounds.js";
 import { makeMeaningLookup, parseJlptCsv, pickExamples, shortGloss, soundAt, startsWithSound } from "../lib/examples.js";
 import { kanaId } from "../lib/kana.js";
 
@@ -14,6 +15,7 @@ const word = (kana, glosses, { kanji = [], common = true, senses } = {}) => ({
 });
 const jmdict = [
   word("カメラ", ["camera"]),
+  word("サラダ", ["salad"]),
   word("パン", ["bread", "(sweet) pastry"]),
   word("パン", ["pan (camera)"], { common: false }),
   word("はし", ["bridge"], { kanji: ["橋"] }),
@@ -177,6 +179,15 @@ describe("example words for the kana decks (#158, v78)", () => {
     assert.equal(writeKanaCards(db, 4000, kanaExamples(db, { ...sources, sounds: [camera] })), 3, "カ, メ and ラ gain it");
     assert.deepEqual(JSON.parse(stored("カ"))[0], { kana: "カメラ", meaning: "camera", source: "lingualibre", audio: exampleSoundName(camera), at: 0 });
     assert.deepEqual(JSON.parse(stored("メ")), [{ kana: "カメラ", meaning: "camera", source: "lingualibre", audio: exampleSoundName(camera), at: 1 }]);
+
+    // v93's generated sound is named after its own file, not a human one's:
+    // the card named example-<hash>.mp3, the file was example-generated-
+    // <hash>.mp3, and 65 katakana cards' examples played nothing (2026-09-17).
+    const salad = GENERATED_EXAMPLE_SOUNDS.find((s) => s.reading === "サラダ");
+    writeKanaCards(db, 5000, kanaExamples(db, { ...sources, sounds: [camera, salad] }));
+    const sa = JSON.parse(stored("サ")).find((e) => e.kana === "サラダ");
+    assert.equal(sa.audio, generatedExampleSoundName(salad));
+    assert.match(sa.audio, /^example-generated-/);
     db.close();
   });
 });

@@ -160,7 +160,11 @@ export function kanaExamples(db, { jlpt, jmdictWords, sounds = [] }) {
   const recorded = sounds.map((s) => ({
     reading: s.reading,
     meaning: meaningOf({ written: s.written, reading: s.reading }),
-    audio: exampleSoundName(s),
+    // A generated sound's file carries "generated" in its name (v93) — this
+    // used exampleSoundName for both, so 66 kana cards (65 katakana) named a
+    // file that did not exist and their examples played nothing (Henning,
+    // 2026-09-17, from the device; the hiragana deck has one such card).
+    audio: s.source === "generated" ? generatedExampleSoundName(s) : exampleSoundName(s),
     source: s.source,
   }));
   return new Map(kanaCards().map((card) => [card.id, pickExamples(card, { kaishi, recorded, jlpt, meaningOf })]));
