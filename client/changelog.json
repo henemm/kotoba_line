@@ -1,5 +1,12 @@
 [
   {
+    "version": "v121",
+    "summary": "In der Suche hat die geöffnete Karte jetzt den Stern zum Markieren.",
+    "notes": [
+      "Tippst du in der Suche auf eine Karte, siehst du oben neben dem ♪ jetzt, ob sie markiert ist – und kannst sie dort markieren oder die Markierung entfernen. Bisher ging das nur in der Liste dahinter."
+    ]
+  },
+  {
     "version": "v120",
     "summary": "Katakana-Beispielwörter sind wieder zu hören, und auch Kana-Karten haben jetzt „Antwort aufnehmen“.",
     "notes": [
