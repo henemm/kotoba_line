@@ -251,3 +251,43 @@ describe("GET /api/queue carries recordings, the same way it carries starred", (
     await app.close();
   });
 });
+
+describe("GET /api/cards/:cardId/recordings (#185 follow-up: the deck's card menu, outside a queue)", () => {
+  it("needs a session", async () => {
+    const { app } = await testApp({ practiceDir: mediaDir });
+    const res = await app.inject({ method: "GET", url: "/api/cards/1/recordings" });
+    assert.equal(res.statusCode, 401);
+    await app.close();
+  });
+
+  it("lists a card's live recordings, oldest first, dropping a deleted one", async () => {
+    const { app, db, config } = await testApp({ practiceDir: mediaDir });
+    const user = await seedUser(db);
+    seedCards(db, 1);
+    const cookie = await signIn(app, config);
+
+    const own = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("t1"), audio: wav(), mediaDir, encode: stubEncode });
+    await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("t2"), audio: wav(), mediaDir, encode: stubEncode });
+    await removeRecording(db, user.id, own.recording.id);
+
+    const res = await app.inject({ method: "GET", url: "/api/cards/1/recordings", headers: { cookie } });
+    assert.equal(res.statusCode, 200);
+    const { recordings } = res.json();
+    assert.equal(recordings.length, 1);
+    assert.equal(recordings[0].kind, "native");
+  });
+
+  it("404s on a card she cannot see, the same as visibleCard everywhere else", async () => {
+    const { app, db, config } = await testApp({ practiceDir: mediaDir });
+    const owner = await seedUser(db, { handle: "owner" });
+    const other = await seedUser(db, { handle: "other", pin: "111222" });
+    db.prepare(
+      `INSERT INTO cards (id, word, word_meaning, deck, owner_id, updated_at) VALUES (-2, 'Kasa', 'Regenschirm', 'personal', ?, 0)`,
+    ).run(owner.id);
+    const cookie = await signIn(app, config, { handle: other.handle, pin: "111222" });
+
+    const res = await app.inject({ method: "GET", url: "/api/cards/-2/recordings", headers: { cookie } });
+    assert.equal(res.statusCode, 404);
+    await app.close();
+  });
+});

@@ -614,6 +614,7 @@ function openCardActions(card, { onChanged } = {}) {
   state.sheet = cardActionsSheet({
     card,
     japanese: state.settings.japaneseScript,
+    recordingEnabled: state.settings.recordingEnabled,
     decks: state.lastDecks.filter((d) => d.own && d.id !== card.deck_id),
     onEdit: () => {
       state.sheet = undefined;

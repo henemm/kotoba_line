@@ -1,4 +1,5 @@
-import { addRecording, removeRecording } from "../recordings.js";
+import { addRecording, recordingsFor, removeRecording } from "../recordings.js";
+import { visibleCard } from "../cards.js";
 
 const MAX_BYTES = 2 * 1024 * 1024; // a spoken word or sentence, generously
 
@@ -28,6 +29,19 @@ export default async function recordingRoutes(app) {
   // (audio/webm;codecs=opus, or audio/mp4 on Safari before 18.4) — one file,
   // no form fields, so a multipart parser is more than this needs.
   app.addContentTypeParser(/^audio\//, { parseAs: "buffer", bodyLimit: MAX_BYTES }, (req, body, done) => done(null, body));
+
+  // For a single card, outside a session's queue (#185 follow-up, 2026-09-17:
+  // the deck's card menu offers a native recording on its own, without going
+  // through a review). `recordingsAmong()` (queue.js) already covers the
+  // in-session case; this is `recordingsFor()`'s first caller.
+  app.get(
+    "/api/cards/:cardId/recordings",
+    { schema: { params: { type: "object", properties: { cardId: { type: "integer" } } } }, preHandler: app.requireUser },
+    async (req, reply) => {
+      if (!visibleCard(db, req.user.id, req.params.cardId)) return reply.code(404).send({ error: "not_found" });
+      return { recordings: recordingsFor(db, req.user.id, req.params.cardId) };
+    },
+  );
 
   app.post(
     "/api/cards/:cardId/recordings",
