@@ -4373,6 +4373,9 @@
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+  /* Pushes the controls to the right whichever of them are present — the
+     star (#187), ♪ (only with a recording) and ×. */
+  margin-right: auto;
 }
 /* v69: the romaji word as large as the Japanese one — it was body text. */
 .topics-title .topics-word {
@@ -4388,9 +4391,29 @@
   color: var(--ink-muted);
   margin-bottom: 4px;
 }
+/* #187: the card's star. The same 21px `--ink`/`--ink-dim` star as the row
+   behind it (.star) — a differently drawn one would read as a different
+   thing. Inert offline, like the row's. */
+.topics-star {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 21px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.topics-star[aria-pressed="false"] {
+  color: var(--ink-dim);
+}
+.topics-star:active {
+  transform: scale(0.88);
+}
 .topics-hear {
   flex: none;
-  margin-left: auto;
   width: 40px;
   height: 40px;
   border: 0;

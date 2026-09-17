@@ -273,6 +273,17 @@ export function browseScreen({
     );
   }
 
+  // 32: "one tap on the star writes immediately and the count changes under
+  // her hand — that is the whole confirmation." One function for the row's
+  // star and the sheet's (#187), so the two cannot drift apart: the card
+  // object, the count in the ★ chip, and the write to the server.
+  function toggleStar(card, wanted) {
+    card.starred = wanted;
+    state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
+    drawChrome();
+    setStar(card.id, wanted);
+  }
+
   function row(card) {
     // #22: an offline row comes from the deck cache, which carries no star or
     // maturity data — both live in server-side tables the cache never syncs.
@@ -293,25 +304,21 @@ export function browseScreen({
       text: hasLiveData && card.starred ? "★" : "☆",
     });
 
-    // 32: "one tap on the star writes immediately and the count changes under
-    // her hand — that is the whole confirmation."
-    //
     // Through `setStar`, the one way a star reaches the server. This used to
     // call the API's star request itself, and #83 made the server require the
     // `changedAt` that only `setStar` sends: every star tapped here since came
     // back 400 and was put back, so starring on this tab did nothing (measured
     // on the live server, 2026-09-14). `setStar` never throws — a star with no
-    // connection waits in its queue — so there is nothing to undo here.
+    // connection waits in its queue — so there is nothing to undo here. The
+    // row patches its own glyph rather than redrawing the list, so the list
+    // does not move under the finger that just tapped.
     if (hasLiveData) {
       star.addEventListener("click", () => {
         const wanted = !card.starred;
-        card.starred = wanted;
-        state.starred = Math.max(0, (state.starred ?? 0) + (wanted ? 1 : -1));
+        toggleStar(card, wanted);
         star.textContent = wanted ? "★" : "☆";
         star.setAttribute("aria-label", wanted ? `Markierung entfernen: ${shownWord(card, japanese)}` : `${shownWord(card, japanese)} markieren`);
         star.setAttribute("aria-pressed", String(wanted));
-        drawChrome();
-        setStar(card.id, wanted);
       });
     }
 
@@ -319,7 +326,23 @@ export function browseScreen({
     // Kaishi card its topics, with its recording to hear. A tap that did
     // nothing was the complaint (Henning, 2026-09-14).
     const own = card.deck === "personal" && onOwnCard;
-    const tap = own ? () => onOwnCard(card, keepSearch) : onTopics ? () => onTopics(card, drawList) : undefined;
+    const tap = own
+      ? () => onOwnCard(card, keepSearch)
+      : onTopics
+        ? () =>
+            onTopics(card, {
+              changed: drawList,
+              // #187: the sheet carries the same star as this row. It goes
+              // through the same write, and the row behind the sheet is
+              // repainted rather than patched, because the sheet does not
+              // hold the row's node.
+              canStar: hasLiveData,
+              star: (wanted) => {
+                toggleStar(card, wanted);
+                drawList();
+              },
+            })
+        : undefined;
 
     return el(
       "div.row",

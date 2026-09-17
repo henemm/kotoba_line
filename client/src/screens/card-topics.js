@@ -26,7 +26,7 @@ import { cardHistoryBlock } from "./card-history.js";
 /** The same ceiling the personal deck uses, and the server enforces. */
 const MAX_TAGS = 5;
 
-export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese = true }) {
+export function cardTopicsSheet({ card, topics = [], onSaved, onClose, onStar, canStar = false, japanese = true }) {
   const root = el("div.sheet-scrim", {
     onclick: (e) => e.target === root && onClose?.(),
   });
@@ -69,6 +69,34 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
             el(showsScript(card, japanese) ? "span.topics-word.jp" : "span.topics-word", { text: shownWord(card, japanese) }),
             el("span.topics-gloss", { text: card.word_meaning ?? "" }),
           ),
+          // #187: the row behind this sheet has a star; the sheet had none, so
+          // the card's mark could be neither seen nor set from here (Henning's
+          // screenshot, 2026-09-16). There is no design screen for this sheet.
+          // Same glyph and same write as the row's star, and like the row's it
+          // takes effect at the tap, not at "Speichern": the star is not part
+          // of what that button saves. Offline the card came from the deck
+          // cache, which knows nothing about stars, so as in Browse (#22) the
+          // star is inert rather than a guessed ☆.
+          onStar
+            ? el("button.topics-star", {
+                type: "button",
+                disabled: !canStar,
+                "aria-label": canStar
+                  ? card.starred
+                    ? `Markierung entfernen: ${shownWord(card, japanese)}`
+                    : `${shownWord(card, japanese)} markieren`
+                  : "Markieren braucht Internet",
+                "aria-pressed": String(Boolean(canStar && card.starred)),
+                text: canStar && card.starred ? "★" : "☆",
+                onclick: () => {
+                  // Written to the card object, which the row behind is drawn
+                  // from too — one object, one truth, same as `myTags`.
+                  card.starred = !card.starred;
+                  draw();
+                  onStar(card.starred);
+                },
+              })
+            : null,
           // v69: something to do with a Kaishi word found in Search — hear it.
           // Its recording, or its generated file (#183); this sheet never
           // falls back to the phone's voice.

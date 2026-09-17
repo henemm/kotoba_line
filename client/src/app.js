@@ -739,7 +739,7 @@ async function loadTopics() {
       openSheet();
     }
     if (state.topicsFor) {
-      openCardTopics(state.topicsFor.card, state.topicsFor.onChanged);
+      openCardTopics(state.topicsFor.card, state.topicsFor.list);
     }
   } catch {
     /* the sheet works without them; the topic row is just "Any" */
@@ -864,14 +864,17 @@ function wordsScreen() {
  * about one row of the list behind it, and taking the screen would lose the
  * search she may have typed to get there.
  */
-function openCardTopics(card, onChanged) {
+function openCardTopics(card, list = {}) {
   // Kept so loadTopics can rebuild this sheet if the list arrives after it
   // opened — the same trick openSheet uses, for the same reason.
-  state.topicsFor = { card, onChanged };
+  state.topicsFor = { card, list };
   state.overlay = cardTopicsSheet({
     card,
     topics: state.topics,
     japanese: state.settings.japaneseScript,
+    // #187: the star, written by the list that owns the row and its count.
+    canStar: list.canStar,
+    onStar: list.star,
     onClose: () => {
       state.topicsFor = undefined;
       closeOverlay();
@@ -882,7 +885,7 @@ function openCardTopics(card, onChanged) {
       // asking Browse to repaint is what makes the chips appear without
       // reloading the search she is in the middle of.
       card.myTags = tags;
-      onChanged?.();
+      list.changed?.();
       state.overlay = undefined;
       // A newly coined topic has to reach the picker, and the counts of the
       // ones she moved a card into have changed. Cheaper to re-ask than to
