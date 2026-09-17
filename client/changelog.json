@@ -1,5 +1,12 @@
 [
   {
+    "version": "v114",
+    "summary": "Auf der Vorderseite von „Karte umdrehen“ und „Sprechen“ gibt es jetzt nur noch deinen eigenen Aufnahme-Knopf.",
+    "notes": [
+      "Der Muttersprachler-Knopf war versehentlich auch dort zu sehen, wo das japanische Wort noch gar nicht auf dem Bildschirm steht – dort kann niemand die Aussprache aufnehmen. Er erscheint jetzt erst, sobald das Wort zu sehen ist, beim Umdrehen."
+    ]
+  },
+  {
     "version": "v113",
     "summary": "Bei „Karte umdrehen“ kannst du dich jetzt auch bei deinen eigenen Karten schon auf der Vorderseite aufnehmen.",
     "notes": [

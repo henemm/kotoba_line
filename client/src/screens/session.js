@@ -807,8 +807,10 @@ export function sessionScreen({
       // in deck-options.js, but playableIn() does not itself filter kana out
       // of "speak" the way it does for "type"/"listen", so this is the only
       // thing that would actually stop one reaching here (code review,
-      // 2026-09-17).
-      isKana(card) ? null : recordingBlock(card),
+      // 2026-09-17). No native circle here (Henning, 2026-09-17): the word
+      // is not on screen yet, so nobody could record its pronunciation
+      // correctly — only her own attempt makes sense on a blind front.
+      isKana(card) ? null : recordingBlock(card, { native: false }),
     );
     render(
       answers,
@@ -1096,12 +1098,15 @@ export function sessionScreen({
       // meant to say it herself before turning the card — 話す already
       // records the attempt on its front for exactly this reason (#32) — so
       // this front gets the same recordingBlock, not only the reveal (Henning,
-      // 2026-09-17: this mode had fallen out of step with 話す).
+      // 2026-09-17: this mode had fallen out of step with 話す). No native
+      // circle: the word is not on screen yet, so a friend or host-family
+      // member has nothing to read the pronunciation from — that voice only
+      // belongs where the word is already visible, same as the reveal.
       render(
         area,
         el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
-        recordingBlock(card),
+        recordingBlock(card, { native: false }),
       );
     } else {
       // #158: a kana's sound is its reading, which is the answer — so the
@@ -1301,9 +1306,13 @@ export function sessionScreen({
    * card already has a professional recording, but comparing her own attempt
    * against it is exactly the point.
    *
-   * One circle per voice, always both present (never hidden or removed —
-   * that was the source of the "neighbouring circle twitches" bug: a flex
-   * row re-centres when a sibling appears, disappears, or changes width).
+   * One circle per voice. Both are present and neither is ever hidden or
+   * removed *after* the block is built (that was the source of the
+   * "neighbouring circle twitches" bug: a flex row re-centres when a sibling
+   * appears, disappears, or changes width) — but the native circle is left
+   * out from the start on a front where the word is not yet on screen
+   * (`{ native: false }`, 2026-09-17): nobody can record a pronunciation
+   * they cannot read, so only her own attempt is offered there.
    * A record button is always red at rest, a red square while capturing,
    * the voice's own colour only once there is something to play — and
    * playing looks exactly like every other ♪ in the app, because that is
@@ -1311,7 +1320,7 @@ export function sessionScreen({
    * a long press — this app has none anywhere else and it is not reliable
    * on a phone browser).
    */
-  function recordingBlock(card) {
+  function recordingBlock(card, { native = true } = {}) {
     if (!recordingEnabled) return null;
     const box = el("div.recording-block");
 
@@ -1476,7 +1485,8 @@ export function sessionScreen({
       return root;
     }
 
-    box.append(voice("own", "Ihre eigene"), voice("native", "Muttersprachler"));
+    box.append(voice("own", "Ihre eigene"));
+    if (native) box.append(voice("native", "Muttersprachler"));
     return box;
   }
 
