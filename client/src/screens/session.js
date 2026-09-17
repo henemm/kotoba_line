@@ -1092,11 +1092,16 @@ export function sessionScreen({
   function drawFlip(card, area, answers) {
     prime(card.word_audio, showsSentence(card, japanese) && card.sentence_audio);
     if (flipsMeaningFirst(card)) {
-      // No speaker and no reading aloud: the word is the answer.
+      // No speaker and no reading aloud: the word is the answer. But she is
+      // meant to say it herself before turning the card — 話す already
+      // records the attempt on its front for exactly this reason (#32) — so
+      // this front gets the same recordingBlock, not only the reveal (Henning,
+      // 2026-09-17: this mode had fallen out of step with 話す).
       render(
         area,
         el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
+        recordingBlock(card),
       );
     } else {
       // #158: a kana's sound is its reading, which is the answer — so the
@@ -1290,11 +1295,11 @@ export function sessionScreen({
    * empty/filled state — worked out this time against a clickable mockup
    * before anything shipped). Called from every page that shows a card's
    * Japanese word and is not a kana card (which has its own recordings
-   * already) — both sides of 話す, both sides of めくる for a word-first
-   * card, only the reveal for a meaning-first one, and 選ぶ/聞く/書く — on
-   * any deck, hers or not ("alle Decks"): a Kaishi card already has a
-   * professional recording, but comparing her own attempt against it is
-   * exactly the point.
+   * already) — both sides of 話す, both sides of めくる (a meaning-first
+   * card's front asks her to produce the word, same as 話す's front does),
+   * and 選ぶ/聞く/書く — on any deck, hers or not ("alle Decks"): a Kaishi
+   * card already has a professional recording, but comparing her own attempt
+   * against it is exactly the point.
    *
    * One circle per voice, always both present (never hidden or removed —
    * that was the source of the "neighbouring circle twitches" bug: a flex
@@ -1485,9 +1490,9 @@ export function sessionScreen({
   }
 
   function revealFlip(card, area, answers) {
-    // The front's own recordingBlock (word-first cards only) is a different
-    // DOM node than the one about to replace it — same reasoning as
-    // revealSpeak above, playback included (code review, 2026-09-17).
+    // The front's own recordingBlock is a different DOM node than the one
+    // about to replace it — same reasoning as revealSpeak above, playback
+    // included (code review, 2026-09-17).
     stopAllRecording();
     stop();
     const meaningFirst = flipsMeaningFirst(card);

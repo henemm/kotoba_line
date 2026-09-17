@@ -1,5 +1,12 @@
 [
   {
+    "version": "v113",
+    "summary": "Bei „Karte umdrehen“ kannst du dich jetzt auch bei deinen eigenen Karten schon auf der Vorderseite aufnehmen.",
+    "notes": [
+      "Bisher gab es den Aufnahme-Knopf bei deinen eigenen Karten erst nach dem Umdrehen. Jetzt kannst du – wie bei „Sprechen“ – erst versuchen, das japanische Wort selbst zu sagen, und danach beim Umdrehen mit einer vorhandenen Aufnahme oder dem Romaji vergleichen."
+    ]
+  },
+  {
     "version": "v112",
     "summary": "Kritische Sicherheitslücke geschlossen, plus mehrere kleinere Aufnahme-Fehler.",
     "notes": [
