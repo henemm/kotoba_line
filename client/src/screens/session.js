@@ -1098,9 +1098,10 @@ export function sessionScreen({
         // Same reasoning as 選ぶ: めくる's front asks "do you know this", not
         // "what does it say" — a romaji line here does not spoil the flip.
         romajiLine(card),
-        // No "Antwort aufnehmen": the word is on screen, so there is nothing
-        // to say from memory (#185). A kana card has its own sounds (Commons,
-        // VOICEVOX) and was never part of this feature.
+        // "Antwort aufnehmen" only where there is something to say from
+        // memory (#185): a kana, whose sound is the answer. A word's front
+        // already shows and plays it.
+        kana ? answerRecorderFor(card) : null,
       );
       if (kana) prime(...strokeFiles(card), ...exampleAudio(card));
       else if (readAloud) voice(card.word, soundOf(card).file);
@@ -1251,9 +1252,16 @@ export function sessionScreen({
     return wordSound(card, recordings.get(card.id));
   }
 
-  /** "Antwort aufnehmen" on a front that asks her to say the answer (#185). */
+  /**
+   * "Antwort aufnehmen" on a front that asks her to say the answer (#185).
+   * A kana card too (Henning, 2026-09-17: "diese Zeichen werden doch auch
+   * gesprochen"): its sound *is* the answer, so めくる's front is exactly the
+   * place — #185 had left kana out only because their audio was wired
+   * separately, not for a reason. 話す/書く are hidden for kana decks, and
+   * 選ぶ/聞く hand the kana its sound before she answers.
+   */
   function answerRecorderFor(card) {
-    if (!recordingEnabled || isKana(card)) return null;
+    if (!recordingEnabled) return null;
     recorder = answerRecorder(attempt);
     return recorder?.root ?? null;
   }
@@ -1392,6 +1400,8 @@ export function sessionScreen({
           kanaSpeaker(card),
         ),
         kanaSynthNote(card),
+        // Her attempt from the front, beside the sound it is compared with.
+        attemptRow(attempt),
         cardRule(),
         el("div.meaning.kana-reading.reveal", { text: card.word_meaning }),
         kanaMnemonicBlock(card),
