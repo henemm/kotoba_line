@@ -11,9 +11,11 @@
 # VOICEVOX for the run, runs import/generate-word-sounds.js from the deployed
 # API image (so it is always the deployed code), and stops VOICEVOX again.
 #
-# Heartbeat (henemm.com rule: readiness, not liveness): pinged only when the
-# run finished without an error. A card left silent on purpose — its reading
-# would not match her romaji — is not an error; it is listed in the log.
+# Monitoring: the BetterStack heartbeat quota is full (henemm-infra
+# docs/monitoring.md), so this is a sub-check of henemm-infra's monitor.sh
+# instead — it reads SUCCESS_FILE's age. Written only when the run finished
+# without an error (readiness, not liveness). A card left silent on purpose —
+# its reading would not match her romaji — is not an error; it is in the log.
 
 set -euo pipefail
 umask 022
@@ -27,8 +29,7 @@ VOICEVOX_IMAGE=${VOICEVOX_IMAGE:-voicevox/voicevox_engine:cpu-ubuntu20.04-latest
 VOICEVOX_NAME=kotoba-voicevox
 VOICEVOX_PORT=${VOICEVOX_PORT:-50021}
 
-[ -r /etc/henemm/secrets.env ] && set -a && source /etc/henemm/secrets.env && set +a
-HEARTBEAT_URL=${KOTOBA_WORD_SOUNDS_HEARTBEAT_URL:-}
+SUCCESS_FILE=${SUCCESS_FILE:-/home/hem/backups/kotoba-word-sounds.success}
 
 for f in "$DICT_DIR/wadokudict2" "$DICT_DIR/accents.txt"; do
   [[ -r $f ]] || { echo "missing $f — see ops/README.md" >&2; exit 1; }
@@ -71,6 +72,6 @@ if [[ $pending -gt 0 ]]; then
     generate "$@"
 fi
 
-if [[ -n $HEARTBEAT_URL && "${1:-}" != --dry-run ]]; then
-  curl -fsS -m 10 --retry 3 "$HEARTBEAT_URL" >/dev/null
+if [[ "${1:-}" != --dry-run ]]; then
+  date -u +%FT%TZ > "$SUCCESS_FILE"
 fi

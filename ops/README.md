@@ -236,8 +236,9 @@ curl -fsSL https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/s
   -o /srv/kotoba/dict/accents.txt
 ```
 
-and a cron entry with its BetterStack heartbeat
-(`KOTOBA_WORD_SOUNDS_HEARTBEAT_URL` in `/etc/henemm/secrets.env`):
+and a cron entry. No BetterStack heartbeat of its own (the quota is full):
+on success the script stamps `~/backups/kotoba-word-sounds.success`, and
+henemm-infra's `monitor.sh` alerts when that stamp is older than 26 hours.
 
 ```
 30 3 * * * /srv/kotoba/bin/generate-word-sounds.sh >> /home/hem/backups/kotoba-word-sounds.log 2>&1
