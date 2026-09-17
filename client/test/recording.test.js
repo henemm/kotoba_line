@@ -106,4 +106,54 @@ describe("recording.js releases the microphone (#185)", () => {
 
     assert.equal(streams[0].getTracks()[0].stopped, true);
   });
+
+  it("a stopAllRecording() that lands while getUserMedia is still pending releases the stream the moment it arrives", async () => {
+    // getUserMedia's permission prompt is exactly the gap a card change can
+    // land in — Henning's code review, 2026-09-17: `active` used to stay
+    // null until *after* this await, so a stopAllRecording() here was a
+    // no-op and the stream that showed up a moment later had nothing left
+    // to release it, ever.
+    let resolveGetUserMedia;
+    Object.defineProperty(globalThis, "navigator", {
+      value: {
+        mediaDevices: {
+          getUserMedia: () =>
+            new Promise((resolve) => {
+              resolveGetUserMedia = () => {
+                const stream = new FakeStream();
+                streams.push(stream);
+                resolve(stream);
+              };
+            }),
+        },
+      },
+      configurable: true,
+    });
+
+    const { startRecording, stopAllRecording } = await import(`../src/recording.js?${Math.random()}`);
+    const startPromise = startRecording();
+
+    stopAllRecording(); // the card changed while the permission prompt was still up
+    resolveGetUserMedia(); // permission granted a moment later, too late
+
+    await assert.rejects(startPromise, /AbortError|cancelled/i);
+    assert.equal(streams[0].getTracks()[0].stopped, true, "the stream was never assigned to `active`, and nothing else releases it");
+  });
+});
+
+describe("micErrorMessage (#185, code review 2026-09-17)", () => {
+  it("translates every getUserMedia failure name this app can see into German", async () => {
+    const { micErrorMessage } = await import(`../src/recording.js?${Math.random()}`);
+    for (const name of ["NotAllowedError", "NotFoundError", "NotReadableError", "OverconstrainedError", "SecurityError", "AbortError"]) {
+      const message = micErrorMessage({ name });
+      assert.ok(message.length > 0);
+      assert.doesNotMatch(message, /Error/, `${name} leaked into the German sentence`);
+    }
+  });
+
+  it("falls back to a plain German sentence for a name it does not recognise, never the raw name", async () => {
+    const { micErrorMessage } = await import(`../src/recording.js?${Math.random()}`);
+    const message = micErrorMessage({ name: "SomeFutureBrowserQuirkError", message: "raw English detail" });
+    assert.doesNotMatch(message, /Error|raw English detail/);
+  });
 });

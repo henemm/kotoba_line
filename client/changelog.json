@@ -1,5 +1,12 @@
 [
   {
+    "version": "v112",
+    "summary": "Kritische Sicherheitslücke geschlossen, plus mehrere kleinere Aufnahme-Fehler.",
+    "notes": [
+      "Ein umfangreicher Test- und Sicherheits-Durchlauf hat mehrere echte Probleme in der Aufnahme-Funktion gefunden: eine ernste Sicherheitslücke serverseitig (behoben, betraf nur den Server, nichts, was du gesehen hättest), zwei weitere seltene Fälle, in denen das Mikrofon weiterlaufen konnte, eine abgespielte Aufnahme, die in die nächste Karte hinein weiterlief, und englische Fehlermeldungen, wo eigentlich Deutsch stehen sollte."
+    ]
+  },
+  {
     "version": "v111",
     "summary": "Das × sauberer: mehr Abstand, gezeichnet statt Schriftzeichen.",
     "notes": [

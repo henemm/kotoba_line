@@ -1,5 +1,4 @@
 import Fastify from "fastify";
-import { mkdirSync } from "node:fs";
 import { config as defaultConfig } from "./config.js";
 import { readCookie } from "./cookies.js";
 import { openDatabase } from "./db.js";
@@ -18,7 +17,6 @@ import recordingRoutes from "./routes/recordings.js";
 export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   const database = db ?? openDatabase(config.dbFile);
   pruneExpiredSessions(database, config.sessionMaxAgeSeconds);
-  mkdirSync(config.practiceDir, { recursive: true });
 
   const app = Fastify({
     logger: logger ?? { level: config.logLevel },

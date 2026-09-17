@@ -11,7 +11,7 @@ import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
-import { canRecord, startRecording, stopAllRecording } from "../recording.js";
+import { canRecord, micErrorMessage, startRecording, stopAllRecording } from "../recording.js";
 
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
@@ -405,8 +405,11 @@ export function sessionScreen({
     // A card can be graded while its own recordingBlock is still recording
     // (grading is not gated on it) — the DOM node this replaces is the only
     // thing that held it, so without this the mic stays live for the rest
-    // of the page load (Charlotte, 2026-09-16).
+    // of the page load (Charlotte, 2026-09-16). The same is true of playing
+    // one back (code review, 2026-09-17): grading mid-playback used to
+    // leave a recording's own audio running audibly into the next card.
     stopAllRecording();
+    stop();
     const card = queue[index];
     // The mode on the card is for the iPad card's layout (#150, screens.css).
     const area = el("div.card-area", { dataset: { mode } });
@@ -799,8 +802,13 @@ export function sessionScreen({
       // produce it, and hearing herself back is the only way to check it —
       // and a card change (drawCard) is the only cleanup this front gets, so
       // tapping "Antwort zeigen" mid-recording has to stop it itself
-      // (revealSpeak does, below).
-      recordingBlock(card),
+      // (revealSpeak does, below). Not for a kana card, same exclusion as
+      // everywhere else this feature appears — 話す is hidden for kana decks
+      // in deck-options.js, but playableIn() does not itself filter kana out
+      // of "speak" the way it does for "type"/"listen", so this is the only
+      // thing that would actually stop one reaching here (code review,
+      // 2026-09-17).
+      isKana(card) ? null : recordingBlock(card),
     );
     render(
       answers,
@@ -819,8 +827,10 @@ export function sessionScreen({
   function revealSpeak(card, area, answers, useSentence) {
     // The front's recordingBlock is a different DOM node than the one about
     // to be drawn here — replacing it does not stop a recording still
-    // running in it, same reasoning as drawCard() above.
+    // running in it, same reasoning as drawCard() above. Nor does it stop
+    // one already playing back (code review, 2026-09-17).
     stopAllRecording();
+    stop();
     const text = useSentence ? card.sentence : card.word;
     const audio = useSentence ? card.sentence_audio : card.word_audio;
 
@@ -845,8 +855,9 @@ export function sessionScreen({
       useSentence ? null : romajiLine(card),
       // The front's own attempt (if she made one) is a fresh "own" source
       // now, so it plays here too — same card, so sourcesFor(card) already
-      // carries it forward without anything extra.
-      recordingBlock(card),
+      // carries it forward without anything extra. Not for a kana card,
+      // same exclusion as the front above.
+      isKana(card) ? null : recordingBlock(card),
     );
     if (readAloud) voice(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
@@ -1389,7 +1400,7 @@ export function sessionScreen({
         } catch (err) {
           starting = false;
           activeKind = null;
-          setStatus(`Mikrofon nicht verfügbar: ${err.name ?? err.message}`);
+          setStatus(micErrorMessage(err));
           paint();
         }
       }
@@ -1476,8 +1487,9 @@ export function sessionScreen({
   function revealFlip(card, area, answers) {
     // The front's own recordingBlock (word-first cards only) is a different
     // DOM node than the one about to replace it — same reasoning as
-    // revealSpeak above.
+    // revealSpeak above, playback included (code review, 2026-09-17).
     stopAllRecording();
+    stop();
     const meaningFirst = flipsMeaningFirst(card);
     // #113: the word stays where the front showed it — or, with the meaning on
     // the front (#137), the meaning does, and the word comes in under it.

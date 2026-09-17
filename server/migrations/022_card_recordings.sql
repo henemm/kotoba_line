@@ -1,10 +1,14 @@
 -- Her own and a native speaker's recordings, attached to a card (the #183
 -- follow-up): unlike review_events, a recording must be deletable and
--- "native" capped at 3 per card, so this is a real row per recording rather
--- than an append-only log folded into a cache — the same shape card_stars
--- and card_user_tags already use for per-(user, card) state that needs more
--- than a boolean. card_id carries no CHECK > 0: her own cards' negative ids
--- are ordinary foreign keys here too (rule 4), same as in card_stars.
+-- capped per card, so this is a real row per recording rather than an
+-- append-only log folded into a cache — the same shape card_stars and
+-- card_user_tags already use for per-(user, card) state that needs more
+-- than a boolean. The cap itself (native capped at 3 when this table was
+-- created, both kinds capped at 1 as of #185, 2026-09-16) lives in code
+-- (server/src/recordings.js's RECORDING_LIMIT), not in this schema — this
+-- comment is not the place to look for the current number. card_id carries
+-- no CHECK > 0: her own cards' negative ids are ordinary foreign keys here
+-- too (rule 4), same as in card_stars.
 --
 -- id is a client-generated UUID, like review_events.id, so a retried upload
 -- after a dropped connection cannot create a duplicate row.

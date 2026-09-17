@@ -319,6 +319,11 @@ function currentScreen() {
     },
     onSettings: keepSettings,
     onSignOut: async () => {
+      // Leaves Settings the same way goToTab() does when she taps another
+      // tab — but this path never went through goToTab(), so a mic test
+      // left running here survived signing out entirely (code review,
+      // 2026-09-17).
+      stopAllRecording();
       state.user = undefined;
       // Her decks are hers (#137); whoever signs in next starts on the list.
       state.filters = { ...DEFAULT_FILTERS };
