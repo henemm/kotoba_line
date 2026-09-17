@@ -31,7 +31,7 @@
 let active = null;
 
 function release(entry) {
-  if (!entry) return;
+  if (!entry?.stream) return;
   for (const track of entry.stream.getTracks()) track.stop();
 }
 
@@ -49,6 +49,25 @@ export function stopAllRecording() {
 /** Whether this device can record at all — checked once, not assumed. */
 export function canRecord() {
   return typeof MediaRecorder !== "undefined" && typeof navigator?.mediaDevices?.getUserMedia === "function";
+}
+
+/**
+ * A `getUserMedia`/`startRecording` failure, in a sentence she can read —
+ * never the raw `DOMException` name or message, which is English and
+ * unexplained (code review, 2026-09-17: two call sites were interpolating
+ * `err.name` straight into an otherwise German sentence, against §12's own
+ * rule that nothing in client/ is a new English string).
+ */
+export function micErrorMessage(err) {
+  const known = {
+    NotAllowedError: "Der Zugriff aufs Mikrofon wurde nicht erlaubt.",
+    NotFoundError: "Es wurde kein Mikrofon gefunden.",
+    NotReadableError: "Das Mikrofon konnte nicht geöffnet werden.",
+    OverconstrainedError: "Das Mikrofon konnte nicht wie gebraucht geöffnet werden.",
+    SecurityError: "Der Zugriff aufs Mikrofon ist hier nicht erlaubt.",
+    AbortError: "Die Aufnahme wurde abgebrochen.",
+  };
+  return known[err?.name] ?? "Mikrofon nicht verfügbar.";
 }
 
 /**
@@ -73,7 +92,21 @@ function pickMimeType() {
  */
 export async function startRecording() {
   stopAllRecording(); // never more than one live capture — the previous owner lost its reference
+  // Claims the slot *before* the await, not after — otherwise a
+  // stopAllRecording() that lands while getUserMedia's permission prompt is
+  // still pending (a card change, leaving the screen, in that exact
+  // window) finds `active` still null, does nothing, and the stream this
+  // call goes on to open becomes an orphan the moment it resolves: nothing
+  // has a reference to release it. Checked again once getUserMedia
+  // resolves, and released immediately if something else claimed the slot
+  // in the meantime.
+  const claim = {};
+  active = claim;
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  if (active !== claim) {
+    for (const track of stream.getTracks()) track.stop();
+    throw new DOMException("Recording was cancelled before it could start", "AbortError");
+  }
   const mimeType = pickMimeType();
   const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
   const entry = { stream };

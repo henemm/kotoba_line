@@ -75,6 +75,12 @@ export function prime(...files) {
 }
 
 let current;
+// playTracked()'s onEnded, so an external stop() (leaving the card, another
+// ♪ starting) can tell it its play was interrupted rather than finished —
+// otherwise the voice circle that called it waits forever for an "ended" or
+// "error" event that a pause() never fires, stuck showing "playing" (and
+// its sibling stuck disabled) until the whole card is torn down and redrawn.
+let currentInterrupted;
 
 /**
  * Play a card's recorded audio, falling back to speech.
@@ -111,6 +117,8 @@ export function stop() {
   if (current) {
     current.pause();
     current = undefined;
+    currentInterrupted?.();
+    currentInterrupted = undefined;
   }
   if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
 }
@@ -127,9 +135,31 @@ export function playTracked(file, { onProgress, onEnded } = {}) {
   stop();
   const audio = new Audio(mediaUrl(file));
   current = audio;
+  // Cleared before every call to onEnded, on every path — a stop() that
+  // lands after natural completion (or after an error already reported it)
+  // must not report the same play as interrupted a second time.
+  currentInterrupted = () => {
+    currentInterrupted = undefined;
+    onEnded?.();
+  };
   audio.addEventListener("timeupdate", () => {
     if (audio.duration) onProgress?.(audio.currentTime / audio.duration);
   });
-  audio.addEventListener("ended", () => onEnded?.());
-  audio.play().catch(() => onEnded?.());
+  audio.addEventListener("ended", () => {
+    currentInterrupted = undefined;
+    onEnded?.();
+  });
+  // A 404 or a corrupt file does not reliably reject play()'s own promise —
+  // it can instead fire only this event, well after play() resolved. The
+  // caller's voice circle waits on onEnded to leave its "playing" state, so
+  // without this it (and its sibling, which it disables while playing) get
+  // stuck until the card is left and re-entered.
+  audio.addEventListener("error", () => {
+    currentInterrupted = undefined;
+    onEnded?.();
+  });
+  audio.play().catch(() => {
+    currentInterrupted = undefined;
+    onEnded?.();
+  });
 }

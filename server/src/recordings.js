@@ -12,7 +12,7 @@
 import { visibleCard } from "./cards.js";
 import { encodeMp3 } from "./audio-encode.js";
 import { join } from "node:path";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 
 export const KINDS = ["own", "native"];
 /** One of each voice at most (#185, 2026-09-16: "nur ein Muttersprachler,
@@ -60,6 +60,12 @@ export function recordingsAmong(db, userId, cardIds) {
  */
 export async function addRecording(db, userId, { cardId, kind, id, audio, mediaDir, encode = encodeMp3 }) {
   if (!KINDS.includes(kind)) return { ok: false, reason: "unknown_kind" };
+  // `id` becomes part of a filename below — checked again here, not only by
+  // the route's JSON schema, the same "more than one place" rule the rest
+  // of this codebase applies to anything a bad value can reach unchecked
+  // (settings.js's own comment says why). A `/` or `..` here let a write
+  // land outside mediaDir entirely (measured: /srv/etc/passwd.mp3).
+  if (!/^[0-9a-zA-Z-]{8,64}$/.test(id)) return { ok: false, reason: "invalid_id" };
   if (!visibleCard(db, userId, cardId)) return { ok: false, reason: "not_found" };
   if (db.prepare("SELECT 1 FROM card_recordings WHERE id = ?").get(id)) return { ok: true, already: true };
 
@@ -76,6 +82,12 @@ export async function addRecording(db, userId, { cardId, kind, id, audio, mediaD
   const name = `${kind}-${id}.mp3`;
   const file = `practice/${name}`;
   const mp3 = await encode(audio, { comment: `Recorded in the app, kind=${kind} (#183 follow-up)` });
+  // Not buildApp()'s job (code review, 2026-09-17): an unconditional
+  // mkdirSync there ran on every server startup and every test regardless
+  // of whether anything ever touches a recording, writing a real
+  // server/media/practice/ directory as a side effect of tests that have
+  // nothing to do with this feature. Made only when actually about to write.
+  await mkdir(mediaDir, { recursive: true });
   await writeFile(join(mediaDir, name), mp3, { mode: 0o644 });
 
   db.prepare(

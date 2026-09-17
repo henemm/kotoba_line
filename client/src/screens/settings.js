@@ -4,7 +4,7 @@ import { SHELL_VERSION } from "../shell-version.js";
 import { viewportReport } from "../viewport.js";
 import { sheetSummary, versionNumber } from "../whats-new.js";
 import { el, num, render } from "../ui/dom.js";
-import { canRecord, startRecording } from "../recording.js";
+import { canRecord, micErrorMessage, startRecording, stopAllRecording } from "../recording.js";
 
 /**
  * Which app shell this device is running, and which one it has ready.
@@ -125,6 +125,12 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
   }
 
   function draw() {
+    // Any write() redraws this whole screen, which throws away
+    // diagnostics()'s microphoneTest() closure — and the MediaRecorder it
+    // might be holding mid-recording, with nothing else left to release it
+    // (found in code review, 2026-09-17: flipping any other switch while
+    // "2 Sek. testen" was running leaked that stream for good).
+    stopAllRecording();
     render(
       root,
       header(),
@@ -496,7 +502,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     const draw = (status) => {
       render(
         box,
-        el("div.diagnostic", {}, el("span", { text: "Mikrofon" }), el("span", { text: status })),
+        diagnostic("Mikrofon", status),
         el(
           "div.mic-test-row",
           {},
@@ -533,7 +539,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
         draw("Aufnahme läuft – nochmal tippen zum Stoppen");
       } catch (err) {
         starting = false;
-        draw(`Fehler: ${err.name ?? err.message}`);
+        draw(micErrorMessage(err));
       }
     }
 

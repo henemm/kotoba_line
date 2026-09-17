@@ -69,6 +69,17 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     assert.deepEqual(result, { ok: false, reason: "not_found" });
   });
 
+  it("refuses an id shaped like a path, before it ever reaches a filename", async () => {
+    const { db } = await testApp();
+    const user = await seedUser(db);
+    seedCards(db, 1);
+
+    for (const bad of ["x/../../../../etc/passwd", "../../secret", "a/b", "trailing/"]) {
+      const result = await addRecording(db, user.id, { cardId: 1, kind: "own", id: bad, audio: wav(), mediaDir, encode: stubEncode });
+      assert.deepEqual(result, { ok: false, reason: "invalid_id" }, bad);
+    }
+  });
+
   it("caps own and native recordings at one each (#185, 2026-09-16: \"nur ein Muttersprachler\")", async () => {
     const { db } = await testApp();
     const user = await seedUser(db);
@@ -134,6 +145,22 @@ describe("POST /api/cards/:cardId/recordings", () => {
       headers: { "content-type": "audio/webm" },
     });
     assert.equal(res.statusCode, 401);
+    await app.close();
+  });
+
+  it("rejects a path-shaped id at the schema, with 400, before any file write", async () => {
+    const { app, db, config } = await testApp({ practiceDir: mediaDir });
+    await seedUser(db);
+    seedCards(db, 1);
+    const cookie = await signIn(app, config);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/cards/1/recordings?kind=own&id=" + encodeURIComponent("x/../../../../etc/passwd"),
+      headers: { cookie, "content-type": "audio/webm" },
+      payload: wav(),
+    });
+    assert.equal(res.statusCode, 400);
     await app.close();
   });
 
