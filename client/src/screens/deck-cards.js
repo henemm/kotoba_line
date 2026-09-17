@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
+import { wordSound } from "../sound.js";
 import { showsScript, shownWord } from "../script.js";
 import { exactFirst, matchesQuery } from "./browse.js";
 import { cardHistoryBlock } from "./card-history.js";
@@ -147,6 +148,8 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
  * recording data — unlike a review session's queue.
  */
 export function cardActionsSheet({ card, japanese = true, decks = [], recordingEnabled = true, onEdit, onMove, onDelete, onClose }) {
+  // Not on a card whose own recording is already a native speaker's — a
+  // Kaishi word she linked (#185, 2026-09-17: 何 was offered one anyway).
   const scrim = el("div.sheet-scrim.card-actions", {
     onclick: (e) => e.target === e.currentTarget && closeWithCleanup(),
   });
@@ -155,7 +158,7 @@ export function cardActionsSheet({ card, japanese = true, decks = [], recordingE
   const history = cardHistoryBlock({ cardId: card.id });
 
   let nativeRecording;
-  const nativeCircle = recordingEnabled
+  const nativeCircle = recordingEnabled && !wordSound(card).deckNative
     ? voiceCircle({
         cardId: card.id,
         kind: "native",
@@ -196,7 +199,7 @@ export function cardActionsSheet({ card, japanese = true, decks = [], recordingE
     // Menu is the only step that shows the recording circle — leaving it
     // (move, delete) must not leave a capture running unattended, the same
     // rule session.js follows whenever it replaces the DOM node a
-    // recordingBlock lives in.
+    // native circle lives in.
     if (step !== "menu") stopAllRecording();
     const title = [el("h2.sheet-title", { text: card.word_meaning ?? "" }), el("p.sheet-body", { text: shownWord(card, japanese) })];
     if (step === "menu") {

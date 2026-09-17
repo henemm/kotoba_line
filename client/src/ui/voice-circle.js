@@ -22,9 +22,9 @@ export const uuid = () =>
     .slice(2, 14)}`;
 
 /**
- * One record/play circle for one voice on one card (#183 follow-up, #185) —
- * pulled out of session.js's `recordingBlock()` so the deck's card menu
- * (#185 follow-up, 2026-09-17) can offer the same control without a second
+ * The record/play circle for a native speaker's recording of one card (#183
+ * follow-up, #185) — shared by the deck's card menu and the chip under a
+ * word's ♪ in a session (session.js's wordSoundParts), so there is no second
  * copy of this state machine to drift out of sync with. Three of this
  * component's past bugs (#194, #195, #196) were exactly that kind of drift
  * inside a single copy; a second copy would only multiply the risk.
@@ -37,18 +37,13 @@ export const uuid = () =>
  * that bookkeeping out of band (an async fetch that resolves after the
  * circle is already on screen).
  *
- * `shared` is the `{ active }` object every voice on the same card must
- * share, so only one may record or play at a time — recording.js's
- * `startRecording()` would otherwise cut a sibling's capture off mid-take.
- * Pass a fresh `{ active: null }` for a circle with no sibling.
+ * `shared` is an `{ active }` object for circles that must not record or
+ * play at the same time — recording.js's `startRecording()` would otherwise
+ * cut a sibling's capture off mid-take. Pass a fresh `{ active: null }` for
+ * a circle with no sibling, which since #185 is every caller.
  *
- * `startsEmpty` renders the circle as empty at first even if `getSource()`
- * already has something — for a front where the Japanese word is not yet on
- * screen, a stored recording from an earlier round must not appear already
- * filled, which would un-blind the very attempt that front is asking her to
- * make (session.js, 2026-09-17). It only guards the very first paint: once
- * she actually interacts with the circle, it reflects the true state, same
- * as everywhere else.
+ * Her own voice has no circle (#185, 2026-09-17): it is never stored. What
+ * she says is compared in the moment — ui/answer-recorder.js.
  */
 export function voiceCircle({
   cardId,
@@ -59,7 +54,6 @@ export function voiceCircle({
   shared,
   getSource,
   setSource,
-  startsEmpty = false,
   rowLayout = false,
 }) {
   const root = el("div.voice", { class: [kind, rowLayout ? "row" : null].filter(Boolean).join(" ") });
@@ -95,7 +89,7 @@ export function voiceCircle({
   let controller = null;
   let starting = false;
   // empty | recording | uploading | filled | playing | deleting
-  let state = !startsEmpty && getSource() ? "filled" : "empty";
+  let state = getSource() ? "filled" : "empty";
 
   function paint() {
     const disabledBySibling = shared.active && shared.active !== kind;

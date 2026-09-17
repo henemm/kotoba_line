@@ -1,11 +1,11 @@
-import { addRecording, recordingsFor, removeRecording } from "../recordings.js";
+import { KINDS, addRecording, recordingsFor, removeRecording } from "../recordings.js";
 import { visibleCard } from "../cards.js";
 
 const MAX_BYTES = 2 * 1024 * 1024; // a spoken word or sentence, generously
 
 // `id` becomes part of a filename (recordings.js's addRecording), written
 // with no further check beyond this — a length-only bound let `/` and `..`
-// through, and `own-x/../../../../etc/passwd.mp3` joined against mediaDir
+// through, and `native-x/../../../../etc/passwd.mp3` joined against mediaDir
 // resolves outside it (measured: /srv/etc/passwd.mp3). Alphanumeric and
 // hyphen only — no `/`, no `.` — costs a real crypto.randomUUID() nothing.
 const ID_PATTERN = "^[0-9a-zA-Z-]+$";
@@ -16,7 +16,7 @@ const uploadSchema = {
     type: "object",
     required: ["kind", "id"],
     properties: {
-      kind: { type: "string", enum: ["own", "native"] },
+      kind: { type: "string", enum: KINDS },
       id: { type: "string", minLength: 8, maxLength: 64, pattern: ID_PATTERN },
     },
   },

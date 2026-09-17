@@ -362,7 +362,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       ),
       row(
         "Aufnahme-Funktion",
-        "Deine eigene Aussprache aufnehmen und mit einem Muttersprachler oder der Karte vergleichen.",
+        "Deine Antwort aufnehmen und direkt mit der Aussprache der Karte vergleichen – und Muttersprachler-Aufnahmen hinzufügen. Deine eigenen Aufnahmen werden nicht gespeichert.",
         toggle(recordingEnabled, "Aufnahme-Funktion", (on) => write({ recordingEnabled: on })),
       ),
     );
@@ -494,7 +494,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     const box = el("div.mic-test");
     let controller = null;
     let audioUrl = null;
-    // Same guard as session.js's recordingBlock: without it a second tap in
+    // Same guard as ui/voice-circle.js's onStart: without it a second tap in
     // the gap before `startRecording()` resolves opens a stream nothing here
     // keeps a reference to, and it never gets stopped (#185).
     let starting = false;

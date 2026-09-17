@@ -1,12 +1,17 @@
 /**
- * Her own and a native speaker's recordings, attached to a card (#183
- * follow-up: no invented pronunciation, only real voices — Henning's own or
- * hers, whoever she is going through cards with, recorded live).
+ * A native speaker's recording, attached to a card (#183 follow-up: no
+ * invented pronunciation, only real voices — whoever she is going through
+ * cards with, recorded live on her device).
  *
- * Both `kind`s live under her account: there is no second login for a friend
- * or her host family to record into, by design ("keine Einladungs-/
- * Freigabe-Logik — einfach interaktiv"). `kind` only labels whose voice it
- * is, not whose account made the request.
+ * It lives under her account: there is no second login for a friend or her
+ * host family to record into, by design ("keine Einladungs-/Freigabe-Logik —
+ * einfach interaktiv").
+ *
+ * Her own voice is not a kind (#185, 2026-09-17). It was one until v116, and
+ * that was a misunderstanding: what she says is only ever compared, in the
+ * moment, against a real source — it is never stored or played back later as
+ * a card's pronunciation. Migration 024 retired the old rows; `kind` stays a
+ * column so that a row of that kind can never be read back by accident.
  */
 
 import { visibleCard } from "./cards.js";
@@ -14,10 +19,9 @@ import { encodeMp3 } from "./audio-encode.js";
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 
-export const KINDS = ["own", "native"];
-/** One of each voice at most (#185, 2026-09-16: "nur ein Muttersprachler,
- * das ist einfacher") — re-recording replaces via a delete first, on both
- * kinds equally, not only native. */
+export const KINDS = ["native"];
+/** One at most (#185, 2026-09-16: "nur ein Muttersprachler, das ist
+ * einfacher") — re-recording replaces via a delete first. */
 export const RECORDING_LIMIT = 1;
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -27,7 +31,7 @@ export function recordingsFor(db, userId, cardId) {
   return db
     .prepare(
       `SELECT id, kind, file, recorded_at FROM card_recordings
-        WHERE user_id = ? AND card_id = ? AND deleted_at IS NULL
+        WHERE user_id = ? AND card_id = ? AND deleted_at IS NULL AND kind = 'native'
         ORDER BY recorded_at`,
     )
     .all(userId, cardId);
@@ -46,7 +50,7 @@ export function recordingsAmong(db, userId, cardIds) {
   return db
     .prepare(
       `SELECT card_id, id, kind, file, recorded_at FROM card_recordings
-        WHERE user_id = ? AND deleted_at IS NULL AND card_id IN (${holes})
+        WHERE user_id = ? AND deleted_at IS NULL AND kind = 'native' AND card_id IN (${holes})
         ORDER BY recorded_at`,
     )
     .all(userId, ...cardIds);

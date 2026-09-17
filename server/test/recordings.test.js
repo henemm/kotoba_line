@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { addRecording, recordingsAmong, removeRecording } from "../src/recordings.js";
+import { addRecording, recordingsAmong, recordingsFor, removeRecording } from "../src/recordings.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
 
 const uid = (label) => `9f8e7d6c-5b4a-4321-8765-${label.padStart(12, "0")}`;
@@ -47,14 +47,14 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     const user = await seedUser(db);
     seedCards(db, 1);
 
-    const result = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("a"), audio: wav(), mediaDir, encode: stubEncode });
+    const result = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("a"), audio: wav(), mediaDir, encode: stubEncode });
 
     assert.equal(result.ok, true);
     // "practice/" the way mediaUrl() (client/src/audio.js) needs it — the
     // actual file is written directly in mediaDir, which *is* practice/ here
     // (config.practiceDir), not a second nested one.
-    assert.match(result.recording.file, /^practice\/own-9f8e7d6c-5b4a-4321-8765-00000000000a\.mp3$/);
-    assert.deepEqual(readFileSync(join(mediaDir, "own-9f8e7d6c-5b4a-4321-8765-00000000000a.mp3")), wav());
+    assert.match(result.recording.file, /^practice\/native-9f8e7d6c-5b4a-4321-8765-00000000000a\.mp3$/);
+    assert.deepEqual(readFileSync(join(mediaDir, "native-9f8e7d6c-5b4a-4321-8765-00000000000a.mp3")), wav());
   });
 
   it("refuses a card she cannot see", async () => {
@@ -65,7 +65,7 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
       `INSERT INTO cards (id, word, word_meaning, deck, owner_id, updated_at) VALUES (-1, 'Toire', 'Toilette', 'personal', ?, 0)`,
     ).run(owner.id);
 
-    const result = await addRecording(db, other.id, { cardId: -1, kind: "own", id: uid("b"), audio: wav(), mediaDir, encode: stubEncode });
+    const result = await addRecording(db, other.id, { cardId: -1, kind: "native", id: uid("b"), audio: wav(), mediaDir, encode: stubEncode });
     assert.deepEqual(result, { ok: false, reason: "not_found" });
   });
 
@@ -75,12 +75,12 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     seedCards(db, 1);
 
     for (const bad of ["x/../../../../etc/passwd", "../../secret", "a/b", "trailing/"]) {
-      const result = await addRecording(db, user.id, { cardId: 1, kind: "own", id: bad, audio: wav(), mediaDir, encode: stubEncode });
+      const result = await addRecording(db, user.id, { cardId: 1, kind: "native", id: bad, audio: wav(), mediaDir, encode: stubEncode });
       assert.deepEqual(result, { ok: false, reason: "invalid_id" }, bad);
     }
   });
 
-  it("caps own and native recordings at one each (#185, 2026-09-16: \"nur ein Muttersprachler\")", async () => {
+  it("caps native recordings at one (#185, 2026-09-16: \"nur ein Muttersprachler\")", async () => {
     const { db } = await testApp();
     const user = await seedUser(db);
     seedCards(db, 1);
@@ -89,12 +89,16 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     assert.equal(n1.ok, true);
     const n2 = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("n2"), audio: wav(), mediaDir, encode: stubEncode });
     assert.deepEqual(n2, { ok: false, reason: "native_limit" });
+  });
 
-    // Not shared with native's count — a second "own" still goes through.
-    const o1 = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("o1"), audio: wav(), mediaDir, encode: stubEncode });
-    assert.equal(o1.ok, true, "own is not capped by the native limit");
-    const o2 = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("o2"), audio: wav(), mediaDir, encode: stubEncode });
-    assert.deepEqual(o2, { ok: false, reason: "own_limit" }, "own is capped at one too, now");
+  it("refuses her own voice as a kind (#185, 2026-09-17: never a stored source)", async () => {
+    const { db } = await testApp();
+    const user = await seedUser(db);
+    seedCards(db, 1);
+
+    const result = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("o1"), audio: wav(), mediaDir, encode: stubEncode });
+    assert.deepEqual(result, { ok: false, reason: "unknown_kind" });
+    assert.equal(db.prepare("SELECT count(*) n FROM card_recordings").get().n, 0);
   });
 
   it("retrying the same id is a no-op, not a duplicate or an error", async () => {
@@ -102,8 +106,8 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     const user = await seedUser(db);
     seedCards(db, 1);
 
-    const first = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("r"), audio: wav(), mediaDir, encode: stubEncode });
-    const retry = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("r"), audio: wav(), mediaDir, encode: stubEncode });
+    const first = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("r"), audio: wav(), mediaDir, encode: stubEncode });
+    const retry = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("r"), audio: wav(), mediaDir, encode: stubEncode });
     assert.equal(first.ok, true);
     assert.deepEqual(retry, { ok: true, already: true });
     assert.equal(db.prepare("SELECT count(*) n FROM card_recordings WHERE id = ?").get(uid("r")).n, 1);
@@ -130,7 +134,7 @@ describe("addRecording / removeRecording (#183 follow-up)", () => {
     const other = await seedUser(db, { handle: "other", pin: "111222" });
     seedCards(db, 1);
 
-    const rec = await addRecording(db, owner.id, { cardId: 1, kind: "own", id: uid("e"), audio: wav(), mediaDir, encode: stubEncode });
+    const rec = await addRecording(db, owner.id, { cardId: 1, kind: "native", id: uid("e"), audio: wav(), mediaDir, encode: stubEncode });
     assert.deepEqual(removeRecording(db, other.id, rec.recording.id), { ok: false, reason: "not_found" });
   });
 });
@@ -140,7 +144,7 @@ describe("POST /api/cards/:cardId/recordings", () => {
     const { app } = await testApp({ practiceDir: mediaDir });
     const res = await app.inject({
       method: "POST",
-      url: "/api/cards/1/recordings?kind=own&id=" + uid("f"),
+      url: "/api/cards/1/recordings?kind=native&id=" + uid("f"),
       payload: wav(),
       headers: { "content-type": "audio/webm" },
     });
@@ -156,7 +160,7 @@ describe("POST /api/cards/:cardId/recordings", () => {
 
     const res = await app.inject({
       method: "POST",
-      url: "/api/cards/1/recordings?kind=own&id=" + encodeURIComponent("x/../../../../etc/passwd"),
+      url: "/api/cards/1/recordings?kind=native&id=" + encodeURIComponent("x/../../../../etc/passwd"),
       headers: { cookie, "content-type": "audio/webm" },
       payload: wav(),
     });
@@ -172,14 +176,14 @@ describe("POST /api/cards/:cardId/recordings", () => {
 
     const res = await app.inject({
       method: "POST",
-      url: "/api/cards/1/recordings?kind=own&id=" + uid("g"),
+      url: "/api/cards/1/recordings?kind=native&id=" + uid("g"),
       headers: { cookie, "content-type": "audio/webm" },
       payload: wav(),
     });
 
     assert.equal(res.statusCode, 201, res.body);
     const { recording } = res.json();
-    assert.match(recording.file, /^practice\/own-.*\.mp3$/);
+    assert.match(recording.file, /^practice\/native-.*\.mp3$/);
     const bytes = readFileSync(join(config.practiceDir, recording.file.replace(/^practice\//, "")));
     // ffmpeg writes an ID3v2 tag (the `comment` metadata) ahead of the MP3
     // frames — not the WAV bytes sent in, proof it actually ran through ffmpeg.
@@ -222,16 +226,41 @@ describe("recordingsAmong (queue.js's starredAmong, for recordings)", () => {
     const user = await seedUser(db);
     seedCards(db, 2);
 
-    const a = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("q1"), audio: wav(), mediaDir, encode: stubEncode });
-    await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("q2"), audio: wav(), mediaDir, encode: stubEncode });
+    const a = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("q1"), audio: wav(), mediaDir, encode: stubEncode });
 
     const rows = recordingsAmong(db, user.id, [1, 2]);
-    assert.equal(rows.length, 2);
-    assert.ok(rows.every((r) => r.card_id === 1));
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].card_id, 1);
     assert.deepEqual(recordingsAmong(db, user.id, []), []);
 
     removeRecording(db, user.id, a.recording.id);
-    assert.equal(recordingsAmong(db, user.id, [1]).length, 1, "a deleted recording drops out");
+    assert.equal(recordingsAmong(db, user.id, [1]).length, 0, "a deleted recording drops out");
+  });
+});
+
+describe("migration 024: the retired 'own' kind (#185, 2026-09-17)", () => {
+  it("soft-deletes live 'own' rows, leaves native and the rows themselves, and nothing reads them back", async () => {
+    const { db } = await testApp();
+    const user = await seedUser(db);
+    seedCards(db, 1);
+    // As v116 wrote them — addRecording refuses this kind now, so directly.
+    const insert = db.prepare(
+      "INSERT INTO card_recordings (id, user_id, card_id, kind, file, recorded_at) VALUES (?, ?, 1, ?, ?, 1)",
+    );
+    insert.run(uid("m1"), user.id, "own", "practice/own-m1.mp3");
+    insert.run(uid("m2"), user.id, "native", "practice/native-m2.mp3");
+
+    // Even before the migration's UPDATE, neither reader hands an own row out.
+    assert.deepEqual(recordingsAmong(db, user.id, [1]).map((r) => r.kind), ["native"]);
+    assert.deepEqual(recordingsFor(db, user.id, 1).map((r) => r.kind), ["native"]);
+
+    db.exec(readFileSync(new URL("../migrations/024_retire_own_recordings.sql", import.meta.url), "utf8"));
+    const rows = db.prepare("SELECT kind, deleted_at FROM card_recordings ORDER BY kind").all();
+    assert.equal(rows.length, 2, "nothing destroyed");
+    assert.equal(rows[0].kind, "native");
+    assert.equal(rows[0].deleted_at, null);
+    assert.equal(rows[1].kind, "own");
+    assert.ok(rows[1].deleted_at > 0);
   });
 });
 
@@ -242,12 +271,12 @@ describe("GET /api/queue carries recordings, the same way it carries starred", (
     seedCards(db, 1);
     const cookie = await signIn(app, config);
 
-    await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("s1"), audio: wav(), mediaDir, encode: stubEncode });
+    await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("s1"), audio: wav(), mediaDir, encode: stubEncode });
 
     const res = await app.inject({ method: "GET", url: "/api/queue?limit=60", headers: { cookie } });
     const body = res.json();
     assert.ok(body.cardIds.includes(1));
-    assert.ok(body.recordings.some((r) => r.card_id === 1 && r.kind === "own"));
+    assert.ok(body.recordings.some((r) => r.card_id === 1 && r.kind === "native"));
     await app.close();
   });
 });
@@ -266,15 +295,15 @@ describe("GET /api/cards/:cardId/recordings (#185 follow-up: the deck's card men
     seedCards(db, 1);
     const cookie = await signIn(app, config);
 
-    const own = await addRecording(db, user.id, { cardId: 1, kind: "own", id: uid("t1"), audio: wav(), mediaDir, encode: stubEncode });
+    const gone = await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("t1"), audio: wav(), mediaDir, encode: stubEncode });
+    await removeRecording(db, user.id, gone.recording.id);
     await addRecording(db, user.id, { cardId: 1, kind: "native", id: uid("t2"), audio: wav(), mediaDir, encode: stubEncode });
-    await removeRecording(db, user.id, own.recording.id);
 
     const res = await app.inject({ method: "GET", url: "/api/cards/1/recordings", headers: { cookie } });
     assert.equal(res.statusCode, 200);
     const { recordings } = res.json();
     assert.equal(recordings.length, 1);
-    assert.equal(recordings[0].kind, "native");
+    assert.equal(recordings[0].id, uid("t2"));
   });
 
   it("404s on a card she cannot see, the same as visibleCard everywhere else", async () => {

@@ -191,7 +191,7 @@ export default async function deckRoutes(app) {
         answer.starred = starredAmong(db, req.user.id, answer.cardIds);
       }
 
-      // Her own and a native speaker's recordings (#183 follow-up), the same
+      // A native speaker's recordings (#183 follow-up, #185), the same
       // shape and the same reason as starred above: per-user, not part of the
       // public deck, wanted for exactly these cards.
       if (answer.cardIds.length > 0) {

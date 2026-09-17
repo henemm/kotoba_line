@@ -1,5 +1,15 @@
 [
   {
+    "version": "v117",
+    "summary": "Aufnehmen ist jetzt einfacher: „Antwort aufnehmen“ vor dem Umdrehen, und unter dem ♪ steht, wessen Stimme du hörst.",
+    "notes": [
+      "Bei „Laut sagen“, „Nur hören“ und bei deinen eigenen Karten in „Karte umdrehen“ gibt es vorne den Knopf „Antwort aufnehmen“. Nach dem Umdrehen steht „Deine Antwort“ direkt unter dem ♪ – so kannst du beides nacheinander anhören. Deine Aufnahme wird nirgends gespeichert und ist bei der nächsten Karte weg.",
+      "Der Kreis „Ihre eigene“ ist deshalb verschwunden. Deine bisherigen eigenen Aufnahmen werden nicht mehr angezeigt.",
+      "Unter dem ♪ steht jetzt „Muttersprachler-Aufnahme“ oder „Computer-generierte Aussprache“.",
+      "„Muttersprachler-Aufnahme hinzufügen“ erscheint nur noch bei Karten, die noch keine echte Aufnahme haben."
+    ]
+  },
+  {
     "version": "v116",
     "summary": "Der neue Muttersprachler-Knopf in der Kartenliste (v115) zeigte eine schon vorhandene Aufnahme fälschlich als leer an.",
     "notes": [
