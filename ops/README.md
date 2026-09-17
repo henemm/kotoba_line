@@ -220,6 +220,33 @@ New cards in an updated deck carry no topic until the rules or
 `import/tags-overrides.tsv` cover them; `npm run tag -- --report` lists what was
 missed.
 
+## Generated audio for words without a recording (#183)
+
+Every word with no recording — her own romaji cards above all — gets a
+VOICEVOX file, made by `ops/generate-word-sounds.sh`, which `ops/deploy.sh` installs as `/srv/kotoba/bin/generate-word-sounds.sh`. It runs nightly from cron
+and after a deploy that changes the generator, and does nothing when no card is
+waiting. It needs, once:
+
+```sh
+mkdir -p /srv/kotoba/dict
+# Wadoku's EDICT export (wadoku.de → Download → "wadokudict2", unpacked)
+cp <unpacked>/wadokudict2 /srv/kotoba/dict/wadokudict2
+# Kanjium's accents (github.com/mifunetoshiro/kanjium, data/source_files/raw/accents.txt, CC BY-SA 4.0)
+curl -fsSL https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt \
+  -o /srv/kotoba/dict/accents.txt
+```
+
+and a cron entry with its BetterStack heartbeat
+(`KOTOBA_WORD_SOUNDS_HEARTBEAT_URL` in `/etc/henemm/secrets.env`):
+
+```
+30 3 * * * /srv/kotoba/bin/generate-word-sounds.sh >> /home/hem/backups/kotoba-word-sounds.log 2>&1
+```
+
+`--dry-run` lists what it would say. A card whose spoken reading would not
+match her romaji is left silent and named in the output; fix it in
+`import/word-sound-overrides.tsv`.
+
 ## Checking a deploy actually worked
 
 Three things, from a browser on the phone:

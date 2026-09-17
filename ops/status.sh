@@ -219,6 +219,19 @@ const out = {
   stars: one("SELECT count(*) n FROM card_stars"),
   ownTags: one("SELECT count(*) n FROM card_user_tags"),
   ownCards: one("SELECT count(*) n FROM cards WHERE deck = 'personal' AND deleted_at IS NULL"),
+  // v118 (#183): words with no recording, and how many still wait for their
+  // generated one (ops/generate-word-sounds.sh).
+  wordSoundsWaiting: has("word_audio_generated")
+    ? one(`SELECT count(*) n FROM cards WHERE deleted_at IS NULL AND word_audio IS NULL
+             AND deck NOT IN ('hiragana', 'katakana')
+             AND (word_audio_generated IS NULL OR word_audio_generated_for IS NOT word)`)
+    : "absent",
+  wordSoundsDone: has("word_audio_generated")
+    ? one("SELECT count(*) n FROM cards WHERE deleted_at IS NULL AND word_audio_generated_for = word")
+    : "absent",
+  wordSoundsChecked: has("word_audio_generated")
+    ? one("SELECT count(*) n FROM cards WHERE deleted_at IS NULL AND word_audio_generated_for = word AND word_audio_checked = 1")
+    : "absent",
 };
 for (const col of ["word_reading", "word_pitch"]) {
   out[col] = has(col)
@@ -300,6 +313,14 @@ NODE
       ok "${F_kanaSound} kana cards with their own recording"
     fi
     # v88: 92 of 208 — the 46 basic kana of each script (#177).
+    if [[ ${F_wordSoundsWaiting} != absent ]]; then
+      if [[ ${F_wordSoundsWaiting:-0} -gt 0 ]]; then
+        warn "/srv/kotoba/bin/generate-word-sounds.sh" "${F_wordSoundsWaiting} word(s) without a recording still wait for generated audio (runs nightly; see ops/README.md)"
+      else
+        ok "${F_wordSoundsDone} words with generated audio (VOICEVOX:No.7), ${F_wordSoundsChecked} with a confirmed accent"
+      fi
+    fi
+
     if [[ ${F_kanaMnemonic} != absent && ${F_kana:-0} -gt 0 && ${F_kanaMnemonic:-0} -lt 92 ]]; then
       warn "npm run import-kana" "${F_kanaMnemonic:-0} of 92 kana cards have their picture — the kana import needs running again (v88)"
     elif [[ ${F_kanaMnemonic} != absent && ${F_kana:-0} -gt 0 ]]; then

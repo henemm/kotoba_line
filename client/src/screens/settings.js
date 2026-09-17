@@ -429,8 +429,13 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
         // require this credit line.
         [
           "VOICEVOX:No.7",
-          "Aussprache der Kana mit ゃゅょ (きゃ …) und einiger Beispielwörter – generierte Sprachausgabe, voicevox.hiroshiba.jp",
+          "Aussprache der Kana mit ゃゅょ (きゃ …), einiger Beispielwörter und aller Wörter ohne Aufnahme – generierte Sprachausgabe, voicevox.hiroshiba.jp",
         ],
+        // #183, v118: both only steer the generated audio (which spelling the
+        // engine reads, whether its accent is confirmed) — neither's text is
+        // shown, but both ask for the credit.
+        ["Wadoku", "Schreibweise für die generierte Aussprache deiner Wörter – wadoku.de"],
+        ["Kanjium", "Betonung zur Prüfung der generierten Aussprache – github.com/mifunetoshiro/kanjium, CC BY-SA 4.0"],
         ["JLPT-Wortlisten", "Beispielwörter der Kana – Jonathan Waller, tanos.co.uk, CC BY"],
         [
           "JMdict",

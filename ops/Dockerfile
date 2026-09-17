@@ -40,9 +40,23 @@ COPY client/src/romaji.js client/src/pitch.js /client/src/
 # ES modules, as the repository's root package.json declares for client/.
 RUN echo '{ "type": "module" }' > /client/package.json
 
+# #183: the nightly generator for words without a recording
+# (import/generate-word-sounds.js, run by ops/generate-word-sounds.sh) runs
+# from this same image, so it is always the code that was deployed — laid out
+# under /repo as in the repository, because it imports across server/,
+# client/ and import/ by relative path.
+COPY server/src /repo/server/src
+COPY server/migrations /repo/server/migrations
+COPY client/src/typing.js client/src/pitch.js /repo/client/src/
+COPY import/generate-word-sounds.js import/word-sound-overrides.tsv /repo/import/
+COPY import/lib/word-sounds.js import/lib/encode-mp3.js import/lib/mp3gain.js import/lib/wav-level.js \
+     import/lib/kana-yoon-sounds.js import/lib/kana.js /repo/import/lib/
+RUN echo '{ "type": "module" }' > /repo/package.json \
+ && ln -s /app/node_modules /repo/server/node_modules
+
 # The image ships no data directory; it is a mounted host volume (§9), and
 # the container must be able to write the SQLite file and its WAL sidecars.
-RUN mkdir -p /data && chown -R node:node /data /app /client
+RUN mkdir -p /data && chown -R node:node /data /app /client /repo
 USER node
 
 VOLUME ["/data"]
