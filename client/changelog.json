@@ -1,5 +1,15 @@
 [
   {
+    "version": "v118",
+    "summary": "Jetzt haben alle Wörter einen Ton – auch deine eigenen Karten ohne Aufnahme, gesprochen von einer Computerstimme.",
+    "notes": [
+      "Deine Karten, die bisher stumm waren, haben jetzt ein ♪. Unter dem ♪ steht dann „Computer-generierte Aussprache“.",
+      "Steht dort ein Sternchen (*), ist die Betonung nicht von einer zweiten Quelle bestätigt und kann falsch sein – unten auf der Karte steht es noch einmal.",
+      "Eine Muttersprachler-Aufnahme ersetzt die Computerstimme sofort, und das Sternchen verschwindet.",
+      "Außerdem korrigiert: vier Tippfehler im Romaji (z. B. „Koko wa doko desu ka“) und sieben im Deutschen."
+    ]
+  },
+  {
     "version": "v117",
     "summary": "Aufnehmen ist jetzt einfacher: „Antwort aufnehmen“ vor dem Umdrehen, und unter dem ♪ steht, wessen Stimme du hörst.",
     "notes": [

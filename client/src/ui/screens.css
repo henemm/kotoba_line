@@ -2038,6 +2038,20 @@
 .sound-source.synth {
   color: var(--rec-synth);
 }
+/* The asterisk's explanation (#183), at the bottom of the card: last in the
+   column whatever order the mode rendered it in, and pushed down. */
+.accent-note {
+  order: 99;
+  /* 14px below: measured 2px short of the rating row at 394 × 852 without it. */
+  margin: auto 0 14px;
+  max-width: 300px;
+  font: 400 12px/1.45 var(--ui);
+  color: var(--ink-muted);
+  text-align: center;
+}
+.accent-note[hidden] {
+  display: none;
+}
 /* Quiet on purpose: it only matters when someone is practising with her. */
 .native-chip {
   display: inline-flex;

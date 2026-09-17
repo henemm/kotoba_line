@@ -1303,6 +1303,12 @@ export function sessionScreen({
     const slot = el("span.speaker-slot");
     const caption = el("span.sound-source");
     const chipHost = el("div.native-chip-host");
+    // Henning (#183, 2026-09-17): an accent that may be wrong gets an
+    // asterisk, and the bottom of the card says why. `order`/`margin-top:
+    // auto` in screens.css put it there wherever it sits in the render.
+    const accentNote = el("p.accent-note", {
+      text: "* Computer-Aussprache: Die Betonung ist von keiner zweiten Quelle bestätigt und kann falsch sein. Eine Muttersprachler-Aufnahme ersetzt sie.",
+    });
     const notes = el(`div.sound-notes${reveal ? ".reveal" : ""}`, {}, caption, withAttempt ? attemptRow(attempt) : null, chipHost);
     // `line: false` for a front that sets the ♪ under the word, not beside it
     // (選ぶ, めくる's word-first front) — the layout those had before #185.
@@ -1313,8 +1319,9 @@ export function sessionScreen({
     function paint() {
       const sound = soundOf(card);
       render(slot, sound.file ? speaker(card.word, sound.file, { small: reveal, ...speakerOptions }) : null);
-      caption.textContent = SOURCE_CAPTION[sound.source] ?? "";
+      caption.textContent = (SOURCE_CAPTION[sound.source] ?? "") + (sound.unchecked ? "*" : "");
       caption.className = `sound-source ${sound.source}`;
+      accentNote.hidden = !sound.unchecked;
       if (circle) return; // open: it shows its own state, "bearbeiten" or not
       render(
         chipHost,
@@ -1351,7 +1358,7 @@ export function sessionScreen({
     }
 
     paint();
-    return inLine ? [line, notes] : [heading, slot, notes];
+    return inLine ? [line, notes, accentNote] : [heading, slot, notes, accentNote];
   }
 
   /**

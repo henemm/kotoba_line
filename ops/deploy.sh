@@ -120,6 +120,12 @@ if $do_api; then
   mkdir -p "$DATA_DIR" "$MEDIA_DIR"
   $COMPOSE up -d --build
 
+  # #183: cron runs the word-sound generator from here, not from a clone —
+  # ~/kotoba_line is not kept current (CLAUDE.md), and the script must match
+  # the image it runs, which is the one just built.
+  mkdir -p /srv/kotoba/bin
+  install -m 755 ops/generate-word-sounds.sh /srv/kotoba/bin/generate-word-sounds.sh
+
   say "Waiting for health"
   for i in $(seq 1 30); do
     if curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1; then

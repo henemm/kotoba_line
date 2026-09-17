@@ -1,0 +1,14 @@
+# What VOICEVOX is given for a card whose text is several forms of one word
+# side by side, which nothing in the text itself marks (#183). Her exact card
+# text, a tab, the engine's input — never shown, the card keeps her text.
+# "、" is the pause between the forms.
+#
+# Also a card the engine misparses as kana alone ("またはなそう" is read
+# "mata wa naso"). Its spelling here was written by hand, not taken from a
+# dictionary match — the everyday spelling of the words already on her card,
+# and still checked like every other card: the generator refuses it unless
+# VOICEVOX's reading matches her romaji.
+Fun Pun	ふん、ぷん
+Totemo Sugoku	とても、すごく
+Ii? Hontou? Hontou ni	いい？ほんとう？ほんとうに
+Mata hanasou	また話そう

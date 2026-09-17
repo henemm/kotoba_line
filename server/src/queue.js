@@ -616,6 +616,7 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   const cards = db
     .prepare(
       `SELECT c.id, c.word, c.word_furigana, c.word_reading, c.word_meaning, c.word_audio,
+              CASE WHEN c.word_audio_generated_for = c.word THEN c.word_audio_generated END AS word_audio_generated,
               c.deck, c.frequency_rank, c.deck_id, d.name AS deck_name,
               COALESCE(st.starred, 0) AS starred,
               s.due_at, s.reps, s.last_review

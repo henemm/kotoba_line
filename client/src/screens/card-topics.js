@@ -70,13 +70,14 @@ export function cardTopicsSheet({ card, topics = [], onSaved, onClose, japanese 
             el("span.topics-gloss", { text: card.word_meaning ?? "" }),
           ),
           // v69: something to do with a Kaishi word found in Search — hear it.
-          // Only its recording: this sheet never falls back to speech.
-          card.word_audio
+          // Its recording, or its generated file (#183); this sheet never
+          // falls back to the phone's voice.
+          card.word_audio || card.word_audio_generated
             ? el("button.topics-hear", {
                 type: "button",
                 "aria-label": `${shownWord(card, japanese)} anhören`,
                 text: "♪",
-                onclick: () => say(undefined, card.word_audio),
+                onclick: () => say(undefined, card.word_audio || card.word_audio_generated),
               })
             : null,
           el("button.topics-close", {

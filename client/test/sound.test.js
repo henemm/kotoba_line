@@ -24,6 +24,7 @@ describe("wordSound (#185)", () => {
       source: "native",
       deckNative: true,
       recording: null,
+      unchecked: false,
     });
   });
 
@@ -44,7 +45,29 @@ describe("wordSound (#185)", () => {
       source: "synth",
       deckNative: false,
       recording: null,
+      unchecked: false,
     });
+  });
+
+  it("a word's generated file (#183) plays as synth, with the asterisk unless its accent was checked", () => {
+    const card = { word: "Inu", word_audio_generated: "word-generated-1-a.mp3", word_audio_checked: 1 };
+    assert.deepEqual(wordSound(card), {
+      file: "word-generated-1-a.mp3",
+      source: "synth",
+      deckNative: false,
+      recording: null,
+      unchecked: false,
+    });
+    assert.equal(wordSound({ ...card, word_audio_checked: 0 }).unchecked, true);
+    assert.equal(wordSound({ ...card, word_audio_checked: null }).unchecked, true);
+  });
+
+  it("a native recording she added outranks a generated file, and has no asterisk", () => {
+    const added = { id: "x", file: "practice/native-x.mp3" };
+    const sound = wordSound({ word_audio_generated: "word-generated-1-a.mp3", word_audio_checked: 0 }, added);
+    assert.equal(sound.file, added.file);
+    assert.equal(sound.source, "native");
+    assert.equal(sound.unchecked, false);
   });
 
   it("nothing at all is no file and no source — the ♪ is absent, not the phone's voice", () => {
@@ -53,6 +76,7 @@ describe("wordSound (#185)", () => {
       source: "none",
       deckNative: false,
       recording: null,
+      unchecked: false,
     });
   });
 });
