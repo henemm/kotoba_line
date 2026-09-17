@@ -16,6 +16,15 @@ const version = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ).version;
 
+// What is actually deployed (ops/deploy.sh → image env). `version` above has
+// read "1.0.0" since the first commit and still goes out for shells older
+// than v119, which print it.
+const built = Number.parseInt(process.env.KOTOBA_BUILT_AT ?? "", 10);
+const build = {
+  commit: process.env.KOTOBA_COMMIT && process.env.KOTOBA_COMMIT !== "unknown" ? process.env.KOTOBA_COMMIT : null,
+  builtAt: Number.isInteger(built) && built > 0 ? built : null,
+};
+
 const patchSchema = {
   body: {
     type: "object",
@@ -58,6 +67,7 @@ export default async function settingsRoutes(app) {
     decks: deckCounts(db, req.user.id),
     sync: syncStateForUser(db, req.user.id),
     version,
+    build,
   }));
 
   /**

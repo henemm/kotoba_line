@@ -65,4 +65,12 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+# Which commit this image is, and when it was built (ops/deploy.sh passes
+# both) — Settings → Diagnose → "Server". Last, because the build time is new
+# on every deploy and would otherwise rebuild every layer after it.
+ARG KOTOBA_COMMIT=unknown
+ARG KOTOBA_BUILT_AT=0
+ENV KOTOBA_COMMIT=${KOTOBA_COMMIT} \
+    KOTOBA_BUILT_AT=${KOTOBA_BUILT_AT}
+
 CMD ["node", "src/server.js"]

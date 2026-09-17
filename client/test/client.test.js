@@ -9,7 +9,7 @@ import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
-import { when } from "../src/screens/settings.js";
+import { serverBuildLine, when } from "../src/screens/settings.js";
 import { byFrequencyThenId, matchesQuery } from "../src/screens/browse.js";
 import { offlineStatus } from "../src/outbox.js";
 import { unwrap } from "../src/store.js";
@@ -325,6 +325,18 @@ describe("the diagnostics clock", () => {
     // and 00:10 are ten hours apart in neither direction that matters.
     const now = new Date("2026-09-09T00:10:00");
     assert.match(when(at("2026-09-08T23:50:00"), now), /^\d{2}\. \p{L}{3,4}\.?$/u);
+  });
+});
+
+describe("the Server diagnostic (Henning, 2026-09-17: it read 1.0.0 forever)", () => {
+  it("says when the server was deployed and from which commit", () => {
+    const line = serverBuildLine({ commit: "d1772f7", builtAt: Date.parse("2026-09-17T11:52:00") / 1000 });
+    assert.match(line, /^17\.09\.2026, 11:52 · d1772f7$/);
+  });
+
+  it("says unknown rather than a number that means nothing, for a server built without ops/deploy.sh", () => {
+    assert.equal(serverBuildLine({ commit: null, builtAt: null }), "unbekannt");
+    assert.equal(serverBuildLine(undefined), "unbekannt");
   });
 });
 
