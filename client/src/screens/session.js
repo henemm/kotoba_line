@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { mediaUrl, playTracked, prime, say, stop, unlock } from "../audio.js";
+import { mediaUrl, prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
@@ -11,7 +11,8 @@ import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
-import { canRecord, micErrorMessage, startRecording, stopAllRecording } from "../recording.js";
+import { uuid, voiceCircle } from "../ui/voice-circle.js";
+import { stopAllRecording } from "../recording.js";
 
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
@@ -79,12 +80,6 @@ export function formatInterval(seconds) {
   const years = Math.round(days / 365);
   return `${years} ${years === 1 ? "Jahr" : "Jahre"}`;
 }
-
-const uuid = () =>
-  crypto.randomUUID?.() ??
-  `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-4000-8000-${Math.random()
-    .toString(16)
-    .slice(2, 14)}`;
 
 /**
  * Design 16 and the prototype — the session, in every mode. 書く (#97) came
@@ -810,7 +805,7 @@ export function sessionScreen({
       // 2026-09-17). No native circle here (Henning, 2026-09-17): the word
       // is not on screen yet, so nobody could record its pronunciation
       // correctly — only her own attempt makes sense on a blind front.
-      isKana(card) ? null : recordingBlock(card, { native: false }),
+      isKana(card) ? null : recordingBlock(card, { wordVisible: false }),
     );
     render(
       answers,
@@ -1106,7 +1101,7 @@ export function sessionScreen({
         area,
         el("span.prompt-label", { text: "Auf Japanisch" }),
         el("p.meaning", { text: card.word_meaning ?? "" }),
-        recordingBlock(card, { native: false }),
+        recordingBlock(card, { wordVisible: false }),
       );
     } else {
       // #158: a kana's sound is its reading, which is the answer — so the
@@ -1282,211 +1277,69 @@ export function sessionScreen({
     };
   }
 
-  const SVG_NS = "http://www.w3.org/2000/svg";
-  /** `el()` cannot make real SVG nodes (`createElement`, not
-   * `createElementNS`) and `className` on an `SVGElement` is not a plain
-   * string, so the progress ring is built by hand instead. */
-  function svgEl(tag, attrs) {
-    const node = document.createElementNS(SVG_NS, tag);
-    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-    return node;
-  }
-  const RING_CIRCUMFERENCE = 144.5; // 2π × the ring's r=23
-
   /**
    * The recording controls (#183 follow-up, redesigned with Henning
    * 2026-09-16 after two earlier shapes both turned out not to be what he
    * meant — a rectangular text button, then a plain coloured circle with no
    * empty/filled state — worked out this time against a clickable mockup
-   * before anything shipped). Called from every page that shows a card's
-   * Japanese word and is not a kana card (which has its own recordings
-   * already) — both sides of 話す, both sides of めくる (a meaning-first
-   * card's front asks her to produce the word, same as 話す's front does),
-   * and 選ぶ/聞く/書く — on any deck, hers or not ("alle Decks"): a Kaishi
-   * card already has a professional recording, but comparing her own attempt
-   * against it is exactly the point.
+   * before anything shipped). The circles themselves live in
+   * `ui/voice-circle.js` (shared with the deck's card menu, #185 follow-up,
+   * 2026-09-17); this just wires them to a card's own recordings. Called
+   * from every page that shows a card's Japanese word and is not a kana
+   * card (which has its own recordings already) — both sides of 話す, both
+   * sides of めくる (a meaning-first card's front asks her to produce the
+   * word, same as 話す's front does), and 選ぶ/聞く/書く — on any deck, hers
+   * or not ("alle Decks"): a Kaishi card already has a professional
+   * recording, but comparing her own attempt against it is exactly the
+   * point.
    *
    * One circle per voice. Both are present and neither is ever hidden or
    * removed *after* the block is built (that was the source of the
    * "neighbouring circle twitches" bug: a flex row re-centres when a sibling
    * appears, disappears, or changes width) — but the native circle is left
    * out from the start on a front where the word is not yet on screen
-   * (`{ native: false }`, 2026-09-17): nobody can record a pronunciation
-   * they cannot read, so only her own attempt is offered there.
-   * A record button is always red at rest, a red square while capturing,
-   * the voice's own colour only once there is something to play — and
-   * playing looks exactly like every other ♪ in the app, because that is
-   * what it is. Re-recording replaces via the × (with a confirmation, not
-   * a long press — this app has none anywhere else and it is not reliable
-   * on a phone browser).
+   * (`{ wordVisible: false }`, 2026-09-17): nobody can record a
+   * pronunciation they cannot read, so only her own attempt is offered
+   * there, and that circle starts empty even if an earlier round already
+   * has one — a stored "own" attempt must not appear already filled on a
+   * front that is asking her to make a fresh one, un-blinding it before she
+   * tries.
    */
-  function recordingBlock(card, { native = true } = {}) {
+  function recordingBlock(card, { wordVisible = true } = {}) {
     if (!recordingEnabled) return null;
-    const box = el("div.recording-block");
-
-    // Shared between both voices: recording into the one mic stream while
-    // the other voice's file plays back would let the recording pick up
-    // the playback, and starting a second stream mid-capture cuts the
-    // first one off (recording.js's startRecording() releases whatever
-    // stream came before it). So only one voice may be doing anything —
-    // recording or playing — at a time; the other's button just disables.
-    let activeKind = null;
-
-    function voice(kind, caption) {
-      const root = el("div.voice", { class: kind });
-      const ringFg = svgEl("circle", { class: "ring-fg", cx: 29, cy: 29, r: 23 });
-      const ring = svgEl("svg", { class: "voice-ring", viewBox: "0 0 58 58" });
-      ring.append(svgEl("circle", { class: "ring-bg", cx: 29, cy: 29, r: 23 }), ringFg);
-      const btn = el("button.voice-btn", { type: "button", onclick: onTap });
-      // No text: the × is drawn in CSS (two crossed bars), not the "×"
-      // character — a text glyph's own centring depends on the font.
-      const del = el("button.voice-delete", {
-        type: "button",
-        "aria-label": `${caption} löschen`,
-        onclick: () => {
-          confirm.hidden = false;
-        },
-      });
-      const captionEl = el("span.voice-caption", { text: caption });
-      const statusEl = el("span.voice-status");
-      const confirm = el(
-        "div.voice-confirm",
-        { hidden: true },
-        el("button.yes", { type: "button", text: "Wirklich löschen", onclick: onConfirmYes }),
-        el("button.no", {
-          type: "button",
-          text: "Abbrechen",
-          onclick: () => {
-            confirm.hidden = true;
+    const shared = { active: null };
+    const own = voiceCircle({
+      cardId: card.id,
+      kind: "own",
+      ariaLabel: "Ihre eigene",
+      emptyCaption: "Ihre eigene",
+      shared,
+      startsEmpty: !wordVisible,
+      getSource: () => sourcesFor(card).own,
+      setSource: (rec) => {
+        const list = (recordings.get(card.id) ?? []).filter((r) => r.kind !== "own");
+        if (rec) list.push(rec);
+        recordings.set(card.id, list);
+      },
+    });
+    const box = el("div.recording-block", {}, own.root);
+    if (wordVisible) {
+      box.append(
+        voiceCircle({
+          cardId: card.id,
+          kind: "native",
+          ariaLabel: "Muttersprachler",
+          emptyCaption: "Muttersprachler",
+          shared,
+          getSource: () => sourcesFor(card).native,
+          setSource: (rec) => {
+            const list = (recordings.get(card.id) ?? []).filter((r) => r.kind !== "native");
+            if (rec) list.push(rec);
+            recordings.set(card.id, list);
           },
-        }),
+        }).root,
       );
-      root.append(el("div.voice-dial", {}, ring, btn, del), captionEl, statusEl, confirm);
-
-      let controller = null;
-      let starting = false;
-      // empty | recording | uploading | filled | playing | deleting
-      let state = sourcesFor(card)[kind] ? "filled" : "empty";
-
-      function paint() {
-        const disabledBySibling = activeKind && activeKind !== kind;
-        const iconState = state === "recording" ? "recording" : state === "filled" || state === "playing" ? "filled" : "empty";
-        btn.disabled = disabledBySibling || starting || state === "uploading" || state === "deleting";
-        btn.classList.toggle("recording", iconState === "recording");
-        btn.classList.toggle("filled", iconState === "filled");
-        btn.textContent = iconState === "recording" ? "■" : iconState === "filled" ? "♪" : "●";
-        btn.setAttribute(
-          "aria-label",
-          iconState === "recording" ? `${caption}: Aufnahme beenden` : iconState === "filled" ? `${caption}, abspielen` : `${caption} aufnehmen`,
-        );
-        del.hidden = iconState !== "filled" || state === "recording" || state === "playing";
-        ringFg.classList.toggle("recording", state === "recording");
-        ringFg.classList.toggle("playing", state === "playing");
-        if (state !== "recording" && state !== "playing") ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE);
-      }
-
-      function setStatus(text) {
-        statusEl.textContent = text ?? "";
-      }
-
-      function onTap() {
-        if (state === "empty") return onStart();
-        if (state === "recording") return onStop();
-        // filled or already playing — a second tap restarts it from the
-        // beginning, the same as every other ♪ in the app.
-        if (state === "filled" || state === "playing") return onPlay();
-      }
-
-      async function onStart() {
-        if (activeKind || starting) return;
-        if (!canRecord()) {
-          setStatus("Aufnahme wird von diesem Browser nicht unterstützt.");
-          return;
-        }
-        starting = true;
-        activeKind = kind;
-        paint();
-        try {
-          controller = await startRecording();
-          starting = false;
-          state = "recording";
-          paint();
-        } catch (err) {
-          starting = false;
-          activeKind = null;
-          setStatus(micErrorMessage(err));
-          paint();
-        }
-      }
-
-      async function onStop() {
-        state = "uploading";
-        setStatus("wird hochgeladen …");
-        paint();
-        try {
-          const blob = await controller.stop();
-          controller = null;
-          activeKind = null;
-          const id = uuid();
-          const { recording } = await api.addRecording(card.id, kind, id, blob);
-          if (!recordings.has(card.id)) recordings.set(card.id, []);
-          if (recording) recordings.get(card.id).push({ ...recording, card_id: card.id });
-          setStatus(null);
-          state = "filled";
-          paint();
-        } catch (err) {
-          controller = null;
-          activeKind = null;
-          setStatus(err?.body?.error === `${kind}_limit` ? "Da ist schon eine Aufnahme." : "Konnte die Aufnahme nicht speichern.");
-          state = sourcesFor(card)[kind] ? "filled" : "empty";
-          paint();
-        }
-      }
-
-      function onPlay() {
-        const rec = sourcesFor(card)[kind];
-        if (!rec) return;
-        activeKind = kind;
-        state = "playing";
-        ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE); // restart from empty, even mid-play
-        paint();
-        playTracked(rec.file, {
-          onProgress: (p) => {
-            ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE - RING_CIRCUMFERENCE * p);
-          },
-          onEnded: () => {
-            activeKind = null;
-            state = "filled";
-            paint();
-          },
-        });
-      }
-
-      async function onConfirmYes() {
-        confirm.hidden = true;
-        const rec = sourcesFor(card)[kind];
-        if (!rec) return;
-        state = "deleting";
-        setStatus("wird gelöscht …");
-        paint();
-        try {
-          await api.deleteRecording(card.id, rec.id);
-          const list = recordings.get(card.id) ?? [];
-          recordings.set(card.id, list.filter((r) => r.id !== rec.id));
-        } catch {
-          // Left in place: a failed delete is not silently pretended to have worked.
-        }
-        setStatus(null);
-        state = sourcesFor(card)[kind] ? "filled" : "empty";
-        paint();
-      }
-
-      paint();
-      return root;
     }
-
-    box.append(voice("own", "Ihre eigene"));
-    if (native) box.append(voice("native", "Muttersprachler"));
     return box;
   }
 

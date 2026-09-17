@@ -1,8 +1,11 @@
+import { api } from "../api.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
+import { stopAllRecording } from "../recording.js";
 import { showsScript, shownWord } from "../script.js";
 import { exactFirst, matchesQuery } from "./browse.js";
 import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
+import { voiceCircle } from "../ui/voice-circle.js";
 
 /**
  * The cards in one deck, under its practise controls (#137) — Noji's "Karten
@@ -134,26 +137,77 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
  *
  * #98: the menu also shows the card's own record, under the actions — built
  * once, so going to "move" and back does not ask the server again.
+ *
+ * #185 follow-up (2026-09-17): a native speaker going through her cards with
+ * her does not have to start a review to record one — the word is already
+ * on screen here, so the same circle from the review modes fits. Only the
+ * Muttersprachler voice, not her own: this menu is for managing the card,
+ * not for practising it. Fetched once, the same "built once" reasoning as
+ * the history block below, since the deck's card list itself carries no
+ * recording data — unlike a review session's queue.
  */
-export function cardActionsSheet({ card, japanese = true, decks = [], onEdit, onMove, onDelete, onClose }) {
-  const scrim = el("div.sheet-scrim.card-actions", { onclick: (e) => e.target === e.currentTarget && onClose?.() });
+export function cardActionsSheet({ card, japanese = true, decks = [], recordingEnabled = true, onEdit, onMove, onDelete, onClose }) {
+  const scrim = el("div.sheet-scrim.card-actions", {
+    onclick: (e) => e.target === e.currentTarget && closeWithCleanup(),
+  });
   const sheet = el("div.sheet.card-sheet", { role: "dialog", "aria-label": card.word_meaning ?? shownWord(card, japanese) });
   scrim.append(sheet);
   const history = cardHistoryBlock({ cardId: card.id });
+
+  let nativeRecording;
+  const nativeCircle = recordingEnabled
+    ? voiceCircle({
+        cardId: card.id,
+        kind: "native",
+        ariaLabel: "Muttersprachler",
+        emptyCaption: "Muttersprachler-Aufnahme hinzufügen",
+        filledCaption: "Muttersprachler-Aufnahme bearbeiten",
+        shared: { active: null },
+        rowLayout: true,
+        getSource: () => nativeRecording,
+        setSource: (rec) => {
+          nativeRecording = rec;
+        },
+      })
+    : null;
+  if (nativeCircle) {
+    api
+      .cardRecordings(card.id)
+      .then(({ recordings }) => {
+        nativeRecording = recordings?.find((r) => r.kind === "native") ?? null;
+        nativeCircle.refresh();
+      })
+      .catch(() => {
+        // Left as the placeholder empty state: a listing that fails leaves
+        // recording still possible, not blocked on a retry of its own.
+      });
+  }
+
   let step = "menu";
   let problem;
   draw();
 
+  function closeWithCleanup() {
+    stopAllRecording();
+    onClose?.();
+  }
+
   function draw() {
+    // Menu is the only step that shows the recording circle — leaving it
+    // (move, delete) must not leave a capture running unattended, the same
+    // rule session.js follows whenever it replaces the DOM node a
+    // recordingBlock lives in.
+    if (step !== "menu") stopAllRecording();
     const title = [el("h2.sheet-title", { text: card.word_meaning ?? "" }), el("p.sheet-body", { text: shownWord(card, japanese) })];
     if (step === "menu") {
       render(
         sheet,
         ...title,
+        nativeCircle ? el("div.card-recording-row", {}, nativeCircle.root) : null,
         el(
           "div.action-list",
           {},
-          el("button.action", { type: "button", text: "Bearbeiten", onclick: () => onEdit?.(card) }),
+          el("button.action", { type: "button", text: "Bearbeiten", onclick: () => (stopAllRecording(), onEdit?.(card)) }),
           decks.length > 0
             ? el("button.action", { type: "button", text: "In ein anderes Deck verschieben", onclick: () => ((step = "move"), draw()) })
             : null,
@@ -185,7 +239,7 @@ export function cardActionsSheet({ card, japanese = true, decks = [], onEdit, on
           "div.sheet-actions",
           {},
           el("button.btn", { type: "button", text: "Löschen", onclick: remove }),
-          el("button.btn.solid", { type: "button", text: "Behalten", onclick: () => onClose?.() }),
+          el("button.btn.solid", { type: "button", text: "Behalten", onclick: closeWithCleanup }),
         ),
       );
     }

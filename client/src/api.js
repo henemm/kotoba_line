@@ -195,6 +195,9 @@ export const api = {
   addRecording: (cardId, kind, id, blob) =>
     request(`/cards/${cardId}/recordings${query({ kind, id })}`, { method: "POST", blob }),
   deleteRecording: (cardId, id) => request(`/cards/${cardId}/recordings/${id}`, { method: "DELETE" }),
+  // #185 follow-up: one card's recordings outside a session's queue, for the
+  // deck's card menu.
+  cardRecordings: (cardId) => request(`/cards/${cardId}/recordings`),
   stats: () => request("/stats"),
   // #98: one card's own record — her reviews of it, and when it is due.
   cardHistory: (cardId) => request(`/cards/${cardId}/history`),

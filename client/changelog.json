@@ -1,5 +1,13 @@
 [
   {
+    "version": "v115",
+    "summary": "Neu: Muttersprachler können jetzt direkt in der Kartenliste eine Aufnahme hinzufügen, ohne eine Übung zu starten.",
+    "notes": [
+      "Tippe in „In diesem Deck suchen“ auf eine Karte – dort gibt es jetzt einen eigenen Aufnahme-Knopf für die Muttersprachler-Aussprache, zusätzlich zu Bearbeiten, Verschieben und Löschen.",
+      "Außerdem: eine frühere eigene Aufnahme wird auf der Vorderseite von „Karte umdrehen“ und „Sprechen“ nicht mehr sofort angezeigt, damit du wirklich unvoreingenommen neu versuchen kannst. Auf der Rückseite ist sie weiterhin da, zum Vergleichen."
+    ]
+  },
+  {
     "version": "v114",
     "summary": "Auf der Vorderseite von „Karte umdrehen“ und „Sprechen“ gibt es jetzt nur noch deinen eigenen Aufnahme-Knopf.",
     "notes": [
