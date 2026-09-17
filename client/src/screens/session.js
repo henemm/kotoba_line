@@ -1286,7 +1286,10 @@ export function sessionScreen({
    * - No sound: no ♪ (absent, not inert). Unlike before #185 the phone's
    *   voice does not stand in for a word here — it is not one of the two
    *   sources. Measured first: none of her 1,102 cards is a Japanese-script
-   *   word without a recording, so no card loses a ♪ it had.
+   *   word without a recording; in Kaishi exactly one is (失礼します), and
+   *   that one card loses the synthetic ♪ it had. Sentences are deliberately
+   *   left alone: revealedSentence still lets the phone read one aloud (#32),
+   *   because #183 has not decided that question for sentences.
    * - Unless the ♪ already plays the deck's own native recording, a quiet
    *   chip offers a native one: "hinzufügen", or "bearbeiten" once she has
    *   one. The chip opens the same circle as the deck's card menu. A card
