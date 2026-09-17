@@ -325,23 +325,23 @@ export function browseScreen({
     // v69: one of her cards opens edit, move and delete, as in its deck; a
     // Kaishi card its topics, with its recording to hear. A tap that did
     // nothing was the complaint (Henning, 2026-09-14).
+    // #187: either sheet carries the same star as this row. It goes through
+    // the same write, and the row behind the sheet is repainted rather than
+    // patched, because the sheet does not hold the row's node.
+    const list = {
+      changed: drawList,
+      canStar: hasLiveData,
+      starred: Boolean(card.starred),
+      star: (wanted) => {
+        toggleStar(card, wanted);
+        drawList();
+      },
+    };
     const own = card.deck === "personal" && onOwnCard;
     const tap = own
-      ? () => onOwnCard(card, keepSearch)
+      ? () => onOwnCard(card, { ...list, changed: keepSearch })
       : onTopics
-        ? () =>
-            onTopics(card, {
-              changed: drawList,
-              // #187: the sheet carries the same star as this row. It goes
-              // through the same write, and the row behind the sheet is
-              // repainted rather than patched, because the sheet does not
-              // hold the row's node.
-              canStar: hasLiveData,
-              star: (wanted) => {
-                toggleStar(card, wanted);
-                drawList();
-              },
-            })
+        ? () => onTopics(card, list)
         : undefined;
 
     return el(

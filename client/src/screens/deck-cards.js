@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { say } from "../audio.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
 import { wordSound } from "../sound.js";
@@ -147,7 +148,21 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
  * the history block below, since the deck's card list itself carries no
  * recording data — unlike a review session's queue.
  */
-export function cardActionsSheet({ card, japanese = true, decks = [], recordingEnabled = true, onEdit, onMove, onDelete, onClose }) {
+export function cardActionsSheet({
+  card,
+  japanese = true,
+  decks = [],
+  recordingEnabled = true,
+  // #187: from Suche the row knows the star and can write it; from the deck
+  // page there is no star data, and no `onStar`, so the head shows none.
+  starred = false,
+  canStar = false,
+  onStar,
+  onEdit,
+  onMove,
+  onDelete,
+  onClose,
+}) {
   // Not on a card whose own recording is already a native speaker's — a
   // Kaishi word she linked (#185, 2026-09-17: 何 was offered one anyway).
   const scrim = el("div.sheet-scrim.card-actions", {
@@ -158,7 +173,8 @@ export function cardActionsSheet({ card, japanese = true, decks = [], recordingE
   const history = cardHistoryBlock({ cardId: card.id });
 
   let nativeRecording;
-  const nativeCircle = recordingEnabled && !wordSound(card).deckNative
+  const deckNative = wordSound(card).deckNative;
+  const nativeCircle = recordingEnabled && !deckNative
     ? voiceCircle({
         cardId: card.id,
         kind: "native",
@@ -205,8 +221,50 @@ export function cardActionsSheet({ card, japanese = true, decks = [], recordingE
     if (step === "menu") {
       render(
         sheet,
-        ...title,
+        // #187: the same head as the Kaishi card's sheet — the star, and ♪
+        // for what the card plays. The star only from Suche (see `onStar`
+        // above); a tap on it writes at once, like the row's.
+        el(
+          "div.card-actions-head",
+          {},
+          el("div.card-actions-title", {}, ...title),
+          onStar
+            ? el("button.topics-star", {
+                type: "button",
+                disabled: !canStar,
+                "aria-label": canStar
+                  ? starred
+                    ? `Markierung entfernen: ${shownWord(card, japanese)}`
+                    : `${shownWord(card, japanese)} markieren`
+                  : "Markieren braucht Internet",
+                "aria-pressed": String(Boolean(canStar && starred)),
+                text: canStar && starred ? "★" : "☆",
+                onclick: () => {
+                  starred = !starred;
+                  draw();
+                  onStar(starred);
+                },
+              })
+            : null,
+          // Its recording, or its generated file (#183); never the phone's
+          // voice, same as the Kaishi card's sheet.
+          card.word_audio || card.word_audio_generated
+            ? el("button.topics-hear", {
+                type: "button",
+                "aria-label": `${shownWord(card, japanese)} anhören`,
+                text: "♪",
+                onclick: () => say(undefined, card.word_audio || card.word_audio_generated),
+              })
+            : null,
+        ),
         nativeCircle ? el("div.card-recording-row", {}, nativeCircle.root) : null,
+        // #187 (Henning, 2026-09-17): a card that already has a native
+        // recording — a Kaishi word she linked — got no circle and no word
+        // about why, so the circle looked like it had gone missing. Say what
+        // the ♪ above plays instead.
+        recordingEnabled && deckNative
+          ? el("p.card-recording-note", { text: "Muttersprachler-Aufnahme vorhanden – das ♪ spielt sie." })
+          : null,
         el(
           "div.action-list",
           {},
