@@ -1,5 +1,14 @@
 [
   {
+    "version": "v124",
+    "summary": "„Nochmal“-Karten kommen in derselben Übung noch einmal dran – bis du sie einmal gewusst hast.",
+    "notes": [
+      "Tippst du „Nochmal“ (oder liegst bei einer Frage daneben), wandert die Karte ans Ende der Übung und kommt wieder, bis sie einmal „Gut“ war. Du musst dafür keine neue Übung starten.",
+      "Der Zähler oben zählt die Karte dann noch einmal mit, und in der Zusammenfassung zählt jede Antwort.",
+      "Bei einer Karte, die schon einmal dran war, stehen keine Zeiten mehr unter den Knöpfen – die wären nach dem „Nochmal“ nicht mehr richtig."
+    ]
+  },
+  {
     "version": "v123",
     "summary": "Eine Antwort zählt nur einmal – auch wenn du auf der letzten Karte zweimal tippst.",
     "notes": [

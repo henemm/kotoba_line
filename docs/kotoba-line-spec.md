@@ -217,6 +217,11 @@ wastes the very bandwidth we are trying to protect.
 Then shuffle within the session so the same cards do not always appear in the
 same order.
 
+A card rated Again goes to the end of the same session and comes round again
+until it earns a Good, at most three times per session (#214) — the "1 min"
+under the button means this session, as it does in Noji. The client does this;
+the server's queue is what it was.
+
 ### 5a. Letting her choose — not optional
 
 The app she is replacing decided for her what to learn and when to stop. That
