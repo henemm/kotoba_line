@@ -17,8 +17,26 @@ import { romajiQuery, searchRomaji } from "../../client/src/romaji.js";
 
 const DAY = 86400;
 
-/** §5: cards lapsed in the last three days come back regardless of due date. */
+/**
+ * §5: cards she got wrong in the last three days come back regardless of due
+ * date — "wrong" meaning her *last* answer (#210). This used to read
+ * `card_state.lapses > 0 AND last_review` within the window, and `lapses` is
+ * FSRS's cumulative counter: one Nochmal made a card eligible for three days
+ * however many Gut it earned after, because every one of those reviews
+ * refreshed `last_review`. Measured in her log on 2026-09-18: four cards,
+ * each with one lapse that morning, each rated Gut with "1 Tag" or "2 Tage"
+ * on the button, each back within a minute in four sessions running.
+ */
 const LAPSE_WINDOW_DAYS = 3;
+
+/**
+ * The rating of a card's most recent review, in the order the scheduler folds
+ * events (`orderEvents`: reviewed_at, then id). Correlated on the outer
+ * query's `c.id`; the (user_id, card_id, reviewed_at) index serves it.
+ */
+const LAST_RATING_SQL = `(SELECT e.rating FROM review_events e
+     WHERE e.user_id = s.user_id AND e.card_id = c.id
+     ORDER BY e.reviewed_at DESC, e.id DESC LIMIT 1)`;
 
 /** §5a and phase-0-plan §3.1 D: "All" is capped so a backlog stays finishable. */
 export const MAX_SESSION_LENGTH = 60;
@@ -239,8 +257,10 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   );
 
   // ── group 2: recently lapsed ────────────────────────────────────
+  // Her last answer was Nochmal, within the window. Self-terminating: one
+  // Gut takes the card out again, and then the button's promise holds.
   const lapsed = run(
-    `AND s.card_id IS NOT NULL AND s.lapses > 0 AND s.last_review >= ?`,
+    `AND s.card_id IS NOT NULL AND s.last_review >= ? AND ${LAST_RATING_SQL} = 1`,
     "ORDER BY s.last_review DESC",
     [now - LAPSE_WINDOW_DAYS * DAY],
   );
