@@ -1797,6 +1797,27 @@
   }
 }
 
+/* A second, separate signal from the tap-ring above (Henning, 2026-09-18):
+   the ring says "the tap arrived" and fades in 0.45s; `.playing` says "it is
+   still talking" and lasts exactly as long as `say()`'s `onEnded` takes to
+   fire — a recording's real length or a synthesised sentence's, not a guess.
+   The two run at the same time on the same button without conflict: this
+   pulses the button's own box-shadow, the tap-ring animates `::after`'s. */
+.speaker.playing {
+  animation: speaker-playing 1.1s ease-in-out infinite;
+}
+@keyframes speaker-playing {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--rail, var(--ink-muted)) 25%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .speaker.playing {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
 /* A native speaker's recording (#183 follow-up), redesigned with Henning
    2026-09-16 after the first two shapes (rectangular text buttons, then
    plain coloured circles) both turned out not to be what he meant — this

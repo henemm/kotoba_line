@@ -75,52 +75,114 @@ export function prime(...files) {
 }
 
 let current;
-// playTracked()'s onEnded, so an external stop() (leaving the card, another
-// ♪ starting) can tell it its play was interrupted rather than finished —
-// otherwise the voice circle that called it waits forever for an "ended" or
-// "error" event that a pause() never fires, stuck showing "playing" (and
-// its sibling stuck disabled) until the whole card is torn down and redrawn.
+// say()'s or playTracked()'s onEnded, so an external stop() (leaving the
+// card, another ♪ starting) can tell it its play was interrupted rather
+// than finished — otherwise the caller waits forever for an "ended" or
+// "error" event that a pause() never fires, stuck showing "playing" (and,
+// for a voice circle, its sibling stuck disabled) until the whole card is
+// torn down and redrawn.
 let currentInterrupted;
+// Bumped by every say()/track() call, and read back by that call's own
+// "ended"/"error" (or, for speech, onend/onerror) listeners before they act.
+// speechSynthesis.cancel() does not reliably skip the cancelled utterance's
+// own end/error event — cross-browser, sometimes it still fires — so a
+// `say()` that starts a *new* sound right after cancelling an old one can
+// otherwise race: the old utterance's stray event arrives after the new
+// play has already set up its own `currentInterrupted`, and clears that
+// instead of its own, leaving the new sound's caller (a ♪ button's "playing"
+// class, since #218) waiting for an end that already happened.
+let playToken = 0;
 
 /**
  * Play a card's recorded audio, falling back to speech.
  *
  * A card with no audio is not an error — 1 of 1,500 in the current deck has
  * none, and the whole personal deck will have none.
+ *
+ * `onEnded` is optional and fires exactly once — on completion, on a play
+ * failure, or on being interrupted by a `stop()` (leaving the card, another
+ * ♪ starting) — the same "one call, whatever happens" contract `track()`
+ * gives the voice circles. It is what lets a ♪ button show it is playing for
+ * as long as the sound actually runs, recording or synthesis alike, rather
+ * than only for the ~80ms the tap itself takes.
  */
-export async function say(text, file, { rate = 0.9 } = {}) {
+export async function say(text, file, { rate = 0.9, onEnded } = {}) {
   stop();
-  if (!text && !file) return;
+  const token = ++playToken;
+  if (!text && !file) {
+    onEnded?.();
+    return;
+  }
 
   if (file) {
     try {
       const audio = new Audio(mediaUrl(file));
       current = audio;
+      currentInterrupted = () => {
+        currentInterrupted = undefined;
+        onEnded?.();
+      };
+      audio.addEventListener("ended", () => {
+        if (token !== playToken) return;
+        currentInterrupted = undefined;
+        onEnded?.();
+      });
+      // Same reasoning as track()'s: a 404 or corrupt file does not reliably
+      // reject play()'s own promise — the two can also both fire for one
+      // failure, which is why this checks `token` too.
+      audio.addEventListener("error", () => {
+        if (token !== playToken) return;
+        currentInterrupted = undefined;
+        onEnded?.();
+      });
       await audio.play();
       return;
     } catch (err) {
       // A card with no audio is ordinary; a card that *names* a file we cannot
       // play is not, and speech would otherwise hide it forever.
       console.warn(`could not play ${file}, falling back to speech`, err);
+      current = undefined;
+      currentInterrupted = undefined;
     }
   }
 
-  if (typeof speechSynthesis === "undefined" || !text) return;
+  if (typeof speechSynthesis === "undefined" || !text) {
+    onEnded?.();
+    return;
+  }
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "ja-JP";
   if (japaneseVoice) u.voice = japaneseVoice;
   u.rate = rate;
+  currentInterrupted = () => {
+    currentInterrupted = undefined;
+    onEnded?.();
+  };
+  u.onend = () => {
+    if (token !== playToken) return;
+    currentInterrupted = undefined;
+    onEnded?.();
+  };
+  u.onerror = () => {
+    if (token !== playToken) return;
+    currentInterrupted = undefined;
+    onEnded?.();
+  };
   speechSynthesis.speak(u);
 }
 
 export function stop() {
+  playToken++;
   if (current) {
     current.pause();
     current = undefined;
-    currentInterrupted?.();
-    currentInterrupted = undefined;
   }
   if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+  // Outside the `if (current)` above on purpose: a speech-synthesis-only
+  // play (no `Audio` element, so `current` was never set) still needs its
+  // caller told it was cut short, the same as a recording does.
+  currentInterrupted?.();
+  currentInterrupted = undefined;
 }
 
 /**

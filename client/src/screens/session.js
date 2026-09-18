@@ -735,6 +735,13 @@ export function sessionScreen({
     });
   }
 
+  /**
+   * Two animations, not one: `acknowledged()` gives the ~80ms tap-ring on
+   * every button already; this adds a second one, `.playing`, that lasts as
+   * long as the sound actually runs — a recording's real length, or a
+   * synthesised sentence's, not a guess. Henning, 2026-09-18: a tap-ring
+   * alone said "the tap arrived", never "it is still talking".
+   */
   function speaker(text, file, { rate, ghost = true, label = "Vorlesen", big = false, small = false } = {}) {
     // Absent rather than inert, and never a guess (#137, v66): see `canVoice`.
     if (!canVoice(text, file)) return null;
@@ -742,7 +749,11 @@ export function sessionScreen({
       type: "button",
       "aria-label": label,
       text: "♪",
-      ...acknowledged(() => say(text, file, rate ? { rate } : undefined)),
+      ...acknowledged((e) => {
+        const btn = e.currentTarget;
+        btn.classList.add("playing");
+        say(text, file, { ...(rate ? { rate } : null), onEnded: () => btn.classList.remove("playing") });
+      }),
     });
   }
 
