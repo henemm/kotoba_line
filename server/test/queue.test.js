@@ -35,6 +35,22 @@ function setState(db, userId, cardId, { dueAt, lapses = 0, lastReview = NOW - DA
   ).run(userId, cardId, dueAt, reps, lapses, lastReview);
 }
 
+/**
+ * #210: the lapsed group reads her *last answer* from the log, not
+ * `card_state.lapses`. Writes the reviews that `setState` only summarises —
+ * `ratings` in order, the last one at `lastReview`, a minute apart.
+ */
+let eventSeq = 0;
+function setHistory(db, userId, cardId, ratings, lastReview = NOW - DAY) {
+  const insert = db.prepare(
+    `INSERT INTO review_events (id, user_id, card_id, mode, rating, reviewed_at, received_at) VALUES (?, ?, ?, 'flip', ?, ?, ?)`,
+  );
+  ratings.forEach((rating, i) => {
+    const at = lastReview - (ratings.length - 1 - i) * 60;
+    insert.run(uid(9000 + eventSeq++), userId, cardId, rating, at, at);
+  });
+}
+
 async function fixture() {
   const { app, db, config } = await testApp();
   const user = await seedUser(db);
@@ -119,6 +135,7 @@ describe("queueForUser", () => {
   it("brings back a card lapsed in the last three days even when it is not due", async () => {
     const { app, db, user } = await fixture();
     setState(db, user.id, 31, { dueAt: NOW + 10 * DAY, lapses: 2, lastReview: NOW - DAY });
+    setHistory(db, user.id, 31, [3, 1], NOW - DAY);
     const q = queueForUser(db, user.id, { limit: 40 }, NOW, () => 0);
     assert.ok(q.cardIds.includes(31), "a fresh lapse comes back regardless of due date");
     await app.close();
@@ -127,8 +144,33 @@ describe("queueForUser", () => {
   it("leaves an old lapse alone", async () => {
     const { app, db, user } = await fixture();
     setState(db, user.id, 31, { dueAt: NOW + 10 * DAY, lapses: 2, lastReview: NOW - 10 * DAY });
+    setHistory(db, user.id, 31, [3, 1], NOW - 10 * DAY);
     const q = queueForUser(db, user.id, { limit: 40 }, NOW, () => 0);
     assert.ok(!q.cardIds.includes(31));
+    await app.close();
+  });
+
+  // #210: measured in her log, 2026-09-18 — one Nochmal, then Gut with
+  // "1 Tag" on the button, and the card back within a minute, four times.
+  it("a lapse she has since answered right stays away until it is due (#210)", async () => {
+    const { app, db, user } = await fixture();
+    // Nochmal yesterday, Gut an hour ago, due tomorrow: `lapses` is still 1.
+    setState(db, user.id, 31, { dueAt: NOW + DAY, lapses: 1, lastReview: NOW - 3600 });
+    setHistory(db, user.id, 31, [1, 3], NOW - 3600);
+    const q = queueForUser(db, user.id, { limit: 40 }, NOW, () => 0);
+    assert.ok(!q.cardIds.includes(31), "Gut after a lapse keeps the button's promise");
+    assert.equal(queueForUser(db, user.id, { only: "lapsed", limit: 40 }, NOW, () => 0).cardIds.length, 0);
+    assert.equal(outlookForUser(db, user.id, NOW).lapsed, 0, "the Letzte Fehler count agrees");
+    await app.close();
+  });
+
+  it("a card whose last answer was Nochmal is a recent lapse whatever its due date (#210)", async () => {
+    const { app, db, user } = await fixture();
+    setState(db, user.id, 31, { dueAt: NOW + DAY, lapses: 1, lastReview: NOW - 3600 });
+    setHistory(db, user.id, 31, [3, 3, 1], NOW - 3600);
+    const q = queueForUser(db, user.id, { limit: 40 }, NOW, () => 0);
+    assert.ok(q.cardIds.includes(31));
+    assert.equal(outlookForUser(db, user.id, NOW).lapsed, 1);
     await app.close();
   });
 
@@ -233,6 +275,7 @@ describe("queueForUser", () => {
     const { app, db, user } = await fixture();
     setState(db, user.id, 8, { dueAt: NOW - 100 });                       // due, not lapsed
     setState(db, user.id, 9, { dueAt: NOW + DAY, lapses: 1, lastReview: NOW - DAY });
+    setHistory(db, user.id, 9, [1], NOW - DAY);
     const q = queueForUser(db, user.id, { only: "lapsed", limit: 40 }, NOW, () => 0);
     assert.deepEqual(q.cardIds, [9]);
     await app.close();
@@ -296,6 +339,7 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
     setState(db, user.id, 1, { dueAt: tomorrowSix });
     setState(db, user.id, 2, { dueAt: tomorrowSix + 3600 });
     setState(db, user.id, 3, { dueAt: tomorrowSix + 17 * 3600, lapses: 1, lastReview: NOW - DAY }); // 23:00, the same day in Tokyo
+    setHistory(db, user.id, 3, [1], NOW - DAY);
     setState(db, user.id, 4, { dueAt: tomorrowSix + 19 * 3600 });                                    // 01:00 the day after
     setState(db, user.id, 5, { dueAt: NOW + 10 * DAY });
 

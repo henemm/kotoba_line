@@ -208,7 +208,9 @@ wastes the very bandwidth we are trying to protect.
 **Queue composition** — mix, do not sort strictly by due date:
 
 1. all cards due today, oldest due first
-2. cards lapsed in the last three days, regardless of due date
+2. cards whose *last* answer was Again, within the last three days, regardless
+   of due date — one right answer takes a card out again, so the interval
+   shown on the rating button holds (#210)
 3. new cards, in `frequency_rank` order, capped at a configurable daily limit
    (default 15)
 
