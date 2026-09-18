@@ -140,6 +140,15 @@ export function sessionScreen({
   let index = 0;
   let right = 0;
   const missed = [];
+  // #211: whether the card on screen has been graded. `grade()` is the one
+  // gate every mode's answer passes, and on the last card the rating row
+  // stays on screen while `finish()` waits for the network — on a train,
+  // seconds — so a second tap there re-graded the card: six pairs of
+  // events a second apart in Charlotte's log, 2026-09-18, each an extra
+  // scheduler step (Gut → 1 Tag, then Gut again → 2 Tage). Reset by
+  // `drawCard()`, never by `finish()`.
+  let graded = false;
+  let finishing = false;
   const results = []; // one entry per card, for the station strip afterwards
   let answered = 0;
   let before;
@@ -421,6 +430,7 @@ export function sessionScreen({
     if (attempt.url) URL.revokeObjectURL(attempt.url);
     attempt = { url: null };
     recorder = null;
+    graded = false;
     const card = queue[index];
     // The mode on the card is for the iPad card's layout (#150, screens.css).
     const area = el("div.card-area", { dataset: { mode } });
@@ -449,6 +459,13 @@ export function sessionScreen({
    * caller is going to ask her first (#57 — see `chooseFrom`'s "Continue").
    */
   function grade(card, rating, pause = 0) {
+    if (graded) return;
+    graded = true;
+    // The rating row goes inert at once, so a second tap has something to
+    // land on that visibly does nothing rather than a live button. Only the
+    // ratings: 選ぶ's options disable themselves, and its "Weiter" after a
+    // miss must stay pressable.
+    for (const button of root.querySelectorAll(".ratings button")) button.disabled = true;
     const ok = recalled(rating);
     results[index] = ok;
     if (ok) right += 1;
@@ -1574,12 +1591,17 @@ export function sessionScreen({
   }
 
   function next() {
+    // #211: the same window as `graded` — 書く's "Nicht gewusst" and 選ぶ's
+    // "Weiter" call this directly, and on the last card they too stay on
+    // screen while `finish()` waits; a second tap must not finish twice.
+    if (finishing) return;
     index += 1;
     if (index >= queue.length) return finish();
     drawCard();
   }
 
   async function finish() {
+    finishing = true;
     stopAllRecording();
     stop();
     // Finished sessions are not resumable, whatever the four-hour window says.
