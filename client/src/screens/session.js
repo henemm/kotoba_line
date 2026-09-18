@@ -38,6 +38,45 @@ const RATING_EASY = 4;
 export const recalled = (rating) => rating > RATING_AGAIN;
 
 /**
+ * #218: a gentle nudge to look away from the screen after a long stretch of
+ * practice — not a break she is forced to take (#179), and not a second
+ * in-app activity to fill the pause, because the research behind the issue
+ * says a *screen* pause helps consolidation and a screen replacement does
+ * not. Module-level rather than a `sessionScreen()` local: two sessions
+ * started back to back are one stretch of practice from her side, and this
+ * is what makes them one stretch on the app's side too — it survives a
+ * session ending, and only forgets once she has actually been away for a
+ * while, or the page reloads.
+ */
+const BREAK_HINT_INTERVAL_MS = 20 * 60 * 1000; // the low end of the 20–25 min the issue names, so a long stretch is never overdue
+const BREAK_HINT_GAP_MS = 5 * 60 * 1000; // longer than this since the last card and it's a new stretch, not a continuation
+
+/**
+ * Whether a fresh 20-minute threshold of continuous practice was just
+ * crossed, and the streak state to carry into the next call. Pure, so it can
+ * be tested without a session or a DOM: given a state and a moment, it says
+ * what the next state is and whether that moment earns a hint. Called once
+ * per card drawn — a close enough clock for a hint this soft, and it needs
+ * no timer of its own running while she is mid-answer.
+ *
+ * `state` starts `undefined` (nothing practised yet in this stretch). A gap
+ * longer than `BREAK_HINT_GAP_MS` since the last card starts a new streak —
+ * that is what lets two sessions run back to back count as one stretch, and
+ * a gap of hours count as two.
+ */
+export function breakHintCheck(state, now = Date.now()) {
+  const fresh = !state || now - state.lastCard > BREAK_HINT_GAP_MS;
+  const streakStart = fresh ? now : state.streakStart;
+  const shown = fresh ? 0 : state.shown;
+  const crossed = Math.floor((now - streakStart) / BREAK_HINT_INTERVAL_MS);
+  const due = crossed > shown;
+  return { due, state: { streakStart, lastCard: now, shown: due ? crossed : shown } };
+}
+
+/** #218: the streak `breakHintCheck()` carries forward — module-level, see above. */
+let breakHintState;
+
+/**
  * 45 and 46 — the same layout, different copy. The situation is identical from
  * her side, which is why neither reads like an error and neither offers a link
  * into iOS Settings: iOS cannot deep-link there reliably, and a dead link is
@@ -151,6 +190,12 @@ export function sessionScreen({
   // `drawCard()`, never by `finish()`.
   let graded = false;
   let finishing = false;
+  // #218: set when a break-hint threshold is crossed, cleared when she taps
+  // it away. Survives a card turning (unlike `graded`) because `drawCard()`
+  // redraws the whole chrome on every card, and the hint should stay put
+  // until she dismisses it, not vanish with the card that happened to be on
+  // screen when it appeared.
+  let showBreakHint = false;
   // #214: a card she rated Nochmal goes to the end of this queue and comes
   // round again until it earns a Gut — what the "1 Min" under the button
   // already means, and what Noji does ("shown for you in 1 minute in the
@@ -336,6 +381,34 @@ export function sessionScreen({
   }
 
   /**
+   * #218: sits under the chrome, above the card — never over it, so it never
+   * costs her a tap meant for an answer. Stays through `grade()`'s chrome-only
+   * replace (that touches `root.firstChild`, not this) and through the next
+   * card's full redraw, because `drawCard()` includes it again as long as
+   * `showBreakHint` is still true. Dismissing it only hides this one; it does
+   * not reset the streak, so the next card does not bring it straight back.
+   */
+  function breakHint() {
+    if (!showBreakHint) return null;
+    return el(
+      "div.break-hint",
+      { role: "status" },
+      el("span.break-hint-text", {
+        text: "Kleine Pause? Schau kurz weg vom Bildschirm — aus dem Fenster reicht.",
+      }),
+      el("button.break-hint-dismiss", {
+        type: "button",
+        "aria-label": "Hinweis schließen",
+        text: "×",
+        onclick: () => {
+          showBreakHint = false;
+          root.querySelector(".break-hint")?.remove();
+        },
+      }),
+    );
+  }
+
+  /**
    * Star the card she is looking at (#35).
    *
    * Reported as "ich möchte in jedem Bereich selbst Favoriten anlegen können".
@@ -457,7 +530,10 @@ export function sessionScreen({
     const area = el("div.card-area", { dataset: { mode } });
     const answers = el("div.options");
 
-    render(root, chrome(), area, answers);
+    const hint = breakHintCheck(breakHintState);
+    breakHintState = hint.state;
+    if (hint.due) showBreakHint = true;
+    render(root, chrome(), breakHint(), area, answers);
     // §7: iOS produces no sound from speech synthesis until a user gesture has
     // happened, and every mode here may reach for it.
     unlock();

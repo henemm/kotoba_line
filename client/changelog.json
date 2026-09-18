@@ -1,5 +1,13 @@
 [
   {
+    "version": "v125",
+    "summary": "Nach einer langen Übungsstrecke fragt die App kurz, ob du nicht mal wegschauen willst.",
+    "notes": [
+      "Übst du etwa 20 Minuten am Stück – auch über mehrere Übungen hintereinander – zeigt dir die Karte einen kurzen Hinweis: „Kleine Pause? Schau kurz weg vom Bildschirm – aus dem Fenster reicht.“",
+      "Er unterbricht nichts: du tippst ihn einfach weg und übst normal weiter. Übst du danach noch länger weiter, kommt er nach weiteren 20 Minuten wieder."
+    ]
+  },
+  {
     "version": "v124",
     "summary": "„Nochmal“-Karten kommen in derselben Übung noch einmal dran – bis du sie einmal gewusst hast.",
     "notes": [
