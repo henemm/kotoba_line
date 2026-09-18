@@ -1,5 +1,12 @@
 [
   {
+    "version": "v123",
+    "summary": "Eine Antwort zählt nur einmal – auch wenn du auf der letzten Karte zweimal tippst.",
+    "notes": [
+      "Auf der letzten Karte einer Übung blieben die Knöpfe aktiv, während die Antworten zum Server gingen. Ein zweiter Tipp dort zählte als zweite Antwort und verschob den nächsten Termin der Karte noch einmal. Jetzt werden die Knöpfe nach dem ersten Tipp sofort grau."
+    ]
+  },
+  {
     "version": "v122",
     "summary": "Auch deine eigenen Karten haben in der Suche den Stern, und eine Karte sagt, wenn sie schon eine Muttersprachler-Aufnahme hat.",
     "notes": [
