@@ -1,5 +1,13 @@
 [
   {
+    "version": "v126",
+    "summary": "Der ♪-Knopf zeigt jetzt, solange ein Ton wirklich läuft – nicht nur beim Antippen.",
+    "notes": [
+      "Bisher blitzte der Ring um ♪ nur kurz auf, wenn du getippt hast, und war dann weg – auch wenn die Aufnahme oder der gesprochene Satz noch mehrere Sekunden weiterlief.",
+      "Jetzt bleibt eine zweite, ruhige Animation, solange der Ton tatsächlich zu hören ist – egal ob Aufnahme oder Computer-Stimme."
+    ]
+  },
+  {
     "version": "v125",
     "summary": "Nach einer langen Übungsstrecke fragt die App kurz, ob du nicht mal wegschauen willst.",
     "notes": [
