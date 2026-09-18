@@ -22,6 +22,8 @@ import { stopAllRecording } from "../recording.js";
  * offered only in めくる, where she is already making a judgement.
  */
 const RATING_AGAIN = 1;
+/** #214: how often one card comes round again in one session after Nochmal. */
+const MAX_RESHOWS = 3;
 const RATING_HARD = 2;
 const RATING_GOOD = 3;
 const RATING_EASY = 4;
@@ -149,6 +151,18 @@ export function sessionScreen({
   // `drawCard()`, never by `finish()`.
   let graded = false;
   let finishing = false;
+  // #214: a card she rated Nochmal goes to the end of this queue and comes
+  // round again until it earns a Gut — what the "1 Min" under the button
+  // already means, and what Noji does ("shown for you in 1 minute in the
+  // same study session again"). Before this the queue was fixed, and on
+  // 2026-09-18 she started four sessions in seven minutes to see her
+  // Nochmal cards again. Card id → how often it has come round: their
+  // interval labels came down at session start, before the Nochmal the
+  // server has not seen yet, so they are withheld rather than shown wrong.
+  // Bounded, so a card she cannot get today cannot keep the session from
+  // ending — after that it is due again in a minute anyway, and the next
+  // session brings it.
+  const reshows = new Map();
   const results = []; // one entry per card, for the station strip afterwards
   let answered = 0;
   let before;
@@ -210,6 +224,13 @@ export function sessionScreen({
         if (r.kind === "native") recordings.set(r.card_id, r);
       }
       const ids = resuming?.cardIds ?? q.cardIds;
+      // A resumed queue can already hold a card twice (#214); the second
+      // copy's labels are as stale as they would have been live.
+      const met = new Set();
+      for (const id of ids) {
+        if (met.has(id)) reshows.set(id, (reshows.get(id) ?? 0) + 1);
+        met.add(id);
+      }
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
       if (resuming) index = Math.min(resuming.index ?? 0, Math.max(queue.length - 1, 0));
@@ -470,6 +491,14 @@ export function sessionScreen({
     results[index] = ok;
     if (ok) right += 1;
     else if (!missed.some((m) => m.id === card.id)) missed.push(card);
+    // #214: Nochmal — and only Nochmal — brings the card round again. Pushed
+    // before the strip and the session note below are written, so both
+    // already count it; on the last card this is what keeps `next()` from
+    // finishing.
+    if (rating === RATING_AGAIN && (reshows.get(card.id) ?? 0) < MAX_RESHOWS) {
+      queue.push(card);
+      reshows.set(card.id, (reshows.get(card.id) ?? 0) + 1);
+    }
 
     const event = {
       id: uuid(),
@@ -1064,6 +1093,10 @@ export function sessionScreen({
 
   /** The four intervals for this card, already formatted. Empty when unknown. */
   function intervalsFor(card) {
+    // #214: a card that has come round again has a Nochmal the server has
+    // not folded yet, so what it sent at session start is for the card as it
+    // was. No number beats a wrong one.
+    if (reshows.has(card.id)) return {};
     const seconds = intervals[card.id];
     if (!seconds) return {};
     return Object.fromEntries(
