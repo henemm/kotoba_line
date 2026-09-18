@@ -590,7 +590,7 @@ async function refreshOpenDeck({ redraw = true } = {}) {
  * A tap on one of her cards (#137): edit, move, delete — in a deck, and from
  * Search (v69), where `onChanged` redoes the search she is in.
  */
-function openCardActions(card, { onChanged } = {}) {
+function openCardActions(card, { onChanged, starred, canStar, onStar } = {}) {
   const afterChange = async () => {
     await cardsChanged();
     if (onChanged) {
@@ -615,6 +615,11 @@ function openCardActions(card, { onChanged } = {}) {
     card,
     japanese: state.settings.japaneseScript,
     recordingEnabled: state.settings.recordingEnabled,
+    // #187: only Suche knows the star (the row carries it); the deck page
+    // passes none.
+    starred,
+    canStar,
+    onStar,
     decks: state.lastDecks.filter((d) => d.own && d.id !== card.deck_id),
     onEdit: () => {
       state.sheet = undefined;
@@ -829,7 +834,7 @@ function wordsScreen() {
     // v69: one of hers opens what it opens in its deck. A row carries only
     // what the list shows, so the card comes from the phone, where it has its
     // sentence: an edit from the row would have saved the card without it.
-    onOwnCard: async (row, reload) => {
+    onOwnCard: async (row, list) => {
       if (state.lastDecks.length === 0) await deckList().catch(() => {});
       const cached = async () => (await loadDeck().catch(() => new Map())).get(row.id);
       // Written on another phone since this one last synced: fetch it first.
@@ -838,7 +843,7 @@ function wordsScreen() {
         await syncDeck().catch(() => {});
         card = await cached();
       }
-      if (card) return openCardActions(card, { onChanged: reload });
+      if (card) return openCardActions(card, { onChanged: list.changed, starred: list.starred, canStar: list.canStar, onStar: list.star });
       // Not on this phone and no way to fetch it: say so, rather than a tap
       // that does nothing — which is what this replaced.
       state.sheet = el(

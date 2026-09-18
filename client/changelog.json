@@ -1,5 +1,13 @@
 [
   {
+    "version": "v122",
+    "summary": "Auch deine eigenen Karten haben in der Suche den Stern, und eine Karte sagt, wenn sie schon eine Muttersprachler-Aufnahme hat.",
+    "notes": [
+      "Öffnest du in der Suche eine deiner eigenen Karten, steht der Stern jetzt oben rechts neben dem Titel – wie bei Kaishi-Karten.",
+      "Hat eine deiner Karten schon eine Muttersprachler-Aufnahme (weil sie mit einem Kaishi-Wort verbunden ist), stand dort bisher gar nichts. Jetzt steht dort „Muttersprachler-Aufnahme vorhanden – das ♪ spielt sie.“"
+    ]
+  },
+  {
     "version": "v121",
     "summary": "In der Suche hat die geöffnete Karte jetzt den Stern zum Markieren.",
     "notes": [
