@@ -132,6 +132,94 @@ describe("queueForUser", () => {
     await app.close();
   });
 
+  // §215: measured on Charlotte's log, 2026-09-18 — a card scheduled from an
+  // evening session sat "not due" all the next morning, on the exact clock
+  // time it was scheduled at, and dumped the whole day on her at once in the
+  // afternoon. NOW is 2025-10-09 17:53:20 in Tokyo (the default zone).
+  it("offers a review-state card as soon as its day begins, hours before its exact due time (#215)", async () => {
+    const { app, db, user } = await fixture();
+    // Due later this evening, at NOW's own calendar day — interval (due_at -
+    // last_review) is 3h + 1 day, well past the 1-day split into review state.
+    setState(db, user.id, 30, { dueAt: NOW + 3 * 3600, lastReview: NOW - DAY });
+    assert.ok(
+      queueForUser(db, user.id, { limit: 40 }, NOW, () => 0).cardIds.includes(30),
+      "today has already begun, so the card is due now — not three hours from now",
+    );
+    await app.close();
+  });
+
+  it("a review-state card due tomorrow stays away until tomorrow begins, not until its exact minute (#215)", async () => {
+    const { app, db, user } = await fixture();
+    const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
+    const tomorrowMidnight = Math.floor(Date.parse("2025-10-10T00:00:00+09:00") / 1000);
+    setState(db, user.id, 30, { dueAt: tomorrowSix, lastReview: NOW - DAY });
+
+    assert.ok(
+      !queueForUser(db, user.id, { limit: 40 }, NOW, () => 0).cardIds.includes(30),
+      "still today: not due",
+    );
+    assert.ok(
+      queueForUser(db, user.id, { limit: 40 }, tomorrowMidnight, () => 0).cardIds.includes(30),
+      "tomorrow has begun, hours before 06:00: due",
+    );
+    await app.close();
+  });
+
+  it("a learning step stays exact to the minute, even once its day has begun (#215)", async () => {
+    const { app, db, user } = await fixture();
+    const tomorrowSix = Math.floor(Date.parse("2025-10-10T06:00:00+09:00") / 1000);
+    const tomorrowMidnight = Math.floor(Date.parse("2025-10-10T00:00:00+09:00") / 1000);
+    // A 10-minute learning step: the interval is minutes, not a day.
+    setState(db, user.id, 30, { dueAt: tomorrowSix, lastReview: tomorrowSix - 600 });
+
+    assert.ok(
+      !queueForUser(db, user.id, { limit: 40 }, tomorrowMidnight, () => 0).cardIds.includes(30),
+      "tomorrow has begun, but the step is not due for six more hours",
+    );
+    assert.ok(
+      queueForUser(db, user.id, { limit: 40 }, tomorrowSix, () => 0).cardIds.includes(30),
+      "due at its exact minute",
+    );
+    await app.close();
+  });
+
+  // The three fixtures above drive card_state by hand, so they prove the SQL
+  // rule but not that a real FSRS schedule ever lands in review state with a
+  // clock time later than the next morning — which is what actually happened
+  // to Charlotte on 2026-09-18. This one runs the real path: two ingested
+  // events graduate the card, and the resulting due_at (read back from the
+  // database, not assumed) is checked against the morning before it.
+  it("a card FSRS graduates to review state is offered the whole day it falls on, not from its own clock time (#215)", async () => {
+    const { app, db, user } = await fixture();
+    const first = Math.floor(Date.parse("2026-09-10T13:41:00+09:00") / 1000);
+    const second = first + 600; // ten minutes later: the second learning step, "Gut"
+    ingestEvents(
+      db,
+      user.id,
+      [
+        { id: uid(500), card_id: 30, mode: "flip", rating: 3, reviewed_at: first },
+        { id: uid(501), card_id: 30, mode: "flip", rating: 3, reviewed_at: second },
+      ],
+      second,
+    );
+
+    const state = db.prepare("SELECT due_at, last_review FROM card_state WHERE user_id = ? AND card_id = ?").get(user.id, 30);
+    assert.ok(state.due_at - state.last_review >= DAY, "graduated: no longer a learning step");
+    assert.ok(dayIn(state.due_at, "Asia/Tokyo") > dayIn(second, "Asia/Tokyo"), "due on a later calendar day");
+
+    const dueDayStart = startOfDay(dayIn(state.due_at, "Asia/Tokyo"), "Asia/Tokyo");
+    const theEveningBefore = dueDayStart - 3600;
+    const theMorningOf = dueDayStart + 3600;
+    assert.ok(
+      !queueForUser(db, user.id, { limit: 40, timeZone: "Asia/Tokyo" }, theEveningBefore, () => 0).cardIds.includes(30),
+      "the day before it is due: not yet",
+    );
+    assert.ok(
+      queueForUser(db, user.id, { limit: 40, timeZone: "Asia/Tokyo" }, theMorningOf, () => 0).cardIds.includes(30),
+      "an hour past midnight on its due day, hours before its own due_at clock time: already due",
+    );
+  });
+
   it("brings back a card lapsed in the last three days even when it is not due", async () => {
     const { app, db, user } = await fixture();
     setState(db, user.id, 31, { dueAt: NOW + 10 * DAY, lapses: 2, lastReview: NOW - DAY });
@@ -347,6 +435,43 @@ describe("the nothing-due outlook (design 10; #90, #91)", () => {
     assert.equal(o.ahead, 4, "cards 1–4 are due within two days");
     assert.equal(o.lapsed, 1);
     assert.deepEqual(o.nextDue, { count: 3, at: tomorrowSix, when: "morgen 06:00" });
+    await app.close();
+  });
+
+  // §215: nextDue promises a future moment. A card whose day has already
+  // begun is not a future moment — it is sitting in the session right now —
+  // so it must not double as "next due" too.
+  it("does not call a card 'next due' once its own day has begun (#215)", async () => {
+    const { app, db, user } = await fixture();
+    // Due later this evening, review-state (interval well past a day).
+    setState(db, user.id, 30, { dueAt: NOW + 3 * 3600, lastReview: NOW - DAY });
+    const q = queueForUser(db, user.id, { limit: 40 }, NOW, () => 0);
+    assert.ok(q.cardIds.includes(30), "sanity: it is in today's session");
+
+    const o = outlookForUser(db, user.id, NOW);
+    assert.equal(o.nextDue, null, "nothing left to announce for later — it is already offered");
+    await app.close();
+  });
+
+  it("does not count a card already due today into nextDue's same-day total (#215)", async () => {
+    const { app, db, user } = await fixture();
+    // Card 30: a learning step due in ten minutes — genuinely not due yet,
+    // and the earliest such card, so it becomes `at`.
+    setState(db, user.id, 30, { dueAt: NOW + 600, lastReview: NOW - 300 });
+    // Card 31: review-state, due later the same day — already offered by the
+    // day-boundary rule, so it must not also swell nextDue's same-day count.
+    setState(db, user.id, 31, { dueAt: NOW + 3 * 3600, lastReview: NOW - DAY });
+
+    const q = queueForUser(db, user.id, { limit: 40 }, NOW, () => 0);
+    assert.ok(q.cardIds.includes(31), "sanity: card 31 is already due today");
+    assert.ok(!q.cardIds.includes(30), "sanity: card 30 is not due for ten more minutes");
+
+    const o = outlookForUser(db, user.id, NOW);
+    assert.deepEqual(
+      { count: o.nextDue.count, at: o.nextDue.at },
+      { count: 1, at: NOW + 600 },
+      "only card 30 is still waiting; card 31 is already in the session",
+    );
     await app.close();
   });
 
@@ -616,7 +741,10 @@ describe("the endpoints", () => {
     // and a minute before can be yesterday.
     const events = [1, 2, 3, 4, 5].map((id) => ({ id: uid(100 + id), card_id: id, mode: "flip", rating: 4, reviewed_at: now }));
     ingestEvents(db, user.id, events, now);
-    setState(db, user.id, 6, { dueAt: now + 3600 });
+    // A learning step (§215): reviewed 5 minutes ago, due in an hour — its
+    // interval is minutes, not a day, so it stays exact-time and "ahead" of
+    // today regardless of where midnight falls.
+    setState(db, user.id, 6, { dueAt: now + 3600, lastReview: now - 300 });
 
     const empty = (await app.inject({ method: "GET", url: "/api/queue?limit=60", headers: { cookie } })).json();
     assert.deepEqual(empty.cardIds, []);

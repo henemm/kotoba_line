@@ -47,6 +47,40 @@ const AHEAD_WINDOW_DAYS = 2;
 export const ONLY_MODES = ["starred", "lapsed", "new", "ahead"];
 
 /**
+ * §215: a card in review state — its last interval was a day or more, the
+ * same `< 1` split `maturityBand` (stats.js) already draws between "learning"
+ * and "young" — counts as due as soon as the calendar day `due_at` falls on
+ * has begun, not at its exact clock time. Anki does the same: a card
+ * scheduled two days out is due the whole day it lands on, not from one
+ * moment on the clock. Without this, a card scheduled from an evening
+ * session stays "not due" all the next morning and dumps the whole day's
+ * cards on her at once in the afternoon — measured on Charlotte's log,
+ * 2026-09-18 (#215).
+ *
+ * A card still inside a learning step (`< 1` day — FSRS's 1-minute and
+ * 10-minute steps) stays exact: those are minutes, not days, and rounding
+ * one up to a day boundary would offer it up to 20 hours before it is
+ * actually due.
+ *
+ * `dayEnd` is the start of the day after `now`, so "its day has begun" is
+ * `due_at < dayEnd`. `last_review` is always set once card_state exists in
+ * practice — a row is only written after a first review (`stateFromEvents`,
+ * scheduler.js) — but the column has no NOT NULL, so a NULL there would
+ * otherwise make `>=` false and `NOT (...)` also false (SQL's three-valued
+ * logic), matching *neither* branch and silently dropping the row from both
+ * the queue and `nextDue`. The `COALESCE` reads that case as interval 0 —
+ * exact-time, like `maturityBand` (stats.js) already treats it.
+ */
+const REVIEW_STATE_SQL = "s.due_at - COALESCE(s.last_review, s.due_at) >= ?";
+const DUE_SQL = `((${REVIEW_STATE_SQL} AND s.due_at < ?) OR (NOT (${REVIEW_STATE_SQL}) AND s.due_at <= ?))`;
+const NOT_DUE_SQL = `((${REVIEW_STATE_SQL} AND s.due_at >= ?) OR (NOT (${REVIEW_STATE_SQL}) AND s.due_at > ?))`;
+
+/** Params for `DUE_SQL`/`NOT_DUE_SQL`, in the order their `?`s appear. */
+function dueBoundaryParams(dayEnd, now) {
+  return [DAY, dayEnd, DAY, now];
+}
+
+/**
  * Fisher-Yates with an injectable source of randomness, so a test can pin the
  * order without the production path being any less shuffled.
  */
@@ -197,6 +231,9 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // morning's. One boundary for both halves: "first answered today" only means
   // that if "before today" is the same moment.
   const dayStart = startOfDay(dayKey, timeZone);
+  // The day's other edge (§215): a review-state card is due once this moment
+  // has passed.
+  const dayEnd = startOfDay(nextDay(dayKey), timeZone);
   const scopeParams = [];
   const scopeSql = inDeck ? filterClause({ deckKey }, scopeParams, userId) : "";
   const introducedToday = db
@@ -251,9 +288,9 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   // ── group 1: due ────────────────────────────────────────────────
   const due = run(
-    "AND s.card_id IS NOT NULL AND s.due_at <= ?",
+    `AND s.card_id IS NOT NULL AND ${DUE_SQL}`,
     "ORDER BY s.due_at ASC",
-    [now],
+    dueBoundaryParams(dayEnd, now),
   );
 
   // ── group 2: recently lapsed ────────────────────────────────────
@@ -303,6 +340,19 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     // cards the scheduler will ask for within two days, soonest first. Anything
     // already due counts too: it is due within two days, and a device that
     // opened the tab a minute before a card fell due should not miss it.
+    //
+    // §215 deliberately left exact-time here, unlike DUE_SQL above: a rolling
+    // 48-hour window, not "the next two calendar days". The gap this opens —
+    // a review-state card due on day+2 after this moment's clock time (say,
+    // 20:00 when `now` is 17:53) is not "ahead" yet, though day+2 has not even
+    // started and the card will in fact be due at its very first minute — is
+    // real but narrow: at most a few hours a day, only at the far edge of a
+    // two-day preview, on a screen whose own copy already says "within two
+    // days" rather than promising a precise cutoff. Switching this to the same
+    // day-boundary rule as `due` would also change the number on design 10
+    // for a case no one has reported, and would need `only=ahead`'s own tests
+    // rewritten (#90) rather than merely read differently. Left for a
+    // follow-up if it turns out to matter in practice.
     groups = {
       due: run(
         "AND s.card_id IS NOT NULL AND s.due_at <= ?",
@@ -514,6 +564,16 @@ export function whenOnClock(at, now, timeZone = DEFAULT_TIME_ZONE) {
  * promise a number its session then does not deliver. `nextDue` counts only
  * cards the scheduler has seen: new cards are not "due", they are allowed, and
  * the allowance is a different sentence.
+ *
+ * §215: `at` stays `due_at` as scheduled — the card's own clock time — even
+ * though a review-state card is now offered from midnight on its day, hours
+ * earlier. "morgen 06:00" is a conservative promise: she can in fact open it
+ * any time after midnight, but that reads as "come back around six", not
+ * "the queue rounds every card up to a full day, so check whenever" — a
+ * sentence design 10 was never written to say. `dueDay` (stats.js,
+ * `cardRecordSummary` in the client) already compares by calendar day rather
+ * than clock time for the same reason `nextDue` cannot be reached before this
+ * moment: that text only ever says "now" or a day, never a time.
  */
 export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), { deckKey, deck, list, timeZone = DEFAULT_TIME_ZONE } = {}) {
   // Within the deck or list she practises in (#137), like the queue it stands
@@ -530,14 +590,23 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
   const scope = [];
   const scheduled = `FROM card_state s JOIN cards c ON c.id = s.card_id
      WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}${filterClause({ deckKey, deck, list }, scope, userId)}`;
-  const { at } = db.prepare(`SELECT min(s.due_at) AS at ${scheduled} AND s.due_at > ?`).get(userId, ...visible.params, ...scope, now);
+  // §215: "not yet due" has to agree with the queue's own DUE_SQL, or a card
+  // already sitting in today's session would still be announced here as
+  // falling due some hours from now.
+  const dayEnd = startOfDay(nextDay(dayIn(now, timeZone)), timeZone);
+  const { at } = db
+    .prepare(`SELECT min(s.due_at) AS at ${scheduled} AND ${NOT_DUE_SQL}`)
+    .get(userId, ...visible.params, ...scope, ...dueBoundaryParams(dayEnd, now));
 
   let nextDue = null;
   if (at) {
+    // Same complement as above: a review-state card due later today (`at`'s
+    // day, when `at` itself is a same-day learning step) must not be counted
+    // here too — it is already in `due`, not still waiting for `endOfThatDay`.
     const endOfThatDay = startOfDay(nextDay(dayIn(at, timeZone)), timeZone);
     const { n } = db
-      .prepare(`SELECT count(*) AS n ${scheduled} AND s.due_at > ? AND s.due_at < ?`)
-      .get(userId, ...visible.params, ...scope, now, endOfThatDay);
+      .prepare(`SELECT count(*) AS n ${scheduled} AND ${NOT_DUE_SQL} AND s.due_at < ?`)
+      .get(userId, ...visible.params, ...scope, ...dueBoundaryParams(dayEnd, now), endOfThatDay);
     nextDue = { count: n, at, when: whenOnClock(at, now, timeZone) };
   }
 
