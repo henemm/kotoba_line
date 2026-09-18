@@ -4,7 +4,7 @@ import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, streakResetCopy, visibleTopics } from "../src/screens/stats.js";
-import { formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, readingsOf, recalled, sentenceKana, speakUsesSentence, splitEmphasis, typingAnswers } from "../src/screens/session.js";
+import { breakHintCheck, formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, readingsOf, recalled, sentenceKana, speakUsesSentence, splitEmphasis, typingAnswers } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
@@ -683,6 +683,51 @@ describe("what the leaving sheet says (50)", () => {
       leavingCopy(4),
       "Die 4 Karten, die du beantwortet hast, sind schon gespeichert. Der Rest kommt wieder in die Reihe.",
     );
+  });
+});
+
+describe("the gentle break hint (#218)", () => {
+  const MIN = 60 * 1000;
+
+  // A card every 4 minutes — under the 5-minute gap that starts a new
+  // stretch — standing in for the cards `drawCard()` actually calls this
+  // with. Returns the last `due` and the state to carry on with.
+  function practice(state, ...minutes) {
+    let due;
+    for (const m of minutes) ({ due, state } = breakHintCheck(state, m * MIN));
+    return { due, state };
+  }
+
+  it("stays quiet before the first 20 minutes", () => {
+    assert.equal(practice(undefined, 0, 4, 8, 12, 16, 19).due, false);
+  });
+
+  it("fires once the 20 minute threshold is crossed", () => {
+    assert.equal(practice(undefined, 0, 4, 8, 12, 16, 20).due, true);
+  });
+
+  it("does not fire twice for the same threshold", () => {
+    const { state } = practice(undefined, 0, 4, 8, 12, 16, 20);
+    assert.equal(practice(state, 24).due, false);
+  });
+
+  it("fires again after another 20 minutes of the same stretch", () => {
+    const { state } = practice(undefined, 0, 4, 8, 12, 16, 20);
+    assert.equal(practice(state, 24, 28, 32, 36, 40).due, true);
+  });
+
+  it("counts two sessions back to back as one stretch", () => {
+    const { state } = practice(undefined, 0, 4, 8, 12, 16); // session 1
+    // Session 2 starts a minute later — nowhere near the 20-minute mark on
+    // its own, but the streak carries over, so 21 total minutes is over it.
+    assert.equal(practice(state, 17, 21).due, true);
+  });
+
+  it("starts a fresh stretch after a real gap", () => {
+    const { state } = practice(undefined, 0, 4, 8, 12, 16); // 16 minutes in
+    // Ten minutes away, then back: the earlier 16 minutes no longer count,
+    // so 5 minutes into the new stretch is nowhere near the threshold.
+    assert.equal(practice(state, 26).due, false);
   });
 });
 

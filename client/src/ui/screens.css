@@ -1644,6 +1644,33 @@
   flex: none;
 }
 
+/* #218: under the chrome, above the card — an informational line, same
+   raised background as the offline strip, never a colour that reads as a
+   warning. Dismissible rather than timed, so she decides how long it stays. */
+.break-hint {
+  background: var(--surface-hi);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px var(--gutter);
+  flex: none;
+}
+.break-hint-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.break-hint-dismiss {
+  background: none;
+  border: 0;
+  color: var(--ink-muted);
+  font-size: 22px;
+  line-height: 1;
+  padding: 0 4px;
+  flex: none;
+}
+
 /* The strip of station markers: one per card, the route so far. */
 .stations {
   flex: 1;
