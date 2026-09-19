@@ -241,8 +241,13 @@ export function cardHistory(db, userId, cardId, timeZone = DEFAULT_TIME_ZONE, no
     .prepare("SELECT due_at, reps FROM card_state WHERE user_id = ? AND card_id = ?")
     .get(userId, cardId);
 
+  // For the card sheet opened from a deck's list, whose rows come from the
+  // phone's copy of the deck and know nothing about stars (2026-09-19).
+  const star = db.prepare("SELECT starred FROM card_stars WHERE user_id = ? AND card_id = ?").get(userId, cardId);
+
   return {
     events,
+    starred: Boolean(star?.starred),
     // So the sheet can say "due now" for a day already past without a date
     // of the phone's own.
     today: dayIn(now, timeZone),

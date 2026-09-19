@@ -17,7 +17,7 @@ import { sessionScreen } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
-import { startFlushingStars } from "./stars.js";
+import { setStar, startFlushingStars } from "./stars.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { deckCatchingUp, loadDeck, syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
@@ -457,7 +457,7 @@ async function loadDeckTopics() {
     if (state.deck?.id !== deck.id) return;
     state.deckTopics = { id: deck.id, list: deckTopics([...cards.values()], deck.id) };
     renderApp();
-    if (state.sheet) openSheet();
+    if (chooseSetOpen()) openSheet();
   };
   try {
     count(await loadDeck());
@@ -666,11 +666,24 @@ function openCardActions(card, { onChanged, starred, canStar, onStar } = {}) {
     card,
     japanese: state.settings.japaneseScript,
     recordingEnabled: state.settings.recordingEnabled,
-    // #187: only Suche knows the star (the row carries it); the deck page
-    // passes none.
+    // #187: Suche knows the star (the row carries it). From the deck page
+    // the sheet reads it from the card's record (2026-09-19).
     starred,
-    canStar,
-    onStar,
+    canStar: onStar ? canStar : true,
+    onStar: onStar ?? ((on) => setStar(card.id, on)),
+    topicNames: async () => {
+      if (state.topics.length === 0) state.topics = (await api.stats()).topics ?? [];
+      return state.topics.map((t) => t.tag);
+    },
+    onTopics: async (tags) => {
+      await api.updateCard(card.id, { ...bodyOf(card.deck_id), tags });
+      card.tags = tags;
+      // The deck's topic counts and the phone's copy, without closing this
+      // sheet: the list under it is redrawn, the sheet stays.
+      await cardsChanged();
+      if (onChanged) onChanged();
+      renderApp();
+    },
     decks: state.lastDecks.filter((d) => d.own && d.id !== card.deck_id),
     onEdit: () => {
       state.sheet = undefined;
@@ -753,7 +766,7 @@ function dismissJokerNotice() {
  * tab underneath is rendered first and this is appended on top.
  */
 function openSheet() {
-  state.sheet = chooseSetScreen({
+  state.sheet = chooseSetSheet = chooseSetScreen({
     filters: state.filters,
     topics: state.deck?.own ? (state.deckTopics?.list ?? []) : state.topics,
     showTopics: topicsHere(),
@@ -774,6 +787,15 @@ function openSheet() {
   loadTopics();
 }
 
+/**
+ * The choose-set sheet, while it is the one open. Topic counts arriving late
+ * rebuild *that* sheet; before 2026-09-19 they rebuilt whatever sheet was
+ * open, so saving a topic from a card's sheet would have swapped it for this
+ * one.
+ */
+let chooseSetSheet;
+const chooseSetOpen = () => state.sheet !== undefined && state.sheet === chooseSetSheet;
+
 /** What the sheet holds becomes the set (#120), inside the open deck (#137). */
 function keepFilters(filters) {
   state.filters = { ...filters, ...scopeOf(state.filters) };
@@ -790,7 +812,7 @@ async function loadTopics() {
   try {
     const stats = await api.stats();
     state.topics = stats.topics ?? [];
-    if (state.sheet) {
+    if (chooseSetOpen()) {
       // Redraw the sheet now that the chips have something to show.
       openSheet();
     }

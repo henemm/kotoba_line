@@ -1,5 +1,13 @@
 [
   {
+    "version": "v133",
+    "summary": "Stern und Thema setzt du jetzt direkt, wenn du im Deck auf eine Karte tippst.",
+    "notes": [
+      "Tippst du in der Kartenliste eines Decks auf eine Karte, siehst du oben den Stern – antippen markiert sie.",
+      "Darunter stehen ihre Themen. Tippst du auf ein Thema, ist es weg. Mit „+ Thema“ fügst du eins hinzu oder legst mit „+ neu“ ein eigenes an. Es wird sofort gespeichert."
+    ]
+  },
+  {
     "version": "v132",
     "summary": "Der ♪-Knopf pulsiert jetzt auch, wenn die App von selbst vorliest.",
     "notes": [

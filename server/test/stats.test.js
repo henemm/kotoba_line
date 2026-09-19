@@ -635,3 +635,23 @@ describe("GET /api/cards/:id/history (#98)", () => {
     await app.close();
   });
 });
+
+describe("a card's record says whether it is starred (2026-09-19)", () => {
+  it("is false until starred, true after, false once unstarred", async () => {
+    const { app, db, config } = await testApp();
+    await seedUser(db);
+    seedCards(db);
+    const cookie = await signIn(app, config);
+    const id = db.prepare("SELECT id FROM cards LIMIT 1").get().id;
+    const starred = async () =>
+      (await app.inject({ method: "GET", url: `/api/cards/${id}/history`, headers: { cookie } })).json().starred;
+    const star = (on, changedAt) =>
+      app.inject({ method: "POST", url: "/api/stars", headers: { cookie }, payload: { cardId: id, starred: on, changedAt } });
+
+    assert.equal(await starred(), false);
+    await star(true, 1_000);
+    assert.equal(await starred(), true);
+    await star(false, 2_000);
+    assert.equal(await starred(), false);
+  });
+});
