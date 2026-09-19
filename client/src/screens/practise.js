@@ -64,6 +64,8 @@ export function practiseScreen({
   onStart,
   onDrillTopic,
   onChooseSet,
+  // #209: the open deck has topics to choose from, Kaishi's or her own.
+  topicsHere = false,
   // #179: take one more batch of new cards into today, in this deck.
   onReleaseNew,
   filters = {},
@@ -361,10 +363,23 @@ export function practiseScreen({
   function setLine() {
     if (!onChooseSet) return null;
     const chosen = !isDefault(filters);
+    // #209: the topics were behind "Weitere Auswahl", a name that does not
+    // say they are there — Charlotte missed them. Where a deck has topics, the
+    // line says so; the sheet it opens is the same.
+    const byTopic = topicsHere && !chosen;
+    if (byTopic) seen("topic_line_shown", deck?.key, { oncePerDay: true });
     return el(
       "button.deck-more",
-      { type: "button", onclick: onChooseSet },
-      el("span", { text: chosen ? `Nur: ${activeLabel({ tag: filters.tag, only: filters.only })}` : "Weitere Auswahl" }),
+      {
+        type: "button",
+        onclick: () => {
+          if (byTopic) seen("topic_line_tapped", deck?.key);
+          onChooseSet();
+        },
+      },
+      el("span", {
+        text: chosen ? `Nur: ${activeLabel({ tag: filters.tag, only: filters.only })}` : byTopic ? "Nach Thema üben" : "Weitere Auswahl",
+      }),
       el("span.chevron", { "aria-hidden": "true", text: "›" }),
     );
   }

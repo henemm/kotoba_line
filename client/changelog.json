@@ -1,5 +1,14 @@
 [
   {
+    "version": "v130",
+    "summary": "Deine eigenen Wörter haben jetzt Themen – im Deck findest du sie unter „Nach Thema üben“.",
+    "notes": [
+      "Knapp die Hälfte deiner eigenen Wörter hat jetzt ein Thema, zum Beispiel Essen, Zeit oder Familie. Es kommt von dem passenden Wort aus Kaishi. Wörter, die es dort nicht gibt, und ganze Sätze haben keins.",
+      "Im Deck tippst du auf „Nach Thema üben“ und wählst ein Thema. Früher hieß die Zeile „Weitere Auswahl“.",
+      "Passt ein Thema nicht, nimm es in der Karte wieder raus – es kommt nicht zurück."
+    ]
+  },
+  {
     "version": "v129",
     "summary": "Die Kana-Decks zeigen jetzt alle ihre Zeichen – antippen, anhören, Merkbild ansehen.",
     "notes": [

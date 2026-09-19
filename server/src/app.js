@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { config as defaultConfig } from "./config.js";
 import { readCookie } from "./cookies.js";
 import { openDatabase } from "./db.js";
+import { offerKaishiTopics } from "./kaishi-topics.js";
 import { pruneExpiredSessions, userForToken } from "./sessions.js";
 import authRoutes from "./routes/auth.js";
 import eventRoutes from "./routes/events.js";
@@ -18,6 +19,8 @@ import uiEventRoutes from "./routes/ui-events.js";
 export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   const database = db ?? openDatabase(config.dbFile);
   pruneExpiredSessions(database, config.sessionMaxAgeSeconds);
+  // #209: her cards from before, and any a list import added since.
+  offerKaishiTopics(database);
 
   const app = Fastify({
     logger: logger ?? { level: config.logLevel },

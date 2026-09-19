@@ -12,6 +12,9 @@ export const UI_EVENT_NAMES = [
   "break_hint_dismissed",
   "kana_grid_shown", // #208: a kana deck's page showed its letters
   "kana_card_opened",
+  "topic_line_shown", // #209: a deck page offered "Nach Thema üben"
+  "topic_line_tapped",
+  "topic_session_started", // #209: a session narrowed to one topic began
 ];
 
 const schema = {

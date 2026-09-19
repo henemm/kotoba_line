@@ -52,6 +52,24 @@ export function topicLabel(tag) {
   return GERMAN[tag] ?? tag;
 }
 
+/**
+ * The topics of one of her decks, counted from the cards on this phone
+ * (#209): `[{ tag, total }]`, most cards first. Stats counts every card she
+ * can see, which inside a deck of 300 words would put Kaishi's 1,500 behind
+ * each chip. Her cards carry the topics of the Kaishi word they match
+ * (server/src/kaishi-topics.js) and whatever she gave them herself.
+ */
+export function deckTopics(cards, deckId) {
+  const counts = new Map();
+  for (const c of cards) {
+    if (c.deck !== "personal" || c.deck_id !== deckId || c.deleted_at) continue;
+    for (const tag of c.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([tag, total]) => ({ tag, total }))
+    .sort((a, b) => b.total - a.total || byTopicLabel(a.tag, b.tag));
+}
+
 /** For lists drawn in German order rather than the English keys' order. */
 export function byTopicLabel(a, b) {
   return topicLabel(a).localeCompare(topicLabel(b), "de");
