@@ -46,6 +46,11 @@ export const LEARNING_STEP_LIMIT = 86400;
  * given the interval the button showed — or undefined: Nochmal goes by
  * position (`reshowPosition`), and a day or more is a later session's.
  */
+// Bounded only through the labels: a card comes back after Schwer or Gut
+// only while `labelsAfter` still knows its intervals, which it does for one
+// such return — after that `seconds` is undefined. Make the labels reach
+// further and this needs a limit of its own, or a card that keeps getting
+// Schwer keeps a session from ending.
 export function returnsAfter(rating, seconds) {
   if (rating === RATING_AGAIN || seconds == null) return undefined;
   return seconds < LEARNING_STEP_LIMIT ? seconds : undefined;

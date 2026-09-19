@@ -315,16 +315,20 @@ export function sessionScreen({
         if (r.kind === "native") recordings.set(r.card_id, r);
       }
       const ids = resuming?.cardIds ?? q.cardIds;
-      // A resumed queue can already hold a card twice (#214); the second
-      // copy's labels are as stale as they would have been live.
+      // A resumed queue can already hold a card twice (#214, #242); what the
+      // session-start labels said no longer holds for the second copy.
+      // How often each came round after Nochmal is saved with it since v140;
+      // a session saved by v139 or earlier had only Nochmal to repeat a card,
+      // so its duplicates are counted as those.
       const met = new Set();
       for (const id of ids) {
         if (met.has(id)) {
-          reshows.set(id, (reshows.get(id) ?? 0) + 1);
+          if (!Array.isArray(resuming?.reshows)) reshows.set(id, (reshows.get(id) ?? 0) + 1);
           labelSource.set(id, undefined);
         }
         met.add(id);
       }
+      if (Array.isArray(resuming?.reshows)) for (const [id, n] of resuming.reshows) reshows.set(id, n);
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
       if (resuming) index = Math.min(resuming.index ?? 0, Math.max(queue.length - 1, 0));
@@ -666,6 +670,10 @@ export function sessionScreen({
       chosenLabel,
       cardIds: queue.map((c) => c.id),
       index: index + 1,
+      // #242: a card can now be in the queue twice for two reasons — Nochmal,
+      // or a learning step that ran out — and only Nochmal counts towards
+      // MAX_RESHOWS. The ids alone cannot tell them apart on resume.
+      reshows: [...reshows],
     }).catch(() => {});
 
     // Redraw the strip so the marker just answered takes its colour.
