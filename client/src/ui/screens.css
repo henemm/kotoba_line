@@ -1618,14 +1618,25 @@
    reach of a thumb rather than under it — starring is deliberate, and a
    control this close to the rating row would get caught by accident. Muted
    until it is on, so an unstarred session's chrome stays quiet. */
+/* 2026-09-19: Henning looked for a way to star a card while practising and
+   did not find this one. Measured: 24 × 22 pt to tap, in --ink-dim, the
+   faintest grey. Now Apple's 44 × 44 minimum target, and --ink-muted when
+   off — the same weight as the counter beside it — so it reads as a
+   control. The glyph keeps its size; only the area around it grows, and
+   the negative margin keeps the chrome's spacing as it was. */
 .session-star {
   background: none;
   border: 0;
-  padding: 0 2px;
+  padding: 0;
   flex: none;
-  font-size: 22px;
+  width: 44px;
+  height: 44px;
+  margin: -11px -10px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
   line-height: 1;
-  color: var(--ink-dim);
+  color: var(--ink-muted);
 }
 /* `--ink` rather than a colour of its own: this is the same star as the one in
    Browse (.star above), and two different-looking stars would read as two
@@ -4500,7 +4511,8 @@
    duplicate of a topic that is already there. Flat, no press state, no
    pressed attribute — it is a label, and must not look like a control that
    refuses to work. */
-.topics-deck .chip.fixed {
+.topics-deck .chip.fixed,
+.card-topics .chip.fixed {
   background: none;
   border: 1px solid var(--surface-hi);
   color: var(--ink-muted);

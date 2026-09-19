@@ -1,14 +1,14 @@
-import { OfflineError, api } from "../api.js";
+import { api } from "../api.js";
 import { say } from "../audio.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
 import { wordSound } from "../sound.js";
 import { showsScript, shownWord } from "../script.js";
-import { byTopicLabel, topicLabel } from "../topics.js";
 import { exactFirst, matchesQuery } from "./browse.js";
 import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
 import { voiceCircle } from "../ui/voice-circle.js";
+import { starButton, topicChips } from "../ui/card-marks.js";
 
 /**
  * The cards in one deck, under its practise controls (#137) — Noji's "Karten
@@ -182,25 +182,28 @@ export function cardActionsSheet({
   const record = api.cardHistory(card.id);
   record.catch(() => {});
   const history = cardHistoryBlock({ cardId: card.id, request: record });
-  // Unknown until the record says, and inert until then — never a guessed ☆
-  // (#22). Offline it stays inert, as in Suche.
-  let starKnown = starred !== undefined;
-  if (!starKnown && onStar) {
-    record
-      .then((r) => {
-        starred = Boolean(r.starred);
-        starKnown = true;
-        draw();
+  // The same star and topic chips as every other card sheet (ui/card-marks.js).
+  // From Suche the row knows the star; from the deck's list the card's
+  // record says, which the sheet asks for anyway.
+  const star = onStar
+    ? starButton({
+        word: shownWord(card, japanese),
+        starred,
+        lookup: starred === undefined ? record.then((r) => r.starred) : undefined,
+        disabled: !canStar,
+        onToggle: onStar,
       })
-      .catch(() => {});
-  }
-
-  let topics = [...(card.tags ?? [])];
-  let allTopics = [];
-  let choosing = false;
-  let coining = false;
-  let topicProblem;
-  const MAX_TOPICS = 5;
+    : null;
+  const topicsBlock = onTopics
+    ? topicChips({
+        chosen: card.tags ?? [],
+        names: topicNames,
+        save: async (next) => {
+          await onTopics(next);
+          card.tags = next;
+        },
+      })
+    : null;
 
   let nativeRecording;
   const deckNative = wordSound(card).deckNative;
@@ -236,106 +239,6 @@ export function cardActionsSheet({
   let problem;
   draw();
 
-  /**
-   * The card's topics as chips she can take off, and "+ Thema" for the rest.
-   * The rest stays folded: 29 of Kaishi's and any of hers would bury the
-   * card's menu under chips. The same interaction as the add-a-word form and
-   * the Kaishi card's sheet (#35) otherwise — a tap toggles, "+ neu" coins.
-   * Each tap saves at once, like the star beside it.
-   */
-  function topicGroup() {
-    const others = allTopics.filter((t) => !topics.includes(t));
-    return el(
-      "div.topics-mine.card-topics",
-      {},
-      el("span.set-label", { text: "Thema" }),
-      el(
-        "div.chips",
-        {},
-        topics.map((tag) => topicChip(tag, true)),
-        choosing ? others.map((tag) => topicChip(tag, false)) : null,
-        choosing
-          ? coining
-            ? newTopicField()
-            : el("button.chip.new-tag", { type: "button", text: "+ neu", onclick: () => ((coining = true), draw(), sheet.querySelector(".new-tag-input")?.focus()) })
-          : el("button.chip.new-tag", { type: "button", text: "+ Thema", onclick: openChoice }),
-      ),
-      topicProblem ? el("p.add-problem", { text: topicProblem }) : null,
-    );
-  }
-
-  function topicChip(tag, on) {
-    return el("button.chip", {
-      type: "button",
-      text: topicLabel(tag),
-      "aria-pressed": String(on),
-      disabled: !on && topics.length >= MAX_TOPICS,
-      onclick: () => setTopics(on ? topics.filter((t) => t !== tag) : [...topics, tag]),
-    });
-  }
-
-  async function openChoice() {
-    choosing = true;
-    draw();
-    try {
-      allTopics = [...new Set(await topicNames())].sort(byTopicLabel);
-    } catch {
-      allTopics = [];
-    }
-    if (step === "menu") draw();
-  }
-
-  async function setTopics(next) {
-    const before = topics;
-    topics = next;
-    topicProblem = undefined;
-    draw();
-    try {
-      await onTopics(next);
-      card.tags = next;
-    } catch (err) {
-      topics = before;
-      topicProblem =
-        err instanceof OfflineError
-          ? "Für Themen brauchst du eine Verbindung – sie liegen auf dem Server, nicht nur auf diesem Handy."
-          : "Das Speichern hat nicht geklappt.";
-    }
-    if (step === "menu") draw();
-  }
-
-  /** Enter and blur both finish, once — the add-a-word form's guard, same reason. */
-  function newTopicField() {
-    const input = el("input.chip.new-tag-input", {
-      type: "text",
-      placeholder: "Thema",
-      autocapitalize: "none",
-      autocorrect: "off",
-      "aria-label": "Neues Thema benennen",
-    });
-    let done = false;
-    const commit = () => {
-      if (done) return;
-      done = true;
-      coining = false;
-      const name = input.value.trim().toLowerCase().replace(/\s+/g, " ");
-      if (name && !topics.includes(name) && topics.length < MAX_TOPICS) setTopics([...topics, name]);
-      else draw();
-    };
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        commit();
-      }
-      if (e.key === "Escape") {
-        done = true;
-        coining = false;
-        draw();
-      }
-    });
-    input.addEventListener("blur", commit);
-    return input;
-  }
-
   function closeWithCleanup() {
     stopAllRecording();
     onClose?.();
@@ -358,24 +261,7 @@ export function cardActionsSheet({
           "div.card-actions-head",
           {},
           el("div.card-actions-title", {}, ...title),
-          onStar
-            ? el("button.topics-star", {
-                type: "button",
-                disabled: !canStar || !starKnown,
-                "aria-label": canStar
-                  ? starred
-                    ? `Markierung entfernen: ${shownWord(card, japanese)}`
-                    : `${shownWord(card, japanese)} markieren`
-                  : "Markieren braucht Internet",
-                "aria-pressed": String(Boolean(canStar && starred)),
-                text: canStar && starred ? "★" : "☆",
-                onclick: () => {
-                  starred = !starred;
-                  draw();
-                  onStar(starred);
-                },
-              })
-            : null,
+          star,
           // Its recording, or its generated file (#183); never the phone's
           // voice, same as the Kaishi card's sheet.
           card.word_audio || card.word_audio_generated
@@ -387,7 +273,7 @@ export function cardActionsSheet({
               })
             : null,
         ),
-        onTopics ? topicGroup() : null,
+        topicsBlock,
         nativeCircle ? el("div.card-recording-row", {}, nativeCircle.root) : null,
         // #187 (Henning, 2026-09-17): a card that already has a native
         // recording — a Kaishi word she linked — got no circle and no word

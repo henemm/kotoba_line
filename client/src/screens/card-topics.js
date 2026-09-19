@@ -1,7 +1,7 @@
-import { OfflineError, api } from "../api.js";
+import { api } from "../api.js";
 import { say } from "../audio.js";
 import { showsScript, shownWord } from "../script.js";
-import { topicLabel } from "../topics.js";
+import { starButton, topicChips } from "../ui/card-marks.js";
 import { el, render } from "../ui/dom.js";
 import { cardHistoryBlock } from "./card-history.js";
 
@@ -23,220 +23,85 @@ import { cardHistoryBlock } from "./card-history.js";
  * may have typed to get here.
  */
 
-/** The same ceiling the personal deck uses, and the server enforces. */
-const MAX_TAGS = 5;
-
-export function cardTopicsSheet({ card, topics = [], onSaved, onClose, onStar, canStar = false, japanese = true }) {
+export function cardTopicsSheet({ card, topics = [], topicNames, onSaved, onClose, onStar, canStar = false, japanese = true }) {
   const root = el("div.sheet-scrim", {
     onclick: (e) => e.target === root && onClose?.(),
   });
 
-  // Only hers are editable here. The deck's own tags are shown, greyed, so the
-  // screen does not look like the card had no topics until she added one —
-  // that would misrepresent the deck and invite a duplicate.
-  const deckTags = card.tags ?? [];
-  const chosen = new Set(card.myTags ?? []);
-  // Names she can pick from: everything already in use anywhere, minus the
-  // deck's own tags on *this* card, which she cannot remove and need not add.
-  let offered = [...new Set(topics.map((t) => t.tag))].filter((t) => !deckTags.includes(t));
-
-  let coining = false;
-  let saving = false;
-  let problem;
-  const fields = {};
-  // #98: her record of this card, under her topics. Built once: every chip
-  // she toggles redraws the sheet, and that should not ask the server again.
+  // #98: her record of this card, under her topics.
   const history = cardHistoryBlock({ cardId: card.id });
+  // #187: the row behind this sheet has a star, and this is the same one —
+  // the same component as every card sheet since 2026-09-19. Written to the
+  // card object the row is drawn from too: one object, one truth. Offline the
+  // card came from the deck cache, which knows nothing about stars, so as in
+  // Browse (#22) the star is inert rather than a guessed ☆.
+  const star = onStar
+    ? starButton({
+        word: shownWord(card, japanese),
+        starred: Boolean(card.starred),
+        disabled: !canStar,
+        onToggle: (on) => {
+          card.starred = on;
+          onStar(on);
+        },
+      })
+    : null;
+  // The deck's own topics are shown and fixed: they belong to Kaishi, not to
+  // her, and without them the card would look untagged and invite a
+  // duplicate. Hers save at the tap, as in her own decks (2026-09-19) — this
+  // sheet used to wait for a Speichern button, the only one that did.
+  const topicsBlock = topicChips({
+    fixed: card.tags ?? [],
+    chosen: card.myTags ?? [],
+    names: topicNames ?? (async () => topics.map((t) => t.tag)),
+    save: async (next) => {
+      const { tags } = await api.setCardTags(card.id, next);
+      card.myTags = tags;
+      onSaved?.(tags);
+    },
+  });
 
-  draw();
-
-  function draw() {
-    render(
-      root,
+  render(
+    root,
+    el(
+      "div.sheet.card-sheet",
+      {},
       el(
-        "div.sheet.card-sheet",
+        "div.topics-head",
         {},
         el(
-          "div.topics-head",
+          "span.topics-title",
           {},
-          el(
-            "span.topics-title",
-            {},
-            // v69: which deck the card is in. "From the deck" above its topic
-            // read as the deck's name (Henning, 2026-09-14).
-            el("span.topics-deck-name", { text: card.deck_name ?? "Kaishi" }),
-            // #135
-            el(showsScript(card, japanese) ? "span.topics-word.jp" : "span.topics-word", { text: shownWord(card, japanese) }),
-            el("span.topics-gloss", { text: card.word_meaning ?? "" }),
-          ),
-          // #187: the row behind this sheet has a star; the sheet had none, so
-          // the card's mark could be neither seen nor set from here (Henning's
-          // screenshot, 2026-09-16). There is no design screen for this sheet.
-          // Same glyph and same write as the row's star, and like the row's it
-          // takes effect at the tap, not at "Speichern": the star is not part
-          // of what that button saves. Offline the card came from the deck
-          // cache, which knows nothing about stars, so as in Browse (#22) the
-          // star is inert rather than a guessed ☆.
-          onStar
-            ? el("button.topics-star", {
-                type: "button",
-                disabled: !canStar,
-                "aria-label": canStar
-                  ? card.starred
-                    ? `Markierung entfernen: ${shownWord(card, japanese)}`
-                    : `${shownWord(card, japanese)} markieren`
-                  : "Markieren braucht Internet",
-                "aria-pressed": String(Boolean(canStar && card.starred)),
-                text: canStar && card.starred ? "★" : "☆",
-                onclick: () => {
-                  // Written to the card object, which the row behind is drawn
-                  // from too — one object, one truth, same as `myTags`.
-                  card.starred = !card.starred;
-                  draw();
-                  onStar(card.starred);
-                },
-              })
-            : null,
-          // v69: something to do with a Kaishi word found in Search — hear it.
-          // Its recording, or its generated file (#183); this sheet never
-          // falls back to the phone's voice.
-          card.word_audio || card.word_audio_generated
-            ? el("button.topics-hear", {
-                type: "button",
-                "aria-label": `${shownWord(card, japanese)} anhören`,
-                text: "♪",
-                onclick: () => say(undefined, card.word_audio || card.word_audio_generated),
-              })
-            : null,
-          el("button.topics-close", {
-            type: "button",
-            "aria-label": "Schließen",
-            text: "×",
-            onclick: onClose,
-          }),
+          // v69: which deck the card is in. "From the deck" above its topic
+          // read as the deck's name (Henning, 2026-09-14).
+          el("span.topics-deck-name", { text: card.deck_name ?? "Kaishi" }),
+          // #135
+          el(showsScript(card, japanese) ? "span.topics-word.jp" : "span.topics-word", { text: shownWord(card, japanese) }),
+          el("span.topics-gloss", { text: card.word_meaning ?? "" }),
         ),
-        deckTags.length > 0
-          ? el(
-              "div.topics-deck",
-              {},
-              el("span.set-label", { text: deckTags.length === 1 ? "Thema" : "Themen" }),
-              el(
-                "div.chips",
-                {},
-                deckTags.map((t) => el("span.chip.fixed", { text: topicLabel(t) })),
-              ),
-            )
+        star,
+        // v69: something to do with a Kaishi word found in Search — hear it.
+        // Its recording, or its generated file (#183); this sheet never
+        // falls back to the phone's voice.
+        card.word_audio || card.word_audio_generated
+          ? el("button.topics-hear", {
+              type: "button",
+              "aria-label": `${shownWord(card, japanese)} anhören`,
+              text: "♪",
+              onclick: () => say(undefined, card.word_audio || card.word_audio_generated),
+            })
           : null,
-        el(
-          "div.topics-mine",
-          {},
-          el("span.set-label", { text: "Deine Themen" }),
-          el(
-            "div.chips",
-            {},
-            offered.map((tag) =>
-              el("button.chip", {
-                type: "button",
-                text: topicLabel(tag),
-                "aria-pressed": String(chosen.has(tag)),
-                onclick: () => {
-                  if (chosen.has(tag)) chosen.delete(tag);
-                  else if (chosen.size < MAX_TAGS) chosen.add(tag);
-                  draw();
-                },
-              }),
-            ),
-            coining
-              ? newTagField()
-              : el("button.chip.new-tag", {
-                  type: "button",
-                  text: "+ neu",
-                  onclick: () => {
-                    coining = true;
-                    draw();
-                    fields.newTag?.focus();
-                  },
-                }),
-          ),
-        ),
-        history,
-        problem ? el("p.add-problem", { text: problem }) : null,
-        el(
-          "div.sheet-actions",
-          {},
-          el("button.btn.solid", {
-            type: "button",
-            text: saving ? "…" : "Speichern",
-            disabled: saving,
-            onclick: save,
-          }),
-        ),
+        el("button.topics-close", {
+          type: "button",
+          "aria-label": "Schließen",
+          text: "×",
+          onclick: onClose,
+        }),
       ),
-    );
-  }
-
-  /**
-   * Coining a name inline rather than through prompt(): in a standalone PWA
-   * that dialog is the browser's, not the app's, and it looks like one.
-   *
-   * Enter and blur are both ways of finishing, and on a phone Enter *causes* a
-   * blur — so this runs once whichever arrives first. The same guard as the
-   * add-a-word screen, for the same reason: redrawing twice threw, because the
-   * second pass tried to replace a node the first had already detached.
-   */
-  function newTagField() {
-    const input = el("input.chip.new-tag-input", {
-      type: "text",
-      placeholder: "Thema",
-      autocapitalize: "none",
-      autocorrect: "off",
-      "aria-label": "Neues Thema benennen",
-    });
-    fields.newTag = input;
-
-    let done = false;
-    const commit = () => {
-      if (done) return;
-      done = true;
-      const name = input.value.trim().toLowerCase().replace(/\s+/g, " ");
-      coining = false;
-      if (name && !offered.includes(name)) offered = [...offered, name];
-      if (name && chosen.size < MAX_TAGS) chosen.add(name);
-      draw();
-    };
-
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        commit();
-      }
-      if (e.key === "Escape") {
-        done = true;
-        coining = false;
-        draw();
-      }
-    });
-    input.addEventListener("blur", commit);
-    return input;
-  }
-
-  async function save() {
-    saving = true;
-    problem = undefined;
-    draw();
-    try {
-      const { tags } = await api.setCardTags(card.id, [...chosen]);
-      onSaved?.(tags);
-      return;
-    } catch (err) {
-      problem =
-        err instanceof OfflineError
-          ? "Für Themen brauchst du eine Verbindung – sie liegen auf dem Server, nicht nur auf diesem Handy."
-          : "Das Speichern hat nicht geklappt.";
-    }
-    saving = false;
-    draw();
-  }
+      topicsBlock,
+      history,
+    ),
+  );
 
   return root;
 }
