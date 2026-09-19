@@ -1,5 +1,12 @@
 [
   {
+    "version": "v131",
+    "summary": "„Nach Thema üben“ erscheint jetzt sofort nach dem Update.",
+    "notes": [
+      "Bisher sahst du in deinen Decks direkt nach dem Update noch „Weitere Auswahl“, bis du das Deck ein zweites Mal geöffnet hast."
+    ]
+  },
+  {
     "version": "v130",
     "summary": "Deine eigenen Wörter haben jetzt Themen – im Deck findest du sie unter „Nach Thema üben“.",
     "notes": [
