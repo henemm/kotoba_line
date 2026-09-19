@@ -1,5 +1,12 @@
 [
   {
+    "version": "v145",
+    "summary": "Jeder Knopf zeigt jetzt, dass du ihn gedrückt hast.",
+    "notes": [
+      "Tippst du auf einen Knopf, gibt er kurz nach – überall in der App, auch bei Knöpfen, die bisher nicht reagiert haben."
+    ]
+  },
+  {
     "version": "v144",
     "summary": "Deine eigene Aufnahme zeigt jetzt, dass sie spielt.",
     "notes": [

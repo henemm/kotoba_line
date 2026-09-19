@@ -1,6 +1,6 @@
 import { playUrl, stop } from "../audio.js";
 import { canRecord, micErrorMessage, startRecording } from "../recording.js";
-import { acknowledged, el } from "./dom.js";
+import { el } from "./dom.js";
 import { followsSound, soundButton } from "./sound-button.js";
 
 /**
@@ -26,10 +26,10 @@ import { followsSound, soundButton } from "./sound-button.js";
 export function answerRecorder(attempt) {
   if (!canRecord()) return null;
 
-  // v144: the same two signals as every ♪ (ui/sound-button.js) — the
-  // tap-ring when a tap lands, the pulse for as long as her attempt plays.
-  // It had neither: a ▶ that stood still while she listened.
-  const dial = el("button.answer-dial", { type: "button", ...acknowledged(onTap) });
+  // v144: the pulse of every ♪ (ui/sound-button.js) for as long as her
+  // attempt plays — it had none, a ▶ that stood still while she listened.
+  // The tap-ring is every button's (ui/press.js).
+  const dial = el("button.answer-dial", { type: "button", onclick: onTap });
   followsSound(dial, () => (attempt.url && (state === "recorded" || state === "playing") ? { url: attempt.url } : undefined));
   const caption = el("span.answer-caption");
   const again = el("button.answer-again", { type: "button", text: "Neu aufnehmen", onclick: onStart });

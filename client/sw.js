@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v144";
+const VERSION = "v145";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -107,6 +107,7 @@ const SHELL_FILES = [
   "src/ui/kana-mnemonic.js",
   "src/ui/card-marks.js",
   "src/ui/sound-button.js",
+  "src/ui/press.js",
   "assets/icons/icon-192.png",
   "assets/icons/apple-touch-icon-180.png",
 ].map((f) => scope + f);

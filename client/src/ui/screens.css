@@ -1747,29 +1747,12 @@
   transform: scale(0.92);
 }
 
-/* #116: the tap is acknowledged the moment the finger lands. A ring grows out
-   past the fingertip and fades, and a ghost speaker takes the line's colour
-   while it does. Both outlast the ~80ms a tap takes, under a thumb that
-   covers the button — which `:active` alone did not. `acknowledged()` in
-   ui/dom.js sets and clears the class. */
-/* Keyed on `.sound`, the one ♪ (ui/sound-button.js), not on its looks: until
-   2026-09-19 these were written for .speaker and .add-speak, and every other
-   ♪ — the card sheets', the kana sheet's, the form's Kaishi offer — had
-   neither signal (Henning's screenshot of a card sheet). */
+/* #116: the tap is answered the moment the finger lands — since v145 for
+   every button, by ui/press.js (the button gives, and has the `tapped`
+   class while it does). What is left here is the one extra some ♪ add: a
+   ghost speaker takes the line's colour meanwhile. */
 .sound {
-  position: relative;
   transition: background-color 0.15s, color 0.15s;
-}
-.sound::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-}
-.sound.tapped::after {
-  animation: tap-ring 0.45s ease-out;
 }
 .speaker.ghost.tapped,
 .topics-hear.tapped,
@@ -1780,36 +1763,13 @@
 .add-speak.tapped {
   background: var(--ink-dim);
 }
-@keyframes tap-ring {
-  from {
-    box-shadow: 0 0 0 0 var(--rail, var(--ink-muted));
-    opacity: 0.9;
-  }
-  to {
-    box-shadow: 0 0 0 16px var(--rail, var(--ink-muted));
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  /* No growing ring; the colour change and a fading outline still say it. */
-  @keyframes tap-ring {
-    from {
-      box-shadow: 0 0 0 4px var(--rail, var(--ink-muted));
-      opacity: 0.9;
-    }
-    to {
-      box-shadow: 0 0 0 4px var(--rail, var(--ink-muted));
-      opacity: 0;
-    }
-  }
-}
 
-/* A second, separate signal from the tap-ring above (Henning, 2026-09-18):
-   the ring says "the tap arrived" and fades in 0.45s; `.playing` says "it is
+/* A second, separate signal from the press above (Henning, 2026-09-18):
+   the press says "the tap arrived" and fades in 0.45s; `.playing` says "it is
    still talking" and lasts exactly as long as `say()`'s `onEnded` takes to
    fire — a recording's real length or a synthesised sentence's, not a guess.
    The two run at the same time on the same button without conflict: this
-   pulses the button's own box-shadow, the tap-ring animates `::after`'s. */
+   pulses the button's own box-shadow, the press (ui/press.js) its scale. */
 .sound.playing {
   animation: speaker-playing 1.1s ease-in-out infinite;
 }
