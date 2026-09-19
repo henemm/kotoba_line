@@ -7,7 +7,7 @@ import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, streakResetC
 import { breakHintCheck, formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, readingsOf, recalled, sentenceKana, speakUsesSentence, splitEmphasis, typingAnswers } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
-import { pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
+import { isSentence, pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
 import { mediaUrl } from "../src/audio.js";
 import { serverBuildLine, when } from "../src/screens/settings.js";
 import { byFrequencyThenId, matchesQuery } from "../src/screens/browse.js";
@@ -260,6 +260,32 @@ describe("distractors", () => {
     const thin = [answer, card(7, "tomorrow", 9000, ["time"])];
     assert.equal(pickDistractors(answer, thin, 3).length, 1);
     assert.equal(pickDistractors(answer, [answer], 3).length, 0);
+  });
+
+  it("offers sentences against a sentence and words against a word (#237)", () => {
+    const phrase = card(20, "It was delicious. (when finishing a meal)", null, ["food", "travel 1"]);
+    const mixed = [
+      ...pool,
+      phrase,
+      card(21, "The check, please.", null, ["restaurant", "travel 1"]),
+      card(22, "Where is the toilet?", null, ["travel 1"]),
+      card(23, "I need your help.", null, ["travel 1"]),
+    ];
+    const forPhrase = pickDistractors(phrase, mixed, 3).map((c) => c.word_meaning);
+    assert.deepEqual(forPhrase.sort(), ["I need your help.", "The check, please.", "Where is the toilet?"]);
+    // …and the other way round: a word does not get a sentence while words remain.
+    const forWord = pickDistractors(answer, mixed, 3).map((c) => c.word_meaning);
+    assert.ok(forWord.every((m) => !isSentence(m)), forWord.join(" | "));
+  });
+
+  it("tells a sentence from a word's gloss the way the live deck needs", () => {
+    for (const s of ["Good afternoon.", "Where is the toilet?", "Please help!", "It was delicious. (when finishing a meal)"]) {
+      assert.ok(isSentence(s), s);
+    }
+    // Kaishi glosses: lower case, ellipses, abbreviations.
+    for (const w of ["to eat", "what kind of...", "afternoon, p.m.", "by no means, never!", "I'm not sure, Hmm..."]) {
+      assert.ok(!isSentence(w), w);
+    }
   });
 
   it("fills up from wider tiers when the good ones run out", () => {

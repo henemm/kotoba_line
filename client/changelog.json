@@ -1,5 +1,12 @@
 [
   {
+    "version": "v137",
+    "summary": "Bei „Bedeutung wählen“ stehen Sätze jetzt gegen Sätze, nicht gegen einzelne Wörter.",
+    "notes": [
+      "Bisher war bei den Reise-Sätzen die richtige Antwort oft einfach die längste. Jetzt sind auch die falschen Antworten ganze Sätze."
+    ]
+  },
+  {
     "version": "v136",
     "summary": "Neu in Kaishi: die Themen „Reise 1“ und „Reise 2“ – was man in Japan unterwegs zuerst braucht.",
     "notes": [
