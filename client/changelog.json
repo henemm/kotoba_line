@@ -1,5 +1,13 @@
 [
   {
+    "version": "v127",
+    "summary": "Kleine Korrektur am Pause-Hinweis: Er merkt jetzt richtig, wenn du wirklich eine Pause gemacht hast.",
+    "notes": [
+      "Wenn du dir bei einer Karte viel Zeit gelassen hast (etwa beim Aufnehmen oder bei einer schwierigen Frage), hat der Hinweis das versehentlich schon als Pause gezählt – jetzt zählt nur noch, wenn du die App wirklich verlassen hast.",
+      "Hast du den Hinweis nicht weggetippt, sondern tatsächlich eine Pause gemacht, verschwindet er jetzt von selbst, sobald du weiterübst."
+    ]
+  },
+  {
     "version": "v126",
     "summary": "Der ♪-Knopf zeigt jetzt, solange ein Ton wirklich läuft – nicht nur beim Antippen.",
     "notes": [
@@ -11,7 +19,7 @@
     "version": "v125",
     "summary": "Nach einer langen Übungsstrecke fragt die App kurz, ob du nicht mal wegschauen willst.",
     "notes": [
-      "Übst du etwa 20 Minuten am Stück – auch über mehrere Übungen hintereinander – zeigt dir die Karte einen kurzen Hinweis: „Kleine Pause? Schau kurz weg vom Bildschirm – aus dem Fenster reicht.“",
+      "Übst du etwa 20 Minuten am Stück – auch über mehrere Übungen hintereinander – zeigt dir die Karte einen kurzen Hinweis: „Kleine Pause? Schau kurz weg vom Bildschirm — aus dem Fenster reicht.“",
       "Er unterbricht nichts: du tippst ihn einfach weg und übst normal weiter. Übst du danach noch länger weiter, kommt er nach weiteren 20 Minuten wieder."
     ]
   },
