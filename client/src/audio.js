@@ -94,6 +94,32 @@ let currentInterrupted;
 let playToken = 0;
 
 /**
+ * What say() is playing right now, for whoever draws it (Henning,
+ * 2026-09-19). A ♪ button pulses while its sound runs; until this it did so
+ * only when it had been tapped, so a word or sentence the app read aloud by
+ * itself played with the button standing still. "Is it talking?" is a state
+ * (Nielsen's first heuristic, visibility of system status), and a state does
+ * not depend on who started it — only the tap-ring belongs to the tap.
+ *
+ * `{ text, file }` while a sound runs, undefined otherwise.
+ */
+let playing;
+const playingListeners = new Set();
+
+export const nowPlaying = () => playing;
+
+/** Called with nowPlaying() whenever it changes. Returns the unsubscribe. */
+export function onPlayingChange(listener) {
+  playingListeners.add(listener);
+  return () => playingListeners.delete(listener);
+}
+
+function setPlaying(value) {
+  playing = value;
+  for (const listener of playingListeners) listener(value);
+}
+
+/**
  * Play a card's recorded audio, falling back to speech.
  *
  * A card with no audio is not an error — 1 of 1,500 in the current deck has
@@ -106,13 +132,21 @@ let playToken = 0;
  * as long as the sound actually runs, recording or synthesis alike, rather
  * than only for the ~80ms the tap itself takes.
  */
-export async function say(text, file, { rate = 0.9, onEnded } = {}) {
+export async function say(text, file, { rate = 0.9, onEnded: callerEnded } = {}) {
   stop();
   const token = ++playToken;
   if (!text && !file) {
-    onEnded?.();
+    callerEnded?.();
     return;
   }
+  // Every path below ends in exactly one onEnded (see above), so this is
+  // where "playing" ends too. stop() above already ended the previous sound's.
+  const sound = { text, file };
+  setPlaying(sound);
+  const onEnded = () => {
+    if (playing === sound) setPlaying(undefined);
+    callerEnded?.();
+  };
 
   if (file) {
     try {
