@@ -123,8 +123,11 @@ missing or older than 15 minutes.
 `.gitignore`; the import fetches ~110 MB and writes ~75 MB of audio.
 
 **The day boundary is midnight in the device's time zone, computed
-server-side** (§8a, #122). Streaks, jokers, "reviews today" and the new cards a
-day allows all depend on it. The device sends its zone name (`X-Time-Zone`,
+server-side** (§8a, #122, #250). Streaks, jokers, "reviews today", the new
+cards a day allows and the scheduler's count of days between two answers all
+depend on it. ts-fsrs alone counts that by UTC date — in Tokyo a day ending at
+09:00 — so `scheduler.js` hands it times moved into the answer's own zone,
+stored per answer in `review_events.time_zone` so a replay finds the same one. The device sends its zone name (`X-Time-Zone`,
 `client/src/api.js`); the server does the arithmetic in `server/src/day.js`
 from the log's timestamps, never from a date the device reports. This was a
 day fixed to Asia/Tokyo until Henning ruled local time the right default

@@ -1,3 +1,4 @@
+import { timeZoneOf } from "../day.js";
 import { ingestEvents } from "../events.js";
 import { VALID_MODES } from "../scheduler.js";
 
@@ -48,10 +49,14 @@ export default async function eventRoutes(app) {
     "/api/events",
     { schema: eventsSchema, preHandler: app.requireUser },
     async (req) => {
+      // The zone of the device that sends them (#250). An answer given
+      // offline is sent from the same phone, nearly always where it was given.
       const { accepted, rejected, states } = ingestEvents(
         db,
         req.user.id,
         req.body.events,
+        undefined,
+        timeZoneOf(req),
       );
 
       if (rejected.length) {

@@ -5,7 +5,7 @@ import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
-import { comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../reshow.js";
+import { comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../reshow.js";
 import { forget, remember } from "../resume.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { seen } from "../seen.js";
@@ -244,12 +244,11 @@ export function sessionScreen({
   const results = []; // one entry per card, for the station strip afterwards
   let answered = 0;
   let before;
-  let intervals = {};   // card id → { 1..4: seconds }, for めくる's rating row
-  // The same after a Nochmal (#242): what the buttons say when the card
-  // comes round again in this session.
-  let againIntervals = {};
-  // And after Schwer or Gut on the first showing, for when it comes back.
-  let stepIntervals = {};
+  // What the queue brought for めくる's rating row (reshow.js, `labelsAt`):
+  // card id → { 1..4: seconds } for a first showing today and tomorrow, the
+  // same after a Nochmal and after Schwer or Gut (#242), and the moments
+  // today and tomorrow end (#246).
+  let labelSets = {};
   // Card id → which of these holds for its next showing ("first", "again",
   // "step:2"/"step:3", or undefined once none does — `labelsAfter`).
   const labelSource = new Map();
@@ -306,9 +305,13 @@ export function sessionScreen({
       // Wrong answers are drawn from the whole deck, not from the session —
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];
-      intervals = q.intervals ?? {};
-      againIntervals = q.againIntervals ?? {};
-      stepIntervals = q.stepIntervals ?? {};
+      labelSets = {
+        intervals: q.intervals ?? {},
+        intervalsTomorrow: q.intervalsTomorrow,
+        labelDays: q.labelDays,
+        againIntervals: q.againIntervals ?? {},
+        stepIntervals: q.stepIntervals ?? {},
+      };
       starred = new Set(q.starred ?? []);
       recordings = new Map();
       for (const r of q.recordings ?? []) {
@@ -1252,17 +1255,14 @@ export function sessionScreen({
 
   /**
    * The four intervals for this card in seconds, as the server worked them
-   * out: before any answer this session, or after a Nochmal (#242). Undefined
-   * when neither holds — a card back after Schwer or Gut has an answer the
-   * server has not folded, and no number beats a wrong one (#214).
+   * out: before any answer this session, after a Nochmal or a learning step
+   * (#242), for the day the clock is on now (#246). Undefined when none of
+   * those holds — no number beats a wrong one (#214).
    */
   function secondsFor(card) {
     const source = labelSource.has(card.id) ? labelSource.get(card.id) : "first";
-    if (source === "first") return intervals[card.id];
-    // One set per Nochmal in a row: `reshows` counts them.
-    if (source === "again") return againIntervals[card.id]?.[(reshows.get(card.id) ?? 1) - 1];
-    if (source?.startsWith("step:")) return stepIntervals[card.id]?.[source.slice(5)];
-    return undefined;
+    // `reshows` counts the Nochmal in a row; the clock picks the day (#246).
+    return labelsAt(labelSets, card.id, source, reshows.get(card.id), Math.floor(Date.now() / 1000));
   }
 
   /** The four intervals for this card, already formatted. Empty when unknown. */

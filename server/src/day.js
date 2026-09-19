@@ -71,7 +71,7 @@ export function nextDay(day) {
 const clockFormatters = new Map();
 
 /** How far the zone's clock is ahead of UTC at that moment, in seconds. */
-function offsetAt(unixSeconds, timeZone) {
+export function offsetAt(unixSeconds, timeZone) {
   let f = clockFormatters.get(timeZone);
   if (!f) {
     f = new Intl.DateTimeFormat("en-GB", {

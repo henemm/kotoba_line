@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MAX_SESSION_LENGTH, browseCards, composeQueue, isFiltered, outlookForUser, queueForUser, setStar, shuffle, whenOnClock } from "../src/queue.js";
 import { releaseNewCards } from "../src/deck-settings.js";
-import { dayIn, startOfDay } from "../src/day.js";
+import { dayIn, nextDay, startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
 import { openDatabase } from "../src/db.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
@@ -776,6 +776,26 @@ describe("the endpoints", () => {
     assert.equal((await today({ "x-time-zone": "Europe/Berlin" })).fresh, 15);
     assert.equal((await today({})).fresh, inTokyo, "a shell from before #122 keeps Tokyo");
     assert.equal((await today({ "x-time-zone": "Not/AZone" })).fresh, inTokyo, "a zone Intl does not know is Tokyo, not a 500");
+    await app.close();
+  });
+
+  it("GET /api/queue carries tomorrow's labels and when her days end (#246)", async () => {
+    const { app, db, config, user } = await fixture();
+    const cookie = await signIn(app, config);
+    const now = Math.floor(Date.now() / 1000);
+    // One card seen three days ago, so its labels depend on the day.
+    ingestEvents(db, user.id, [{ id: uid(301), card_id: 1, mode: "flip", rating: 3, reviewed_at: now - 3 * 86400 }], now);
+    const body = (
+      await app.inject({ method: "GET", url: "/api/queue?limit=5", headers: { cookie, "x-time-zone": "Europe/Berlin" } })
+    ).json();
+    const today = dayIn(now, "Europe/Berlin");
+    assert.deepEqual(body.labelDays, [
+      startOfDay(nextDay(today), "Europe/Berlin"),
+      startOfDay(nextDay(nextDay(today)), "Europe/Berlin"),
+    ]);
+    assert.deepEqual(Object.keys(body.intervalsTomorrow).map(Number).sort(), [...body.cardIds].sort());
+    // A day later, the card seen before gets a longer Gut; a new one does not.
+    assert.ok(body.intervalsTomorrow[1][3] > body.intervals[1][3], JSON.stringify([body.intervals[1], body.intervalsTomorrow[1]]));
     await app.close();
   });
 

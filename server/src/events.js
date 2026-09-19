@@ -1,4 +1,5 @@
 import { visibleTo } from "./cards.js";
+import { DEFAULT_TIME_ZONE } from "./day.js";
 import { VALID_MODES, VALID_RATINGS, stateFromEvents } from "./scheduler.js";
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -36,7 +37,7 @@ function reasonToReject(db, userId, event, serverNow) {
 export function recomputeCardState(db, userId, cardId) {
   const events = db
     .prepare(
-      `SELECT id, rating, reviewed_at
+      `SELECT id, rating, reviewed_at, time_zone
          FROM review_events
         WHERE user_id = ? AND card_id = ?`,
     )
@@ -73,16 +74,19 @@ export function recomputeCardState(db, userId, cardId) {
  * card the batch touched is then recomputed from its full history — including
  * cards whose events were all duplicates, because recomputing is cheap and
  * getting it wrong is not.
+ *
+ * `timeZone` is the device's (#250), stored with each answer: the scheduler
+ * counts days on her calendar, and a replay must find the same one.
  */
-export function ingestEvents(db, userId, events, serverNow = now()) {
+export function ingestEvents(db, userId, events, serverNow = now(), timeZone = DEFAULT_TIME_ZONE) {
   const accepted = [];
   const rejected = [];
   const touched = new Set();
 
   const insert = db.prepare(
     `INSERT OR IGNORE INTO review_events
-       (id, user_id, card_id, mode, rating, reviewed_at, received_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (id, user_id, card_id, mode, rating, reviewed_at, received_at, time_zone)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   db.transaction(() => {
@@ -101,6 +105,7 @@ export function ingestEvents(db, userId, events, serverNow = now()) {
         event.rating,
         event.reviewed_at,
         serverNow,
+        timeZone,
       );
 
       // Acknowledged whether it was new or already present: either way the

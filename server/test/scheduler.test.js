@@ -4,7 +4,7 @@ import { orderEvents, previewIntervals, stateFromEvents } from "../src/scheduler
 
 const DAY = 86400;
 const T0 = 1_760_000_000;
-const ev = (id, rating, reviewed_at) => ({ id, rating, reviewed_at });
+const ev = (id, rating, reviewed_at, time_zone) => ({ id, rating, reviewed_at, time_zone });
 
 describe("stateFromEvents", () => {
   it("is undefined with no events", () => {
@@ -131,5 +131,47 @@ describe("Noji's intervals (#242)", () => {
     const after = stateFromEvents(known);
     const intervals = previewIntervals(known, new Date(after.due_at * 1000));
     assert.equal(intervals[1], 60);
+  });
+});
+
+describe("the scheduler's day is her day (#250)", () => {
+  // Learned on 2026-09-20 around noon in Tokyo (03:00 UTC), seen again four
+  // days later on the way to school — either side of 09:00 in Tokyo, which
+  // is where the UTC date changes.
+  const learned = Date.UTC(2026, 8, 20, 3, 0) / 1000;
+  const history = (zone) => [ev("a", 3, learned, zone), ev("b", 3, learned + 900, zone)];
+  const interval = (zone, at) => stateFromEvents([...history(zone), ev("c", 3, at, zone)]).due_at - at;
+  const utc = (d, h, m) => Date.UTC(2026, 8, d, h, m) / 1000;
+
+  it("gives an answer at 08:50 in Tokyo the interval it gives at 09:10", () => {
+    // 08:50 JST is 23:50 UTC the day before; ts-fsrs alone counted one day
+    // fewer there (measured on her cards: Gut 15 days instead of 20).
+    assert.equal(interval("Asia/Tokyo", utc(23, 23, 50)), interval("Asia/Tokyo", utc(24, 0, 10)));
+  });
+
+  it("counts an answer from before the zone was stored as Tokyo", () => {
+    assert.equal(interval(undefined, utc(23, 23, 50)), interval("Asia/Tokyo", utc(23, 23, 50)));
+  });
+
+  it("changes the day at midnight where she is, wherever that is", () => {
+    // 23:50 and 00:10 in Berlin are two days; the interval grows with them.
+    const before = interval("Europe/Berlin", utc(24, 21, 50));
+    const after = interval("Europe/Berlin", utc(24, 22, 10));
+    assert.ok(after > before, `${before} → ${after}`);
+    assert.equal(interval("Europe/Berlin", utc(24, 21, 10)), before);
+  });
+
+  it("still measures every interval from the moment of the answer", () => {
+    const at = utc(24, 0, 10);
+    const state = stateFromEvents([...history("Asia/Tokyo"), ev("c", 3, at, "Asia/Tokyo")]);
+    assert.equal((state.due_at - at) % DAY, 0);
+    assert.equal(state.last_review, at);
+  });
+
+  it("previews what the fold then schedules, on either side of 09:00", () => {
+    for (const at of [utc(23, 23, 50), utc(24, 0, 10)]) {
+      const shown = previewIntervals(history("Asia/Tokyo"), new Date(at * 1000), "Asia/Tokyo")[3];
+      assert.equal(shown, interval("Asia/Tokyo", at));
+    }
   });
 });

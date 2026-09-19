@@ -44,6 +44,10 @@ export async function sessionQueue(opts) {
       againIntervals: answer.againIntervals,
       // And after Schwer or Gut on the first showing (#242).
       stepIntervals: answer.stepIntervals,
+      // Tomorrow's, and when each day ends (#246): a queue cached today can
+      // be run on tomorrow's train, when the intervals have grown a day.
+      intervalsTomorrow: answer.intervalsTomorrow,
+      labelDays: answer.labelDays,
       // Cached for the same reason as the intervals: the session draws a star
       // on every card (#35), and a session on a train would otherwise draw all
       // of them empty — which reads as "nothing is starred", not as "unknown".
@@ -77,6 +81,8 @@ export async function sessionQueue(opts) {
       intervals: answer.intervals,
       againIntervals: answer.againIntervals,
       stepIntervals: answer.stepIntervals,
+      intervalsTomorrow: answer.intervalsTomorrow,
+      labelDays: answer.labelDays,
       starred: answer.starred ?? [],
       recordings: answer.recordings ?? [],
       stale: false,
@@ -103,6 +109,8 @@ async function fromCache(cached) {
     intervals: cached.intervals,
     againIntervals: cached.againIntervals,
     stepIntervals: cached.stepIntervals,
+    intervalsTomorrow: cached.intervalsTomorrow,
+    labelDays: cached.labelDays,
     starred: cached.starred ?? [],
     recordings: cached.recordings ?? [],
     stale: true,
