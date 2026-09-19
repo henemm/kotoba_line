@@ -11,6 +11,7 @@
  * one row lookup and changes nothing.
  */
 import { ApiError, OfflineError, api } from "./api.js";
+import { flushSeen } from "./seen.js";
 import { acknowledge, enqueue, noteAnswered, outbox, outboxCount } from "./store.js";
 
 const listeners = new Set();
@@ -151,7 +152,9 @@ export function offlineStatus({ online, waiting = 0, justSent = 0, signedOut = f
 let flushingStarted = false;
 
 export function startFlushing() {
-  const attempt = () => flush().catch(() => {});
+  // #228: what she was shown goes up on the same occasions, never ahead of
+  // her reviews and never counted with them.
+  const attempt = () => flush().catch(() => {}).then(() => flushSeen().catch(() => {}));
   if (flushingStarted) return attempt();
   flushingStarted = true;
 

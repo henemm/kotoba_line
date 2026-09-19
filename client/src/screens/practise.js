@@ -1,5 +1,6 @@
 import { answerSoon } from "../api.js";
 import { modeName, visibleModes } from "../script.js";
+import { seen } from "../seen.js";
 import { topicLabel } from "../topics.js";
 import { activeLabel, isDefault } from "./choose-set.js";
 import { el, num, render } from "../ui/dom.js";
@@ -282,8 +283,13 @@ export function practiseScreen({
     if (fresh > 0 && onReleaseNew) {
       const batch = Math.min(fresh, deck?.settings?.newPerDay ?? fresh);
       offers.push(
-        offer(newLabel(), `${cards(batch)} für heute dazunehmen · ${cards(fresh)} noch nicht gelernt`, onReleaseNew),
+        offer(newLabel(), `${cards(batch)} für heute dazunehmen · ${cards(fresh)} noch nicht gelernt`, () => {
+          seen("more_new_tapped", deck?.key);
+          onReleaseNew();
+        }),
       );
+      // #228: once a day per deck — this page redraws on every sync.
+      seen("more_new_shown", deck?.key, { oncePerDay: true });
     }
 
     // "If a row has nothing behind it the row is dropped, not disabled." Both

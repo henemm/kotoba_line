@@ -1,5 +1,13 @@
 [
   {
+    "version": "v128",
+    "summary": "Die App merkt sich jetzt, ob „Mehr neue Wörter“ und der Pause-Hinweis bei dir auftauchen.",
+    "notes": [
+      "Gespeichert wird nur, wann eins davon erschienen ist und ob du es angetippt oder weggetippt hast – keine Inhalte, sonst nichts.",
+      "So sehen wir, ob diese Hilfen bei dir überhaupt ankommen, ohne dich jedes Mal fragen zu müssen."
+    ]
+  },
+  {
     "version": "v127",
     "summary": "Kleine Korrektur am Pause-Hinweis: Er merkt jetzt richtig, wenn du wirklich eine Pause gemacht hast.",
     "notes": [

@@ -131,6 +131,10 @@ if $do_api; then
   # the image it runs, which is the one just built.
   mkdir -p /srv/kotoba/bin
   install -m 755 ops/generate-word-sounds.sh /srv/kotoba/bin/generate-word-sounds.sh
+  # #228: the SessionStart hook reads these from here for the same reason —
+  # a session starts in ~/kotoba_line, which never has the current ops/.
+  install -m 755 ops/seen.sh /srv/kotoba/bin/seen.sh
+  install -m 644 ops/watches.tsv /srv/kotoba/bin/watches.tsv
 
   say "Waiting for health"
   for i in $(seq 1 30); do

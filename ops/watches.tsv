@@ -1,0 +1,3 @@
+# issue	since (Tokyo day)	ui_events names	the question it answers
+179	2026-09-19	more_new_shown,more_new_tapped	Erscheint „Mehr neue Wörter/Zeichen“ bei Charlotte, und tippt sie es an?
+218	2026-09-19	break_hint_shown,break_hint_dismissed	Erscheint der Pausenhinweis bei ihr, und tippt sie ihn weg?
