@@ -1,6 +1,6 @@
 import { userTagsFor, visibleCard, visibleTo } from "./cards.js";
 import { deckSettings } from "./deck-settings.js";
-import { KANA_DECKS, MY_WORDS, isKanaDeck, ownDecks } from "./decks.js";
+import { KANA_DECKS, MY_WORDS, TRAVEL_DECKS, isKanaDeck, ownDecks, travelDeck } from "./decks.js";
 import { DEFAULT_TIME_ZONE, dayIn, nextDay, startOfDay } from "./day.js";
 import { maturityBand } from "./stats.js";
 // The client's own module, not a copy (v69): the image puts client/src/romaji.js
@@ -138,11 +138,14 @@ export function isFiltered({ tag, only }) {
  * named her decks, and resolve by name for a phone that has not updated.
  * Anything else is not a deck.
  */
-export const DECK_KEY_PATTERN = "^(kaishi|hiragana|katakana|deck:[0-9]{1,15}|mine|list:.{1,100})$";
+export const DECK_KEY_PATTERN = "^(kaishi|hiragana|katakana|travel:[12]|deck:[0-9]{1,15}|mine|list:.{1,100})$";
 
 export function parseDeckKey(key) {
   // The kana decks (#158) are a `cards.deck` of their own, like Kaishi.
   if (key === "kaishi" || isKanaDeck(key)) return { deck: key };
+  // #252: Reise 1 and 2 are Kaishi's cards under one topic.
+  const travel = travelDeck(key);
+  if (travel) return { deck: "kaishi", tag: travel.tag };
   if (typeof key !== "string") return undefined;
   if (/^deck:\d{1,15}$/.test(key)) return { deck: "personal", deckId: Number(key.slice(5)) };
   if (key === "mine") return { deck: "personal", deckName: MY_WORDS };
@@ -180,6 +183,7 @@ function filterClause({ deckKey, deck, list, tag }, params, userId) {
       params.push(scope.deckId);
     }
     if (scope.deckName !== undefined) sql += byDeckName(scope.deckName, params, userId);
+    if (scope.tag !== undefined) sql += byTag(scope.tag, params, userId);
   }
   if (deck) {
     sql += " AND c.deck = ?";
@@ -191,14 +195,17 @@ function filterClause({ deckKey, deck, list, tag }, params, userId) {
     sql += " AND c.deck = 'personal'";
     sql += byDeckName(list, params, userId);
   }
-  if (tag) {
-    sql +=
-      " AND (EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)" +
-      " OR EXISTS (SELECT 1 FROM card_user_tags ut" +
-      " WHERE ut.card_id = c.id AND ut.user_id = ? AND ut.tag = ?))";
-    params.push(tag, userId, tag);
-  }
+  if (tag) sql += byTag(tag, params, userId);
   return sql;
+}
+
+function byTag(tag, params, userId) {
+  params.push(tag, userId, tag);
+  return (
+    " AND (EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)" +
+    " OR EXISTS (SELECT 1 FROM card_user_tags ut" +
+    " WHERE ut.card_id = c.id AND ut.user_id = ? AND ut.tag = ?))"
+  );
 }
 
 export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() / 1000), random = Math.random) {
@@ -459,6 +466,8 @@ export function deckProgress(db, userId, deckKey) {
  * always the session the deck page then starts.
  */
 export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), timeZone = DEFAULT_TIME_ZONE) {
+  const beginner = db.prepare("SELECT beginner FROM user_settings WHERE user_id = ?").get(userId)?.beginner === 1;
+  if (beginner) return beginnerDecks(db, userId, now, timeZone);
   // What each way of practising can ask in this deck, the rule playableIn
   // (client/src/screens/session.js) applies card by card: 聞く needs a sentence
   // with a translation, 書く a reading. Counted so the deck's options can say
@@ -500,6 +509,62 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), ti
       };
     })
     .filter(Boolean);
+}
+
+/**
+ * The deck list with Settings → Einstieg on (#252): Reise 1, then Reise 2 —
+ * locked until every Reise 1 card has been said aloud and known once.
+ *
+ * Only 話す, and the whole deck can do it: Henning's beginner reads the
+ * German, says it (with "Romaji zeigen" if need be), records it, and turns
+ * the card to hear the native recording beside the attempt.
+ */
+export function beginnerDecks(db, userId, now = Math.floor(Date.now() / 1000), timeZone = DEFAULT_TIME_ZONE) {
+  const count = db.prepare(
+    `SELECT count(*) AS cards, count(s.card_id) AS seen
+       FROM cards c JOIN tags t ON t.card_id = c.id AND t.tag = ?
+       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
+      WHERE c.deleted_at IS NULL AND c.deck = 'kaishi'`,
+  );
+  let unlocked = true;
+  return TRAVEL_DECKS.map(({ key, name, tag }) => {
+    const row = count.get(tag, userId);
+    const known = travelKnown(db, userId, tag);
+    const deck = {
+      key,
+      own: false,
+      name,
+      cards: row.cards,
+      seen: row.seen,
+      known,
+      ways: { choose: 0, listen: 0, speak: row.cards, type: 0, flip: 0 },
+      settings: deckSettings(db, userId, key),
+    };
+    const locked = !unlocked;
+    // The next one waits for this one to be known throughout.
+    unlocked = unlocked && row.cards > 0 && known >= row.cards;
+    if (locked) return { ...deck, locked: true, today: { total: 0, fresh: 0, review: 0 } };
+    return { ...deck, today: queueForUser(db, userId, { deckKey: key, timeZone }, now).today };
+  });
+}
+
+/**
+ * How many cards of a travel topic she has said and known at least once
+ * (#252): a 話す answer of Gewusst. Read from the log, not kept anywhere
+ * (rule 1) — and never lost again once earned, so a later Nochmal does not
+ * lock Reise 2 behind her. "Romaji zeigen" grades Nochmal, so a card she
+ * only read out does not count.
+ */
+export function travelKnown(db, userId, tag) {
+  return db
+    .prepare(
+      `SELECT count(DISTINCT e.card_id) AS n
+         FROM review_events e
+         JOIN cards c ON c.id = e.card_id AND c.deleted_at IS NULL AND c.deck = 'kaishi'
+         JOIN tags t ON t.card_id = c.id AND t.tag = ?
+        WHERE e.user_id = ? AND e.mode = 'speak' AND e.rating > 1`,
+    )
+    .get(tag, userId).n;
 }
 
 /**

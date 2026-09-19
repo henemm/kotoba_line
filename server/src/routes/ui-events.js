@@ -21,6 +21,11 @@ export const UI_EVENT_NAMES = [
   "push_granted", // #248: the system dialog said yes (detail "settings" from there)
   "push_denied",
   "push_opened", // #248: she opened the app from a notification
+  "romaji_peek_shown", // #252: 話す's front offered "Romaji zeigen"
+  "romaji_peek_tapped",
+  "beginner_on", // #252: Settings → Einstieg switched on / off
+  "beginner_off",
+  "travel_unlocked_shown", // #252: the deck list showed Reise 2 unlocked
 ];
 
 const schema = {

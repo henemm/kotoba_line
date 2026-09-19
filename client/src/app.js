@@ -47,6 +47,9 @@ const TABS = [
 
 const app = document.getElementById("app");
 
+/** Reise 1 and 2 (#252), the decks Einstieg lists. */
+const isTravelDeck = (key) => typeof key === "string" && key.startsWith("travel:");
+
 /**
  * The most one sitting asks — MAX_SESSION_LENGTH on the server. Since v74 there
  * is no "How long" (#123, reversed): a session is the deck's cards for today,
@@ -126,6 +129,8 @@ const state = {
     // #137, v65: the default Henning chose, and what index.html drew with.
     appearance: "light",
     recordingEnabled: true,
+    // #252: Einstieg — the deck list is Reise 1 and 2 (server/src/queue.js).
+    beginner: false,
   },
   online: navigator.onLine,
   // 52: the server is reachable and the cookie is not. Two flags, because the
@@ -244,8 +249,11 @@ function currentScreen() {
     return decksScreen({
       decks: deckList(),
       onOpen: openDeck,
-      onNewDeck: openNewDeck,
-      resumable: state.resumable,
+      // #252: Einstieg lists no decks of her own to add to.
+      onNewDeck: state.settings.beginner ? undefined : openNewDeck,
+      // …and no session to carry on from a deck it hides.
+      resumable: state.settings.beginner && !isTravelDeck(state.resumable?.filters?.deckKey) ? undefined : state.resumable,
+      beginner: state.settings.beginner,
       onResume: resumeSession,
       japanese: state.settings.japaneseScript,
       scrollTop: app.querySelector(":scope > .practise")?.scrollTop ?? 0,
@@ -286,7 +294,9 @@ function currentScreen() {
             : { mode, ...state.filters },
         ),
       filters: state.filters,
-      onChooseSet: openSheet,
+      // #252: a Reise deck is one way of practising and nothing to narrow —
+      // the sheet's Start would begin a session in a way the deck does not have.
+      onChooseSet: isTravelDeck(state.deck?.key) ? undefined : openSheet,
       onDrillTopic: openSheet,
       topicsHere: topicsHere(),
       // #179: one more batch of new cards into today. The deck's own settings
@@ -1214,7 +1224,9 @@ function renderApp() {
       romaji: state.settings.romaji,
       japanese: state.settings.japaneseScript,
       // #77: same reasoning — read here so every setting lives in one place.
-      speakSource: state.settings.speakSource,
+      // #252: Reise asks for the phrase itself. Its cards' example sentences
+      // are Kaishi's, and "say this sentence" is not a beginner's first step.
+      speakSource: isTravelDeck(state.session.filters?.deckKey) ? "word" : state.settings.speakSource,
       recordingEnabled: state.settings.recordingEnabled,
       onExit: () => {
         state.session = undefined;
@@ -1395,6 +1407,14 @@ async function checkDeck() {
 
 /** The settings as they now stand, in memory and on the device for offline starts. */
 function keepSettings(settings) {
+  // #252: Einstieg changes which decks there are, so the open one and its
+  // numbers belong to the list that was.
+  if (Boolean(settings.beginner) !== Boolean(state.settings.beginner)) {
+    state.deck = undefined;
+    state.deckCards = undefined;
+    state.filters = { ...DEFAULT_FILTERS };
+    numbersChanged();
+  }
   state.settings = settings;
   state.signInScript = settings.japaneseScript;
   nameTheDocument(settings.japaneseScript);

@@ -1,5 +1,14 @@
 [
   {
+    "version": "v143",
+    "summary": "Neu: „Romaji zeigen“ beim Laut-Sagen – und ein Einstieg mit den Reise-Sätzen.",
+    "notes": [
+      "Beim Laut-Sagen kannst du vorne auf „Romaji zeigen“ tippen, wenn du noch nicht weißt, wie man es sagt. Die Karte zählt dann als nicht gewusst und kommt gleich noch einmal – dann versuchst du es ohne Hilfe.",
+      "In den Einstellungen unter Üben gibt es jetzt „Einstieg“. Ist er an, siehst du nur Reise 1: Sätze für die Reise, zum Laut-Sagen und Aufnehmen. Hast du jede Karte aus Reise 1 einmal gewusst, wird Reise 2 frei.",
+      "Schaltest du den Einstieg aus, siehst du wieder alle Decks. Es geht nichts verloren."
+    ]
+  },
+  {
     "version": "v142",
     "summary": "Die Zeit unter den Knöpfen stimmt jetzt auch, wenn du früh morgens oder über Mitternacht übst.",
     "notes": [

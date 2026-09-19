@@ -270,6 +270,8 @@ export function sessionScreen({
   // survive the card turning; ui/answer-recorder.js says why it is never
   // stored anywhere else.
   let attempt = { url: null };
+  // #252: "Romaji zeigen" was tapped on the card on screen.
+  let peeked = false;
   let recorder = null;
 
   begin();
@@ -582,6 +584,7 @@ export function sessionScreen({
     attempt = { url: null };
     recorder = null;
     graded = false;
+    peeked = false;
     const card = queue[index];
     // The mode on the card is for the iPad card's layout (#150, screens.css).
     const area = el("div.card-area", { dataset: { mode } });
@@ -1013,6 +1016,7 @@ export function sessionScreen({
       area,
       el("span.prompt-label", { text: "Sag es auf Japanisch" }),
       el("p.meaning", { text: (useSentence ? card.sentence_meaning : card.word_meaning) ?? "" }),
+      peekBlock(card, useSentence),
       // She says it before she sees it (#185, 2026-09-17), and the reveal
       // puts what she said beside the real thing. "Antwort zeigen" in the
       // middle of a recording keeps it (thenReveal). Not for a kana card —
@@ -1032,6 +1036,38 @@ export function sessionScreen({
         }),
       ),
     );
+  }
+
+  /**
+   * #252: "Romaji zeigen" — a beginner's first step (Henning, 2026-09-19):
+   * read how it is said, say it into the recorder, turn the card, and hear
+   * the attempt beside the native recording. Spelled out on the front, where
+   * `romajiLine()` has nothing to offer: it assumes the word is on screen,
+   * and here only the meaning is.
+   *
+   * Looking is not knowing, so a card she looked at is graded Nochmal on the
+   * back and comes round again in this session, where she can try it without
+   * help (`revealSpeak`). That is also what makes "Reise 2 wird frei" honest:
+   * the unlock counts Gewusst in this mode, and a peeked card cannot be one.
+   */
+  function peekBlock(card, useSentence) {
+    const text = speakPeek(card, useSentence);
+    if (!text) return null;
+    const slot = el("div.peek");
+    seen("romaji_peek_shown", filters.deckKey, { oncePerDay: true });
+    render(
+      slot,
+      el("button.peek-button", {
+        type: "button",
+        text: "Romaji zeigen",
+        onclick: () => {
+          peeked = true;
+          seen("romaji_peek_tapped", filters.deckKey);
+          render(slot, el("p.romaji.peek-text", { text }));
+        },
+      }),
+    );
+    return slot;
   }
 
   function revealSpeak(card, area, answers, useSentence) {
@@ -1059,12 +1095,30 @@ export function sessionScreen({
       ...(useSentence
         ? [revealedSentence(card), attemptRow(attempt)]
         : wordSoundParts(card, { label: "Wort nochmal hören" }, { reveal: true, withAttempt: true })),
-      useSentence ? null : romajiLine(card),
+      // #252: what she read on the front stays on the back, whatever
+      // "Romaji zeigen" in Settings says — she is about to compare it.
+      useSentence ? null : romajiLine(card, peeked),
     );
     if (readAloud) voice(text, audio, useSentence ? { rate: 0.85 } : undefined);
 
     // 42: same height and tints as めくる's row, half the count and no
     // intervals — 話す asks whether she could produce it, a yes-or-no question.
+    // #252: after "Romaji zeigen" there is no Gewusst to give — she read it.
+    // The line says what happens next instead of leaving one button to guess
+    // at; after MAX_RESHOWS the card waits for the scheduler, and the line
+    // does not promise otherwise.
+    if (peeked) {
+      const again = comesRoundAgain(RATING_AGAIN, reshows.get(card.id) ?? 0);
+      render(
+        answers,
+        el("p.peek-note", {
+          text: again ? "Mit Romaji-Hilfe – die Karte kommt gleich noch einmal." : "Mit Romaji-Hilfe – zählt als nicht gewusst.",
+        }),
+        el("div.ratings.two", {}, ratingButton("Weiter", RATING_AGAIN, () => grade(card, RATING_AGAIN))),
+      );
+      settle();
+      return;
+    }
     render(
       answers,
       el(
@@ -2186,6 +2240,17 @@ export function typingAnswers(card, pool) {
  * The cards from her Noji lists keep Kaishi's sentence and recording without
  * its English, and asked about the sentence they would show an empty prompt.
  */
+/**
+ * What "Romaji zeigen" reveals on 話す's front (#252): the romaji of what the
+ * prompt asks for. A sentence the import could not romanise (8 of 1,500) has
+ * no button rather than a guess; every Reise card has one (measured on the
+ * live deck, 2026-09-19: 65 of 65).
+ */
+export function speakPeek(card, useSentence) {
+  if (isKana(card)) return undefined;
+  return (useSentence ? card.sentence_romaji : wordRomaji(card)) || undefined;
+}
+
 export function speakUsesSentence(card, speakSource, random = Math.random) {
   if (!card.sentence || !card.sentence_meaning) return false;
   if (speakSource === "word") return false;

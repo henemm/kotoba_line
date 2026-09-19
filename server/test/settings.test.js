@@ -29,6 +29,7 @@ describe("the settings row", () => {
       hiddenModes: [],
       appearance: "light",
       recordingEnabled: true,
+      beginner: false,
     });
     db.close();
   });
@@ -111,6 +112,7 @@ describe("GET /api/settings", () => {
       hiddenModes: [],
       appearance: "light",
       recordingEnabled: true,
+      beginner: false,
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -160,6 +162,7 @@ describe("PATCH /api/settings", () => {
       hiddenModes: [],
       appearance: "light",
       recordingEnabled: true,
+      beginner: false,
     });
     await app.close();
   });
@@ -185,6 +188,7 @@ describe("PATCH /api/settings", () => {
       hiddenModes: [],
       appearance: "light",
       recordingEnabled: true,
+      beginner: false,
     });
     await app.close();
   });

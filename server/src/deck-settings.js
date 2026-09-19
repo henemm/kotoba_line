@@ -36,6 +36,7 @@ export function deckSettings(db, userId, key) {
       "SELECT hidden_modes, new_per_day, max_per_day, extra_new, extra_new_day FROM deck_settings WHERE user_id = ? AND deck_key = ?",
     )
     .get(userId, deckKey);
+  // Reise 1 and 2 (#252) pace like a list: Reise 1's 21 cards over three days.
   let fallback = isKanaDeck(deckKey) ? KANA_NEW_PER_DAY : LIST_NEW_PER_DAY;
   if (deckKey === "kaishi") {
     fallback = db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15;
