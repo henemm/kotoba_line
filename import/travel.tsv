@@ -29,6 +29,11 @@
 #     greetings) and 12 under none (measured 2026-09-19), so for these cards
 #     the rules are not asked.
 #
+#     One reading departs from Wikivoyage's romaji: 行き in この電車はどこ行き
+#     is "yuki" there and "iki" in the generated voice (measured 2026-09-19,
+#     VOICEVOX audio_query). Both are standard; the reading follows the voice,
+#     so the card's romaji never contradicts its own sound.
+#
 # Meanings stay English, like the rest of Kaishi.
 
 # ── Reise 1 ───────────────────────────────────────────────────────────
@@ -93,7 +98,7 @@
 2	9000000000110	怪我をしました。	けが お しました	I've been injured.	health,doctor
 2	9000000000111	英語の出来る医者はいますか？	えいご の できる いしゃ わ います か	Is there a doctor who can speak English?	health,doctor
 2	9000000000112	薬局はどこですか？	やっきょく わ どこ です か	Where is a pharmacy?	health,doctor,places
-2	9000000000113	この電車はどこ行きですか？	この でんしゃ わ どこ ゆき です か	Where does this train go?	train
+2	9000000000113	この電車はどこ行きですか？	この でんしゃ わ どこ いき です か	Where does this train go?	train
 2	9000000000114	空いてる部屋ありますか？	あいてる へや あります か	Do you have any rooms available?	places
 2	9000000000115	クレジットカードは使えますか？	くれじっと かーど わ つかえます か	Do you accept credit cards?	money,shopping
 2	9000000000116	二人です。	ふたり です	A table for two people, please.	restaurant
