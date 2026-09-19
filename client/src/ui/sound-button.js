@@ -1,5 +1,5 @@
 import { nowPlaying, onPlayingChange, playUrl, say, unlock } from "../audio.js";
-import { acknowledged, el } from "./dom.js";
+import { el } from "./dom.js";
 
 /**
  * Every ♪ in the app (Henning, 2026-09-19, with a screenshot: "keine
@@ -9,8 +9,8 @@ import { acknowledged, el } from "./dom.js";
  * the kana sheet and the add-a-word form each drew a ♪ of their own and got
  * neither. Now there is one ♪, and the signals belong to it:
  *
- * - the tap-ring (`.tapped`, via `acknowledged()`): "the tap arrived",
- *   ~0.45 s, only on a tap;
+ * - the press: "the tap arrived", ~0.45 s, only on a tap — since v145
+ *   every button's, drawn by ui/press.js, not this one's;
  * - the pulse (`.playing`): "it is talking", for exactly as long as the
  *   sound runs, whoever started it — a tap, or the app reading aloud by
  *   itself (Nielsen #1, visibility of system status).
@@ -30,13 +30,13 @@ export function soundButton({ sound, className = "", label = "Vorlesen", content
     type: "button",
     "aria-label": label,
     text: content,
-    ...acknowledged(() => {
+    onclick: () => {
       const { text, file, url, rate } = current() ?? {};
       unlock();
       // Her own attempt (#185) is an object URL, not a file on the server.
       if (url) playUrl(url);
       else say(text, file, rate ? { rate } : undefined);
-    }),
+    },
   });
   return followsSound(button, current);
 }
@@ -44,8 +44,7 @@ export function soundButton({ sound, className = "", label = "Vorlesen", content
 /**
  * The pulse for a button that plays something but is not only a ♪ — the
  * front's "Antwort aufnehmen" dial, which records first and plays after
- * (v144). It gets the same `.sound` class and so the same CSS; its tap-ring
- * is its caller's `acknowledged()`. `sound()` is what it would play now, or
+ * (v144). It gets the same `.sound` class and so the same CSS. `sound()` is what it would play now, or
  * undefined while it has nothing to play.
  */
 export function followsSound(button, sound) {

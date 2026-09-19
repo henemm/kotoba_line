@@ -11,7 +11,7 @@ import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "
 import { seen } from "../seen.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
-import { acknowledged, el, render } from "../ui/dom.js";
+import { el, render } from "../ui/dom.js";
 import { wordSound } from "../sound.js";
 import { answerRecorder, attemptRow } from "../ui/answer-recorder.js";
 import { uuid, voiceCircle } from "../ui/voice-circle.js";
@@ -818,8 +818,8 @@ export function sessionScreen({
   }
 
   /**
-   * Two animations, not one: `acknowledged()` gives the ~80ms tap-ring on
-   * every button already; this adds a second one, `.playing`, that lasts as
+   * Two animations, not one: ui/press.js answers the ~80ms tap on every
+   * button already; this adds a second one, `.playing`, that lasts as
    * long as the sound actually runs — a recording's real length, or a
    * synthesised sentence's, not a guess. Henning, 2026-09-18: a tap-ring
    * alone said "the tap arrived", never "it is still talking".
@@ -827,7 +827,7 @@ export function sessionScreen({
   function speaker(text, file, { rate, ghost = true, label = "Vorlesen", big = false, small = false } = {}) {
     // Absent rather than inert, and never a guess (#137, v66): see `canVoice`.
     if (!canVoice(text, file)) return null;
-    // The app's one ♪ (ui/sound-button.js): tap-ring and pulse come with it.
+    // The app's one ♪ (ui/sound-button.js): the press and the pulse come with it.
     return soundButton({
       sound: { text, file, rate },
       className: `.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`,

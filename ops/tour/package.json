@@ -1,0 +1,9 @@
+{
+  "name": "kotoba-line-tour",
+  "private": true,
+  "description": "The app tour (#255): every screen, every button, in WebKit at the phone's size, against a copy of the live database. Installed on its own (npm ci --prefix ops/tour) so neither the app nor the server image carries Playwright.",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}

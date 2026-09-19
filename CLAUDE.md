@@ -100,6 +100,17 @@ sandbox — and a path from the other one silently finds nothing. When a test
 reads the *source* instead, say so in the test and record what the browser run
 actually measured.
 
+**Every button answers a press from one place, and the tour checks it.**
+`client/src/ui/press.js` gives every button, link and role=button the same
+press (it gives, then springs back), and the ♪'s pulse is
+`ui/sound-button.js`. Never style a press per button again — that is how 51
+kinds of button ended up with 19 hand-written answers, most of them missing,
+and Henning found them one by one (#255). Before deploying a client change,
+run the tour: `npm ci --prefix ops/tour && node ops/tour/tour.mjs` taps every
+button on every screen in WebKit against a copy of the live database and
+writes `report.md`; it exits 1 for a button without an answer, or a sound
+with nothing pulsing. A new screen gets a line in its `SCREENS`.
+
 **Use WebKit for anything that has to hold on her phone.** Chromium is fine for
 layout and copy, but every device trap listed here was invisible in it: the
 `Range` request for audio, `height: 100%` short of the bottom, the safe-area

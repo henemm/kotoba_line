@@ -50,13 +50,30 @@ function bodyOf(source, name) {
 describe("♪ acknowledges the tap and plays from the cache (#116)", () => {
   // Since 2026-09-19 every ♪ is ui/sound-button.js (see one-sound-button.test.js),
   // so the session's speaker is that button and the ring is keyed on `.sound`.
-  it("routes every session speaker through the one ♪, which acknowledges the tap", () => {
+  // Since v145 the tap-ring is every button's, answered by the page itself
+  // (ui/press.js) rather than opted into per button — Henning, 2026-09-19:
+  // one building block, one change. The session's speaker is still the one ♪.
+  it("routes every session speaker through the one ♪", () => {
     assert.match(bodyOf(session, "speaker"), /soundButton\(/);
-    assert.match(bodyOf(soundButtonSource, "soundButton"), /\.\.\.acknowledged\(/);
   });
 
-  it("draws the ring from the class acknowledged() sets", () => {
-    assert.match(css, /\.sound\.tapped::after[\s\S]*?animation:\s*tap-ring/);
+  it("answers every press from one place, started before the first screen", () => {
+    const app = read("src", "app.js");
+    const press = read("src", "ui", "press.js");
+    assert.match(app, /^watchPresses\(\);$/m);
+    assert.ok(app.indexOf("watchPresses();") < app.indexOf("renderApp()"), "installed before anything is drawn");
+    // Every kind of button, not a list of classes.
+    assert.match(press, /PRESSABLE = 'button, \[role="button"\]/);
+    // iOS applies :active only when the page listens for touches.
+    assert.match(press, /addEventListener\("touchstart"/);
+  });
+
+  it("leaves no button to draw a tap-ring of its own", () => {
+    const offenders = ["src/ui/sound-button.js", "src/ui/answer-recorder.js", "src/screens/session.js"].filter((f) =>
+      /acknowledged\(/.test(read(...f.split("/"))),
+    );
+    assert.deepEqual(offenders, []);
+    assert.doesNotMatch(css, /animation:\s*tap-ring/);
   });
 
   it("starts downloading exactly the recordings each mode can play", () => {

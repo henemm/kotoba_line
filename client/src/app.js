@@ -24,6 +24,7 @@ import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
+import { watchPresses } from "./ui/press.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
@@ -70,6 +71,8 @@ const SESSION_MAX = 60;
 // Before the first render: the shell's height depends on `--viewport-h`, and a
 // first paint at the wrong height is the bug this fixes.
 watchViewport();
+// v145: every button answers a press from here — none asks for it (ui/press.js).
+watchPresses();
 
 const state = {
   user: undefined,
