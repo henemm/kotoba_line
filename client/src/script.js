@@ -13,13 +13,12 @@ import { kanaReading } from "./screens/session.js";
  *   2026-09-14). Where one cannot — a kanji word with no reading, which is
  *   most of her own words — the Japanese is shown: no reading beats a guess,
  *   the rule `romajiLine` in session.js already follows.
- * - an example **sentence** is not shown as text at all, only as its
- *   recording and its translation. Its romaji is not good enough to be the
- *   only text on a card: は comes out as "ha" in 787 of the 1,500 sentences
- *   (私はアンです → "watashi haandesu."), and the word boundaries are a guess.
- *   A wrong romaji line under the kana is a hint; as the only line it teaches
- *   a wrong pronunciation. Kana instead would bring back what she asked to
- *   hide.
+ * - an example **sentence** is shown in the romaji the import wrote for it
+ *   (since 2026-09-19, import/lib/sentence-romaji.js: 1,492 of 1,500), with
+ *   its recording. Until then it was sound only: the phone's own guess put
+ *   は as "ha" in 787 sentences (私はアンです → "watashi haandesu.") and
+ *   guessed the word boundaries, and as the only line on a card that teaches
+ *   a wrong pronunciation. A sentence the import could not do still is.
  * - characters used as **decoration** — 選ぶ, ちょっと, おつかれさま — give way
  *   to the English beside them.
  *

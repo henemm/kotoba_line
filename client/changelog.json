@@ -1,5 +1,14 @@
 [
   {
+    "version": "v138",
+    "summary": "Beispielsätze gibt es jetzt auch in Romaji.",
+    "notes": [
+      "Liest du in Romaji, steht unter einer Karte jetzt der Beispielsatz als Text, zum Beispiel „kono kutsu wa ikura desu ka.“ – bisher gab es nur „Beispielsatz ♪“.",
+      "Mit „Romaji anzeigen“ steht er unter dem japanischen Satz, jetzt mit richtigen Wortgrenzen und „wa“ statt „ha“.",
+      "8 der 1.500 Sätze haben noch keine Romaji. Bei ihnen bleibt es beim Ton."
+    ]
+  },
+  {
     "version": "v137",
     "summary": "Bei „Bedeutung wählen“ stehen Sätze jetzt gegen Sätze, nicht gegen einzelne Wörter.",
     "notes": [

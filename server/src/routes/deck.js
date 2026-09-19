@@ -91,7 +91,10 @@ export default async function deckRoutes(app) {
                   -- #183: only while it is still a recording of this word
                   -- (migration 025 says why).
                   CASE WHEN word_audio_generated_for = word THEN word_audio_generated END AS word_audio_generated,
-                  CASE WHEN word_audio_generated_for = word THEN word_audio_checked END AS word_audio_checked
+                  CASE WHEN word_audio_generated_for = word THEN word_audio_checked END AS word_audio_checked,
+                  -- The sentence in romaji (migration 028), by the sentence
+                  -- itself: a changed sentence finds none rather than an old one.
+                  (SELECT r.romaji FROM sentence_romaji r WHERE r.sentence = cards.sentence) AS sentence_romaji
              FROM cards
             WHERE updated_at > ?
             ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC

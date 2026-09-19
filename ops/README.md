@@ -110,6 +110,8 @@ npm run import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run tag   -- --db /srv/kotoba/data/kotoba.sqlite
 npm run import-kana -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run import-travel -- --db /srv/kotoba/data/kotoba.sqlite
+npm ci --prefix import/tools/sentence-romaji        # once per checkout
+npm run sentence-romaji -- --db /srv/kotoba/data/kotoba.sqlite
 npm run verify-import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 ```
 
@@ -119,6 +121,12 @@ lacks (ids from 9,000,000,000,000; Japanese and English from the Wikivoyage
 phrasebook). Those have no recording: the nightly
 `/srv/kotoba/bin/generate-word-sounds.sh` gives them the generated voice.
 `npm run tag` keeps the Reise topics, since it reads the same file.
+
+`sentence-romaji` writes every example sentence in romaji into
+`sentence_romaji` (migration 028): the readings from the deck's furigana, the
+word boundaries from kuromoji — the one third-party package under `import/`,
+installed on its own so neither the app nor the server image carries it.
+Run it after any import that brings sentences; `ops/status.sh` says when.
 
 `import-kana` writes the Hiragana and Katakana decks (#158) — 208 cards from
 the fixed table in `import/lib/kana.js` — and fetches KanjiVG's 148
