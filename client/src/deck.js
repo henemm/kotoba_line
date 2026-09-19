@@ -158,12 +158,17 @@ export function pickDistractors(
 
   // Tiers, best first. Each is exhausted before the next is touched, so a
   // same-topic distractor always beats a random one.
-  const tiers = [
+  const byTopic = [
     others.filter((c) => sharesTag(c) && nearRank(c)),
     others.filter((c) => sharesTag(c)),
     others.filter(nearRank),
     others,
   ];
+  // …and a sentence among sentences, a word among words, before all of that
+  // (Henning, 2026-09-19, #237): "It was delicious. (when finishing a meal)"
+  // against "to drink", "tasty" and "tea (polite)" was found by its length.
+  const shape = isSentence(answer[field]);
+  const tiers = [...byTopic.map((tier) => tier.filter((c) => isSentence(c[field]) === shape)), ...byTopic];
 
   const chosen = [];
   const taken = new Set();
@@ -185,6 +190,17 @@ export function pickDistractors(
   }
 
   return chosen;
+}
+
+/**
+ * Whether a gloss is a sentence rather than a word's meaning: a capital
+ * first, and one `.`, `?` or `!` at the end, a parenthesis allowed after it.
+ * Measured on the live deck (2026-09-19): all 26 phrases Reise adds, none of
+ * Kaishi's 1,500 word glosses — they start in lower case, and their trailing
+ * dots are ellipses ("what kind of...") or abbreviations ("p.m.").
+ */
+export function isSentence(text) {
+  return /^[A-ZÄÖÜ].*[^.][.?!]\s*(\([^)]*\))?$/u.test(String(text ?? "").trim());
 }
 
 /** How far apart two cards can be in frequency and still count as neighbours. */
