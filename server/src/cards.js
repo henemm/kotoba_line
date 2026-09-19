@@ -25,6 +25,7 @@
  */
 
 import { MY_WORDS, deckIdFor, ownDeck } from "./decks.js";
+import { offerKaishiTopics } from "./kaishi-topics.js";
 
 /**
  * The SQL condition for "this user may see this card", with its parameter.
@@ -192,6 +193,8 @@ export function createCard(db, userId, input, now = Date.now()) {
     );
     replaceTags(db, id, f.tags);
   })();
+  // #209: added to whatever topics she picked in the form.
+  offerKaishiTopics(db, { cardIds: [id], now });
 
   return getCard(db, id);
 }

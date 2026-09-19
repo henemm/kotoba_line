@@ -2,3 +2,4 @@
 179	2026-09-19	more_new_shown,more_new_tapped	Erscheint „Mehr neue Wörter/Zeichen“ bei Charlotte, und tippt sie es an?
 218	2026-09-19	break_hint_shown,break_hint_dismissed	Erscheint der Pausenhinweis bei ihr, und tippt sie ihn weg?
 208	2026-09-19	kana_grid_shown,kana_card_opened	Öffnet Charlotte die Zeichen-Tabelle eines Kana-Decks, und tippt sie ein Zeichen an?
+209	2026-09-19	topic_line_shown,topic_line_tapped,topic_session_started	Tippt Charlotte „Nach Thema üben“ an, und übt sie danach ein Thema?

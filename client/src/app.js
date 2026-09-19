@@ -27,6 +27,8 @@ import { watchViewport } from "./viewport.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
+import { seen } from "./seen.js";
+import { deckTopics } from "./topics.js";
 import { stopAllRecording } from "./recording.js";
 
 // #123: four, where design 11 draws three. Words is where she searches, stars
@@ -285,6 +287,7 @@ function currentScreen() {
       filters: state.filters,
       onChooseSet: openSheet,
       onDrillTopic: openSheet,
+      topicsHere: topicsHere(),
       // #179: one more batch of new cards into today. The deck's own settings
       // are kept in step so the page can say how big the next batch is, and
       // the numbers are thrown away so the page redraws with cards on it.
@@ -440,6 +443,31 @@ function openDeck(deck) {
   state.filters = { ...DEFAULT_FILTERS, deckKey: deck.key };
   numbersChanged();
   renderApp();
+  loadDeckTopics();
+}
+
+/**
+ * #209: the topics of the open deck of hers, from the cards on this phone —
+ * so they are there offline, and counted inside this deck only.
+ */
+async function loadDeckTopics() {
+  const deck = state.deck;
+  if (!deck?.own) return;
+  try {
+    const list = deckTopics([...(await loadDeck()).values()], deck.id);
+    if (state.deck?.id !== deck.id) return;
+    state.deckTopics = { id: deck.id, list };
+    renderApp();
+    if (state.sheet) openSheet();
+  } catch {
+    /* no copy of the deck yet: the sheet shows no topics, as before */
+  }
+}
+
+/** Whether the open deck has topics to choose from: Kaishi's, or hers (#209). */
+function topicsHere() {
+  if (state.deck?.key === "kaishi") return true;
+  return Boolean(state.deck?.own && state.deckTopics?.id === state.deck.id && state.deckTopics.list.length > 0);
 }
 
 /**
@@ -719,8 +747,8 @@ function dismissJokerNotice() {
 function openSheet() {
   state.sheet = chooseSetScreen({
     filters: state.filters,
-    topics: state.topics,
-    showTopics: state.deck?.key === "kaishi",
+    topics: state.deck?.own ? (state.deckTopics?.list ?? []) : state.topics,
+    showTopics: topicsHere(),
     sessionLength: SESSION_MAX,
     // #120: what the sheet holds is the set, Start or no Start. Written here
     // on every tap rather than on close, because loadTopics() below rebuilds
@@ -831,7 +859,10 @@ function cardsChanged() {
   state.deckCards = undefined;
   state.topics = [];
   loadTopics();
-  return syncDeck();
+  // A card can bring a topic into its deck or take the last one out (#209).
+  const synced = syncDeck();
+  synced.then(loadDeckTopics, () => {});
+  return synced;
 }
 
 function closeOverlay() {
@@ -919,6 +950,8 @@ function openCardTopics(card, list = {}) {
 }
 
 function startSession({ mode = "choose", ...filters } = {}) {
+  // #209: whether she practises by topic, now that her own decks have them.
+  if (filters.tag) seen("topic_session_started", filters.deckKey);
   state.session = { mode, filters };
   state.summary = undefined;
   state.resumable = undefined;

@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { argv, exit } from "node:process";
 import { config } from "../src/config.js";
 import { openDatabase } from "../src/db.js";
+import { offerKaishiTopics } from "../src/kaishi-topics.js";
 import { importList } from "../src/import-list.js";
 import { findByHandle, normaliseHandle } from "../src/users.js";
 
@@ -35,6 +36,8 @@ if (!user) {
 const rows = JSON.parse(readFileSync(args.file, "utf8"));
 const result = importList(db, user.id, rows);
 console.log(`${user.handle} (id ${user.id}):`, result);
+// #209: the new cards take their Kaishi topics now, not at the next restart.
+console.log("cards that took Kaishi topics:", offerKaishiTopics(db));
 
 const lists = db
   .prepare(
