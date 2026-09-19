@@ -6,7 +6,6 @@ import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
-import { toRomaji } from "../romaji.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { seen } from "../seen.js";
 import { setStar } from "../stars.js";
@@ -757,16 +756,18 @@ export function sessionScreen({
   }
 
   /**
-   * The sentence in romaji, via the word-boundary guess in `sentenceKana`
-   * (#75). Silent wherever that guess still fails to convert — a sentence
-   * with a kanji `toRomaji` cannot resolve, most often — same rule as
-   * `romajiLine`: no reading is better than a wrong one.
+   * The sentence in romaji, under the Japanese when "Show romaji" is on.
+   *
+   * Written at import since 2026-09-19 (import/lib/sentence-romaji.js), not
+   * guessed here any more: the phone's guess from the furigana alone (#75,
+   * `sentenceKana`) could not tell where a word ends or that は is said "wa"
+   * — この靴はいくらですか came out "kono kutsu haikuradesuka". A sentence the
+   * import could not do (8 of 1,500) has none: no reading is better than a
+   * wrong one.
    */
   function sentenceRomajiLine(card) {
-    if (!romaji || !japanese) return null;
-    const text = toRomaji(sentenceKana(card.sentence_furigana));
-    if (!text) return null;
-    return el("p.romaji.sentence-romaji.reveal", { text });
+    if (!romaji || !japanese || !card.sentence_romaji) return null;
+    return el("p.romaji.sentence-romaji.reveal", { text: card.sentence_romaji });
   }
 
   /**
@@ -1649,9 +1650,22 @@ export function sessionScreen({
 
   function revealedSentence(card) {
     if (!showsSentence(card, japanese)) return null;
-    // #135: with the script off the sentence is its recording, labelled, and
-    // no text — its romaji is not good enough to stand alone (script.js). The
-    // translation still follows wherever a mode shows one.
+    // #135: with the script off the sentence is its romaji — since
+    // 2026-09-19, when the import writes one good enough to stand alone
+    // (Henning: "Hier fehlt Romaji"). Where it could not (8 of 1,500), the
+    // sentence stays what it was: its recording, labelled, and no text.
+    if (!japanese && card.sentence_romaji) {
+      return el(
+        "div.sentence-line.reveal",
+        {},
+        el("div.sentence-copy", {}, el("p.sentence.latin", { text: card.sentence_romaji })),
+        speaker(card.sentence, card.sentence_audio, {
+          rate: 0.85,
+          small: true,
+          label: "Satz nochmal hören",
+        }),
+      );
+    }
     if (!japanese) {
       return el(
         "div.sentence-line.reveal",

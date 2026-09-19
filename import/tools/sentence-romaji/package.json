@@ -1,0 +1,8 @@
+{
+  "name": "kotoba-line-sentence-romaji",
+  "private": true,
+  "description": "The one third-party import of import/: kuromoji (Apache-2.0) with its IPADIC dictionary, for word boundaries in import/sentence-romaji.js. Installed on its own (npm ci --prefix import/tools/sentence-romaji) so neither the app nor the server image carries it.",
+  "dependencies": {
+    "kuromoji": "0.1.2"
+  }
+}

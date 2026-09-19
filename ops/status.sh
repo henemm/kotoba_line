@@ -215,6 +215,9 @@ const out = {
     ? one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL AND word_mnemonic IS NOT NULL")
     : "absent",
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
+  // 2026-09-19: example sentences in romaji (migration 028).
+  sentenceRomaji: one("SELECT count(*) n FROM sentence_romaji", "absent"),
+  sentences: one("SELECT count(DISTINCT sentence) n FROM cards WHERE deck = 'kaishi' AND deleted_at IS NULL AND sentence IS NOT NULL"),
   // #237: Reise 1 and 2, import/travel.tsv (65 cards: 21 + 44).
   travel: one("SELECT count(*) n FROM tags WHERE tag IN ('travel 1', 'travel 2')"),
   reviews: one("SELECT count(*) n FROM review_events"),
@@ -327,6 +330,14 @@ NODE
       warn "npm run import-kana" "${F_kanaMnemonic:-0} of 92 kana cards have their picture — the kana import needs running again (v88)"
     elif [[ ${F_kanaMnemonic} != absent && ${F_kana:-0} -gt 0 ]]; then
       ok "${F_kanaMnemonic} kana cards with a picture"
+    fi
+
+    # 1,492 of Kaishi's 1,500 at the first run (8 cannot be done): under 95%
+    # means the romaji step has not run since the sentences arrived.
+    if [[ ${F_sentenceRomaji} != absent && ${F_sentences:-0} -gt 0 && $((F_sentenceRomaji * 100)) -lt $((F_sentences * 95)) ]]; then
+      warn "npm ci --prefix import/tools/sentence-romaji && npm run sentence-romaji -- --db /srv/kotoba/data/kotoba.sqlite" "${F_sentenceRomaji:-0} of ${F_sentences} example sentences have romaji"
+    elif [[ ${F_sentenceRomaji} != absent && ${F_sentences:-0} -gt 0 ]]; then
+      ok "${F_sentenceRomaji} example sentences in romaji"
     fi
 
     travel_expected=$(grep -cE '^[12]'$'\t' import/travel.tsv 2>/dev/null || echo 0)
