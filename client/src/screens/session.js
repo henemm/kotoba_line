@@ -5,6 +5,7 @@ import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
+import { comesRoundAgain } from "../reshow.js";
 import { forget, remember } from "../resume.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { seen } from "../seen.js";
@@ -25,8 +26,6 @@ import { soundButton } from "../ui/sound-button.js";
  * offered only in めくる, where she is already making a judgement.
  */
 const RATING_AGAIN = 1;
-/** #214: how often one card comes round again in one session after Nochmal. */
-const MAX_RESHOWS = 3;
 const RATING_HARD = 2;
 const RATING_GOOD = 3;
 const RATING_EASY = 4;
@@ -616,7 +615,7 @@ export function sessionScreen({
     // before the strip and the session note below are written, so both
     // already count it; on the last card this is what keeps `next()` from
     // finishing.
-    if (rating === RATING_AGAIN && (reshows.get(card.id) ?? 0) < MAX_RESHOWS) {
+    if (comesRoundAgain(rating, reshows.get(card.id) ?? 0)) {
       queue.push(card);
       reshows.set(card.id, (reshows.get(card.id) ?? 0) + 1);
     }
