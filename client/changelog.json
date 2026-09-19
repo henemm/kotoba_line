@@ -1,5 +1,12 @@
 [
   {
+    "version": "v139",
+    "summary": "Nichts Neues zu sehen – im Hintergrund wird jetzt über viele Tage geprüft, dass neue Wörter kommen und „Nochmal“-Karten wiederkommen.",
+    "notes": [
+      "Für dich ändert sich nichts. Die Regel, dass eine „Nochmal“-Karte in derselben Übung noch einmal drankommt, ist nur an eine Stelle gezogen worden, die auch der neue Test benutzt."
+    ]
+  },
+  {
     "version": "v138",
     "summary": "Beispielsätze gibt es jetzt auch in Romaji.",
     "notes": [

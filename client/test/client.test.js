@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { MAX_RESHOWS, comesRoundAgain } from "../src/reshow.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
@@ -1063,5 +1064,16 @@ describe("the remembered viewport height", () => {
     const seen = fold({ tallest: 859, lowest: 859 }, { width: 0, height: 0 });
     assert.equal(seen.tallest, 859);
     assert.equal(seen.lowest, 859);
+  });
+});
+
+describe("comesRoundAgain (#214, shared with the multi-day simulation, #242)", () => {
+  it("sends a Nochmal card round again, three times at most", () => {
+    assert.deepEqual([0, 1, 2, 3].map((n) => comesRoundAgain(1, n)), [true, true, true, false]);
+    assert.equal(MAX_RESHOWS, 3);
+  });
+
+  it("never sends a card round again for Schwer, Gut or Leicht", () => {
+    for (const rating of [2, 3, 4]) assert.equal(comesRoundAgain(rating, 0), false);
   });
 });
