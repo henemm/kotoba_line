@@ -6,13 +6,13 @@ import {
   exampleAudio,
   flipsMeaningFirst,
   kanaExamples,
-  kanaMnemonic,
   kanaSynthesised,
   meaningPool,
   promptAudio,
   soundParts,
   strokeFiles,
 } from "../src/screens/session.js";
+import { kanaMnemonic } from "../src/ui/kana-mnemonic.js";
 
 // Pure logic only: what the kana card's back looks like was checked in WebKit.
 const kana = (word, reading, deck = "hiragana", rank = 1) => ({
