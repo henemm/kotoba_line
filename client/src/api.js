@@ -192,6 +192,10 @@ export const api = {
   events: (events) => request("/events", { method: "POST", body: { events } }),
   // #228: what appeared on her screen and what she did with it (seen.js).
   uiEvents: (events) => request("/ui-events", { method: "POST", body: { events } }),
+  // #248: "Deine nächsten Karten sind bereit" (push.js).
+  pushKey: () => request("/push/key"),
+  pushSubscribe: (subscription) => request("/push/subscribe", { method: "POST", body: { subscription } }),
+  pushUnsubscribe: (endpoint) => request("/push/unsubscribe", { method: "POST", body: { endpoint } }),
   // #183 follow-up, #185: a native speaker's recording of one card, made under
   // her own session (recording.js). Her own voice is never uploaded.
   addRecording: (cardId, kind, id, blob) =>

@@ -28,6 +28,7 @@ import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
 import { seen } from "./seen.js";
+import { declinePush, enablePush, pushState, refreshPush } from "./push.js";
 import { deckTopics } from "./topics.js";
 import { stopAllRecording } from "./recording.js";
 
@@ -1161,6 +1162,13 @@ function renderApp() {
       app,
       summaryScreen(state.summary, {
         japanese: state.settings.japaneseScript,
+        onPushYes: answerPushOffer,
+        onPushNo: () => {
+          seen("push_offer_no");
+          declinePush().catch(() => {});
+          if (state.summary) state.summary.pushOffer = undefined;
+          renderApp();
+        },
         onDone: () => {
           state.summary = undefined;
           renderApp();
@@ -1222,6 +1230,7 @@ function renderApp() {
         numbersChanged();
         state.resumable = undefined;
         state.summary = result.empty ? undefined : result;
+        offerPush(state.summary);
         // Design 11. This used to read `state.jokerBadge || false` on a level
         // up, so the badge could never light (#86).
         if (result.jokerEarned) {
@@ -1523,6 +1532,51 @@ if (remembered) {
 
 noteUpdated();
 
+/**
+ * #248: the summary offers "Deine nächsten Karten sind bereit" when the session
+ * ended with cards whose minutes were not up — the moment the offer means
+ * something — and only on a device that can receive it and was never asked.
+ */
+function offerPush(summary) {
+  if (!summary?.waitingSoon) return;
+  pushState().then(
+    (s) => {
+      if (s !== "ask" || state.summary !== summary) return;
+      summary.pushOffer = { cards: summary.waitingSoon };
+      seen("push_offer_shown", undefined, { oncePerDay: true });
+      renderApp();
+    },
+    () => {},
+  );
+}
+
+async function answerPushOffer() {
+  const summary = state.summary;
+  seen("push_offer_yes");
+  let outcome;
+  try {
+    outcome = await enablePush();
+  } catch {
+    outcome = "error";
+  }
+  if (outcome === "on") seen("push_granted");
+  if (outcome === "denied") seen("push_denied");
+  if (summary?.pushOffer) summary.pushOffer = { ...summary.pushOffer, outcome };
+  renderApp();
+}
+
+/** A notification tapped (sw.js): opened with ?from=push, or focused. */
+function notePushOpened() {
+  if (new URLSearchParams(location.search).get("from") === "push") {
+    seen("push_opened");
+    history.replaceState(null, "", location.pathname);
+  }
+  navigator.serviceWorker?.addEventListener("message", (event) => {
+    if (event.data?.type === "push-opened") seen("push_opened");
+  });
+}
+notePushOpened();
+
 if (state.user) {
   if (await getMeta("joker.badge")) {
     state.jokerBadge = true;
@@ -1536,4 +1590,6 @@ if (state.user) {
   // here that cannot be reconstructed.
   startFlushing();
   startFlushingStars();
+  // #248: a subscribed device tells the server its zone again (quiet hours).
+  refreshPush();
 }

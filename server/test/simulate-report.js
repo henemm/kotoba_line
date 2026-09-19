@@ -51,7 +51,7 @@ if (!user) {
 // in the past, and its "new today" would count that answer.
 const { last } = db.prepare("SELECT max(reviewed_at) AS last FROM review_events WHERE user_id = ?").get(user.id);
 const start = dayIn(Math.max(Math.floor(Date.now() / 1000), last ?? 0) + 86400, "Asia/Tokyo");
-const result = simulate(db, user.id, {
+const result = await simulate(db, user.id, {
   deckKey: opts.deck ?? "kaishi",
   days: Number(opts.days ?? 30),
   start,

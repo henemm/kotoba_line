@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MAX_RESHOWS, comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
+import { keyBytes, pushStateFrom } from "../src/push.js";
+import { pushOfferText, pushOutcomeText } from "../src/screens/summary.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
@@ -1120,5 +1122,35 @@ describe("returnsAfter and takeDue (#242)", () => {
     assert.equal(takeDue(waiting, 300).id, "a");
     assert.equal(takeDue(waiting, 300), undefined);
     assert.deepEqual(waiting.map((w) => w.id), ["c"]);
+  });
+});
+
+describe("push (#248)", () => {
+  it("knows where a device stands", () => {
+    const base = { hasPush: true, isApple: true, standalone: true, permission: "default", subscribed: false, declined: false };
+    assert.equal(pushStateFrom(base), "ask");
+    assert.equal(pushStateFrom({ ...base, declined: true }), "declined");
+    assert.equal(pushStateFrom({ ...base, permission: "granted", subscribed: true }), "on");
+    assert.equal(pushStateFrom({ ...base, permission: "granted" }), "off");
+    assert.equal(pushStateFrom({ ...base, permission: "denied" }), "denied");
+    // Safari on an iPhone, not from the home screen: no PushManager at all.
+    assert.equal(pushStateFrom({ ...base, hasPush: false, standalone: false }), "install");
+    assert.equal(pushStateFrom({ ...base, hasPush: false, isApple: false, standalone: false }), "unsupported");
+  });
+
+  it("turns the server's key into the bytes subscribe() wants", () => {
+    // 65 bytes, uncompressed P-256 point: 0x04 then 64 more.
+    const key = Buffer.from([4, ...Array(64).fill(7)]).toString("base64url");
+    const bytes = keyBytes(key);
+    assert.equal(bytes.length, 65);
+    assert.equal(bytes[0], 4);
+  });
+
+  it("says what the offer is for, and what happened after", () => {
+    assert.match(pushOfferText(1), /^1 Karte kommt in ein paar Minuten wieder\./);
+    assert.match(pushOfferText(3), /^3 Karten kommen/);
+    assert.match(pushOutcomeText("on"), /Einstellungen/);
+    assert.match(pushOutcomeText("denied"), /iPhone-Einstellungen/);
+    assert.equal(pushOutcomeText("ask"), undefined);
   });
 });

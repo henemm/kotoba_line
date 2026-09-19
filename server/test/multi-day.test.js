@@ -35,7 +35,7 @@ async function learner() {
 
 async function run(profile, seed = 1) {
   const { db, userId } = await learner();
-  const result = simulate(db, userId, { start: START, days: DAYS, profile, seed });
+  const result = await simulate(db, userId, { start: START, days: DAYS, profile, seed });
   return { db, userId, ...result };
 }
 
@@ -79,7 +79,7 @@ describe("thirty days of practice (#242)", () => {
 
   it("brings a Nochmal card back within the session even when she stops after twenty (#242)", async () => {
     const { db, userId } = await learner();
-    const { violations, showings } = simulate(db, userId, { start: START, days: DAYS, profile: PROFILES.realistisch, pattern: PATTERNS.pendeln });
+    const { violations, showings } = await simulate(db, userId, { start: START, days: DAYS, profile: PROFILES.realistisch, pattern: PATTERNS.pendeln });
     assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
     const { ratings } = experience(showings);
     // At the end of the queue it was 7 % (measured 2026-09-19); three cards
@@ -97,7 +97,7 @@ describe("thirty days of practice (#242)", () => {
     db.prepare(
       "INSERT INTO deck_settings (user_id, deck_key, new_per_day, max_per_day, updated_at) VALUES (?, 'kaishi', 15, 40, 0)",
     ).run(userId);
-    const { rows, violations, maxPerDay } = simulate(db, userId, { start: START, days: DAYS, profile: PROFILES.fleissig });
+    const { rows, violations, maxPerDay } = await simulate(db, userId, { start: START, days: DAYS, profile: PROFILES.fleissig });
     assert.equal(maxPerDay, 40);
     assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
     // It did bite: some days had to leave owed cards for tomorrow.
@@ -118,9 +118,9 @@ describe("thirty days of practice (#242)", () => {
       "INSERT INTO deck_settings (user_id, deck_key, new_per_day, updated_at) VALUES (?, ?, 10, 0)",
     ).run(userId, `deck:${deckId}`);
     // A Kaishi session first, so she has seen cards outside this deck.
-    simulate(db, userId, { start: "2026-09-10", days: 2, profile: PROFILES.fleissig });
+    await simulate(db, userId, { start: "2026-09-10", days: 2, profile: PROFILES.fleissig });
 
-    const { rows, violations } = simulate(db, userId, { deckKey: `deck:${deckId}`, start: START, days: 14, profile: PROFILES.fleissig });
+    const { rows, violations } = await simulate(db, userId, { deckKey: `deck:${deckId}`, start: START, days: 14, profile: PROFILES.fleissig });
     assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
     // 120 cards at 10 a day: twelve full days, then the deck has run out.
     assert.deepEqual(rows.map((r) => r.fresh), [...Array(12).fill(10), 0, 0]);

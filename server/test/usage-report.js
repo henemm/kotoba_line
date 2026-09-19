@@ -39,6 +39,9 @@ const profile = PROFILES[opts.profile ?? "realistisch"];
 const days = Number(opts.days ?? 30);
 const deckKey = opts.deck ?? "kaishi";
 const dir = mkdtempSync(join(tmpdir(), "usage-"));
+// #248: --push 0.7 — she is subscribed, and opens the app five minutes after
+// a notification seven times in ten.
+const PUSH = opts.push ? { reacts: Number(opts.push), delay: 5 * 60 } : undefined;
 
 const RATINGS = [["neu:1", "Neu, Nochmal"], ["neu:2", "Neu, Schwer"], ["neu:3", "Neu, Gut"], ["neu:4", "Neu, Leicht"], ["gesehen:3", "Wiederholung, Gut"]];
 let failed = 0;
@@ -62,7 +65,7 @@ for (const [name, pattern] of Object.entries(PATTERNS)) {
   } else {
     user = await createUser(db, { handle: `sim-${name}`.slice(0, 30), display: "Simulation", pin: "483920" });
   }
-  const run = simulate(db, user.id, { deckKey, days, start, profile, pattern });
+  const run = await simulate(db, user.id, { deckKey, days, start, profile, pattern, push: PUSH });
   db.close();
   failed += run.violations.length;
   const x = experience(run.showings);
@@ -73,6 +76,7 @@ for (const [name, pattern] of Object.entries(PATTERNS)) {
     "Karten/Tag": (active.reduce((n, r) => n + r.fresh + r.reviews + r.reshown, 0) / active.length).toFixed(0),
     "neues Wort, 1. Tag gezeigt": `${x.firstDay.median}× (nur 1×: ${x.firstDay.once} %)`,
     Verstöße: run.violations.length,
+    ...(PUSH ? { "Benachrichtigungen/Tag": (active.reduce((n, r) => n + r.pushes, 0) / active.length).toFixed(1), "danach geöffnet": active.reduce((n, r) => n + r.fromPush, 0) } : {}),
   };
   for (const [key, title] of RATINGS) {
     const r = x.ratings[key];
@@ -82,7 +86,7 @@ for (const [name, pattern] of Object.entries(PATTERNS)) {
   for (const v of run.violations.slice(0, 5)) console.log(`${name}: ${v}`);
 }
 rmSync(dir, { recursive: true });
-console.log(`${opts.handle ? `${opts.handle}${"fresh" in opts ? " (frisch)" : " (ab ihrem Stand)"} · ` : ""}${deckKey} · ${opts.profile ?? "realistisch"} · ${days} Tage`);
+console.log(`${PUSH ? `mit Benachrichtigung (reagiert ${PUSH.reacts * 100} %) · ` : ""}${opts.handle ? `${opts.handle}${"fresh" in opts ? " (frisch)" : " (ab ihrem Stand)"} · ` : ""}${deckKey} · ${opts.profile ?? "realistisch"} · ${days} Tage`);
 for (const row of table) {
   console.log(`\n${row.Nutzung}`);
   for (const [k, v] of Object.entries(row)) if (k !== "Nutzung") console.log(`  ${k.padEnd(28)} ${v}`);

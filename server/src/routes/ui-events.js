@@ -15,6 +15,12 @@ export const UI_EVENT_NAMES = [
   "topic_line_shown", // #209: a deck page offered "Nach Thema üben"
   "topic_line_tapped",
   "topic_session_started", // #209: a session narrowed to one topic began
+  "push_offer_shown", // #248: the summary offered "Bescheid geben"
+  "push_offer_yes",
+  "push_offer_no",
+  "push_granted", // #248: the system dialog said yes (detail "settings" from there)
+  "push_denied",
+  "push_opened", // #248: she opened the app from a notification
 ];
 
 const schema = {
