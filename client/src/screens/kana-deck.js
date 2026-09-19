@@ -1,5 +1,4 @@
 import { api } from "../api.js";
-import { say } from "../audio.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
 import { seen } from "../seen.js";
@@ -9,6 +8,7 @@ import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
 import { kanaMnemonicBlock } from "../ui/kana-mnemonic.js";
 import { starButton } from "../ui/card-marks.js";
+import { soundButton } from "../ui/sound-button.js";
 import { voiceCircle } from "../ui/voice-circle.js";
 
 /**
@@ -216,10 +216,7 @@ export function kanaCardSheet({ card, recordingEnabled = true, onClose }) {
 
   // What ♪ plays is asked at the tap, so a recording made in this sheet is
   // what it plays next — the same order a session's ♪ follows (sound.js).
-  const hear = () => {
-    const file = wordSound(card, nativeRecording).file;
-    if (file) say(undefined, file);
-  };
+  const hear = () => ({ file: wordSound(card, nativeRecording).file });
 
   render(
     sheet,
@@ -234,7 +231,7 @@ export function kanaCardSheet({ card, recordingEnabled = true, onClose }) {
       ),
       star,
       wordSound(card).file
-        ? el("button.topics-hear", { type: "button", "aria-label": `${card.word} anhören`, text: "♪", onclick: hear })
+        ? soundButton({ sound: hear, className: ".topics-hear", label: `${card.word} anhören` })
         : null,
     ),
     kanaMnemonicBlock(card),

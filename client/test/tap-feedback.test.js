@@ -33,6 +33,7 @@ const session = read("src", "screens", "session.js");
 const audio = read("src", "audio.js");
 const sw = read("sw.js");
 const css = read("src", "ui", "screens.css");
+const soundButtonSource = read("src", "ui", "sound-button.js");
 
 function bodyOf(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -47,12 +48,15 @@ function bodyOf(source, name) {
 }
 
 describe("♪ acknowledges the tap and plays from the cache (#116)", () => {
-  it("routes every session speaker through acknowledged()", () => {
-    assert.match(bodyOf(session, "speaker"), /\.\.\.acknowledged\(/);
+  // Since 2026-09-19 every ♪ is ui/sound-button.js (see one-sound-button.test.js),
+  // so the session's speaker is that button and the ring is keyed on `.sound`.
+  it("routes every session speaker through the one ♪, which acknowledges the tap", () => {
+    assert.match(bodyOf(session, "speaker"), /soundButton\(/);
+    assert.match(bodyOf(soundButtonSource, "soundButton"), /\.\.\.acknowledged\(/);
   });
 
   it("draws the ring from the class acknowledged() sets", () => {
-    assert.match(css, /\.speaker\.tapped::after[\s\S]*?animation:\s*tap-ring/);
+    assert.match(css, /\.sound\.tapped::after[\s\S]*?animation:\s*tap-ring/);
   });
 
   it("starts downloading exactly the recordings each mode can play", () => {

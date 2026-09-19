@@ -1,5 +1,4 @@
 import { api } from "../api.js";
-import { say } from "../audio.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
 import { wordSound } from "../sound.js";
@@ -9,6 +8,7 @@ import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
 import { voiceCircle } from "../ui/voice-circle.js";
 import { starButton, topicChips } from "../ui/card-marks.js";
+import { soundButton } from "../ui/sound-button.js";
 
 /**
  * The cards in one deck, under its practise controls (#137) — Noji's "Karten
@@ -265,11 +265,10 @@ export function cardActionsSheet({
           // Its recording, or its generated file (#183); never the phone's
           // voice, same as the Kaishi card's sheet.
           card.word_audio || card.word_audio_generated
-            ? el("button.topics-hear", {
-                type: "button",
-                "aria-label": `${shownWord(card, japanese)} anhören`,
-                text: "♪",
-                onclick: () => say(undefined, card.word_audio || card.word_audio_generated),
+            ? soundButton({
+                sound: { file: card.word_audio || card.word_audio_generated },
+                className: ".topics-hear",
+                label: `${shownWord(card, japanese)} anhören`,
               })
             : null,
         ),

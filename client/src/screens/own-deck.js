@@ -1,11 +1,11 @@
 import { OfflineError, api } from "../api.js";
-import { say, unlock } from "../audio.js";
 import { loadDeck } from "../deck.js";
 import { kaishiMatches, kaishiOf } from "../kaishi-match.js";
 import { inScript, showsScript, shownWord } from "../script.js";
 import { plainSentence } from "./session.js";
 import { topicLabel } from "../topics.js";
-import { acknowledged, el, render } from "../ui/dom.js";
+import { el, render } from "../ui/dom.js";
+import { soundButton } from "../ui/sound-button.js";
 
 /**
  * Her own words — designs 28, 29 and 30.
@@ -255,15 +255,7 @@ export function addWordScreen({
     const word = (k) =>
       el("span.kaishi-word", {}, el(showsScript(k, japanese) ? "b.jp" : "b", { text: shownWord(k, japanese) }), el("span", { text: k.word_meaning ?? "" }));
     const hear = (k) =>
-      el("button.kaishi-hear", {
-        type: "button",
-        "aria-label": `${shownWord(k, japanese)} anhören`,
-        text: "♪",
-        ...acknowledged(() => {
-          unlock();
-          say(undefined, k.word_audio);
-        }),
-      });
+      soundButton({ sound: { file: k.word_audio }, className: ".kaishi-hear", label: `${shownWord(k, japanese)} anhören` });
     if (link) {
       render(
         offers,
@@ -392,15 +384,11 @@ export function addWordScreen({
       // field is what fixes it.
       // Only what the phone's voice can read honestly (v66): Japanese characters.
       inScript(draft.sentence.trim() || draft.reading.trim() || draft.word.trim())
-        ? el("button.add-speak", {
-            type: "button",
-            text: "♪ Anhören",
-            ...acknowledged(() => {
-              unlock();
-              say(draft.sentence.trim() || draft.reading.trim() || draft.word.trim(), null, {
-                rate: 0.85,
-              });
-            }),
+        ? soundButton({
+            sound: () => ({ text: draft.sentence.trim() || draft.reading.trim() || draft.word.trim(), rate: 0.85 }),
+            className: ".add-speak",
+            label: "Anhören",
+            content: "♪ Anhören",
           })
         : null,
     );
