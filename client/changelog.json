@@ -1,5 +1,14 @@
 [
   {
+    "version": "v134",
+    "summary": "Stern und Themen funktionieren jetzt in jedem Deck gleich – und der Stern beim Üben ist besser zu sehen.",
+    "notes": [
+      "Beim Üben steht oben neben dem Zähler ein ☆. Antippen markiert die Karte, egal aus welchem Deck. Er ist jetzt dunkler und leichter zu treffen.",
+      "Kaishi-Karten aus der Suche: Deine Themen werden sofort gespeichert, wie in deinen eigenen Decks. Den Speichern-Knopf gibt es nicht mehr.",
+      "Hiragana und Katakana: Tippst du in der Tabelle auf ein Zeichen, kannst du es jetzt auch markieren."
+    ]
+  },
+  {
     "version": "v133",
     "summary": "Stern und Thema setzt du jetzt direkt, wenn du im Deck auf eine Karte tippst.",
     "notes": [

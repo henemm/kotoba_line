@@ -3,10 +3,12 @@ import { say } from "../audio.js";
 import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
 import { seen } from "../seen.js";
+import { setStar } from "../stars.js";
 import { wordSound } from "../sound.js";
 import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
 import { kanaMnemonicBlock } from "../ui/kana-mnemonic.js";
+import { starButton } from "../ui/card-marks.js";
 import { voiceCircle } from "../ui/voice-circle.js";
 
 /**
@@ -201,6 +203,17 @@ export function kanaCardSheet({ card, recordingEnabled = true, onClose }) {
       });
   }
 
+  // One request for the record below and the star (2026-09-19): a kana had
+  // a star in a session but none here, the only card sheet without one. The
+  // grid reads the phone's copy, which knows no stars, so the record says.
+  const record = api.cardHistory(card.id);
+  record.catch(() => {});
+  const star = starButton({
+    word: card.word,
+    lookup: record.then((r) => r.starred),
+    onToggle: (on) => setStar(card.id, on),
+  });
+
   // What ♪ plays is asked at the tap, so a recording made in this sheet is
   // what it plays next — the same order a session's ♪ follows (sound.js).
   const hear = () => {
@@ -219,6 +232,7 @@ export function kanaCardSheet({ card, recordingEnabled = true, onClose }) {
         el("h2.sheet-title.kana-card-char.jp", { text: card.word }),
         el("p.sheet-body", { text: card.word_meaning ?? "" }),
       ),
+      star,
       wordSound(card).file
         ? el("button.topics-hear", { type: "button", "aria-label": `${card.word} anhören`, text: "♪", onclick: hear })
         : null,
@@ -228,7 +242,7 @@ export function kanaCardSheet({ card, recordingEnabled = true, onClose }) {
     recordingEnabled && deckNative
       ? el("p.card-recording-note", { text: "Muttersprachler-Aufnahme vorhanden – das ♪ spielt sie." })
       : null,
-    cardHistoryBlock({ cardId: card.id }),
+    cardHistoryBlock({ cardId: card.id, request: record }),
   );
 
   function close() {

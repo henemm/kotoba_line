@@ -671,10 +671,7 @@ function openCardActions(card, { onChanged, starred, canStar, onStar } = {}) {
     starred,
     canStar: onStar ? canStar : true,
     onStar: onStar ?? ((on) => setStar(card.id, on)),
-    topicNames: async () => {
-      if (state.topics.length === 0) state.topics = (await api.stats()).topics ?? [];
-      return state.topics.map((t) => t.tag);
-    },
+    topicNames,
     onTopics: async (tags) => {
       await api.updateCard(card.id, { ...bodyOf(card.deck_id), tags });
       card.tags = tags;
@@ -795,6 +792,12 @@ function openSheet() {
  */
 let chooseSetSheet;
 const chooseSetOpen = () => state.sheet !== undefined && state.sheet === chooseSetSheet;
+
+/** Every topic in use, for a card sheet's "+ Thema" (ui/card-marks.js). */
+async function topicNames() {
+  if (state.topics.length === 0) state.topics = (await api.stats()).topics ?? [];
+  return state.topics.map((t) => t.tag);
+}
 
 /** What the sheet holds becomes the set (#120), inside the open deck (#137). */
 function keepFilters(filters) {
@@ -956,23 +959,22 @@ function openCardTopics(card, list = {}) {
     // #187: the star, written by the list that owns the row and its count.
     canStar: list.canStar,
     onStar: list.star,
+    topicNames,
     onClose: () => {
       state.topicsFor = undefined;
       closeOverlay();
     },
+    // Every tap saves (2026-09-19), and the sheet stays open for the next.
     onSaved: (tags) => {
-      state.topicsFor = undefined;
       // The row keeps the object it was drawn from, so writing back to it and
       // asking Browse to repaint is what makes the chips appear without
       // reloading the search she is in the middle of.
       card.myTags = tags;
       list.changed?.();
-      state.overlay = undefined;
       // A newly coined topic has to reach the picker, and the counts of the
-      // ones she moved a card into have changed. Cheaper to re-ask than to
-      // reproduce the server's arithmetic here and get it subtly wrong.
+      // ones she moved a card into have changed: asked again when next
+      // needed. Not reloaded now — that rebuilds this sheet (see loadTopics).
       state.topics = [];
-      loadTopics();
       renderApp();
     },
   });
