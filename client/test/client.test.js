@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_RESHOWS, comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
 import { keyBytes, pushStateFrom } from "../src/push.js";
 import { pushOfferText, pushOutcomeText } from "../src/screens/summary.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
@@ -1085,6 +1085,41 @@ describe("reshowPosition (#242)", () => {
     assert.equal(reshowPosition(0, 60), 4);
     assert.equal(reshowPosition(10, 12), 12);
     assert.equal(reshowPosition(59, 60), 60);
+  });
+});
+
+describe("labelsAt (#246)", () => {
+  const today = { 3: 2 * 86400 };
+  const tomorrow = { 3: 7 * 86400 };
+  const sets = {
+    intervals: { 5: today },
+    intervalsTomorrow: { 5: tomorrow },
+    labelDays: [1000, 2000],
+    againIntervals: { 5: [{ 3: 60 }, { 3: 120 }, { 3: 180 }] },
+    stepIntervals: { 5: { 3: { 3: 86400 } } },
+  };
+
+  it("prints today's until the device's midnight, tomorrow's after it", () => {
+    assert.equal(labelsAt(sets, 5, "first", undefined, 999), today);
+    assert.equal(labelsAt(sets, 5, "first", undefined, 1000), tomorrow);
+    assert.equal(labelsAt(sets, 5, "first", undefined, 1999), tomorrow);
+  });
+
+  it("prints nothing a day further on — a queue cached two days ago knows no number", () => {
+    assert.equal(labelsAt(sets, 5, "first", undefined, 2000), undefined);
+  });
+
+  it("picks the set after one, two, three Nochmal and after a step — today only", () => {
+    assert.deepEqual(labelsAt(sets, 5, "again", 2, 500), { 3: 120 });
+    assert.deepEqual(labelsAt(sets, 5, "step:3", 0, 500), { 3: 86400 });
+    assert.equal(labelsAt(sets, 5, "again", 1, 1500), undefined);
+    assert.equal(labelsAt(sets, 5, "step:3", 0, 1500), undefined);
+    assert.equal(labelsAt(sets, 5, undefined, 0, 500), undefined);
+  });
+
+  it("keeps today's for a queue cached before the server sent the days", () => {
+    const old = { intervals: { 5: today } };
+    assert.equal(labelsAt(old, 5, "first", undefined, 1e12), today);
   });
 });
 

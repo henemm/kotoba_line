@@ -45,6 +45,18 @@ describe("POST /api/events", () => {
     await app.close();
   });
 
+  it("stores the zone of the device that sent them (#250)", async () => {
+    const { app, db, config } = await fixture();
+    const cookie = await signIn(app, config);
+    const post = (id, headers) =>
+      app.inject({ method: "POST", url: "/api/events", headers: { cookie, ...headers }, payload: { events: [ev(id, 1, 3, T0)] } });
+    await post("z1", { "x-time-zone": "Europe/Berlin" });
+    await post("z2", {});
+    const zones = db.prepare("SELECT time_zone FROM review_events ORDER BY reviewed_at, id").all().map((r) => r.time_zone);
+    assert.deepEqual(zones.sort(), ["Asia/Tokyo", "Europe/Berlin"]);
+    await app.close();
+  });
+
   it("stores events and returns the updated state", async () => {
     const { app, db, config } = await fixture();
     const cookie = await signIn(app, config);

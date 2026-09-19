@@ -83,14 +83,49 @@ describe("thirty days of practice (#242)", () => {
     assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
     const { ratings } = experience(showings);
     // At the end of the queue it was 7 % (measured 2026-09-19); three cards
-    // on, only a Nochmal among the last three before she stops misses it.
-    assert.ok(ratings["neu:1"].sameSession >= 80, `${ratings["neu:1"].sameSession} %`);
+    // on, 83 % (100 of 121). Since #250 the 07:40 train counts as the day it
+    // is on, not the one before, which changes which cards are due in it:
+    // 79 % (92 of 117) — measured 2026-09-19, and of the misses, 4 were not
+    // among a session's last three cards, where before #250 it was 7.
+    assert.ok(ratings["neu:1"].sameSession >= 75, `${ratings["neu:1"].sameSession} %`);
     // What the buttons say for a new card is Noji's.
     assert.deepEqual(
       [1, 2, 3, 4].map((r) => ratings[`neu:${r}`]?.label),
       ["1 Min", "8 Min", "15 Min", "4 Tage"],
     );
   });
+
+  // #246, #250: a session that runs past midnight, and one on the train
+  // that runs past 09:00 in Tokyo — where the UTC date, which ts-fsrs counts
+  // days by, changes. Every label printed in them is checked against what
+  // was scheduled (`labelOff` in simulate-days.js). Before the fix the 08:50
+  // session printed, measured on "100 vokabeln": "2 Tage" under Gut for a
+  // card then scheduled for 7.
+  //
+  // Only the labels: a session from 23:50 also spends tomorrow's new words
+  // after midnight, which the day-by-day count of new words reads as a day
+  // short of them — true, and not what this is about.
+  for (const [name, session, boundary] of [
+    ["midnight", { hour: 23, minute: 50, mode: "flip" }, 15 * 3600],
+    ["09:00 in Tokyo", { hour: 8, minute: 50, mode: "flip" }, 0],
+  ]) {
+    it(`keeps the label under every button in a session across ${name} (#246)`, async () => {
+      const { db, userId } = await learner();
+      const { violations, showings } = await simulate(db, userId, {
+        start: START,
+        days: DAYS,
+        profile: PROFILES.realistisch,
+        sessions: [session],
+      });
+      const labelOff = violations.filter((v) => v.includes("Knopf sagte"));
+      assert.deepEqual(labelOff.slice(0, 10), [], `${labelOff.length} labels off`);
+      // …and there were labels past the boundary to check: a session whose
+      // cards after it all showed none would pass by checking nothing.
+      // `boundary` is the UTC second of the day it falls on.
+      const crossed = showings.filter((x) => x.label !== undefined && !x.fresh && (x.t - boundary + 86400) % 86400 < 1800);
+      assert.ok(crossed.length > 30, `${crossed.length} labelled answers on seen cards after the boundary`);
+    });
+  }
 
   it("counts a deck's daily maximum as a full session, not as cards gone missing", async () => {
     const { db, userId } = await learner();

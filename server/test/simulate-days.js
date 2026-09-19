@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { MAX_RESHOWS, comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../../client/src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../../client/src/reshow.js";
 import { formatInterval } from "../../client/src/screens/session.js";
 import { deckSettings } from "../src/deck-settings.js";
 import { dayIn, nextDay, startOfDay } from "../src/day.js";
@@ -7,7 +7,7 @@ import { ingestEvents } from "../src/events.js";
 import { MAX_SESSION_LENGTH, parseDeckKey, queueForUser } from "../src/queue.js";
 import { runPush, subscribe } from "../src/push.js";
 import { replayCardState } from "../src/replay.js";
-import { previewAfterAgain, previewAfterStep, previewIntervals } from "../src/scheduler.js";
+import { intervalsForCards } from "../src/labels.js";
 
 /**
  * Days of practice, simulated (#242).
@@ -176,7 +176,6 @@ export async function simulate(db, userId, {
   // check below then passes by checking nothing — which is what `deck:1`
   // did before this scope existed.
   if (deckCards.length === 0) throw new Error(`no cards in deck ${deckKey}`);
-  const historyOf = db.prepare("SELECT id, rating, reviewed_at FROM review_events WHERE user_id = ? AND card_id = ?");
 
   const violations = [];
   const rows = [];
@@ -258,31 +257,14 @@ export async function simulate(db, userId, {
       const skipped = unseen.slice(0, worstIn + 1).filter((c) => !inQueue.has(c.id));
       if (skipped.length > 0) violations.push(`${where}: ${skipped.length} häufigere neue Wörter übersprungen`);
 
-      // The labels a phone would print under the buttons: folded at session
-      // start, as the queue route does (`intervalsForCards`) — before any
-      // answer, and after a Nochmal (#242).
-      const labels = new Map();
-      const againLabels = new Map();
-      const stepLabels = new Map();
-      for (const id of q.cardIds) {
-        const history = historyOf.all(userId, id);
-        labels.set(id, previewIntervals(history, new Date(now * 1000)));
-        againLabels.set(id, [1, 2, 3].map((times) => previewAfterAgain(history, new Date(now * 1000), times)));
-        const steps = {};
-        for (const r of [2, 3]) {
-          const wait = labels.get(id)[r];
-          if (wait < DAY) steps[r] = previewAfterStep(history, new Date(now * 1000), r, wait);
-        }
-        stepLabels.set(id, steps);
-      }
+      // The labels a phone would print under the buttons: the queue route's
+      // own (`intervalsForCards`), folded at session start, and picked the
+      // way the app picks them — by the clock when the card is on screen
+      // (#246), and by what came before in this session (`labelsAfter`).
+      const labelSets = intervalsForCards(db, userId, q.cardIds, timeZone, new Date(now * 1000));
       const labelSource = new Map();
-      const labelFor = (id) => {
-        const source = labelSource.has(id) ? labelSource.get(id) : "first";
-        if (source === "first") return labels.get(id);
-        if (source === "again") return againLabels.get(id)[(reshows.get(id) ?? 1) - 1];
-        if (source?.startsWith("step:")) return stepLabels.get(id)[source.slice(5)];
-        return undefined;
-      };
+      const labelFor = (id, at) =>
+        labelsAt(labelSets, id, labelSource.has(id) ? labelSource.get(id) : "first", reshows.get(id), at);
 
       // ── the session itself: Nochmal three cards on, a learning step
       // (Schwer 8, Gut 15 minutes) when its time has come — the app's rules
@@ -304,7 +286,7 @@ export async function simulate(db, userId, {
         const fresh = !seenEver.has(id);
         t += SECONDS_PER_ANSWER;
         const rating = answer(profile, mode, random, reshown, fresh);
-        const said = labelFor(id);
+        const said = labelFor(id, t);
         showings.push({ id, t, rating, fresh, reshown, session, label: said?.[rating] });
         if (fresh) {
           seenEver.add(id);
@@ -313,7 +295,7 @@ export async function simulate(db, userId, {
         if (reshown) row.reshown += 1;
         if (rating === 1) row.again += 1;
 
-        const { rejected } = ingestEvents(db, userId, [{ id: randomUUID(), card_id: id, mode, rating, reviewed_at: t }], t);
+        const { rejected } = ingestEvents(db, userId, [{ id: randomUUID(), card_id: id, mode, rating, reviewed_at: t }], t, timeZone);
         if (rejected.length) violations.push(`${where}: Antwort auf Karte ${id} abgelehnt (${rejected[0].reason})`);
 
         // ── die Angabe unter dem Knopf: what 'Gut → 2 Tage' said is when the

@@ -15,12 +15,12 @@ export function replayCardState(db, { userId } = {}) {
   const rows = userId
     ? db
         .prepare(
-          `SELECT user_id, card_id, id, rating, reviewed_at
+          `SELECT user_id, card_id, id, rating, reviewed_at, time_zone
              FROM review_events WHERE user_id = ?`,
         )
         .all(userId)
     : db
-        .prepare("SELECT user_id, card_id, id, rating, reviewed_at FROM review_events")
+        .prepare("SELECT user_id, card_id, id, rating, reviewed_at, time_zone FROM review_events")
         .all();
 
   // Group in memory: at this scale the whole log is a few hundred thousand

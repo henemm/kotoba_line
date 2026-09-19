@@ -85,3 +85,32 @@ export function labelsAfter(rating, current) {
   if (current === "first" && (rating === 2 || rating === 3)) return `step:${rating}`;
   return undefined;
 }
+
+/**
+ * #246: the four intervals the buttons print for this showing of a card, in
+ * seconds — or undefined when none the server sent still holds.
+ *
+ * `sets` is what the queue brought (server/src/routes/deck.js): the
+ * intervals for a first showing today and tomorrow, those after Nochmal and
+ * after a learning step, and `labelDays`, the moments today and tomorrow end
+ * on the device's calendar. A card's intervals grow with the days since she
+ * last saw it, so an answer after midnight gets a longer one than the same
+ * answer before it: a session that runs past midnight, or a queue cached for
+ * the train yesterday, would print a day too few.
+ *
+ * Past the first midnight only a first showing has a number: the ones after
+ * Nochmal or a step were worked out for today, and "no number beats a wrong
+ * one" (#214). Past the second, nothing. A queue cached before v142 has no
+ * `labelDays` and keeps today's, as it always did.
+ */
+export function labelsAt(sets, cardId, source, timesAgain, nowSeconds) {
+  const ends = sets.labelDays;
+  const day = !ends ? 0 : nowSeconds < ends[0] ? 0 : nowSeconds < ends[1] ? 1 : 2;
+  if (day === 1) return source === "first" ? sets.intervalsTomorrow?.[cardId] : undefined;
+  if (day > 1) return undefined;
+  if (source === "first") return sets.intervals?.[cardId];
+  // One set per Nochmal in a row.
+  if (source === "again") return sets.againIntervals?.[cardId]?.[(timesAgain ?? 1) - 1];
+  if (source?.startsWith("step:")) return sets.stepIntervals?.[cardId]?.[source.slice(5)];
+  return undefined;
+}

@@ -20,51 +20,12 @@ import {
   starredAmong,
 } from "../queue.js";
 import { dayIn, timeZoneOf } from "../day.js";
-import { VALID_MODES, previewAfterAgain, previewAfterStep, previewIntervals } from "../scheduler.js";
+import { VALID_MODES } from "../scheduler.js";
+import { intervalsForCards } from "../labels.js";
 import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, releaseNewCards, updateDeckSettings } from "../deck-settings.js";
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 import { recordingsAmong } from "../recordings.js";
-
-/**
- * The four intervals for each card, folded from its own history.
- *
- * One query for every card's events rather than one per card: a sixty-card
- * めくる session would otherwise be sixty round trips through SQLite for a
- * number printed under a button.
- */
-function intervalsForCards(db, userId, cardIds) {
-  const placeholders = cardIds.map(() => "?").join(",");
-  const rows = db
-    .prepare(
-      `SELECT id, card_id, rating, reviewed_at
-         FROM review_events
-        WHERE user_id = ? AND card_id IN (${placeholders})`,
-    )
-    .all(userId, ...cardIds);
-
-  const byCard = new Map(cardIds.map((id) => [id, []]));
-  for (const row of rows) byCard.get(row.card_id)?.push(row);
-
-  const now = new Date();
-  const intervals = {};
-  const againIntervals = {};
-  const stepIntervals = {};
-  for (const id of cardIds) {
-    intervals[id] = previewIntervals(byCard.get(id), now);
-    // Back after Schwer or Gut on its first showing, once that step is up.
-    const steps = {};
-    for (const rating of [2, 3]) {
-      const wait = intervals[id][rating];
-      if (wait < 86400) steps[rating] = previewAfterStep(byCard.get(id), now, rating, wait);
-    }
-    stepIntervals[id] = steps;
-    // After one, two and three Nochmal in a row — a session brings a card
-    // round at most three times (client/src/reshow.js, MAX_RESHOWS).
-    againIntervals[id] = [1, 2, 3].map((times) => previewAfterAgain(byCard.get(id), now, times));
-  }
-  return { intervals, againIntervals, stepIntervals };
-}
 
 export default async function deckRoutes(app) {
   const { db } = app;
@@ -203,7 +164,7 @@ export default async function deckRoutes(app) {
       // (8, 15 minutes) runs out while she is still practising — and needs
       // to know how long each answer's step is to do that.
       if (answer.cardIds.length > 0) {
-        Object.assign(answer, intervalsForCards(db, req.user.id, answer.cardIds));
+        Object.assign(answer, intervalsForCards(db, req.user.id, answer.cardIds, timeZone));
       }
 
       // Which of these she has already starred (#35).

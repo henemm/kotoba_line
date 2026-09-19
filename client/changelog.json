@@ -1,5 +1,13 @@
 [
   {
+    "version": "v142",
+    "summary": "Die Zeit unter den Knöpfen stimmt jetzt auch, wenn du früh morgens oder über Mitternacht übst.",
+    "notes": [
+      "Übst du vor 9 Uhr morgens, hat die App bisher gerechnet, als wäre noch gestern. Die Karten kamen dann zu früh wieder. Jetzt beginnt der neue Tag auch dafür um Mitternacht.",
+      "Läuft eine Übung über Mitternacht, zeigen die Knöpfe die Zeiten für den neuen Tag. Für Karten, die in dieser Übung schon einmal dran waren, steht dann keine Zeit statt einer falschen."
+    ]
+  },
+  {
     "version": "v141",
     "summary": "Neu: Die App kann dir Bescheid geben, wenn deine nächsten Karten bereit sind – wie Noji.",
     "notes": [
