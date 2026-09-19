@@ -689,9 +689,8 @@ describe("what the leaving sheet says (50)", () => {
 describe("the gentle break hint (#218)", () => {
   const MIN = 60 * 1000;
 
-  // A card every 4 minutes — under the 5-minute gap that starts a new
-  // stretch — standing in for the cards `drawCard()` actually calls this
-  // with. Returns the last `due` and the state to carry on with.
+  // Cards drawn at the given minutes, none of them a real away-from-screen
+  // gap. Returns the last `due` and the state to carry on with.
   function practice(state, ...minutes) {
     let due;
     for (const m of minutes) ({ due, state } = breakHintCheck(state, m * MIN));
@@ -699,35 +698,52 @@ describe("the gentle break hint (#218)", () => {
   }
 
   it("stays quiet before the first 20 minutes", () => {
-    assert.equal(practice(undefined, 0, 4, 8, 12, 16, 19).due, false);
+    assert.equal(practice(undefined, 0, 19).due, false);
   });
 
   it("fires once the 20 minute threshold is crossed", () => {
-    assert.equal(practice(undefined, 0, 4, 8, 12, 16, 20).due, true);
+    assert.equal(practice(undefined, 0, 20).due, true);
   });
 
   it("does not fire twice for the same threshold", () => {
-    const { state } = practice(undefined, 0, 4, 8, 12, 16, 20);
+    const { state } = practice(undefined, 0, 20);
     assert.equal(practice(state, 24).due, false);
   });
 
   it("fires again after another 20 minutes of the same stretch", () => {
-    const { state } = practice(undefined, 0, 4, 8, 12, 16, 20);
-    assert.equal(practice(state, 24, 28, 32, 36, 40).due, true);
+    const { state } = practice(undefined, 0, 20);
+    assert.equal(practice(state, 40).due, true);
   });
 
   it("counts two sessions back to back as one stretch", () => {
-    const { state } = practice(undefined, 0, 4, 8, 12, 16); // session 1
+    const { state } = practice(undefined, 0, 16); // session 1
     // Session 2 starts a minute later — nowhere near the 20-minute mark on
     // its own, but the streak carries over, so 21 total minutes is over it.
     assert.equal(practice(state, 17, 21).due, true);
   });
 
-  it("starts a fresh stretch after a real gap", () => {
-    const { state } = practice(undefined, 0, 4, 8, 12, 16); // 16 minutes in
-    // Ten minutes away, then back: the earlier 16 minutes no longer count,
-    // so 5 minutes into the new stretch is nowhere near the threshold.
-    assert.equal(practice(state, 26).due, false);
+  it("#221: a single long card does not reset the streak — only a real away-from-screen gap does", () => {
+    // A 21-minute card (a recording, a hard 書く) with no backgrounding in
+    // between: the streak must still be the one that started at 0, so 21
+    // minutes in is over the threshold, not the start of a fresh one.
+    assert.equal(practice(undefined, 0, 21).due, true);
+  });
+
+  it("starts a fresh stretch when the app was actually away too long", () => {
+    const { state } = practice(undefined, 0, 16); // 16 minutes in
+    // Ten minutes in the background, then back: the earlier 16 minutes no
+    // longer count, so 5 minutes into the new stretch is nowhere near it.
+    const away = breakHintCheck(state, 26 * MIN, true);
+    assert.equal(away.due, false);
+  });
+
+  it("#222: a device clock stepping backward never goes below the streak's own start", () => {
+    const { state } = breakHintCheck(undefined, 10 * MIN);
+    // The clock steps back 3 minutes before the next card, without the app
+    // ever leaving the foreground (awayTooLong stays false).
+    const after = breakHintCheck(state, 7 * MIN);
+    assert.equal(after.due, false);
+    assert.equal(after.state.streakStart, state.streakStart, "the streak itself must not restart");
   });
 });
 

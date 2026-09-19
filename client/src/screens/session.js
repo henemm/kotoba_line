@@ -49,32 +49,62 @@ export const recalled = (rating) => rating > RATING_AGAIN;
  * while, or the page reloads.
  */
 const BREAK_HINT_INTERVAL_MS = 20 * 60 * 1000; // the low end of the 20–25 min the issue names, so a long stretch is never overdue
-const BREAK_HINT_GAP_MS = 5 * 60 * 1000; // longer than this since the last card and it's a new stretch, not a continuation
+// #221: how long the app has to have actually left the foreground — not how
+// long between two cards — before a stretch counts as broken. A card that
+// takes her 6 minutes (a recording, a hard 書く) is not a pause; it is
+// exactly the screen time this hint exists for, and measuring the gap
+// between draws instead of real backgrounding used to reset the streak for
+// precisely the slow, thoughtful sessions the hint is most meant to catch.
+const BREAK_HINT_GAP_MS = 5 * 60 * 1000;
 
 /**
  * Whether a fresh 20-minute threshold of continuous practice was just
  * crossed, and the streak state to carry into the next call. Pure, so it can
- * be tested without a session or a DOM: given a state and a moment, it says
- * what the next state is and whether that moment earns a hint. Called once
- * per card drawn — a close enough clock for a hint this soft, and it needs
- * no timer of its own running while she is mid-answer.
+ * be tested without a session or a DOM: given a state, a moment and whether
+ * the app was truly away for too long since the last call (see the
+ * `visibilitychange` listener below), it says what the next state is and
+ * whether that moment earns a hint. Called once per card drawn — no timer of
+ * its own runs while she is mid-answer.
  *
- * `state` starts `undefined` (nothing practised yet in this stretch). A gap
- * longer than `BREAK_HINT_GAP_MS` since the last card starts a new streak —
- * that is what lets two sessions run back to back count as one stretch, and
- * a gap of hours count as two.
+ * `state` starts `undefined` (nothing practised yet in this stretch).
+ * `Math.max(0, …)` on `crossed` (#222) is for a device clock that steps
+ * backward mid-stretch (a timezone re-sync, an NTP correction, plausible on
+ * the travel this app already handles local-time zones for, `server/src/
+ * day.js`) — without it a negative `crossed` would silently delay the next
+ * hint by however far the clock jumped, on top of the real 20 minutes.
  */
-export function breakHintCheck(state, now = Date.now()) {
-  const fresh = !state || now - state.lastCard > BREAK_HINT_GAP_MS;
+export function breakHintCheck(state, now = Date.now(), awayTooLong = false) {
+  const fresh = !state || awayTooLong;
   const streakStart = fresh ? now : state.streakStart;
   const shown = fresh ? 0 : state.shown;
-  const crossed = Math.floor((now - streakStart) / BREAK_HINT_INTERVAL_MS);
+  const crossed = Math.max(0, Math.floor((now - streakStart) / BREAK_HINT_INTERVAL_MS));
   const due = crossed > shown;
-  return { due, state: { streakStart, lastCard: now, shown: due ? crossed : shown } };
+  return { due, state: { streakStart, shown: due ? crossed : shown } };
 }
 
 /** #218: the streak `breakHintCheck()` carries forward — module-level, see above. */
 let breakHintState;
+
+/**
+ * #221: the real "she stepped away" signal, fed into `breakHintCheck()` as
+ * `awayTooLong` — a screen lock or switching apps fires this reliably even
+ * under iOS's background throttling (the same event `outbox.js` and
+ * `stars.js` already flush on return from). `hiddenAt` is when the page was
+ * last seen going into the background; becoming visible again turns a long
+ * enough absence into the one-shot flag `drawCard()` reads and clears.
+ */
+let hiddenAt;
+let awayTooLong = false;
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+    } else {
+      if (hiddenAt !== undefined && Date.now() - hiddenAt > BREAK_HINT_GAP_MS) awayTooLong = true;
+      hiddenAt = undefined;
+    }
+  });
+}
 
 /**
  * 45 and 46 — the same layout, different copy. The situation is identical from
@@ -530,9 +560,16 @@ export function sessionScreen({
     const area = el("div.card-area", { dataset: { mode } });
     const answers = el("div.options");
 
-    const hint = breakHintCheck(breakHintState);
+    const previousStreakStart = breakHintState?.streakStart;
+    const hint = breakHintCheck(breakHintState, Date.now(), awayTooLong);
+    awayTooLong = false;
     breakHintState = hint.state;
     if (hint.due) showBreakHint = true;
+    // #220: a hint she never dismissed must not survive into a *new* stretch
+    // — if she actually took the break it suggested, the streak restarting
+    // is exactly the "started fresh" case #218's dismiss-only-hides-this-one
+    // rule was never meant to cover.
+    else if (hint.state.streakStart !== previousStreakStart) showBreakHint = false;
     render(root, chrome(), breakHint(), area, answers);
     // §7: iOS produces no sound from speech synthesis until a user gesture has
     // happened, and every mode here may reach for it.

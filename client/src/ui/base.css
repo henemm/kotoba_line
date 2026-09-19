@@ -157,7 +157,11 @@ input:focus-visible {
    not). The one moment this bar exists to flag is the one it downplayed.
    Now both tones share the raised background and the bright text; the dot
    colour alone still says which one it is. */
-.offline-bar {
+/* Shared with the session's break-hint (#218, screens.css) — one "raised
+   info strip" look, enforced here rather than by a comment claiming the two
+   still match after whichever one is next redesigned. */
+.offline-bar,
+.break-hint {
   background: var(--surface-hi);
   padding: 9px var(--gutter);
   display: flex;

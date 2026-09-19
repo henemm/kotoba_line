@@ -1645,16 +1645,9 @@
 }
 
 /* #218: under the chrome, above the card — an informational line, same
-   raised background as the offline strip, never a colour that reads as a
-   warning. Dismissible rather than timed, so she decides how long it stays. */
-.break-hint {
-  background: var(--surface-hi);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px var(--gutter);
-  flex: none;
-}
+   raised background as the offline strip (the shared rule is in base.css,
+   `.offline-bar, .break-hint`), never a colour that reads as a warning.
+   Dismissible rather than timed, so she decides how long it stays. */
 .break-hint-text {
   flex: 1;
   font-size: 13px;
