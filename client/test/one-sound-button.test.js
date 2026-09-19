@@ -30,4 +30,15 @@ describe("one ♪ for the whole app", () => {
       .filter((f) => /text:\s*"♪/.test(readFileSync(f, "utf8")));
     assert.deepEqual(offenders.map((f) => f.slice(SRC.length)), []);
   });
+
+  // v144: her attempt's ▶ played through playUrl() and had neither signal.
+  // Whatever plays a sound on a tap has to be one of the app's ♪ or follow
+  // one (followsSound) — voice-circle.js draws its own progress ring instead.
+  it("every file that plays a sound on a tap draws it with the ♪'s signals", () => {
+    const offenders = files(SRC)
+      .filter((f) => !f.endsWith("ui/sound-button.js") && !f.endsWith("ui/voice-circle.js") && !f.endsWith("audio.js"))
+      .filter((f) => /\bplay(Url|Tracked)\(/.test(readFileSync(f, "utf8")))
+      .filter((f) => !/\b(followsSound|soundButton)\(/.test(readFileSync(f, "utf8")));
+    assert.deepEqual(offenders.map((f) => f.slice(SRC.length)), []);
+  });
 });

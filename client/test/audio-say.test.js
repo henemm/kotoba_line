@@ -176,3 +176,34 @@ describe("nowPlaying() — the ♪ pulses whoever started the sound (2026-09-19)
     assert.equal(ended, 1);
   });
 });
+
+describe("nowPlaying() covers every way to play (v144)", () => {
+  // Henning, 2026-09-19: her own attempt's ▶ stood still while it played —
+  // playUrl() and playTracked() never reported anything to nowPlaying().
+  it("reports her attempt from playUrl() until it ends", async () => {
+    const { playUrl, nowPlaying } = await import(`../src/audio.js?${Math.random()}`);
+    let ended = 0;
+    playUrl("blob:attempt-1", { onEnded: () => ended++ });
+    assert.deepEqual(nowPlaying(), { url: "blob:attempt-1" });
+    lastAudio.fire("ended");
+    assert.equal(nowPlaying(), undefined);
+    assert.equal(ended, 1);
+  });
+
+  it("reports a native recording from playTracked(), and ends on stop()", async () => {
+    const { playTracked, stop, nowPlaying } = await import(`../src/audio.js?${Math.random()}`);
+    playTracked("practice/n1.mp3");
+    assert.deepEqual(nowPlaying(), { file: "practice/n1.mp3" });
+    stop();
+    assert.equal(nowPlaying(), undefined);
+  });
+
+  it("hands over to a ♪ without the attempt's late end clearing it", async () => {
+    const { playUrl, say, nowPlaying } = await import(`../src/audio.js?${Math.random()}`);
+    playUrl("blob:attempt-2");
+    const attempt = lastAudio;
+    say("思う", "omou.mp3");
+    attempt.fire("ended");
+    assert.deepEqual(nowPlaying(), { text: "思う", file: "omou.mp3" });
+  });
+});
