@@ -4,7 +4,7 @@ import { formatInterval } from "../../client/src/screens/session.js";
 import { deckSettings } from "../src/deck-settings.js";
 import { dayIn, nextDay, startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
-import { MAX_SESSION_LENGTH, queueForUser } from "../src/queue.js";
+import { MAX_SESSION_LENGTH, parseDeckKey, queueForUser } from "../src/queue.js";
 import { replayCardState } from "../src/replay.js";
 import { previewIntervals } from "../src/scheduler.js";
 
@@ -103,9 +103,14 @@ export function simulate(db, userId, {
 } = {}) {
   const random = seeded(seed);
   const { newPerDay, maxPerDay } = deckSettings(db, userId, deckKey);
+  // The deck as the queue scopes it: Kaishi and the kana decks by `deck`,
+  // one of her own by `deck_id` as well (`deck:1`).
+  const scope = parseDeckKey(deckKey);
+  const inDeck = scope.deckId === undefined ? "c.deck = ?" : "c.deck = ? AND c.deck_id = ?";
+  const deckParams = scope.deckId === undefined ? [scope.deck] : [scope.deck, scope.deckId];
   const countToday = db.prepare(
     `SELECT count(DISTINCT e.card_id) n FROM review_events e JOIN cards c ON c.id = e.card_id
-      WHERE e.user_id = ? AND e.reviewed_at >= ? AND c.deck = ?`,
+      WHERE e.user_id = ? AND e.reviewed_at >= ? AND ${inDeck}`,
   );
 
   const lastEvent = db.prepare(
@@ -115,10 +120,14 @@ export function simulate(db, userId, {
   const deckCards = db
     .prepare(
       `SELECT c.id, c.frequency_rank FROM cards c
-        WHERE c.deleted_at IS NULL AND c.deck = ? AND (c.deck <> 'personal' OR c.owner_id = ?)
+        WHERE c.deleted_at IS NULL AND ${inDeck} AND (c.deck <> 'personal' OR c.owner_id = ?)
         ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC`,
     )
-    .all(deckKey, userId);
+    .all(...deckParams, userId);
+  // A deck key the lookup above does not understand finds no cards, and every
+  // check below then passes by checking nothing — which is what `deck:1`
+  // did before this scope existed.
+  if (deckCards.length === 0) throw new Error(`no cards in deck ${deckKey}`);
   const historyOf = db.prepare("SELECT id, rating, reviewed_at FROM review_events WHERE user_id = ? AND card_id = ?");
 
   const violations = [];
@@ -148,7 +157,7 @@ export function simulate(db, userId, {
       // Full: the session cap (60), or the deck's "Max cards per day"
       // (migration 017) used up by this session — either way the queue had
       // to leave owed cards for later, and says nothing about the label.
-      const answeredToday = countToday.get(userId, dayStart, deckKey).n;
+      const answeredToday = countToday.get(userId, dayStart, ...deckParams).n;
       const capped =
         q.cardIds.length >= MAX_SESSION_LENGTH ||
         (maxPerDay != null && answeredToday + q.cardIds.length >= maxPerDay);
@@ -251,7 +260,7 @@ export function simulate(db, userId, {
     // ── neue Wörter jeden Tag: exactly the deck's daily number, however many
     // sessions — fewer only when the day's last session was full of cards
     // already owed (§5 puts those first), or the deck has run out.
-    const unseenLeft = deckCards.length - seenEver.size;
+    const unseenLeft = deckCards.filter((c) => !seenEver.has(c.id)).length;
     if (row.fresh > newPerDay) violations.push(`Tag ${d}: ${row.fresh} neue Wörter, mehr als ${newPerDay}`);
     else if (row.fresh < newPerDay && !lastFull && unseenLeft > 0) {
       violations.push(`Tag ${d}: nur ${row.fresh} neue Wörter statt ${newPerDay}`);

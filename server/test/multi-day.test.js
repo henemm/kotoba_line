@@ -10,8 +10,8 @@ import { seedUser } from "./helpers.js";
  *
  * The cards here are made up — 1,500, ranked like Kaishi — because CI has no
  * deck. `simulate-report.js` runs the same simulation on a `.backup` copy of
- * a real database; until that has been done, these made-up cards are all it
- * has been measured on.
+ * a real database: on Charlotte's, 2026-09-19, from her own history on, in
+ * Kaishi and in "100 vokabeln", three profiles each — 0 violations (#242).
  *
  * Each check in simulate-days.js was shown to bite before this was merged, by
  * putting an old bug back and counting what it reported (2026-09-19): #210's
@@ -80,6 +80,28 @@ describe("thirty days of practice (#242)", () => {
     assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
     // It did bite: some days had to leave owed cards for tomorrow.
     assert.ok(rows.some((r) => r.deferred > 0));
+  });
+
+  it("works in one of her own decks, keyed deck:<id>, beside cards from elsewhere", async () => {
+    const { db, userId } = await learner();
+    const { lastInsertRowid: deckId } = db
+      .prepare("INSERT INTO decks (owner_id, name, created_at, updated_at) VALUES (?, '100 vokabeln', 1, 1)")
+      .run(userId);
+    // Her own cards have negative ids (rule 4) and no frequency rank.
+    const card = db.prepare(
+      "INSERT INTO cards (id, word, word_meaning, deck, owner_id, deck_id) VALUES (?, ?, ?, 'personal', ?, ?)",
+    );
+    for (let i = 1; i <= 120; i++) card.run(-i, `私${i}`, `mine ${i}`, userId, deckId);
+    db.prepare(
+      "INSERT INTO deck_settings (user_id, deck_key, new_per_day, updated_at) VALUES (?, ?, 10, 0)",
+    ).run(userId, `deck:${deckId}`);
+    // A Kaishi session first, so she has seen cards outside this deck.
+    simulate(db, userId, { start: "2026-09-10", days: 2, profile: PROFILES.fleissig });
+
+    const { rows, violations } = simulate(db, userId, { deckKey: `deck:${deckId}`, start: START, days: 14, profile: PROFILES.fleissig });
+    assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
+    // 120 cards at 10 a day: twelve full days, then the deck has run out.
+    assert.deepEqual(rows.map((r) => r.fresh), [...Array(12).fill(10), 0, 0]);
   });
 
   it("lands on the same log twice, and card_state folds back to itself", async () => {
