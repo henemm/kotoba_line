@@ -215,6 +215,8 @@ const out = {
     ? one("SELECT count(*) n FROM cards WHERE deck IN ('hiragana', 'katakana') AND deleted_at IS NULL AND word_mnemonic IS NOT NULL")
     : "absent",
   tagged: one("SELECT count(DISTINCT card_id) n FROM tags"),
+  // #237: Reise 1 and 2, import/travel.tsv (65 cards: 21 + 44).
+  travel: one("SELECT count(*) n FROM tags WHERE tag IN ('travel 1', 'travel 2')"),
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
   ownTags: one("SELECT count(*) n FROM card_user_tags"),
@@ -325,6 +327,13 @@ NODE
       warn "npm run import-kana" "${F_kanaMnemonic:-0} of 92 kana cards have their picture — the kana import needs running again (v88)"
     elif [[ ${F_kanaMnemonic} != absent && ${F_kana:-0} -gt 0 ]]; then
       ok "${F_kanaMnemonic} kana cards with a picture"
+    fi
+
+    travel_expected=$(grep -cE '^[12]'$'\t' import/travel.tsv 2>/dev/null || echo 0)
+    if [[ ${F_cards:-0} -gt 0 && ${F_travel:-0} -lt $travel_expected ]]; then
+      warn "npm run import-travel -- --db /srv/kotoba/data/kotoba.sqlite" "${F_travel:-0} of ${travel_expected} cards filed under Reise 1/2 (#237)"
+    elif [[ ${F_cards:-0} -gt 0 ]]; then
+      ok "${F_travel} cards in Reise 1 and 2"
     fi
 
     if [[ ${F_tagged:-0} -eq 0 && ${F_cards:-0} -gt 0 ]]; then

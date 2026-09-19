@@ -1,0 +1,101 @@
+# Reise 1 and Reise 2 (#237): what a traveller in Japan needs first, as two
+# topics inside Kaishi — Henning, 2026-09-19: "als Thema unterhalb von
+# Kaishi", no deck of its own, in rounds that stay small enough to finish.
+#
+# Two kinds of row, read by import/lib/travel.js:
+#
+#   staffel<TAB>id<TAB>word
+#     A Kaishi card, by its note id (words repeat in Kaishi, ids do not). The
+#     word is only here so a person can read the file; the import checks it.
+#     These have Kaishi's native-speaker recordings.
+#
+#   staffel<TAB>id<TAB>word<TAB>reading<TAB>meaning<TAB>topics
+#     A card Kaishi does not have, added to the Kaishi deck with an id from
+#     9_000_000_000_000 up (Kaishi's note ids are ~1.7e12, the kana decks'
+#     ~1e7, hers are negative). The Japanese and the English are copied
+#     from the Wikivoyage Japanese phrasebook (CC BY-SA 3.0,
+#     https://en.wikivoyage.org/wiki/Japanese_phrasebook), where a slash
+#     between two variants was split and only one kept — nothing written by a
+#     model. The reading is written as it is said, a space between words and
+#     the particles は/を as わ/お, because she reads romaji: toRomaji() of it
+#     is what the card shows ("toire wa doko desu ka", not "toirehadokodesuka").
+#     These start with the generated voice (VOICEVOX, the nightly
+#     generate-word-sounds run); a native speaker can record one later from
+#     the card's sheet.
+#
+#     `topics` (comma-separated, may be empty) are this card's other topics,
+#     written by hand: the keyword rules put 6 of these 26 under a wrong
+#     topic ("Good morning" under time, "A table for two people, please" under
+#     greetings) and 12 under none (measured 2026-09-19), so for these cards
+#     the rules are not asked.
+#
+# Meanings stay English, like the rest of Kaishi.
+
+# ── Reise 1 ───────────────────────────────────────────────────────────
+1	1708637440067	すみません
+1	1708637439926	ありがとうございます
+1	1708637439921	お願いします
+1	1708637439888	ください
+1	1708637439902	はい
+1	1708637439903	いいえ
+1	1708637439971	大丈夫
+1	1708637440450	いくら
+1	1708637440417	どうぞ
+1	1708637440365	頂きます
+1	1708637441281	袋
+1	1708637439929	ゆっくり
+1	1708637440051	水
+1	9000000000001	こんにちは。	こんにちわ	Good afternoon.	greetings
+1	9000000000002	さようなら。	さようなら	Goodbye. (long-term)	greetings
+1	9000000000003	トイレはどこですか？	といれ わ どこ です か	Where is the toilet?	places
+1	9000000000004	英語が話せますか？	えいご が はなせます か	Do you speak English?	speaking
+1	9000000000005	分かりません。	わかりません	I don't understand.	speaking
+1	9000000000006	お勘定お願いします。	おかんじょう おねがいします	The check, please.	restaurant,money
+1	9000000000007	ご馳走さまでした。	ごちそうさま でした	It was delicious. (when finishing a meal)	restaurant,food
+1	9000000000008	手伝ってください。	てつだって ください	I need your help.	
+
+# ── Reise 2 ───────────────────────────────────────────────────────────
+2	1708637440666	席
+2	1708637440678	美味しい
+2	1708637440324	結構
+2	1708637441324	いかが
+2	1708637440760	お茶
+2	1708637440955	辛い
+2	1708637440076	ご飯
+2	1708637439935	高い
+2	1708637440847	払う
+2	1708637440619	お金
+2	1708637440375	店
+2	1708637440027	買う
+2	1708637440290	乗る
+2	1708637440426	降りる
+2	1708637440752	着く
+2	1708637441125	入り口
+2	1708637440843	荷物
+2	1708637440873	遅れる
+2	1708637440161	左
+2	1708637440244	痛い
+2	1708637440662	熱
+2	1708637440787	薬
+2	1708637441081	お腹
+2	1708637441134	病院
+2	1708637439889	名前
+2	1708637439999	失礼します
+2	9000000000101	お早うございます。	おはよう ございます	Good morning.	greetings
+2	9000000000102	こんばんは。	こんばんわ	Good evening.	greetings
+2	9000000000103	ごめんなさい。	ごめんなさい	I'm sorry.	greetings
+2	9000000000104	助けて！	たすけて	Please help!	
+2	9000000000105	緊急です。	きんきゅう です	It's an emergency.	health
+2	9000000000106	道に迷っています。	みち に まよって います	I'm lost.	places
+2	9000000000107	鞄をなくしました。	かばん お なくしました	I lost my bag.	
+2	9000000000108	財布をおとしました。	さいふ お おとしました	I dropped my wallet.	money
+2	9000000000109	具合がわるいです。	ぐあい が わるい です	I don't feel well.	health,doctor
+2	9000000000110	怪我をしました。	けが お しました	I've been injured.	health,doctor
+2	9000000000111	英語の出来る医者はいますか？	えいご の できる いしゃ わ います か	Is there a doctor who can speak English?	health,doctor
+2	9000000000112	薬局はどこですか？	やっきょく わ どこ です か	Where is a pharmacy?	health,doctor,places
+2	9000000000113	この電車はどこ行きですか？	この でんしゃ わ どこ ゆき です か	Where does this train go?	train
+2	9000000000114	空いてる部屋ありますか？	あいてる へや あります か	Do you have any rooms available?	places
+2	9000000000115	クレジットカードは使えますか？	くれじっと かーど わ つかえます か	Do you accept credit cards?	money,shopping
+2	9000000000116	二人です。	ふたり です	A table for two people, please.	restaurant
+2	9000000000117	メニューを下さい。	めにゅー お ください	Please bring a menu.	restaurant,food
+2	9000000000118	お勧めはありますか？	おすすめ わ あります か	Is there a house specialty?	restaurant
