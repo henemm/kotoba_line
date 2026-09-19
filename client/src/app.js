@@ -10,6 +10,7 @@ import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
 import { addWordScreen } from "./screens/own-deck.js";
 import { cardActionsSheet, deckCardsBlock, deckNameSheet } from "./screens/deck-cards.js";
+import { kanaCardSheet, kanaGridBlock } from "./screens/kana-deck.js";
 import { firstRunScreen } from "./screens/first-run.js";
 import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault, scopeOf } from "./screens/choose-set.js";
 import { sessionScreen } from "./screens/session.js";
@@ -556,20 +557,34 @@ async function deleteOpenDeck() {
  * arrive, and a new list each time would lose her search mid-word.
  */
 function deckCards() {
-  // Her decks only (v69): see cardsOfDeck.
-  if (!state.deck?.own) return undefined;
+  // Her decks, and the kana decks' letters (#208). Not Kaishi (v69): see
+  // cardsOfDeck.
+  const kana = state.deck?.key === "hiragana" || state.deck?.key === "katakana";
+  if (!state.deck?.own && !kana) return undefined;
   if (state.deckCards?.key !== state.deck.key) {
     state.deckCards = {
       key: state.deck.key,
-      block: deckCardsBlock({
-        deck: state.deck,
-        japanese: state.settings.japaneseScript,
-        onCard: openCardActions,
-        onAdd: openAddCard,
-      }),
+      block: kana
+        ? kanaGridBlock({ deck: state.deck, onCard: openKanaCard })
+        : deckCardsBlock({
+            deck: state.deck,
+            japanese: state.settings.japaneseScript,
+            onCard: openCardActions,
+            onAdd: openAddCard,
+          }),
     };
   }
   return state.deckCards.block;
+}
+
+/** One kana from the deck's grid (#208): hear it, see its picture, record a native speaker. */
+function openKanaCard(card) {
+  state.sheet = kanaCardSheet({
+    card,
+    recordingEnabled: state.settings.recordingEnabled,
+    onClose: closeSheet,
+  });
+  renderApp();
 }
 
 /** The open deck's counts again, after one of its cards changed. */

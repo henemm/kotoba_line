@@ -1,5 +1,13 @@
 [
   {
+    "version": "v129",
+    "summary": "Die Kana-Decks zeigen jetzt alle ihre Zeichen – antippen, anhören, Merkbild ansehen.",
+    "notes": [
+      "Öffnest du Hiragana oder Katakana, stehen unten alle 104 Zeichen als Tabelle: Grundzeichen, Zeichen mit Strichen oder Kreis (が, ぱ) und die Kombinationen wie きゃ.",
+      "Tippst du ein Zeichen an, hörst du es mit ♪ und siehst – bei den Grundzeichen – sein Merkbild. Bei den Kombinationen, die bisher nur eine Computer-Stimme haben, kann ein Muttersprachler dort auch eine Aufnahme hinzufügen."
+    ]
+  },
+  {
     "version": "v128",
     "summary": "Die App merkt sich jetzt, ob „Mehr neue Wörter“ und der Pause-Hinweis bei dir auftauchen.",
     "notes": [

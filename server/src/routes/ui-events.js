@@ -10,6 +10,8 @@ export const UI_EVENT_NAMES = [
   "more_new_tapped",
   "break_hint_shown", // #218: "Kleine Pause?" appeared in a session
   "break_hint_dismissed",
+  "kana_grid_shown", // #208: a kana deck's page showed its letters
+  "kana_card_opened",
 ];
 
 const schema = {
