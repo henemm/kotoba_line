@@ -19,7 +19,7 @@ import { el, render } from "../ui/dom.js";
 /** Answers shown before "show all": most cards have a handful. */
 const ROWS_BEFORE_MORE = 5;
 
-export function cardHistoryBlock({ cardId }) {
+export function cardHistoryBlock({ cardId, request }) {
   const root = el("div.card-history");
   const body = el("div.card-history-body", {}, el("p.card-history-note", { text: "…" }));
   render(root, el("span.set-label", { text: "Dein Verlauf" }), body);
@@ -31,7 +31,9 @@ export function cardHistoryBlock({ cardId }) {
 
   async function load() {
     try {
-      record = await api.cardHistory(cardId);
+      // The card sheet asks once and shares the answer, which also says
+      // whether the card is starred (2026-09-19).
+      record = await (request ?? api.cardHistory(cardId));
     } catch (err) {
       render(
         body,
