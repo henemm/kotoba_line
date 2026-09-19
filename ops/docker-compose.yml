@@ -29,6 +29,9 @@ services:
       COOKIE_PATH: /kotoba
       COOKIE_SECURE: "true"  # nginx terminates TLS in front of this
       LOG_LEVEL: info
+      # #248: this is the one process that sends Web Push. A test server on a
+      # copy of the database must not, so it is off unless set here.
+      PUSH_SENDER: "true"
 
     volumes:
       # The SQLite file and its WAL sidecars. Survives a container rebuild.

@@ -80,11 +80,26 @@ export function seen(name, detail, { oncePerDay = false } = {}) {
 }
 
 let flushing;
+let again = false;
 
-/** Send what is waiting. Called beside the review outbox's flush. */
+/**
+ * Send what is waiting. Called beside the review outbox's flush.
+ *
+ * A moment noted while a send is under way is not in that send, so the send
+ * goes once more when it is done (#248: "push_granted" stayed on the device
+ * for minutes, because it came right behind "push_offer_yes").
+ */
 export function flushSeen() {
-  flushing ??= doFlush().finally(() => {
+  if (flushing) {
+    again = true;
+    return flushing;
+  }
+  flushing = doFlush().finally(() => {
     flushing = undefined;
+    if (again) {
+      again = false;
+      flushSeen().catch(() => {});
+    }
   });
   return flushing;
 }

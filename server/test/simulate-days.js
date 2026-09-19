@@ -5,6 +5,7 @@ import { deckSettings } from "../src/deck-settings.js";
 import { dayIn, nextDay, startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
 import { MAX_SESSION_LENGTH, parseDeckKey, queueForUser } from "../src/queue.js";
+import { runPush, subscribe } from "../src/push.js";
 import { replayCardState } from "../src/replay.js";
 import { previewAfterAgain, previewAfterStep, previewIntervals } from "../src/scheduler.js";
 
@@ -128,7 +129,7 @@ export function promisedBy(state, now, timeZone) {
   return state.due_at <= now;
 }
 
-export function simulate(db, userId, {
+export async function simulate(db, userId, {
   deckKey = "kaishi",
   days = 30,
   start,
@@ -136,8 +137,13 @@ export function simulate(db, userId, {
   profile = PROFILES.fleissig,
   sessions = DEFAULT_SESSIONS,
   pattern,
+  // #248: `{ reacts, delay }` — she is subscribed; a notification makes her
+  // open the app `delay` seconds later with probability `reacts`.
+  push,
   seed = 1,
 } = {}) {
+  const pushTimes = [];
+  if (push) subscribe(db, userId, { endpoint: `https://push.invalid/sim-${userId}`, keys: { p256dh: "p".repeat(40), auth: "a".repeat(16) } }, timeZone);
   const random = seeded(seed);
   // A separate stream for the pattern, so choosing one does not change the
   // answers a learner gives.
@@ -181,16 +187,17 @@ export function simulate(db, userId, {
     // fresh: first seen today · reviews: seen before · again: Nochmal answers ·
     // reshown: came round again in the same session · deferred: owed but left
     // for tomorrow by a full last session · early/late/labelOff: violations.
-    const row = { day: d, date: dayKey, sessions: 0, fresh: 0, reviews: 0, again: 0, reshown: 0, deferred: 0, early: 0, late: 0, labelOff: 0 };
+    const row = { day: d, date: dayKey, pushes: 0, fromPush: 0, sessions: 0, fresh: 0, reviews: 0, again: 0, reshown: 0, deferred: 0, early: 0, late: 0, labelOff: 0 };
     rows.push(row);
     if (profile.skip.includes(d)) continue;
 
     const dayStart = startOfDay(dayKey, timeZone);
     let busyUntil = 0;
     let lastFull = false;
-    const today = pattern ? pattern(d, usage) : sessions;
+    const today = [...(pattern ? pattern(d, usage) : sessions)];
     if (today.length === 0) continue;
-    for (const [sessionNo, { hour, minute = 0, mode, stopAfter = Infinity }] of today.entries()) {
+    for (let sessionNo = 0; sessionNo < today.length; sessionNo++) {
+      const { hour, minute = 0, mode, stopAfter = Infinity, fromPush = false } = today[sessionNo];
       // A session cannot start before the last one ended: sixty cards with
       // their Nochmal and learning steps can outlast a half-hour gap.
       const now = Math.max(dayStart + hour * HOUR + minute * 60, busyUntil + 60);
@@ -334,6 +341,33 @@ export function simulate(db, userId, {
 
       busyUntil = t;
 
+      // #248: after the session, the server's minute-by-minute check, until
+      // her next planned session or the end of the day. When it sends, she
+      // opens the app a few minutes later — or, `push.reacts` of the time
+      // not, she does not.
+      if (push) {
+        const next = today[sessionNo + 1];
+        const nextAt = next ? dayStart + next.hour * HOUR + (next.minute ?? 0) * 60 : dayStart + DAY - 60;
+        for (let m = t + 60; m < nextAt; m += 60) {
+          const r = await runPush(db, m, async () => "ok");
+          if (r.sent === 0) continue;
+          row.pushes += 1;
+          pushTimes.push(m);
+          if (usage() < push.reacts) {
+            const opensAt = m + push.delay;
+            const local = opensAt - dayStart;
+            today.splice(sessionNo + 1, 0, {
+              hour: Math.floor(local / HOUR),
+              minute: Math.floor((local % HOUR) / 60),
+              mode: "flip",
+              fromPush: true,
+            });
+            row.fromPush += 1;
+          }
+          break;
+        }
+      }
+
       // She put the phone away with cards left: the day's new words may be
       // among them, and a Nochmal card may not have come round yet.
       const stoppedEarly = i < queue.length;
@@ -358,7 +392,7 @@ export function simulate(db, userId, {
     }
   }
 
-  return { rows, violations, newPerDay, maxPerDay, showings };
+  return { rows, violations, newPerDay, maxPerDay, showings, pushTimes };
 }
 
 /** card_state as stored, then as folded from the log again: rule 1's promise. */

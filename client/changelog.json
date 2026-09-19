@@ -1,5 +1,14 @@
 [
   {
+    "version": "v141",
+    "summary": "Neu: Die App kann dir Bescheid geben, wenn deine nächsten Karten bereit sind – wie Noji.",
+    "notes": [
+      "Hörst du auf, bevor die 8 oder 15 Minuten einer Karte um sind, meldet sich die App, sobald sie dran ist. Einmal pro Übung, nicht zwischen 21:30 und 7:00.",
+      "Nach so einer Übung fragt die App einmal, ob du das möchtest. Danach fragt dein iPhone noch einmal selbst.",
+      "Ein- und ausschalten kannst du es in den Einstellungen unter „Benachrichtigungen“. Das geht nur in der App auf dem Home-Bildschirm."
+    ]
+  },
+  {
     "version": "v140",
     "summary": "Die Zeiten unter den Knöpfen sind jetzt wie bei Noji: 1 Min, 8 Min, 15 Min, 4 Tage.",
     "notes": [

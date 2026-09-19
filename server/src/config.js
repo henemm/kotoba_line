@@ -38,4 +38,12 @@ export const config = {
   pinMinLength: 6,
 
   logLevel: process.env.LOG_LEVEL ?? "info",
+
+  // #248: whether this process sends Web Push. Off unless asked for — the
+  // compose file turns it on — because a test server on a copy of the live
+  // database holds her real subscriptions and would otherwise message her
+  // phone. The stamp is touched after every pass that had no errors, and
+  // henemm-infra's monitor.sh alerts when it goes stale.
+  pushSender: bool(process.env.PUSH_SENDER, false),
+  pushStampFile: process.env.PUSH_STAMP_FILE ?? join(dataDir, "push-run.success"),
 };

@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v140";
+const VERSION = "v141";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -63,6 +63,7 @@ const SHELL_FILES = [
   "src/modes.js",
   "src/outbox.js",
   "src/pitch.js",
+  "src/push.js",
   "src/queue.js",
   "src/recording.js",
   "src/reshow.js",
@@ -174,6 +175,47 @@ self.addEventListener("install", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "version") event.ports[0]?.postMessage(VERSION);
   if (event.data?.type === "skip-waiting") self.skipWaiting();
+});
+
+/**
+ * #248: "Deine nächsten Karten sind bereit". The server sends title, body and
+ * where to go (server/src/push.js). iOS withdraws permission from a worker
+ * that receives a push and shows nothing, so something is always shown.
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch {
+    // Not JSON: still show the plain sentence below.
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title ?? "Deine nächsten Karten sind bereit", {
+      body: data.body ?? "",
+      icon: `${scope}assets/icons/icon-192.png`,
+      // One at a time on her lock screen: a newer one replaces the older.
+      tag: "kotoba-ready",
+      data: { url: data.url ?? scope },
+    }),
+  );
+});
+
+/** Tapping it opens the app — the open one if there is one — at the deck list. */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url ?? scope, self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const open = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const existing = open.find((c) => c.url.startsWith(self.location.origin + scope));
+      if (existing) {
+        await existing.focus();
+        existing.postMessage({ type: "push-opened" });
+        return;
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
 });
 
 self.addEventListener("activate", (event) => {

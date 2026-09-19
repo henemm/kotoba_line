@@ -19,7 +19,7 @@ export const mmss = (seconds) =>
  * 選ぶ is an orange too close to red). A session is modal, so there is no
  * tab bar underneath.
  */
-export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = true }) {
+export function summaryScreen(result, { onDone, onAgain, onCarryOn, onPushYes, onPushNo, japanese = true }) {
   const line = modeByKey(result.mode) ?? modeByKey("choose");
   const root = el("div.summary", { style: { "--rail": line.colour } });
 
@@ -98,6 +98,7 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, japanese = t
             text: "Auf diesem Gerät gespeichert. Es wird übertragen, sobald du wieder Verbindung hast.",
           })
         : null,
+      result.pushOffer ? pushOfferBlock(result.pushOffer, { onPushYes, onPushNo }) : null,
     ),
     result.chosenLabel ? chosenFoot(result, { onDone, onCarryOn }) : el(
       "div.summary-foot",
@@ -206,4 +207,37 @@ function levelUpOverlay({ levelUp }) {
   );
 
   return overlay;
+}
+
+/**
+ * #248: the offer, made after a session that left cards a few minutes from
+ * due. It says what for before the system dialog comes — iOS asks only once,
+ * and a "Nicht erlauben" can only be undone in the iOS settings.
+ */
+export function pushOfferText(cards) {
+  const what = cards === 1 ? "1 Karte kommt" : `${cards} Karten kommen`;
+  return `${what} in ein paar Minuten wieder. Soll ich dir Bescheid geben, wenn sie bereit sind?`;
+}
+
+export function pushOutcomeText(outcome) {
+  if (outcome === "on") return "Gut – ich melde mich, wenn deine nächsten Karten bereit sind. Ausschalten kannst du das in den Einstellungen.";
+  if (outcome === "denied") return "In Ordnung, keine Benachrichtigungen. Falls du es dir anders überlegst: iPhone-Einstellungen → Mitteilungen → ことばライン.";
+  if (outcome === "error") return "Das hat gerade nicht geklappt. Du kannst es später in den Einstellungen noch einmal versuchen.";
+  return undefined;
+}
+
+function pushOfferBlock({ cards, outcome }, { onPushYes, onPushNo }) {
+  const done = pushOutcomeText(outcome);
+  if (done) return el("p.summary-note.push-offer", { text: done });
+  return el(
+    "div.push-offer",
+    {},
+    el("p.summary-note", { text: pushOfferText(cards) }),
+    el(
+      "div.push-offer-actions",
+      {},
+      el("button.btn-primary", { type: "button", text: "Ja, Bescheid geben", onclick: onPushYes }),
+      el("button.push-offer-no", { type: "button", text: "Nein, danke", onclick: onPushNo }),
+    ),
+  );
 }

@@ -5,6 +5,8 @@ import { viewportReport } from "../viewport.js";
 import { sheetSummary, versionNumber } from "../whats-new.js";
 import { el, num, render } from "../ui/dom.js";
 import { canRecord, micErrorMessage, startRecording, stopAllRecording } from "../recording.js";
+import { disablePush, enablePush, pushState } from "../push.js";
+import { seen } from "../seen.js";
 
 /**
  * Which app shell this device is running, and which one it has ready.
@@ -142,6 +144,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       sound(),
       script(),
       practice(),
+      notifications(),
       account(),
       sources(),
       diagnostics(),
@@ -368,6 +371,45 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     );
   }
 
+  // ── Notifications (#248) ───────────────────────────────────────
+
+  /**
+   * "Deine nächsten Karten sind bereit". What the row can say depends on the
+   * device, which only the browser knows — so it is drawn first and filled
+   * in when `pushState()` answers.
+   */
+  function notifications() {
+    const slot = el("div.push-row");
+    const draw = (state, busy = false) => {
+      const detail = PUSH_DETAIL[state] ?? PUSH_DETAIL.off;
+      const canToggle = ["on", "off", "ask", "declined"].includes(state);
+      render(
+        slot,
+        row(
+          "Wenn Karten bereit sind",
+          detail,
+          canToggle
+            ? toggle(state === "on", "Benachrichtigungen", async (on) => {
+                draw(state, true);
+                let next;
+                try {
+                  next = on ? await enablePush() : await disablePush();
+                } catch {
+                  next = state;
+                }
+                if (on && next === "on") seen("push_granted", "settings");
+                if (on && next === "denied") seen("push_denied", "settings");
+                draw(next === "ask" ? "ask" : next);
+              }, { disabled: busy })
+            : null,
+        ),
+      );
+    };
+    draw("off", true);
+    pushState().then((state) => draw(state), () => draw("unsupported"));
+    return group("Benachrichtigungen", slot);
+  }
+
   // ── Account ─────────────────────────────────────────────────────
 
   function account() {
@@ -587,6 +629,17 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
 }
 
 // ── Shared bits ───────────────────────────────────────────────────
+
+/** #248: the notification row's sentence, per `pushState()`. */
+export const PUSH_DETAIL = {
+  on: "Die App meldet sich, wenn deine nächsten Karten nach einer Übung bereit sind. Nicht zwischen 21:30 und 7:00.",
+  off: "Eine Nachricht, wenn deine nächsten Karten nach einer Übung bereit sind – so wie bei Noji.",
+  ask: "Eine Nachricht, wenn deine nächsten Karten nach einer Übung bereit sind – so wie bei Noji.",
+  declined: "Eine Nachricht, wenn deine nächsten Karten nach einer Übung bereit sind – so wie bei Noji.",
+  denied: "Ausgeschaltet in den iPhone-Einstellungen. Dort unter Mitteilungen → ことばライン kannst du sie erlauben.",
+  install: "Geht nur in der App auf dem Home-Bildschirm: In Safari auf Teilen → „Zum Home-Bildschirm“ tippen und die App von dort öffnen.",
+  unsupported: "Dieser Browser kann keine Benachrichtigungen empfangen.",
+};
 
 function group(label, ...children) {
   return el(

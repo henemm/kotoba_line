@@ -5101,3 +5101,31 @@ button.kana-tile:active {
   color: var(--ink-muted);
   font: 600 12px/1.2 var(--ui);
 }
+
+/* #248: "Soll ich dir Bescheid geben …" on the session summary. */
+.push-offer {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--rule, rgba(128, 128, 128, 0.3));
+  border-radius: 14px;
+}
+.push-offer .summary-note {
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+.push-offer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.push-offer-actions .btn-primary {
+  height: 48px;
+  font-size: 16px;
+}
+.push-offer-no {
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 600 15px/1 inherit;
+}

@@ -1820,6 +1820,9 @@ export function sessionScreen({
       results,
       seconds: Math.round((Date.now() - started) / 1000),
       newCards: newCardsIn(after, before),
+      // #248: cards whose learning step (8, 15 minutes) had not run out when
+      // the session ended — what "Deine nächsten Karten sind bereit" is for.
+      waitingSoon: waiting.length,
       synced: accepted,
       xpGained,
       levelUp,
