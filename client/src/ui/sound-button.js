@@ -1,4 +1,4 @@
-import { nowPlaying, onPlayingChange, say, unlock } from "../audio.js";
+import { nowPlaying, onPlayingChange, playUrl, say, unlock } from "../audio.js";
 import { acknowledged, el } from "./dom.js";
 
 /**
@@ -26,19 +26,33 @@ import { acknowledged, el } from "./dom.js";
  */
 export function soundButton({ sound, className = "", label = "Vorlesen", content = "♪" }) {
   const current = typeof sound === "function" ? sound : () => sound;
-  const button = el(`button.sound${className}`, {
+  const button = el(`button${className}`, {
     type: "button",
     "aria-label": label,
     text: content,
     ...acknowledged(() => {
-      const { text, file, rate } = current() ?? {};
+      const { text, file, url, rate } = current() ?? {};
       unlock();
-      say(text, file, rate ? { rate } : undefined);
+      // Her own attempt (#185) is an object URL, not a file on the server.
+      if (url) playUrl(url);
+      else say(text, file, rate ? { rate } : undefined);
     }),
   });
+  return followsSound(button, current);
+}
+
+/**
+ * The pulse for a button that plays something but is not only a ♪ — the
+ * front's "Antwort aufnehmen" dial, which records first and plays after
+ * (v144). It gets the same `.sound` class and so the same CSS; its tap-ring
+ * is its caller's `acknowledged()`. `sound()` is what it would play now, or
+ * undefined while it has nothing to play.
+ */
+export function followsSound(button, sound) {
+  button.classList.add("sound");
   keys.set(button, () => {
-    const s = current() ?? {};
-    return soundKey(s.text, s.file);
+    const s = sound() ?? {};
+    return soundKey(s.text, s.file, s.url);
   });
   // Drawn with the state as it is: the read-aloud of a new card usually starts
   // before the card's buttons exist.
@@ -47,12 +61,12 @@ export function soundButton({ sound, className = "", label = "Vorlesen", content
 }
 
 /** Which ♪ a sound belongs to: its recording, or its text when it has none. */
-export function soundKey(text, file) {
-  return file ? `file:${file}` : text ? `text:${text}` : undefined;
+export function soundKey(text, file, url) {
+  return url ? `url:${url}` : file ? `file:${file}` : text ? `text:${text}` : undefined;
 }
 
 const keys = new WeakMap();
-const keyOf = (sound) => soundKey(sound?.text, sound?.file);
+const keyOf = (sound) => soundKey(sound?.text, sound?.file, sound?.url);
 
 function paint(button, playingKey) {
   const own = keys.get(button)?.();

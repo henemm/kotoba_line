@@ -1,5 +1,12 @@
 [
   {
+    "version": "v144",
+    "summary": "Deine eigene Aufnahme zeigt jetzt, dass sie spielt.",
+    "notes": [
+      "Beim Laut-Sagen reagiert der Knopf für deine Antwort jetzt auf das Antippen und pulsiert, solange deine Aufnahme läuft – vorne und auf der Rückseite, genau wie jeder ♪."
+    ]
+  },
+  {
     "version": "v143",
     "summary": "Neu: „Romaji zeigen“ beim Laut-Sagen – und ein Einstieg mit den Reise-Sätzen.",
     "notes": [

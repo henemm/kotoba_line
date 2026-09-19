@@ -228,7 +228,7 @@ export function stop() {
  * circle only calls this once it already knows a file exists).
  */
 export function playTracked(file, options) {
-  return track(mediaUrl(file), options);
+  return track(mediaUrl(file), options, { file });
 }
 
 /**
@@ -237,11 +237,23 @@ export function playTracked(file, options) {
  * long as the card on screen (ui/answer-recorder.js).
  */
 export function playUrl(url, options) {
-  return track(url, options);
+  return track(url, options, { url });
 }
 
-function track(src, { onProgress, onEnded } = {}) {
+/**
+ * `sound` is what nowPlaying() reports while this runs. Until v144 only say()
+ * reported anything, so her own attempt played with its ▶ standing still
+ * (Henning, 2026-09-19: "komplett ohne Animation … Warum arbeitest du nicht
+ * mit System?") — "is it talking?" was a state of one of the two ways to
+ * play a sound, not of sound.
+ */
+function track(src, { onProgress, onEnded: callerEnded } = {}, sound = { url: src }) {
   stop();
+  setPlaying(sound);
+  const onEnded = () => {
+    if (playing === sound) setPlaying(undefined);
+    callerEnded?.();
+  };
   const audio = new Audio(src);
   current = audio;
   // Cleared before every call to onEnded, on every path — a stop() that

@@ -1,6 +1,7 @@
 import { playUrl, stop } from "../audio.js";
 import { canRecord, micErrorMessage, startRecording } from "../recording.js";
-import { el } from "./dom.js";
+import { acknowledged, el } from "./dom.js";
+import { followsSound, soundButton } from "./sound-button.js";
 
 /**
  * "Antwort aufnehmen" (#185, 2026-09-17): she says the answer before she
@@ -25,7 +26,11 @@ import { el } from "./dom.js";
 export function answerRecorder(attempt) {
   if (!canRecord()) return null;
 
-  const dial = el("button.answer-dial", { type: "button", onclick: onTap });
+  // v144: the same two signals as every ♪ (ui/sound-button.js) — the
+  // tap-ring when a tap lands, the pulse for as long as her attempt plays.
+  // It had neither: a ▶ that stood still while she listened.
+  const dial = el("button.answer-dial", { type: "button", ...acknowledged(onTap) });
+  followsSound(dial, () => (attempt.url && (state === "recorded" || state === "playing") ? { url: attempt.url } : undefined));
   const caption = el("span.answer-caption");
   const again = el("button.answer-again", { type: "button", text: "Neu aufnehmen", onclick: onStart });
   const status = el("span.answer-status", { "aria-live": "polite" });
@@ -117,15 +122,12 @@ export function answerRecorder(attempt) {
  */
 export function attemptRow(attempt) {
   if (!attempt?.url) return null;
-  const btn = el("button.attempt-play", {
-    type: "button",
-    text: "▶",
-    "aria-label": "Deine Antwort anhören",
-    onclick: () => {
-      row.classList.add("playing");
-      playUrl(attempt.url, { onEnded: () => row.classList.remove("playing") });
-    },
+  // The app's one ♪ (v144), so it taps and pulses like the ♪ beside it.
+  const btn = soundButton({
+    sound: { url: attempt.url },
+    className: ".attempt-play",
+    label: "Deine Antwort anhören",
+    content: "▶",
   });
-  const row = el("div.attempt-row.reveal", {}, btn, el("span", { text: "Deine Antwort" }));
-  return row;
+  return el("div.attempt-row.reveal", {}, btn, el("span", { text: "Deine Antwort" }));
 }
