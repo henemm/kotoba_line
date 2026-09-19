@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_RESHOWS, comesRoundAgain } from "../src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
@@ -1075,5 +1075,50 @@ describe("comesRoundAgain (#214, shared with the multi-day simulation, #242)", (
 
   it("never sends a card round again for Schwer, Gut or Leicht", () => {
     for (const rating of [2, 3, 4]) assert.equal(comesRoundAgain(rating, 0), false);
+  });
+});
+
+describe("reshowPosition (#242)", () => {
+  it("puts a Nochmal card three cards on, or at the end when fewer are left", () => {
+    assert.equal(reshowPosition(0, 60), 4);
+    assert.equal(reshowPosition(10, 12), 12);
+    assert.equal(reshowPosition(59, 60), 60);
+  });
+});
+
+describe("labelsAfter (#242)", () => {
+  it("knows the labels after a run of Nochmal, or one Schwer or Gut, from the first showing", () => {
+    assert.equal(labelsAfter(1, "first"), "again");
+    assert.equal(labelsAfter(1, "again"), "again");
+    assert.equal(labelsAfter(3, "first"), "step:3");
+    assert.equal(labelsAfter(2, "first"), "step:2");
+  });
+
+  it("knows none after anything else", () => {
+    assert.equal(labelsAfter(1, "step:2"), undefined);
+    assert.equal(labelsAfter(3, "again"), undefined);
+    assert.equal(labelsAfter(4, "first"), undefined);
+    // Unknown stays unknown: a default of "first" here once turned it back.
+    assert.equal(labelsAfter(3, undefined), undefined);
+    assert.equal(labelsAfter(1, undefined), undefined);
+  });
+});
+
+describe("returnsAfter and takeDue (#242)", () => {
+  it("brings Schwer and Gut back after a learning step, not after days, and never Nochmal", () => {
+    assert.equal(returnsAfter(3, 900), 900);
+    assert.equal(returnsAfter(2, 480), 480);
+    assert.equal(returnsAfter(3, 2 * 86400), undefined);
+    assert.equal(returnsAfter(1, 60), undefined);
+    assert.equal(returnsAfter(3, undefined), undefined);
+  });
+
+  it("takes the earliest card whose time has come, and only that", () => {
+    const waiting = [{ id: "a", at: 200 }, { id: "b", at: 100 }, { id: "c", at: 900 }];
+    assert.equal(takeDue(waiting, 50), undefined);
+    assert.equal(takeDue(waiting, 300).id, "b");
+    assert.equal(takeDue(waiting, 300).id, "a");
+    assert.equal(takeDue(waiting, 300), undefined);
+    assert.deepEqual(waiting.map((w) => w.id), ["c"]);
   });
 });

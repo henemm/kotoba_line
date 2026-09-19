@@ -40,6 +40,10 @@ export async function sessionQueue(opts) {
     await setMeta(key(opts), {
       cardIds: answer.cardIds,
       intervals: answer.intervals,
+      // What the buttons say after a Nochmal (#242), for the same reason.
+      againIntervals: answer.againIntervals,
+      // And after Schwer or Gut on the first showing (#242).
+      stepIntervals: answer.stepIntervals,
       // Cached for the same reason as the intervals: the session draws a star
       // on every card (#35), and a session on a train would otherwise draw all
       // of them empty — which reads as "nothing is starred", not as "unknown".
@@ -71,6 +75,8 @@ export async function sessionQueue(opts) {
     return {
       cardIds: answer.cardIds,
       intervals: answer.intervals,
+      againIntervals: answer.againIntervals,
+      stepIntervals: answer.stepIntervals,
       starred: answer.starred ?? [],
       recordings: answer.recordings ?? [],
       stale: false,
@@ -95,6 +101,8 @@ async function fromCache(cached) {
   return {
     cardIds: stillToAnswer(cached, waiting, answered),
     intervals: cached.intervals,
+    againIntervals: cached.againIntervals,
+    stepIntervals: cached.stepIntervals,
     starred: cached.starred ?? [],
     recordings: cached.recordings ?? [],
     stale: true,

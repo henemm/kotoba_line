@@ -10,7 +10,34 @@ import { createEmptyCard, fsrs, generatorParameters, Rating } from "ts-fsrs";
  * worth anything if the rebuild lands on the same answer every time. A replay
  * that quietly moves every due date is not a rebuild.
  */
-const engine = fsrs(generatorParameters({ enable_fuzz: false }));
+/**
+ * Noji's intervals (#242, Henning 2026-09-19: "Mache es so wie Noji"). Noji
+ * documents a new card as Nochmal 1 minute in the same session, Schwer 8
+ * minutes, Gut 15 minutes, Leicht 4 days (help.noji.io, "Personalise your
+ * Learning Algorithm", checked 2026-09-19). ts-fsrs's defaults gave 1, 6, 10
+ * minutes and 8 days, and a forgotten card 10 minutes for Nochmal.
+ *
+ * - `learning_steps` 1m, 15m: Nochmal is the first step, Gut the second,
+ *   Schwer the average of the two (8 minutes) — ts-fsrs's own rule.
+ * - `relearning_steps` the same, so Nochmal on a card she knew is also 1
+ *   minute, as Noji says of Nochmal on any card.
+ * - `w[3]`, the initial stability for Leicht, 8.2956 → 4: Leicht on a new card
+ *   is 4 days. Nothing else in the default weights is touched.
+ *
+ * Everything past the learning steps is still FSRS with default weights; Noji
+ * does not document what it does there. Changing any of this changes every
+ * replayed state (§3): deploying it needs a `replayCardState` over everyone.
+ */
+const weights = [...generatorParameters().w];
+weights[3] = 4;
+const engine = fsrs(
+  generatorParameters({
+    enable_fuzz: false,
+    learning_steps: ["1m", "15m"],
+    relearning_steps: ["1m", "15m"],
+    w: weights,
+  }),
+);
 
 const RATINGS = {
   1: Rating.Again,
@@ -100,4 +127,31 @@ export function previewIntervals(events, now = new Date()) {
     );
   }
   return out;
+}
+
+/**
+ * The four intervals a card offers once she has just rated it Nochmal
+ * `times` times in a row (#242): what the buttons say when it comes round
+ * again a minute later in the same session. Each Nochmal lowers the card's
+ * stability, so Leicht after two is not Leicht after one — measured: 2 days,
+ * then 1. Sent with the queue beside `previewIntervals`, because the client
+ * cannot fold a Nochmal itself and a session on a train cannot ask.
+ */
+export function previewAfterAgain(events, now = new Date(), times = 1) {
+  const at = Math.floor(now.getTime() / 1000);
+  const agains = Array.from({ length: times }, (_, i) => ({ id: `\uffff-again-${i}`, rating: 1, reviewed_at: at + 60 * i }));
+  return previewIntervals([...(events ?? []), ...agains], new Date((at + 60 * times) * 1000));
+}
+
+/**
+ * The four intervals a card offers when it comes back in the same session
+ * after Schwer or Gut on its first showing (#242) — `wait` seconds on, the
+ * learning step the button promised. Without these, a card back after "Gut
+ * 15 Min" showed four bare buttons: its answer is one the server has not
+ * folded yet.
+ */
+export function previewAfterStep(events, now = new Date(), rating, wait) {
+  const at = Math.floor(now.getTime() / 1000);
+  const step = { id: "\uffff-step", rating, reviewed_at: at };
+  return previewIntervals([...(events ?? []), step], new Date((at + wait) * 1000));
 }
