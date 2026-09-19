@@ -14,6 +14,7 @@
     "test:import": "node --test import/test/*.test.js",
     "tag": "node import/tag-cards.js",
     "dev:client": "node client/dev-server.js",
-    "test:client": "node --test client/test/*.test.js"
+    "test:client": "node --test client/test/*.test.js",
+    "import-travel": "node import/import-travel.js"
   }
 }

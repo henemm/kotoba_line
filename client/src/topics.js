@@ -43,6 +43,9 @@ const GERMAN = {
   shopping: "Einkaufen",
   "host family": "Gastfamilie",
   greetings: "Begrüßungen",
+  // #237: two rounds of travel phrases, import/travel.tsv
+  "travel 1": "Reise 1",
+  "travel 2": "Reise 2",
 };
 
 export const TOPIC_KEYS = Object.keys(GERMAN);

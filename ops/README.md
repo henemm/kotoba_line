@@ -109,8 +109,16 @@ umask 022
 npm run import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 npm run tag   -- --db /srv/kotoba/data/kotoba.sqlite
 npm run import-kana -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
+npm run import-travel -- --db /srv/kotoba/data/kotoba.sqlite
 npm run verify-import -- --db /srv/kotoba/data/kotoba.sqlite --media /srv/kotoba/media
 ```
+
+`import-travel` (#237) files the cards `import/travel.tsv` lists under the
+topics Reise 1 and Reise 2, and adds to the Kaishi deck the 26 phrases Kaishi
+lacks (ids from 9,000,000,000,000; Japanese and English from the Wikivoyage
+phrasebook). Those have no recording: the nightly
+`/srv/kotoba/bin/generate-word-sounds.sh` gives them the generated voice.
+`npm run tag` keeps the Reise topics, since it reads the same file.
 
 `import-kana` writes the Hiragana and Katakana decks (#158) — 208 cards from
 the fixed table in `import/lib/kana.js` — and fetches KanjiVG's 148

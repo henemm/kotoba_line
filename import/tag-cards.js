@@ -22,6 +22,7 @@ import {
   tagsForCard,
   tagsFromRules,
 } from "./lib/tagging.js";
+import { handTagged, parseTravel, travelAssignments } from "./lib/travel.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -73,6 +74,20 @@ for (const card of cards) {
   if (overrides.has(card.word)) fromOverride += 1;
   else if (modelPass.has(String(card.id))) fromModel += 1;
   for (const tag of tags) assignments.push({ card_id: card.id, tag });
+}
+
+// Reise 1 and 2 (#237) are a list, not a rule: the cards import/travel.tsv
+// names. Added here too, because the DELETE below clears every Kaishi tag —
+// without this a re-tag would take Reise off every card until import-travel
+// ran again.
+// The phrases the file adds carry topics written beside them, and the rules'
+// guesses for those cards are dropped (travel.tsv's header says why).
+const travel = parseTravel(readFileSync(join(here, "travel.tsv"), "utf8"));
+const byHand = handTagged(travel);
+const listed = new Set(cards.map((c) => c.id));
+for (let i = assignments.length - 1; i >= 0; i--) if (byHand.has(assignments[i].card_id)) assignments.splice(i, 1);
+for (const a of travelAssignments(travel)) {
+  if (listed.has(a.card_id)) assignments.push(a);
 }
 
 const taggedCards = new Set(assignments.map((a) => a.card_id));

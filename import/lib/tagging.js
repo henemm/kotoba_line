@@ -87,6 +87,10 @@ export const SITUATIONS = [
   "shopping",
   "host family",
   "greetings",
+  // #237: Reise 1 and 2 — a hand-picked list (import/travel.tsv), not a
+  // keyword rule, in two rounds so the first stays small enough to finish.
+  "travel 1",
+  "travel 2",
 ];
 
 export const TOPICS = [...FIELDS, ...SITUATIONS];
