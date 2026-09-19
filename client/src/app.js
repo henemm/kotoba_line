@@ -19,7 +19,7 @@ import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
 import { startFlushingStars } from "./stars.js";
 import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
-import { loadDeck, syncDeck } from "./deck.js";
+import { deckCatchingUp, loadDeck, syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
@@ -453,12 +453,20 @@ function openDeck(deck) {
 async function loadDeckTopics() {
   const deck = state.deck;
   if (!deck?.own) return;
-  try {
-    const list = deckTopics([...(await loadDeck()).values()], deck.id);
+  const count = (cards) => {
     if (state.deck?.id !== deck.id) return;
-    state.deckTopics = { id: deck.id, list };
+    state.deckTopics = { id: deck.id, list: deckTopics([...cards.values()], deck.id) };
     renderApp();
     if (state.sheet) openSheet();
+  };
+  try {
+    count(await loadDeck());
+    // A cached deck comes back before the server's difference does, and the
+    // difference is where new topics arrive — the first start after v130 has
+    // every one of hers in it. Counted only from the cache, her deck said
+    // "Weitere Auswahl" until it was opened again (measured live, v130).
+    await deckCatchingUp();
+    count(await loadDeck());
   } catch {
     /* no copy of the deck yet: the sheet shows no topics, as before */
   }
