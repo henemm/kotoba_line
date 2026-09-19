@@ -5,7 +5,7 @@ import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
-import { comesRoundAgain, reshowPosition } from "../reshow.js";
+import { comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../reshow.js";
 import { forget, remember } from "../resume.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { seen } from "../seen.js";
@@ -245,6 +245,17 @@ export function sessionScreen({
   let answered = 0;
   let before;
   let intervals = {};   // card id → { 1..4: seconds }, for めくる's rating row
+  // The same after a Nochmal (#242): what the buttons say when the card
+  // comes round again in this session.
+  let againIntervals = {};
+  // And after Schwer or Gut on the first showing, for when it comes back.
+  let stepIntervals = {};
+  // Card id → which of these holds for its next showing ("first", "again",
+  // "step:2"/"step:3", or undefined once none does — `labelsAfter`).
+  const labelSource = new Map();
+  // #242: cards whose learning step (8, 15 minutes) runs out during this
+  // session — `{ card, at }` — brought back by `next()` when it has.
+  const waiting = [];
   // The pending move to the next card in 選ぶ and 聞く. Held here rather than
   // left anonymous so a replay can push it back (#32) and so leaving the
   // session cancels it — an orphaned timer redraws a screen that is gone.
@@ -296,6 +307,8 @@ export function sessionScreen({
       // twenty cards is far too small a pool to find plausible ones in.
       pool = [...deck.values()];
       intervals = q.intervals ?? {};
+      againIntervals = q.againIntervals ?? {};
+      stepIntervals = q.stepIntervals ?? {};
       starred = new Set(q.starred ?? []);
       recordings = new Map();
       for (const r of q.recordings ?? []) {
@@ -306,7 +319,10 @@ export function sessionScreen({
       // copy's labels are as stale as they would have been live.
       const met = new Set();
       for (const id of ids) {
-        if (met.has(id)) reshows.set(id, (reshows.get(id) ?? 0) + 1);
+        if (met.has(id)) {
+          reshows.set(id, (reshows.get(id) ?? 0) + 1);
+          labelSource.set(id, undefined);
+        }
         met.add(id);
       }
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
@@ -620,6 +636,11 @@ export function sessionScreen({
       queue.splice(reshowPosition(index, queue.length), 0, card);
       reshows.set(card.id, (reshows.get(card.id) ?? 0) + 1);
     }
+    // #242: Schwer or Gut on a learning step — back when its minutes are up,
+    // if she is still practising then (`next()`).
+    const back = returnsAfter(rating, secondsFor(card)?.[rating]);
+    if (back !== undefined) waiting.push({ card, at: Math.floor(Date.now() / 1000) + back });
+    labelSource.set(card.id, labelsAfter(rating, labelSource.has(card.id) ? labelSource.get(card.id) : "first"));
 
     const event = {
       id: uuid(),
@@ -1221,13 +1242,24 @@ export function sessionScreen({
     settle();
   }
 
+  /**
+   * The four intervals for this card in seconds, as the server worked them
+   * out: before any answer this session, or after a Nochmal (#242). Undefined
+   * when neither holds — a card back after Schwer or Gut has an answer the
+   * server has not folded, and no number beats a wrong one (#214).
+   */
+  function secondsFor(card) {
+    const source = labelSource.has(card.id) ? labelSource.get(card.id) : "first";
+    if (source === "first") return intervals[card.id];
+    // One set per Nochmal in a row: `reshows` counts them.
+    if (source === "again") return againIntervals[card.id]?.[(reshows.get(card.id) ?? 1) - 1];
+    if (source?.startsWith("step:")) return stepIntervals[card.id]?.[source.slice(5)];
+    return undefined;
+  }
+
   /** The four intervals for this card, already formatted. Empty when unknown. */
   function intervalsFor(card) {
-    // #214: a card that has come round again has a Nochmal the server has
-    // not folded yet, so what it sent at session start is for the card as it
-    // was. No number beats a wrong one.
-    if (reshows.has(card.id)) return {};
-    const seconds = intervals[card.id];
+    const seconds = secondsFor(card);
     if (!seconds) return {};
     return Object.fromEntries(
       Object.entries(seconds).map(([rating, s]) => [rating, formatInterval(s)]),
@@ -1718,6 +1750,9 @@ export function sessionScreen({
     // screen while `finish()` waits; a second tap must not finish twice.
     if (finishing) return;
     index += 1;
+    // #242: a learning step that has run out comes before the next card.
+    const due = takeDue(waiting, Math.floor(Date.now() / 1000));
+    if (due) queue.splice(index, 0, due.card);
     if (index >= queue.length) return finish();
     drawCard();
   }

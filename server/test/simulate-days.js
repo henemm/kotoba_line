@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { MAX_RESHOWS, comesRoundAgain, reshowPosition } from "../../client/src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, labelsAfter, reshowPosition, returnsAfter, takeDue } from "../../client/src/reshow.js";
 import { formatInterval } from "../../client/src/screens/session.js";
 import { deckSettings } from "../src/deck-settings.js";
 import { dayIn, nextDay, startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
 import { MAX_SESSION_LENGTH, parseDeckKey, queueForUser } from "../src/queue.js";
 import { replayCardState } from "../src/replay.js";
-import { previewIntervals } from "../src/scheduler.js";
+import { previewAfterAgain, previewAfterStep, previewIntervals } from "../src/scheduler.js";
 
 /**
  * Days of practice, simulated (#242).
@@ -186,11 +186,14 @@ export function simulate(db, userId, {
     if (profile.skip.includes(d)) continue;
 
     const dayStart = startOfDay(dayKey, timeZone);
+    let busyUntil = 0;
     let lastFull = false;
     const today = pattern ? pattern(d, usage) : sessions;
     if (today.length === 0) continue;
     for (const [sessionNo, { hour, minute = 0, mode, stopAfter = Infinity }] of today.entries()) {
-      const now = dayStart + hour * HOUR + minute * 60;
+      // A session cannot start before the last one ended: sixty cards with
+      // their Nochmal and learning steps can outlast a half-hour gap.
+      const now = Math.max(dayStart + hour * HOUR + minute * 60, busyUntil + 60);
       row.sessions += 1;
       const where = `Tag ${d} ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
       const session = `${d}/${sessionNo}`;
@@ -248,24 +251,54 @@ export function simulate(db, userId, {
       const skipped = unseen.slice(0, worstIn + 1).filter((c) => !inQueue.has(c.id));
       if (skipped.length > 0) violations.push(`${where}: ${skipped.length} häufigere neue Wörter übersprungen`);
 
-      // The labels a phone would print under めくる's buttons: folded at
-      // session start, as the queue route does (`intervalsForCards`).
+      // The labels a phone would print under the buttons: folded at session
+      // start, as the queue route does (`intervalsForCards`) — before any
+      // answer, and after a Nochmal (#242).
       const labels = new Map();
-      for (const id of q.cardIds) labels.set(id, previewIntervals(historyOf.all(userId, id), new Date(now * 1000)));
+      const againLabels = new Map();
+      const stepLabels = new Map();
+      for (const id of q.cardIds) {
+        const history = historyOf.all(userId, id);
+        labels.set(id, previewIntervals(history, new Date(now * 1000)));
+        againLabels.set(id, [1, 2, 3].map((times) => previewAfterAgain(history, new Date(now * 1000), times)));
+        const steps = {};
+        for (const r of [2, 3]) {
+          const wait = labels.get(id)[r];
+          if (wait < DAY) steps[r] = previewAfterStep(history, new Date(now * 1000), r, wait);
+        }
+        stepLabels.set(id, steps);
+      }
+      const labelSource = new Map();
+      const labelFor = (id) => {
+        const source = labelSource.has(id) ? labelSource.get(id) : "first";
+        if (source === "first") return labels.get(id);
+        if (source === "again") return againLabels.get(id)[(reshows.get(id) ?? 1) - 1];
+        if (source?.startsWith("step:")) return stepLabels.get(id)[source.slice(5)];
+        return undefined;
+      };
 
-      // ── the session itself, including Nochmal coming round again.
+      // ── the session itself: Nochmal three cards on, a learning step
+      // (Schwer 8, Gut 15 minutes) when its time has come — the app's rules
+      // from reshow.js, on the simulated clock.
       const queue = [...q.cardIds];
       const reshows = new Map();
+      const waiting = [];
+      const shown = new Set();
       const lastInSession = new Map();
       let t = now;
       let i = 0;
-      for (; i < queue.length && i < stopAfter; i++) {
+      for (; i < stopAfter; i++) {
+        const due = takeDue(waiting, t);
+        if (due) queue.splice(i, 0, due.id);
+        if (i >= queue.length) break;
         const id = queue[i];
-        const reshown = reshows.has(id);
+        const reshown = shown.has(id);
+        shown.add(id);
         const fresh = !seenEver.has(id);
         t += SECONDS_PER_ANSWER;
         const rating = answer(profile, mode, random, reshown, fresh);
-        showings.push({ id, t, rating, fresh, reshown, session, label: reshown ? undefined : labels.get(id)[rating] });
+        const said = labelFor(id);
+        showings.push({ id, t, rating, fresh, reshown, session, label: said?.[rating] });
         if (fresh) {
           seenEver.add(id);
           row.fresh += 1;
@@ -279,9 +312,9 @@ export function simulate(db, userId, {
         // ── die Angabe unter dem Knopf: what 'Gut → 2 Tage' said is when the
         // card is now due. Compared as the button prints it, so exactly as
         // coarse as what she reads: "2 Tage" either side can hide hours.
-        // Withheld on a reshown card (#214), so not checked.
-        if (!reshown) {
-          const promised = formatInterval(labels.get(id)[rating]);
+        // Not checked where the app shows no label (after Schwer or Gut).
+        if (said) {
+          const promised = formatInterval(said[rating]);
           const actual = formatInterval(stateOf.get(userId, id).due_at - t);
           if (promised !== actual) {
             row.labelOff += 1;
@@ -293,8 +326,13 @@ export function simulate(db, userId, {
           queue.splice(reshowPosition(i, queue.length), 0, id);
           reshows.set(id, (reshows.get(id) ?? 0) + 1);
         }
+        const back = returnsAfter(rating, said?.[rating]);
+        if (back !== undefined) waiting.push({ id, at: t + back });
+        labelSource.set(id, labelsAfter(rating, labelSource.has(id) ? labelSource.get(id) : "first"));
         lastInSession.set(id, rating);
       }
+
+      busyUntil = t;
 
       // She put the phone away with cards left: the day's new words may be
       // among them, and a Nochmal card may not have come round yet.

@@ -277,8 +277,10 @@ Its short-term steps are Noji's (#242, Henning 2026-09-19): a new card offers
 *again* 1 minute, *hard* 8 minutes, *good* 15 minutes, *easy* 4 days, and
 *again* on any card is 1 minute. Past the learning steps it is FSRS with
 default weights (`server/src/scheduler.js` says which were changed). An
-*again* brings the card back in the same session three cards later
-(`client/src/reshow.js`). `server/test/usage-report.js` simulates a month of
+*again* brings the card back in the same session three cards later, and
+*hard* or *good* on a learning step brings it back once those minutes are up
+if the session is still going (`client/src/reshow.js`). The queue sends the
+labels for those returns ahead (`againIntervals`, `stepIntervals`). `server/test/usage-report.js` simulates a month of
 use and reports what she would experience.
 
 Map the four ratings straight through: the self-grade buttons in 話す and

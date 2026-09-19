@@ -128,3 +128,30 @@ export function previewIntervals(events, now = new Date()) {
   }
   return out;
 }
+
+/**
+ * The four intervals a card offers once she has just rated it Nochmal
+ * `times` times in a row (#242): what the buttons say when it comes round
+ * again a minute later in the same session. Each Nochmal lowers the card's
+ * stability, so Leicht after two is not Leicht after one — measured: 2 days,
+ * then 1. Sent with the queue beside `previewIntervals`, because the client
+ * cannot fold a Nochmal itself and a session on a train cannot ask.
+ */
+export function previewAfterAgain(events, now = new Date(), times = 1) {
+  const at = Math.floor(now.getTime() / 1000);
+  const agains = Array.from({ length: times }, (_, i) => ({ id: `\uffff-again-${i}`, rating: 1, reviewed_at: at + 60 * i }));
+  return previewIntervals([...(events ?? []), ...agains], new Date((at + 60 * times) * 1000));
+}
+
+/**
+ * The four intervals a card offers when it comes back in the same session
+ * after Schwer or Gut on its first showing (#242) — `wait` seconds on, the
+ * learning step the button promised. Without these, a card back after "Gut
+ * 15 Min" showed four bare buttons: its answer is one the server has not
+ * folded yet.
+ */
+export function previewAfterStep(events, now = new Date(), rating, wait) {
+  const at = Math.floor(now.getTime() / 1000);
+  const step = { id: "\uffff-step", rating, reviewed_at: at };
+  return previewIntervals([...(events ?? []), step], new Date((at + wait) * 1000));
+}
