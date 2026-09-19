@@ -9,6 +9,7 @@ import deckRoutes, { personalDeckRoutes } from "./routes/deck.js";
 import settingsRoutes from "./routes/settings.js";
 import statsRoutes from "./routes/stats.js";
 import recordingRoutes from "./routes/recordings.js";
+import uiEventRoutes from "./routes/ui-events.js";
 
 /**
  * Build the server. Takes an already-open database so tests can hand in an
@@ -52,6 +53,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   await app.register(personalDeckRoutes);
   await app.register(settingsRoutes);
   await app.register(recordingRoutes);
+  await app.register(uiEventRoutes);
 
   app.addHook("onClose", async () => database.close());
 

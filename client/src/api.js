@@ -190,6 +190,8 @@ export const api = {
   setCardTags: (cardId, tags) =>
     request(`/cards/${cardId}/tags`, { method: "PUT", body: { tags } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
+  // #228: what appeared on her screen and what she did with it (seen.js).
+  uiEvents: (events) => request("/ui-events", { method: "POST", body: { events } }),
   // #183 follow-up, #185: a native speaker's recording of one card, made under
   // her own session (recording.js). Her own voice is never uploaded.
   addRecording: (cardId, kind, id, blob) =>

@@ -8,6 +8,7 @@ import { sessionQueue } from "../queue.js";
 import { forget, remember } from "../resume.js";
 import { toRomaji } from "../romaji.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
+import { seen } from "../seen.js";
 import { setStar } from "../stars.js";
 import { judge, kanaPreview, normalizeTyped, splitReadings } from "../typing.js";
 import { acknowledged, el, render } from "../ui/dom.js";
@@ -431,6 +432,7 @@ export function sessionScreen({
         "aria-label": "Hinweis schließen",
         text: "×",
         onclick: () => {
+          seen("break_hint_dismissed");
           showBreakHint = false;
           root.querySelector(".break-hint")?.remove();
         },
@@ -564,7 +566,11 @@ export function sessionScreen({
     const hint = breakHintCheck(breakHintState, Date.now(), awayTooLong);
     awayTooLong = false;
     breakHintState = hint.state;
-    if (hint.due) showBreakHint = true;
+    if (hint.due) {
+      showBreakHint = true;
+      // #228: here and not in breakHint(), which every card redraws.
+      seen("break_hint_shown", `${(hint.state.shown * BREAK_HINT_INTERVAL_MS) / 60000}min`);
+    }
     // #220: a hint she never dismissed must not survive into a *new* stretch
     // — if she actually took the break it suggested, the streak restarting
     // is exactly the "started fresh" case #218's dismiss-only-hides-this-one
