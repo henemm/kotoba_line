@@ -138,3 +138,41 @@ describe("say() (#218 follow-up)", () => {
     assert.equal(ended, 1);
   });
 });
+
+describe("nowPlaying() — the ♪ pulses whoever started the sound (2026-09-19)", () => {
+  it("is the sound from its start until it ends, and tells listeners both times", async () => {
+    const { say, nowPlaying, onPlayingChange } = await import(`../src/audio.js?${Math.random()}`);
+    const seen = [];
+    onPlayingChange((s) => seen.push(s?.file));
+    say("思う", "practice/omou.mp3");
+    assert.deepEqual(nowPlaying(), { text: "思う", file: "practice/omou.mp3" });
+    lastAudio.fire("ended");
+    assert.equal(nowPlaying(), undefined);
+    assert.deepEqual(seen, ["practice/omou.mp3", undefined]);
+  });
+
+  it("hands over from one sound to the next without a stale end clearing the new one", async () => {
+    const { say, nowPlaying } = await import(`../src/audio.js?${Math.random()}`);
+    say("思う", "practice/omou.mp3");
+    const first = lastAudio;
+    say("聞く", "practice/kiku.mp3");
+    first.fire("error"); // a late event from the interrupted one
+    assert.equal(nowPlaying()?.file, "practice/kiku.mp3");
+  });
+
+  it("covers synthesis too, and ends on stop()", async () => {
+    const { say, stop, nowPlaying } = await import(`../src/audio.js?${Math.random()}`);
+    say("思う", undefined);
+    assert.equal(nowPlaying()?.text, "思う");
+    stop();
+    assert.equal(nowPlaying(), undefined);
+  });
+
+  it("still calls the caller's own onEnded", async () => {
+    const { say } = await import(`../src/audio.js?${Math.random()}`);
+    let ended = 0;
+    say("思う", "practice/omou.mp3", { onEnded: () => ended++ });
+    lastAudio.fire("ended");
+    assert.equal(ended, 1);
+  });
+});

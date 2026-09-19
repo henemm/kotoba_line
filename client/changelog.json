@@ -1,5 +1,12 @@
 [
   {
+    "version": "v132",
+    "summary": "Der ♪-Knopf pulsiert jetzt auch, wenn die App von selbst vorliest.",
+    "notes": [
+      "Bisher pulsierte ♪ nur, wenn du ihn angetippt hast. Jetzt zeigt er immer, dass gerade etwas abgespielt wird – auch beim automatischen Vorlesen eines Worts oder Satzes."
+    ]
+  },
+  {
     "version": "v131",
     "summary": "„Nach Thema üben“ erscheint jetzt sofort nach dem Update.",
     "notes": [
