@@ -1,7 +1,7 @@
 import { api } from "../api.js";
-import { say } from "../audio.js";
 import { showsScript, shownWord } from "../script.js";
 import { starButton, topicChips } from "../ui/card-marks.js";
+import { soundButton } from "../ui/sound-button.js";
 import { el, render } from "../ui/dom.js";
 import { cardHistoryBlock } from "./card-history.js";
 
@@ -84,11 +84,10 @@ export function cardTopicsSheet({ card, topics = [], topicNames, onSaved, onClos
         // Its recording, or its generated file (#183); this sheet never
         // falls back to the phone's voice.
         card.word_audio || card.word_audio_generated
-          ? el("button.topics-hear", {
-              type: "button",
-              "aria-label": `${shownWord(card, japanese)} anhören`,
-              text: "♪",
-              onclick: () => say(undefined, card.word_audio || card.word_audio_generated),
+          ? soundButton({
+              sound: { file: card.word_audio || card.word_audio_generated },
+              className: ".topics-hear",
+              label: `${shownWord(card, japanese)} anhören`,
             })
           : null,
         el("button.topics-close", {

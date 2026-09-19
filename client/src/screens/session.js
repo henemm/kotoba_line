@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { mediaUrl, nowPlaying, onPlayingChange, prime, say, stop, unlock } from "../audio.js";
+import { mediaUrl, prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
@@ -17,21 +17,8 @@ import { answerRecorder, attemptRow } from "../ui/answer-recorder.js";
 import { uuid, voiceCircle } from "../ui/voice-circle.js";
 import { kanaMnemonicBlock } from "../ui/kana-mnemonic.js";
 import { stopAllRecording } from "../recording.js";
+import { soundButton } from "../ui/sound-button.js";
 
-/** Which ♪ button a sound belongs to: its recording, or its text when it has none. */
-export function soundKey(text, file) {
-  return file ? `file:${file}` : text ? `text:${text}` : undefined;
-}
-
-// One listener for the whole app: every ♪ on screen whose sound this is
-// pulses, and stops when it ends (see `speaker`).
-onPlayingChange((sound) => {
-  if (typeof document === "undefined") return;
-  const key = soundKey(sound?.text, sound?.file);
-  for (const btn of document.querySelectorAll("button.speaker[data-sound]")) {
-    btn.classList.toggle("playing", key !== undefined && btn.dataset.sound === key);
-  }
-});
 
 /**
  * §6: the multiple-choice modes give *again* on a miss and *good* on a hit;
@@ -804,22 +791,12 @@ export function sessionScreen({
   function speaker(text, file, { rate, ghost = true, label = "Vorlesen", big = false, small = false } = {}) {
     // Absent rather than inert, and never a guess (#137, v66): see `canVoice`.
     if (!canVoice(text, file)) return null;
-    const btn = el(`button.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`, {
-      type: "button",
-      "aria-label": label,
-      text: "♪",
-      // A tap while it plays starts it again rather than stopping it
-      // (Henning, 2026-09-19): a second tap is most often "did the first one
-      // work?", and stopping would answer that with silence.
-      ...acknowledged(() => say(text, file, rate ? { rate } : undefined)),
+    // The app's one ♪ (ui/sound-button.js): tap-ring and pulse come with it.
+    return soundButton({
+      sound: { text, file, rate },
+      className: `.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`,
+      label,
     });
-    // `.playing` follows the sound, whoever started it (2026-09-19): the
-    // read-aloud of a new card or of a revealed sentence pulses its ♪ too.
-    // Drawn with the state as it is now, since the read-aloud usually starts
-    // before the card's buttons exist.
-    btn.dataset.sound = soundKey(text, file);
-    btn.classList.toggle("playing", soundKey(nowPlaying()?.text, nowPlaying()?.file) === btn.dataset.sound);
-    return btn;
   }
 
   /** Read aloud, the same rule as `speaker`: a recording, or Japanese to synthesise. */

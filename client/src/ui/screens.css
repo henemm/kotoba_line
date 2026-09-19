@@ -1752,13 +1752,15 @@
    while it does. Both outlast the ~80ms a tap takes, under a thumb that
    covers the button — which `:active` alone did not. `acknowledged()` in
    ui/dom.js sets and clears the class. */
-.speaker,
-.add-speak {
+/* Keyed on `.sound`, the one ♪ (ui/sound-button.js), not on its looks: until
+   2026-09-19 these were written for .speaker and .add-speak, and every other
+   ♪ — the card sheets', the kana sheet's, the form's Kaishi offer — had
+   neither signal (Henning's screenshot of a card sheet). */
+.sound {
   position: relative;
   transition: background-color 0.15s, color 0.15s;
 }
-.speaker::after,
-.add-speak::after {
+.sound::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1766,11 +1768,12 @@
   pointer-events: none;
   opacity: 0;
 }
-.speaker.tapped::after,
-.add-speak.tapped::after {
+.sound.tapped::after {
   animation: tap-ring 0.45s ease-out;
 }
-.speaker.ghost.tapped {
+.speaker.ghost.tapped,
+.topics-hear.tapped,
+.kaishi-hear.tapped {
   background: var(--rail);
   color: #fff;
 }
@@ -1807,7 +1810,7 @@
    fire — a recording's real length or a synthesised sentence's, not a guess.
    The two run at the same time on the same button without conflict: this
    pulses the button's own box-shadow, the tap-ring animates `::after`'s. */
-.speaker.playing {
+.sound.playing {
   animation: speaker-playing 1.1s ease-in-out infinite;
 }
 @keyframes speaker-playing {
@@ -1816,7 +1819,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .speaker.playing {
+  .sound.playing {
     animation: none;
     opacity: 0.8;
   }

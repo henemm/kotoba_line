@@ -1,5 +1,12 @@
 [
   {
+    "version": "v135",
+    "summary": "Jedes ♪ in der App zeigt jetzt den Tipp und pulsiert, solange es abspielt.",
+    "notes": [
+      "Bisher tat das nur das ♪ beim Üben. Jetzt auch im Fenster einer Karte (eigene Decks, Kaishi aus der Suche, Hiragana und Katakana) und beim Hinzufügen einer Karte."
+    ]
+  },
+  {
     "version": "v134",
     "summary": "Stern und Themen funktionieren jetzt in jedem Deck gleich – und der Stern beim Üben ist besser zu sehen.",
     "notes": [
