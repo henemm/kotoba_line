@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_RESHOWS, comesRoundAgain } from "../src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, reshowPosition } from "../src/reshow.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
@@ -1075,5 +1075,13 @@ describe("comesRoundAgain (#214, shared with the multi-day simulation, #242)", (
 
   it("never sends a card round again for Schwer, Gut or Leicht", () => {
     for (const rating of [2, 3, 4]) assert.equal(comesRoundAgain(rating, 0), false);
+  });
+});
+
+describe("reshowPosition (#242)", () => {
+  it("puts a Nochmal card three cards on, or at the end when fewer are left", () => {
+    assert.equal(reshowPosition(0, 60), 4);
+    assert.equal(reshowPosition(10, 12), 12);
+    assert.equal(reshowPosition(59, 60), 60);
   });
 });

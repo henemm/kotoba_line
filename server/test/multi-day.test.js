@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { openDatabase } from "../src/db.js";
-import { PROFILES, logFingerprint, rebuildMatches, simulate } from "./simulate-days.js";
+import { PATTERNS, PROFILES, experience, logFingerprint, rebuildMatches, simulate } from "./simulate-days.js";
 import { seedUser } from "./helpers.js";
 
 /**
@@ -68,6 +68,21 @@ describe("thirty days of practice (#242)", () => {
     // Every Nochmal sends the card round again unless it already came round
     // three times — so the two can only differ by those.
     assert.ok(reshown <= again && again - reshown < again / 20, `${again} Nochmal, ${reshown} reshown`);
+  });
+
+  it("brings a Nochmal card back within the session even when she stops after twenty (#242)", async () => {
+    const { db, userId } = await learner();
+    const { violations, showings } = simulate(db, userId, { start: START, days: DAYS, profile: PROFILES.realistisch, pattern: PATTERNS.pendeln });
+    assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
+    const { ratings } = experience(showings);
+    // At the end of the queue it was 7 % (measured 2026-09-19); three cards
+    // on, only a Nochmal among the last three before she stops misses it.
+    assert.ok(ratings["neu:1"].sameSession >= 80, `${ratings["neu:1"].sameSession} %`);
+    // What the buttons say for a new card is Noji's.
+    assert.deepEqual(
+      [1, 2, 3, 4].map((r) => ratings[`neu:${r}`]?.label),
+      ["1 Min", "8 Min", "15 Min", "4 Tage"],
+    );
   });
 
   it("counts a deck's daily maximum as a full session, not as cards gone missing", async () => {

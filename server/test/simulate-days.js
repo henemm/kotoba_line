@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { MAX_RESHOWS, comesRoundAgain } from "../../client/src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, reshowPosition } from "../../client/src/reshow.js";
 import { formatInterval } from "../../client/src/screens/session.js";
 import { deckSettings } from "../src/deck-settings.js";
 import { dayIn, nextDay, startOfDay } from "../src/day.js";
@@ -59,6 +59,10 @@ export const PROFILES = {
   schwach: { again: 0.4, hard: 0.15, easy: 0.02, skip: [] },
   // Days are 1-based: three days away in the middle of the month.
   luecke: { again: 0.2, hard: 0.1, easy: 0.1, skip: [10, 11, 12] },
+  // A new word missed as often as in Charlotte's first days (37 % Nochmal in
+  // "100 vokabeln", measured 2026-09-19), a word met before far less often —
+  // the other profiles miss every card alike, which overstates the backlog.
+  realistisch: { again: 0.37, againSeen: 0.12, hard: 0.1, easy: 0.05, skip: [] },
 };
 
 /**
@@ -70,8 +74,40 @@ export const DEFAULT_SESSIONS = [
   { hour: 19, mode: "flip" },
 ];
 
-function answer(profile, mode, random, reshown) {
-  const again = reshown ? profile.again / 2 : profile.again;
+/**
+ * How she might actually use it (Henning, 2026-09-19: "Du musst die Nutzung
+ * simulieren"). Each is a function of the day and the seeded randomness,
+ * returning that day's sessions: `hour`, `minute`, `mode`, and `stopAfter` —
+ * the answers after which she puts the phone away, whatever is left.
+ */
+export const PATTERNS = {
+  zweimal: () => DEFAULT_SESSIONS,
+  "einmal-abends": () => [{ hour: 20, mode: "flip" }],
+  // Two sessions a few minutes apart — what an app that says "your next
+  // cards are ready" (Noji) brings about.
+  "gleich-nochmal": () => [{ hour: 19, mode: "flip" }, { hour: 19, minute: 30, mode: "flip" }],
+  // Short bursts on the train: twenty cards at most, three times a day.
+  pendeln: () => [
+    { hour: 7, minute: 40, mode: "choose", stopAfter: 20 },
+    { hour: 12, minute: 30, mode: "flip", stopAfter: 20 },
+    { hour: 17, minute: 50, mode: "flip", stopAfter: 20 },
+  ],
+  // A day in three off; one to three sessions at any hour from 7 to 22, of
+  // ten to forty answers.
+  unregelmaessig: (day, random) => {
+    if (random() < 0.3) return [];
+    const count = 1 + Math.floor(random() * 3);
+    const hours = new Set();
+    while (hours.size < count) hours.add(7 + Math.floor(random() * 16));
+    return [...hours]
+      .sort((a, b) => a - b)
+      .map((hour) => ({ hour, minute: Math.floor(random() * 60), mode: random() < 0.5 ? "choose" : "flip", stopAfter: 10 + Math.floor(random() * 31) }));
+  },
+};
+
+function answer(profile, mode, random, reshown, fresh) {
+  const base = fresh ? profile.again : (profile.againSeen ?? profile.again);
+  const again = reshown ? base / 2 : base;
   const r = random();
   if (r < again) return 1;
   if (mode !== "flip") return 3;
@@ -99,9 +135,15 @@ export function simulate(db, userId, {
   timeZone = "Asia/Tokyo",
   profile = PROFILES.fleissig,
   sessions = DEFAULT_SESSIONS,
+  pattern,
   seed = 1,
 } = {}) {
   const random = seeded(seed);
+  // A separate stream for the pattern, so choosing one does not change the
+  // answers a learner gives.
+  const usage = seeded(seed + 1000);
+  // Every card shown, in order: what she experienced (`experience` below).
+  const showings = [];
   const { newPerDay, maxPerDay } = deckSettings(db, userId, deckKey);
   // The deck as the queue scopes it: Kaishi and the kana decks by `deck`,
   // one of her own by `deck_id` as well (`deck:1`).
@@ -145,10 +187,13 @@ export function simulate(db, userId, {
 
     const dayStart = startOfDay(dayKey, timeZone);
     let lastFull = false;
-    for (const { hour, mode } of sessions) {
-      const now = dayStart + hour * HOUR;
+    const today = pattern ? pattern(d, usage) : sessions;
+    if (today.length === 0) continue;
+    for (const [sessionNo, { hour, minute = 0, mode, stopAfter = Infinity }] of today.entries()) {
+      const now = dayStart + hour * HOUR + minute * 60;
       row.sessions += 1;
-      const where = `Tag ${d} ${String(hour).padStart(2, "0")}:00`;
+      const where = `Tag ${d} ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+      const session = `${d}/${sessionNo}`;
 
       const q = queueForUser(db, userId, { deckKey, timeZone }, now, random);
       const inQueue = new Set(q.cardIds);
@@ -213,12 +258,15 @@ export function simulate(db, userId, {
       const reshows = new Map();
       const lastInSession = new Map();
       let t = now;
-      for (let i = 0; i < queue.length; i++) {
+      let i = 0;
+      for (; i < queue.length && i < stopAfter; i++) {
         const id = queue[i];
         const reshown = reshows.has(id);
+        const fresh = !seenEver.has(id);
         t += SECONDS_PER_ANSWER;
-        const rating = answer(profile, mode, random, reshown);
-        if (!seenEver.has(id)) {
+        const rating = answer(profile, mode, random, reshown, fresh);
+        showings.push({ id, t, rating, fresh, reshown, session, label: reshown ? undefined : labels.get(id)[rating] });
+        if (fresh) {
           seenEver.add(id);
           row.fresh += 1;
         } else if (!reshown) row.reviews += 1;
@@ -242,15 +290,20 @@ export function simulate(db, userId, {
         }
 
         if (comesRoundAgain(rating, reshows.get(id) ?? 0)) {
-          queue.push(id);
+          queue.splice(reshowPosition(i, queue.length), 0, id);
           reshows.set(id, (reshows.get(id) ?? 0) + 1);
         }
         lastInSession.set(id, rating);
       }
 
+      // She put the phone away with cards left: the day's new words may be
+      // among them, and a Nochmal card may not have come round yet.
+      const stoppedEarly = i < queue.length;
+      if (stoppedEarly) lastFull = true;
+
       // ── gleich nochmal: a card leaves the session on a Nochmal only once
       // it has come round the most times the rule allows (#214).
-      for (const [id, rating] of lastInSession) {
+      for (const [id, rating] of stoppedEarly ? [] : lastInSession) {
         if (rating === 1 && (reshows.get(id) ?? 0) < MAX_RESHOWS) {
           violations.push(`${where}: Karte ${id} endete mit Nochmal und kam nicht wieder`);
         }
@@ -267,7 +320,7 @@ export function simulate(db, userId, {
     }
   }
 
-  return { rows, violations, newPerDay, maxPerDay };
+  return { rows, violations, newPerDay, maxPerDay, showings };
 }
 
 /** card_state as stored, then as folded from the log again: rule 1's promise. */
@@ -286,4 +339,62 @@ export function logFingerprint(db, userId) {
     .all(userId)
     .map((e) => `${e.card_id}:${e.mode}:${e.rating}:${e.reviewed_at}`)
     .join("\n");
+}
+
+function median(values) {
+  if (values.length === 0) return undefined;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+/**
+ * What the learner lived through, from `simulate`'s showings: after each
+ * answer, how long until she actually saw that card again — against what the
+ * button said. The label is a promise about when a card is *due*; this is
+ * when it *came*, which depends on when she next opened the app.
+ */
+export function experience(showings) {
+  const next = new Map();
+  const gaps = [];
+  for (let i = showings.length - 1; i >= 0; i--) {
+    const s = showings[i];
+    const after = next.get(s.id);
+    gaps[i] = after ? { gap: after.t - s.t, sameSession: after.session === s.session } : undefined;
+    next.set(s.id, s);
+  }
+
+  const groups = {};
+  const firstDays = new Map(); // id → showings within 24 hours of its first
+  const introduced = new Map();
+  showings.forEach((s, i) => {
+    if (s.fresh) introduced.set(s.id, s.t);
+    const first = introduced.get(s.id);
+    if (first !== undefined && s.t - first < DAY) firstDays.set(s.id, (firstDays.get(s.id) ?? 0) + 1);
+    if (s.reshown || s.label === undefined || !gaps[i]) return;
+    const key = `${s.fresh ? "neu" : "gesehen"}:${s.rating}`;
+    const g = (groups[key] ??= { labels: [], gaps: [], sameSession: 0 });
+    g.labels.push(s.label);
+    g.gaps.push(gaps[i].gap);
+    if (gaps[i].sameSession) g.sameSession += 1;
+  });
+
+  const summary = {};
+  for (const [key, g] of Object.entries(groups)) {
+    summary[key] = {
+      label: formatInterval(median(g.labels)),
+      answers: g.gaps.length,
+      median: formatInterval(median(g.gaps)),
+      sameSession: Math.round((100 * g.sameSession) / g.gaps.length),
+      withinDay: Math.round((100 * g.gaps.filter((x) => x < DAY).length) / g.gaps.length),
+    };
+  }
+  const seenOnFirstDay = [...firstDays.values()];
+  return {
+    ratings: summary,
+    // How many times a new word is shown in its first 24 hours.
+    firstDay: {
+      median: median(seenOnFirstDay),
+      once: Math.round((100 * seenOnFirstDay.filter((n) => n === 1).length) / (seenOnFirstDay.length || 1)),
+    },
+  };
 }

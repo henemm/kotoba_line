@@ -273,6 +273,14 @@ pace. The limit still paces an ordinary day; it is no longer a full stop.
 Use `ts-fsrs`. It is a drop-in library, it is what modern Anki uses, and it
 outperforms fixed-interval Leitner boxes noticeably.
 
+Its short-term steps are Noji's (#242, Henning 2026-09-19): a new card offers
+*again* 1 minute, *hard* 8 minutes, *good* 15 minutes, *easy* 4 days, and
+*again* on any card is 1 minute. Past the learning steps it is FSRS with
+default weights (`server/src/scheduler.js` says which were changed). An
+*again* brings the card back in the same session three cards later
+(`client/src/reshow.js`). `server/test/usage-report.js` simulates a month of
+use and reports what she would experience.
+
 Map the four ratings straight through: the self-grade buttons in 話す and
 めくる give *again* and *good*; the multiple-choice modes give *again* on a
 wrong answer and *good* on a correct one. Offer *hard* and *easy* only in

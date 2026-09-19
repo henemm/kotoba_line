@@ -118,3 +118,18 @@ describe("previewing what each button would do (design 41)", () => {
     assert.deepEqual(stateFromEvents(events), before);
   });
 });
+
+describe("Noji's intervals (#242)", () => {
+  // help.noji.io, checked 2026-09-19: Again 1 minute, Hard 8 minutes, Good
+  // 15 minutes, Easy 4 days — for a card seen for the first time.
+  it("offers a new card 1 min, 8 min, 15 min and 4 days", () => {
+    assert.deepEqual(previewIntervals([], new Date(T0 * 1000)), { 1: 60, 2: 480, 3: 900, 4: 4 * DAY });
+  });
+
+  it("brings a card she knew back in 1 minute after Nochmal, as Noji does for any card", () => {
+    const known = [ev("a", 3, T0), ev("b", 3, T0 + 900), ev("c", 3, T0 + 3 * DAY)];
+    const after = stateFromEvents(known);
+    const intervals = previewIntervals(known, new Date(after.due_at * 1000));
+    assert.equal(intervals[1], 60);
+  });
+});

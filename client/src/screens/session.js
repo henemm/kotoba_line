@@ -5,7 +5,7 @@ import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
-import { comesRoundAgain } from "../reshow.js";
+import { comesRoundAgain, reshowPosition } from "../reshow.js";
 import { forget, remember } from "../resume.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { seen } from "../seen.js";
@@ -228,8 +228,9 @@ export function sessionScreen({
   // until she dismisses it, not vanish with the card that happened to be on
   // screen when it appeared.
   let showBreakHint = false;
-  // #214: a card she rated Nochmal goes to the end of this queue and comes
-  // round again until it earns a Gut — what the "1 Min" under the button
+  // #214: a card she rated Nochmal goes back into this queue three cards on
+  // (#242, `reshowPosition` — it was the end) and comes round again until it
+  // earns a Gut — what the "1 Min" under the button
   // already means, and what Noji does ("shown for you in 1 minute in the
   // same study session again"). Before this the queue was fixed, and on
   // 2026-09-18 she started four sessions in seven minutes to see her
@@ -611,12 +612,12 @@ export function sessionScreen({
     results[index] = ok;
     if (ok) right += 1;
     else if (!missed.some((m) => m.id === card.id)) missed.push(card);
-    // #214: Nochmal — and only Nochmal — brings the card round again. Pushed
-    // before the strip and the session note below are written, so both
+    // #214: Nochmal — and only Nochmal — brings the card round again. Put
+    // back before the strip and the session note below are written, so both
     // already count it; on the last card this is what keeps `next()` from
     // finishing.
     if (comesRoundAgain(rating, reshows.get(card.id) ?? 0)) {
-      queue.push(card);
+      queue.splice(reshowPosition(index, queue.length), 0, card);
       reshows.set(card.id, (reshows.get(card.id) ?? 0) + 1);
     }
 

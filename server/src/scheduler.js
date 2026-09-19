@@ -10,7 +10,34 @@ import { createEmptyCard, fsrs, generatorParameters, Rating } from "ts-fsrs";
  * worth anything if the rebuild lands on the same answer every time. A replay
  * that quietly moves every due date is not a rebuild.
  */
-const engine = fsrs(generatorParameters({ enable_fuzz: false }));
+/**
+ * Noji's intervals (#242, Henning 2026-09-19: "Mache es so wie Noji"). Noji
+ * documents a new card as Nochmal 1 minute in the same session, Schwer 8
+ * minutes, Gut 15 minutes, Leicht 4 days (help.noji.io, "Personalise your
+ * Learning Algorithm", checked 2026-09-19). ts-fsrs's defaults gave 1, 6, 10
+ * minutes and 8 days, and a forgotten card 10 minutes for Nochmal.
+ *
+ * - `learning_steps` 1m, 15m: Nochmal is the first step, Gut the second,
+ *   Schwer the average of the two (8 minutes) — ts-fsrs's own rule.
+ * - `relearning_steps` the same, so Nochmal on a card she knew is also 1
+ *   minute, as Noji says of Nochmal on any card.
+ * - `w[3]`, the initial stability for Leicht, 8.2956 → 4: Leicht on a new card
+ *   is 4 days. Nothing else in the default weights is touched.
+ *
+ * Everything past the learning steps is still FSRS with default weights; Noji
+ * does not document what it does there. Changing any of this changes every
+ * replayed state (§3): deploying it needs a `replayCardState` over everyone.
+ */
+const weights = [...generatorParameters().w];
+weights[3] = 4;
+const engine = fsrs(
+  generatorParameters({
+    enable_fuzz: false,
+    learning_steps: ["1m", "15m"],
+    relearning_steps: ["1m", "15m"],
+    w: weights,
+  }),
+);
 
 const RATINGS = {
   1: Rating.Again,
