@@ -116,7 +116,8 @@ refuses instead. If work is merged and not live, that is why.
 `ops/docker-compose.yml` sets `PUSH_SENDER=true`; never set it for a test
 server, or the test messages her phone. Sending is checked once a minute and
 stamps `/srv/kotoba/data/push-run.success` after every pass without errors;
-henemm-infra's `monitor.sh` alerts when that goes stale.
+henemm-infra's `monitor.sh` (`check_kotoba_push`) alerts when that is
+missing or older than 15 minutes.
 
 **Deck data is never committed.** No `.apkg`, no audio, no SQLite file. See
 `.gitignore`; the import fetches ~110 MB and writes ~75 MB of audio.

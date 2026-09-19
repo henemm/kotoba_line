@@ -14,13 +14,16 @@ import { validTimeZone } from "./day.js";
  *
  * The rule, one notification per session at most:
  *
- * - she has not answered anything for `SETTLE_SECONDS` — the session is over,
- *   and a card that came due during it came round in it (reshow.js);
+ * - the server has heard nothing from her for `SETTLE_SECONDS` — the session
+ *   is over, and a card that came due during it came round in it (reshow.js);
  * - a card in a learning step (interval under a day: Nochmal, Schwer, Gut in
- *   minutes) is due;
- * - nothing was sent since her last answer — so no second message for the
- *   8-minute card and then the 15-minute one, and none at all for a week she
- *   does not open the app;
+ *   minutes) is due, and it came due *after* the server heard of her answers.
+ *   Heard is `received_at`, not `reviewed_at`: a session on a train reaches
+ *   the server hours later, when she has the app open anyway, and "your next
+ *   cards are ready" for cards three hours old would be noise;
+ * - nothing was sent since — so no second message for the 8-minute card and
+ *   then the 15-minute one, and none at all for a week she does not open the
+ *   app;
  * - not in the quiet hours, on the device's own clock. A card that comes due
  *   at night is announced at 07:00.
  *
@@ -106,7 +109,9 @@ export function readyToAnnounce(db, now) {
     .all();
   const out = [];
   for (const { user_id: userId, time_zone: timeZone } of users) {
-    const { last } = db.prepare("SELECT max(reviewed_at) AS last FROM review_events WHERE user_id = ?").get(userId);
+    const { last } = db
+      .prepare("SELECT max(max(reviewed_at, received_at)) AS last FROM review_events WHERE user_id = ?")
+      .get(userId);
     if (last == null || now - last < SETTLE_SECONDS) continue;
     const sent = db.prepare("SELECT 1 FROM push_log WHERE user_id = ? AND sent_at > ? LIMIT 1").get(userId, last);
     if (sent) continue;
@@ -117,9 +122,9 @@ export function readyToAnnounce(db, now) {
         `SELECT count(*) AS n FROM card_state s JOIN cards c ON c.id = s.card_id
           WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql}
             AND s.due_at - COALESCE(s.last_review, s.due_at) < ${DAY}
-            AND s.due_at <= ?`,
+            AND s.due_at <= ? AND s.due_at > ?`,
       )
-      .get(userId, ...visible.params, now);
+      .get(userId, ...visible.params, now, last);
     if (n > 0) out.push({ userId, cards: n });
   }
   return out;

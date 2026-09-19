@@ -13,8 +13,9 @@ const DAY0 = startOfDay("2026-10-01", TZ);
 const at = (h, m = 0, day = 0) => DAY0 + day * DAY + h * 3600 + m * MIN;
 
 let seq = 0;
-function answer(db, userId, cardId, rating, t) {
-  ingestEvents(db, userId, [{ id: `e-${seq++}`, card_id: cardId, mode: "flip", rating, reviewed_at: t }], t);
+/** An answer at `t`, reaching the server at `arrives` — at once, unless she was offline. */
+function answer(db, userId, cardId, rating, t, arrives = t) {
+  ingestEvents(db, userId, [{ id: `e-${seq++}`, card_id: cardId, mode: "flip", rating, reviewed_at: t }], arrives);
 }
 
 async function fixture() {
@@ -45,10 +46,26 @@ describe("Deine nächsten Karten sind bereit (#248)", () => {
 
   it("waits until the session has been over for ten minutes", async () => {
     const { db } = await fixture();
-    answer(db, 1, 1, 1, at(19, 0)); // Nochmal: due 19:01
-    answer(db, 1, 2, 3, at(19, 1));
+    answer(db, 1, 1, 3, at(19, 0)); // Gut: due 19:15
+    answer(db, 1, 2, 3, at(19, 8)); // she is still at it
     const sent = await walk(db, at(19, 0), at(20, 0));
-    assert.deepEqual(sent, [at(19, 1) + SETTLE_SECONDS]);
+    assert.deepEqual(sent, [at(19, 8) + SETTLE_SECONDS]);
+  });
+
+  it("says nothing for a card already waiting when she stopped", async () => {
+    const { db } = await fixture();
+    answer(db, 1, 1, 1, at(19, 0)); // Nochmal: due 19:01 — due as she stops
+    answer(db, 1, 2, 4, at(19, 1)); // Leicht: days away
+    assert.deepEqual(await walk(db, at(19, 0), at(21, 0)), []);
+  });
+
+  it("says nothing for a session on a train that reaches the server hours later", async () => {
+    const { db } = await fixture();
+    // Answered offline 19:00–19:05, sent when she came online at 21:00 — with
+    // the app open. The Gut card has been due since 19:15.
+    answer(db, 1, 1, 3, at(19, 0), at(21, 0));
+    answer(db, 1, 2, 3, at(19, 5), at(21, 0));
+    assert.deepEqual(await walk(db, at(21, 0), at(9, 0, 1)), []);
   });
 
   it("sends again only after she has practised again", async () => {
