@@ -24,6 +24,21 @@ export const KANA_DECKS = [
 
 export const isKanaDeck = (key) => KANA_DECKS.some((d) => d.key === key);
 
+/**
+ * The beginner's decks (#252): Kaishi's cards under one travel topic
+ * (import/travel.tsv, #237), listed as decks of their own while Settings →
+ * Einstieg is on. Decks rather than a topic filter, because a topic filter
+ * hands the day's pacing to her (§5a, `isFiltered`) and all 21 cards of
+ * Reise 1 would arrive in one sitting; a deck keeps its own daily limit.
+ * They hold no cards of their own, so nothing is lost when the switch is off.
+ */
+export const TRAVEL_DECKS = [
+  { key: "travel:1", name: "Reise 1", tag: "travel 1" },
+  { key: "travel:2", name: "Reise 2", tag: "travel 2" },
+];
+
+export const travelDeck = (key) => TRAVEL_DECKS.find((d) => d.key === key);
+
 /** Where a card goes when nothing says which deck: what "Add a word" did before decks. */
 export const MY_WORDS = "My words";
 
@@ -53,7 +68,7 @@ function deckNamed(db, userId, name) {
  * does not exist (any more). An old spelling becomes 'deck:<id>'.
  */
 export function canonicalDeckKey(db, userId, key) {
-  if (key === "kaishi" || isKanaDeck(key)) return key;
+  if (key === "kaishi" || isKanaDeck(key) || travelDeck(key)) return key;
   if (typeof key !== "string") return undefined;
   let deck;
   if (/^deck:\d+$/.test(key)) deck = ownDeck(db, userId, Number(key.slice(5)));

@@ -343,9 +343,21 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
    * until they touch it: the default stays "Sentence".
    */
   function practice() {
-    const { speakSource, recordingEnabled } = data.settings;
+    const { speakSource, recordingEnabled, beginner } = data.settings;
     return group(
       "Üben",
+      // #252 (Henning, 2026-09-19): a way in for someone starting from
+      // nothing — travel phrases, said aloud, one round unlocking the next.
+      row(
+        "Einstieg",
+        beginner
+          ? "An: Du siehst nur Reise 1 und Reise 2. Ausschalten zeigt wieder alle Decks – es geht nichts verloren."
+          : "Nur die Reise-Sätze zum Laut-Sagen, mit Romaji zum Spicken. Reise 2 wird frei, wenn du jede Karte aus Reise 1 einmal gewusst hast.",
+        toggle(beginner, "Einstieg", (on) => {
+          seen(on ? "beginner_on" : "beginner_off");
+          write({ beginner: on });
+        }),
+      ),
       el(
         "div.field",
         {},

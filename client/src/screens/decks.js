@@ -2,6 +2,7 @@ import { answerSoon } from "../api.js";
 import { modeByKey } from "../modes.js";
 import { describe } from "../resume.js";
 import { modeName } from "../script.js";
+import { seen } from "../seen.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -28,6 +29,8 @@ export function decksScreen({
   onResume,
   japanese = true,
   scrollTop = 0,
+  // #252: Settings → Einstieg is on, and the list is Reise 1 and 2.
+  beginner = false,
 }) {
   const root = el("div.practise.decks");
   const list = el("div.deck-list", {}, el("div.loading", { text: "…" }));
@@ -49,17 +52,23 @@ export function decksScreen({
       return;
     }
     const rows = outcome.value.decks ?? [];
+    // #228: whether anyone ever gets this far — once a day, not per redraw.
+    if (rows.some((deck) => deck.key === "travel:2" && !deck.locked)) {
+      seen("travel_unlocked_shown", "travel:2", { oncePerDay: true });
+    }
     render(
       list,
       rows.map((deck) =>
-        el(
+        deck.locked
+          ? lockedRow(deck, rows)
+          : el(
           "button.deck-row",
           { type: "button", onclick: () => onOpen(deck) },
           el(
             "span.copy",
             {},
             el("span.name", { text: deck.name }),
-            el("span.sub", { text: `${num(deck.cards)} ${deck.cards === 1 ? "Karte" : "Karten"} · ${num(deck.seen)} gesehen` }),
+            el("span.sub", { text: subLine(deck) }),
           ),
           el("span.today", {
             text: num(deck.today?.total ?? 0),
@@ -77,6 +86,44 @@ export function decksScreen({
           )
         : null,
       rows.length > 0 ? el("p.deck-hint", { text: "Die Zahl zeigt, wie viele Karten heute warten." }) : null,
+      beginner
+        ? el("p.deck-hint", { text: "Einstieg ist an. Alle Decks siehst du wieder, wenn du ihn in den Einstellungen ausschaltest." })
+        : null,
+    );
+  }
+
+  /**
+   * #252: a Reise deck counts what the unlock counts — cards said aloud and
+   * known — so "21 von 21" is visibly the moment the next one opens.
+   */
+  function subLine(deck) {
+    const cards = `${num(deck.cards)} ${deck.cards === 1 ? "Karte" : "Karten"}`;
+    if (deck.known !== undefined) return `${cards} · ${num(deck.known)} gewusst`;
+    return `${cards} · ${num(deck.seen)} gesehen`;
+  }
+
+  /**
+   * Reise 2 before Reise 1 is done (#252): there, so the way ahead is
+   * visible, but not a button — and it says what opens it, with the count.
+   */
+  function lockedRow(deck, rows) {
+    const before = rows[rows.indexOf(deck) - 1];
+    return el(
+      // A button that is off rather than a div: the list's corners are drawn
+      // by :first-child and :last-of-type, and a div among buttons is a
+      // type of its own to those.
+      "button.deck-row.deck-locked",
+      { type: "button", disabled: true },
+      el(
+        "span.copy",
+        {},
+        el("span.name", { text: deck.name }),
+        el("span.sub", {
+          text: before
+            ? `Wird frei, wenn du jede Karte aus ${before.name} einmal gewusst hast – ${num(before.known ?? 0)} von ${num(before.cards)}.`
+            : "Noch nicht frei.",
+        }),
+      ),
     );
   }
 

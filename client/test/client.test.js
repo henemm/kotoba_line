@@ -7,7 +7,7 @@ import { ApiError, isSessionExpired, query } from "../src/api.js";
 import { weakestTopic } from "../src/screens/practise.js";
 import { MODES, modeByKey } from "../src/modes.js";
 import { endDotOffset, jokerNoticeCopy, levelProgress, noticeSlots, streakResetCopy, visibleTopics } from "../src/screens/stats.js";
-import { breakHintCheck, formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, readingsOf, recalled, sentenceKana, speakUsesSentence, splitEmphasis, typingAnswers } from "../src/screens/session.js";
+import { breakHintCheck, formatInterval, kanaReading, leavingCopy, parseFurigana, plainSentence, playableIn, readingsOf, recalled, sentenceKana, speakPeek, speakUsesSentence, splitEmphasis, typingAnswers } from "../src/screens/session.js";
 import { toRomaji } from "../src/romaji.js";
 import { chosenSentence, mmss } from "../src/screens/summary.js";
 import { isSentence, pickDistractors, shuffle as deckShuffle } from "../src/deck.js";
@@ -1187,5 +1187,19 @@ describe("push (#248)", () => {
     assert.match(pushOutcomeText("on"), /Einstellungen/);
     assert.match(pushOutcomeText("denied"), /iPhone-Einstellungen/);
     assert.equal(pushOutcomeText("ask"), undefined);
+  });
+});
+
+describe("Romaji zeigen on 話す's front (#252)", () => {
+  const phrase = { id: 9000000000003, deck: "kaishi", word: "トイレはどこですか？", word_reading: "toire wa doko desu ka" };
+  it("shows the romaji of what the prompt asks for", () => {
+    assert.equal(speakPeek({ ...phrase, word_reading: "ありがとう" }, false), "arigatou");
+    assert.equal(speakPeek({ ...phrase, sentence_romaji: "kore wa nan desu ka" }, true), "kore wa nan desu ka");
+  });
+  it("offers nothing rather than a guess for a sentence the import could not romanise", () => {
+    assert.equal(speakPeek(phrase, true), undefined);
+  });
+  it("offers nothing on a kana card, whose romaji is the answer", () => {
+    assert.equal(speakPeek({ deck: "hiragana", word: "あ", word_reading: "あ" }, false), undefined);
   });
 });

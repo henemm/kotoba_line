@@ -4,3 +4,4 @@
 208	2026-09-19	kana_grid_shown,kana_card_opened	Öffnet Charlotte die Zeichen-Tabelle eines Kana-Decks, und tippt sie ein Zeichen an?
 209	2026-09-19	topic_line_shown,topic_line_tapped,topic_session_started	Tippt Charlotte „Nach Thema üben“ an, und übt sie danach ein Thema?
 248	2026-09-20	push_offer_shown,push_offer_yes,push_offer_no,push_granted,push_denied,push_opened	Bietet die App Charlotte nach einer Übung die Benachrichtigung an, erlaubt sie sie, und öffnet sie die App aus einer Benachrichtigung?
+252	2026-09-20	romaji_peek_shown,romaji_peek_tapped,beginner_on,beginner_off,travel_unlocked_shown	Wird „Romaji zeigen“ beim Laut-Sagen angezeigt und angetippt, schaltet jemand den Einstieg ein, und wird Reise 2 freigeschaltet?

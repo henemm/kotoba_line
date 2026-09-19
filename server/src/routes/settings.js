@@ -40,6 +40,7 @@ const patchSchema = {
       japaneseScript: { type: "boolean" },
       appearance: { type: "string", enum: APPEARANCES },
       recordingEnabled: { type: "boolean" },
+      beginner: { type: "boolean" },
       // #133: at most four of the five, so one line always remains.
       hiddenModes: {
         type: "array",
