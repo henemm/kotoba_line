@@ -478,6 +478,12 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
           "Aussprache von Beispielwörtern der Kana – github.com/tofugu/japanese-vocabulary-pronunciation-audio, CC BY-SA 4.0",
         ],
         ["Merkbilder", "Zeichnungen zu den Kana – B. Domangue, Wikimedia Commons, CC BY-SA 4.0"],
+        // #252: two of Reise's own phrases have a human recording on Commons
+        // (こんにちは, さようなら); the other 24 have none anywhere free.
+        [
+          "Wiktionary-Aufnahmen",
+          "Aussprache von こんにちは und さようなら – Aufnahmen von Spesco (CC BY-SA 4.0) und TAKASUGI Shinji (CC BY-SA 3.0), Wikimedia Commons",
+        ],
         // #183, v92/v93: the 33 yōon and 92 example words have no free human
         // recording anywhere, so these are generated – VOICEVOX's own terms
         // require this credit line.
