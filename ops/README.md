@@ -87,6 +87,22 @@ passed as an argument is in the shell history and in the process list, and a
 PIN chosen by anything other than the two people who use it is not hers. The
 hidden prompt is the point of the step, not an obstacle to it.
 
+**4b. Or a group, by invitation code (#260).** For a handful of people whose
+names nobody here knows — Julia's travelling party, fifteen or so — one code
+instead of an account each:
+
+```sh
+docker compose -f ops/docker-compose.yml exec api node bin/addinvite.js \
+  --code REISE26 --label "Reise nach Japan" --uses 20 --days 60 --beginner
+```
+
+It prints the link to pass on (`…/kotoba/?einladung=REISE26`). Whoever opens
+it chooses their own name and PIN; `--beginner` starts each account with
+Einstieg on and the Japanese script off. The code stops working after
+`--uses` accounts or on the day `--days` gives, whichever comes first, and
+nothing has to be switched off afterwards. There is still no open sign-up:
+without a code the app only signs in (§10).
+
 **5. The deck.** This is the long step — about 110 MB downloaded and 75 MB of
 audio written.
 

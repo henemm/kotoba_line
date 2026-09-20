@@ -168,6 +168,10 @@ export const query = (params) => {
 export const api = {
   login: (handle, pin) => request("/auth/login", { method: "POST", body: { handle, pin } }),
   logout: () => request("/auth/logout", { method: "POST" }),
+  // #260: an invitation code — what it is for, and signing up with it.
+  invite: (code) => request(`/invite/${encodeURIComponent(code)}`),
+  register: (code, handle, pin) =>
+    request(`/invite/${encodeURIComponent(code)}`, { method: "POST", body: { handle, pin } }),
   me: () => request("/me"),
 
   deck: (since = 0, page) => request(`/deck${query({ since, ...page })}`),

@@ -49,6 +49,8 @@ const DB = args.db ?? "/srv/kotoba/data/kotoba.sqlite";
 const MEDIA = args.media ?? "/srv/kotoba/media";
 const OUT = args.out ?? mkdtempSync(join(tmpdir(), "kotoba-tour-"));
 const HANDLE = "tour";
+/** The code the tour makes for itself, so the sign-up screen has one. */
+const TOUR_INVITE = "TOURCODE";
 /** Of one kind of button on one screen, how many are pressed (see the loop). */
 const PER_KIND = 3;
 const PIN = "602915";
@@ -92,8 +94,10 @@ async function prepare() {
   // checkout has and the live database does not yet.
   const { openDatabase } = await import(pathToFileURL(join(ROOT, "server", "src", "db.js")));
   const { createUser } = await import(pathToFileURL(join(ROOT, "server", "src", "users.js")));
+  const { createInvite } = await import(pathToFileURL(join(ROOT, "server", "src", "invites.js")));
   const db = openDatabase(join(data, "kotoba.sqlite"));
   await createUser(db, { handle: HANDLE, display: "Rundgang", pin: PIN });
+  createInvite(db, { code: TOUR_INVITE, label: "Rundgang", settings: { beginner: true }, maxUses: 50, days: 1 });
   db.close();
 
   const apiPort = await freePort();
@@ -233,7 +237,8 @@ function fakeDevices(mp3) {
   }
 }
 
-async function signedInPage(browser, base) {
+/** Her phone's geometry, the fake microphone and the tour's own helpers. */
+async function phone(browser) {
   const mp3 = readFileSync(join(MEDIA, readdirSync(MEDIA).find((f) => f.endsWith(".mp3")))).toString("base64");
   const context = await browser.newContext({
     viewport: { width: 394, height: 852 },
@@ -243,7 +248,11 @@ async function signedInPage(browser, base) {
     serviceWorkers: "block",
   });
   await context.addInitScript(fakeDevices, mp3);
-  const page = await context.newPage();
+  return context.newPage();
+}
+
+async function signedInPage(browser, base) {
+  const page = await phone(browser);
   await page.goto(base);
   await page.getByLabel("Name").fill(HANDLE);
   await page.getByLabel("PIN, sechs Ziffern").fill(PIN);
@@ -314,6 +323,11 @@ const MODES = [
 ];
 
 export const SCREENS = [
+  // Signed out, in a browser of its own: the tour signs in first, so it had
+  // never seen these two — which is how the metro line survived on sign-in
+  // until Henning found it (v148).
+  { name: "Anmeldung", steps: [], fresh: true },
+  { name: "Einladung", steps: [], fresh: true, path: `?einladung=${TOUR_INVITE}` },
   { name: "Decks", steps: [] },
   { name: "Kaishi", steps: [deck("Kaishi")] },
   { name: "Kaishi · Optionen", steps: [deck("Kaishi"), tapText("Optionen")] },
@@ -434,8 +448,12 @@ let restore = () => {};
 
 async function go(page, base, screen) {
   restore();
-  await page.goto(base);
-  await page.waitForSelector("nav.tabbar", { timeout: 60000 });
+  // Pressing "Konto anlegen" really does make one and sign it in, so the
+  // signed-out screens start from no cookie every time.
+  if (screen.fresh) await page.context().clearCookies();
+  await page.goto(base + (screen.path ?? ""));
+  // A signed-out screen has no tab bar; it has its own form.
+  await page.waitForSelector(screen.fresh ? ".signin" : "nav.tabbar", { timeout: 60000 });
   await page.waitForTimeout(800);
   for (const step of screen.steps) {
     await step(page);
@@ -460,18 +478,27 @@ try {
   restore = snapshot(dbPath);
   browser = await webkit.launch();
   const page = await signedInPage(browser, base);
+  // A second browser that never signed in, for the screens that only exist
+  // signed out. Made once, on the first such screen.
+  let guest;
+  const pageFor = async (screen) => {
+    if (!screen.fresh) return page;
+    guest ??= await phone(browser);
+    return guest;
+  };
   const seen = new Set();
   const screens = args.screen ? SCREENS.filter((s) => args.screen.split(",").includes(s.name)) : SCREENS;
   for (const screen of screens) {
+    const on = await pageFor(screen);
     try {
-      await go(page, base, screen);
+      await go(on, base, screen);
     } catch (err) {
       results.push({ screen: screen.name, error: `nicht erreicht: ${err.message.split("\n")[0]}` });
-      await page.screenshot({ path: join(OUT, `nicht-erreicht-${screen.name.replace(/[^\wäöüÄÖÜ]+/g, "-")}.png`) }).catch(() => {});
+      await on.screenshot({ path: join(OUT, `nicht-erreicht-${screen.name.replace(/[^\wäöüÄÖÜ]+/g, "-")}.png`) }).catch(() => {});
       continue;
     }
-    await page.screenshot({ path: join(OUT, `${screen.name.replace(/[^\wäöüÄÖÜ]+/g, "-")}.png`) });
-    const buttons = await buttonsOn(page);
+    await on.screenshot({ path: join(OUT, `${screen.name.replace(/[^\wäöüÄÖÜ]+/g, "-")}.png`) });
+    const buttons = await buttonsOn(on);
     // Forty days of the calendar or a hundred kana tiles are one component
     // each: three of a kind are pressed, the rest are counted.
     const ofKind = new Map();
@@ -487,8 +514,8 @@ try {
       else if (NOT_PRESSED.some((re) => re.test(b.label))) row.skipped = "nicht gedrückt";
       else {
         try {
-          await go(page, base, screen);
-          Object.assign(row, await measure(page, b));
+          await go(on, base, screen);
+          Object.assign(row, await measure(on, b));
         } catch (err) {
           row.error = err.message.split("\n")[0];
         }

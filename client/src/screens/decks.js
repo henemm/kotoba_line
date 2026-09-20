@@ -31,6 +31,9 @@ export function decksScreen({
   scrollTop = 0,
   // #252: Settings → Einstieg is on, and the list is Reise 1 and 2.
   beginner = false,
+  // …and the word "Einstellungen" in the note below goes there (Henning,
+  // 2026-09-20, with the word circled: "verlinken zu den Einstellungen").
+  onSettings,
 }) {
   const root = el("div.practise.decks");
   const list = el("div.deck-list", {}, el("div.loading", { text: "…" }));
@@ -87,7 +90,15 @@ export function decksScreen({
         : null,
       rows.length > 0 ? el("p.deck-hint", { text: "Die Zahl zeigt, wie viele Karten heute warten." }) : null,
       beginner
-        ? el("p.deck-hint", { text: "Einstieg ist an. Alle Decks siehst du wieder, wenn du ihn in den Einstellungen ausschaltest." })
+        ? el(
+            "p.deck-hint",
+            {},
+            "Einstieg ist an. Alle Decks siehst du wieder, wenn du ihn in den ",
+            onSettings
+              ? el("button.link", { type: "button", text: "Einstellungen", onclick: onSettings })
+              : el("span", { text: "Einstellungen" }),
+            " ausschaltest.",
+          )
         : null,
     );
   }

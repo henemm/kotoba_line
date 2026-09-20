@@ -18,7 +18,18 @@ const PIN_LENGTH = 6;
  * actually does; `onState` is how the screen's own root gets `data-state`,
  * which is what the CSS colours the cells from.
  */
-export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState }) {
+export function pinEntry({
+  buttonText,
+  onSubmit,
+  canSubmit = () => true,
+  onState,
+  // What a refusal says, and whether the digits survive it. Signing in, a
+  // refusal means the PIN was wrong, so it clears; signing up (#260), the
+  // PIN is the one she just chose and the refusal is usually about the
+  // name, so keeping it saves typing it again.
+  errorMessage = () => "Diese PIN stimmt nicht.",
+  clearOnError = true,
+}) {
   let pin = "";
   let hasFocus = false;
   let state = "default"; // default | error | limited
@@ -135,8 +146,10 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
       clearInterval(countdownTimer);
     } catch (err) {
       // The PIN clears, the name is kept, focus returns to cell one.
-      pin = "";
-      capture.value = "";
+      if (clearOnError) {
+        pin = "";
+        capture.value = "";
+      }
 
       if (err instanceof OfflineError) {
         setState("error", "Keine Verbindung. Versuch es gleich noch einmal.");
@@ -146,8 +159,9 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
         startCountdown(60);
         return;
       } else {
-        setState("error", "Diese PIN stimmt nicht.");
-        capture.focus();
+        setState("error", errorMessage(err));
+        if (clearOnError) capture.focus();
+        updateButton();
       }
     }
   }
@@ -169,6 +183,12 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
     /** Call when something *outside* the PIN changes whether it can be sent. */
     refresh: updateButton,
     focus: () => capture.focus(),
+    /** An invitation code that is expired or full: nothing here can help. */
+    setDisabled: (off) => {
+      canSubmit = off ? () => false : canSubmit;
+      capture.disabled = off;
+      updateButton();
+    },
     destroy: () => clearInterval(countdownTimer),
   };
 }

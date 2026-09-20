@@ -1,5 +1,6 @@
 import { clearedCookie, readCookie, serializeCookie } from "../cookies.js";
 import { createSession, destroySession } from "../sessions.js";
+import { CODE_PATTERN, inviteState, redeemInvite } from "../invites.js";
 import { checkPin, findByHandle } from "../users.js";
 
 const loginSchema = {
@@ -42,6 +43,49 @@ export default async function authRoutes(app) {
     req.log.info({ userId: user.id }, "login accepted");
     return { id: user.id, handle: user.handle, display: user.display };
   });
+
+  /**
+   * Sign-up by invitation code (#260). Public on purpose — that is the
+   * point of a code — and cheap before the code is checked: an unknown one
+   * costs a single indexed lookup, and nothing here hashes anything until
+   * the code is good. nginx's rate limit (§9) covers the rest.
+   */
+  app.get(
+    "/api/invite/:code",
+    { schema: { params: { type: "object", properties: { code: { type: "string", pattern: CODE_PATTERN } } } } },
+    async (req) => inviteState(db, req.params.code),
+  );
+
+  app.post(
+    "/api/invite/:code",
+    {
+      schema: {
+        params: { type: "object", properties: { code: { type: "string", pattern: CODE_PATTERN } } },
+        body: {
+          type: "object",
+          required: ["handle", "pin"],
+          additionalProperties: false,
+          properties: {
+            handle: { type: "string", minLength: 1, maxLength: 64 },
+            pin: { type: "string", minLength: 1, maxLength: 64 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { handle, pin } = req.body;
+      const made = await redeemInvite(db, { code: req.params.code, handle, pin });
+      if (!made.ok) {
+        req.log.info({ code: req.params.code, reason: made.reason }, "invite refused");
+        return reply.code(made.reason === "handle_taken" ? 409 : 400).send({ error: made.reason });
+      }
+      // Signed in at once: asking someone to type the PIN they just chose,
+      // on the screen they just left, is a step that teaches nothing.
+      setSessionCookie(reply, createSession(db, made.user.id));
+      req.log.info({ userId: made.user.id, code: req.params.code }, "invite redeemed");
+      return reply.code(201).send(made.user);
+    },
+  );
 
   app.post("/api/auth/logout", async (req, reply) => {
     destroySession(db, readCookie(req, config.cookieName));

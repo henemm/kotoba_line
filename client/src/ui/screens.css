@@ -4929,6 +4929,18 @@ button.kana-tile:active {
   background: var(--surface);
 }
 
+/* A word inside a sentence that goes somewhere, drawn as the sentence's own
+   text with an underline rather than as a button (v150). */
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ══ (i) — one explanation, one look ═════════════════════════════
    Henning, 2026-09-20: "Könntest du die App mit (i) info-Popovers
    garnieren?" One component (ui/info.js) draws all of them; this is the
