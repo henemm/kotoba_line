@@ -3,9 +3,19 @@
  *
  * Fifteen travellers will open an invitation link from their mail app, sign
  * up, and stay in a browser tab: half the screen height, no notifications,
- * and next time they have to find the address again. Henning, 2026-09-20:
- * "Auf iOS 27 ist die Option noch versteckter" — the share sheet moved
- * behind the ••• in the address bar, so the instructions say both places.
+ * and next time they have to find the address again.
+ *
+ * The first version of these steps named the ••• menu, which was wrong twice
+ * over and measured so: on Henning's iPhone (iOS 27, screenshot 2026-09-20)
+ * the compact tab bar has **no ••• at all** — the bottom-right button opens
+ * the tabs — and there is no share icon in the bar either. The only way in is
+ * a long press on the address bar, whose menu opens with "Teilen". That was
+ * iOS 26's ••• and iOS 27 took it away again; the steps therefore name what
+ * is on the screen rather than a version. Do not "restore" the ••• sentence:
+ * MacStories Weekly #517 ("Safari for iOS 27: Where's the Share Button?")
+ * records the same change, and Apple offers nothing programmatic instead —
+ * WebKit's standards position on the Web Install API is *oppose*, so there
+ * will be no install button for us to call.
  *
  * Shown once per device, after signing in or signing up, and only while the
  * app is *not* already installed. Afterwards it lives in Settings, because
@@ -46,10 +56,16 @@ export function installSteps({ apple = isApple() } = {}) {
       title: "Auf den Home-Bildschirm legen",
       why: "So wird ことばライン eine App: ganzer Bildschirm, offline nutzbar, und Erinnerungen sind überhaupt erst möglich.",
       steps: [
-        "Tippe in der Adresszeile auf das Teilen-Symbol – ein Quadrat mit einem Pfeil nach oben. Auf neueren iPhones steckt es hinter den drei Punkten rechts in der Adresszeile.",
-        "Wisch in der Liste nach unten, bis „Zum Home-Bildschirm“ kommt, und tippe darauf.",
+        "Drück unten lang auf die Adresszeile – dort, wo „henemm.com“ steht –, bis ein Menü aufklappt.",
+        "Ganz oben im Menü steht „Teilen“. Tipp darauf.",
+        "Wisch nach unten, bis „Zum Home-Bildschirm“ kommt – mit einem Plus davor –, und tippe darauf.",
         "Oben rechts auf „Hinzufügen“. Danach startest du die App über das neue Symbol, nicht mehr über den Link.",
       ],
+      // Not "ältere iPhones": whether the icon is in the bar is the Safari
+      // layout setting (Einstellungen → Apps → Safari → Tabs), not the age of
+      // the phone — "Unten" shows it on iOS 27 too. Saying otherwise would
+      // send someone looking for a button again, which is the whole bug.
+      tip: "Wenn du in der Leiste ein Teilen-Symbol siehst – ein Quadrat mit einem Pfeil nach oben –, geht es auch darüber.",
     };
   }
   return {
@@ -69,7 +85,7 @@ export function installSteps({ apple = isApple() } = {}) {
  */
 export function openInstallHint(reason = "settings") {
   if (typeof document === "undefined") return;
-  const { title, why, steps } = installSteps();
+  const { title, why, steps, tip } = installSteps();
   seen("install_hint_shown", reason);
   // On the body, not in #app: signing up is followed by the first-run
   // download, and every redraw of #app would take the sheet with it. The
@@ -109,6 +125,7 @@ export function openInstallHint(reason = "settings") {
       el("h2.sheet-title", { text: title }),
       el("p.sheet-body", { text: why }),
       el("ol.install-steps", {}, steps.map((text) => el("li", { text }))),
+      tip ? el("p.sheet-note", { text: tip }) : null,
       el(
         "div.sheet-actions",
         {},
@@ -126,7 +143,17 @@ export function openInstallHint(reason = "settings") {
  * than in IndexedDB: it is one flag, it is read at a moment when the rest of
  * the start is already busy, and losing it costs one extra hint.
  */
-const SEEN_KEY = "installHint";
+/*
+ * The key carries the version of the steps, not just "shown". Julia saw the
+ * first version on 2026-09-20 at 12:48 and closed it a minute later without
+ * installing (`install_hint_shown` / `install_hint_closed`, no
+ * `install_accepted`) — and its first step pointed at a button her phone does
+ * not have. A flag that only says "shown" would never let the corrected
+ * steps reach her. Renaming the key offers them once more, to everyone still
+ * in a browser tab; someone who installed is filtered out by `isStandalone`
+ * before this is read.
+ */
+const SEEN_KEY = "installHint.longpress";
 
 export function hintPending() {
   if (isStandalone()) return false;

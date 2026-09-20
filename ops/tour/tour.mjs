@@ -244,6 +244,13 @@ async function phone(browser) {
     viewport: { width: 394, height: 852 },
     deviceScaleFactor: 3,
     isMobile: true,
+    // Playwright's WebKit on Linux reports itself as Linux, and the app asks
+    // (install.js `isApple`). Measured 2026-09-20: without this the tour drew
+    // the Chromium instructions — "Tippe oben rechts auf die drei Punkte" —
+    // on every run, so the steps her phone actually gets had never once been
+    // rendered by anything. The geometry was her iPhone's; the name was not.
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1",
     hasTouch: true,
     serviceWorkers: "block",
   });
@@ -350,6 +357,12 @@ export const SCREENS = [
   },
   { name: "Statistik", steps: [tab("Statistik")] },
   { name: "Einstellungen", steps: [tab("Einstellungen")] },
+  // #260: the sheet the travellers are sent to. It is the only screen written
+  // entirely from a screenshot of someone else's phone, so it is the one most
+  // worth drawing here — the client suite can only test installSteps() as a
+  // function, because it has no DOM. Reached from Einstellungen, which is
+  // where it lives after the one automatic offer.
+  { name: "Zum Home-Bildschirm", steps: [tab("Einstellungen"), tapText("Anleitung")] },
   { name: "Einstieg · Decks", steps: [beginner] },
   { name: "Reise 1", steps: [beginner, deck("Reise 1")] },
   { name: "Reise 1 · vorne", steps: [beginner, deck("Reise 1"), way("Karten laut sagen"), idle(1500)] },
