@@ -303,19 +303,27 @@ async function reveal(page) {
   if (await option.count()) return option.first().click();
 }
 
-const MODES = ["Bedeutung wählen", "Nur hören", "Laut sagen", "Japanisch tippen", "Karte umdrehen"];
+/** The name of a way of practising, and what its button on the deck page
+ *  says since v149 (START_LABELS in client/src/screens/practise.js). */
+const MODES = [
+  ["Bedeutung wählen", "Bedeutungen wählen"],
+  ["Nur hören", "Karten anhören"],
+  ["Laut sagen", "Karten laut sagen"],
+  ["Japanisch tippen", "Wörter tippen"],
+  ["Karte umdrehen", "Karten umdrehen"],
+];
 
 export const SCREENS = [
   { name: "Decks", steps: [] },
   { name: "Kaishi", steps: [deck("Kaishi")] },
   { name: "Kaishi · Optionen", steps: [deck("Kaishi"), tapText("Optionen")] },
   { name: "Kaishi · Nach Thema üben", steps: [deck("Kaishi"), (p) => p.locator("button.deck-more").click()] },
-  ...MODES.flatMap((mode) => [
-    { name: `${mode} · vorne`, steps: [deck("Kaishi"), way(mode), idle(1500)] },
-    { name: `${mode} · Rückseite`, steps: [deck("Kaishi"), way(mode), idle(1500), reveal, idle(900)] },
+  ...MODES.flatMap(([mode, button]) => [
+    { name: `${mode} · vorne`, steps: [deck("Kaishi"), way(button), idle(1500)] },
+    { name: `${mode} · Rückseite`, steps: [deck("Kaishi"), way(button), idle(1500), reveal, idle(900)] },
   ]),
-  { name: "Übung verlassen?", steps: [deck("Kaishi"), way("Bedeutung wählen"), idle(1200), answerOne, (p) => p.locator("button.session-close").click()] },
-  { name: "Zusammenfassung", steps: [deck("Hiragana"), way("Bedeutung wählen"), idle(1200), finish, idle(1500)] },
+  { name: "Übung verlassen?", steps: [deck("Kaishi"), way("Bedeutungen wählen"), idle(1200), answerOne, (p) => p.locator("button.session-close").click()] },
+  { name: "Zusammenfassung", steps: [deck("Hiragana"), way("Bedeutungen wählen"), idle(1200), finish, idle(1500)] },
   { name: "Hiragana", steps: [deck("Hiragana")] },
   { name: "Hiragana · Zeichen", steps: [deck("Hiragana"), idle(800), (p) => p.locator("button.kana-tile").first().click()] },
   { name: "Eigenes Deck", steps: [deck("Rundgang")] },
@@ -330,11 +338,11 @@ export const SCREENS = [
   { name: "Einstellungen", steps: [tab("Einstellungen")] },
   { name: "Einstieg · Decks", steps: [beginner] },
   { name: "Reise 1", steps: [beginner, deck("Reise 1")] },
-  { name: "Reise 1 · vorne", steps: [beginner, deck("Reise 1"), way("Laut sagen"), idle(1500)] },
-  { name: "Reise 1 · Romaji gezeigt", steps: [beginner, deck("Reise 1"), way("Laut sagen"), idle(1500), tapText("Romaji zeigen")] },
+  { name: "Reise 1 · vorne", steps: [beginner, deck("Reise 1"), way("Karten laut sagen"), idle(1500)] },
+  { name: "Reise 1 · Romaji gezeigt", steps: [beginner, deck("Reise 1"), way("Karten laut sagen"), idle(1500), tapText("Romaji zeigen")] },
   {
     name: "Reise 1 · Rückseite nach Romaji",
-    steps: [beginner, deck("Reise 1"), way("Laut sagen"), idle(1500), tapText("Romaji zeigen"), reveal, idle(900)],
+    steps: [beginner, deck("Reise 1"), way("Karten laut sagen"), idle(1500), tapText("Romaji zeigen"), reveal, idle(900)],
   },
 ];
 
