@@ -1,5 +1,12 @@
 [
   {
+    "version": "v148",
+    "summary": "Die Anmeldeseite ist aufgeräumt.",
+    "notes": [
+      "Die bunte Linie mit den Punkten am Rand ist weg. Sie war der letzte Rest der alten Ansicht, den es sonst nirgends mehr gibt."
+    ]
+  },
+  {
     "version": "v147",
     "summary": "こんにちは und さようなら sprechen jetzt Muttersprachler.",
     "notes": [

@@ -194,28 +194,24 @@ export function signInScreen({ onSignedIn, japanese = true }) {
 
   nameInput.addEventListener("input", pin.refresh);
 
+  // v148: no rail and no stations. The metro line left every other screen
+  // when Henning said the red circles "kamen nicht gut an" (v74, #137); this
+  // was the last place still drawing it, and he found it — a coloured line
+  // with four dots down the side of a form that is a name and six digits.
+  // The button stays at the bottom: that is about a thumb, not about a line.
   const form = el(
     "div.signin",
     { dataset: { state: "default" } },
-    el("div.rail"),
     el(
       "div.block.title",
       {},
-      el("span.stop"),
       el(japanese ? "h1.jp" : "h1", { text: appName(japanese) }),
       el("p.tagline", { text: "Fünf Arten, japanische Vokabeln zu üben." }),
     ),
-    el(
-      "div.block.name",
-      {},
-      el("span.stop"),
-      el("div.mono-label", { text: "Name" }),
-      nameInput,
-    ),
+    el("div.block.name", {}, el("div.mono-label", { text: "Name" }), nameInput),
     el(
       "div.block.pin.pin-entry",
       {},
-      el("span.stop"),
       el("div.mono-label", { text: "PIN · sechs Ziffern" }),
       pin.cells,
       pin.capture,
@@ -226,10 +222,8 @@ export function signInScreen({ onSignedIn, japanese = true }) {
   const foot = el(
     "div.signin-foot",
     {},
-    el("span.rail-end"),
-    el("span.stop"),
     pin.button,
-    el("p.note", { text: "Keine Registrierung und kein Zurücksetzen. Konten werden auf dem Server angelegt." }),
+    el("p.note", { text: "Konten werden auf dem Server angelegt." }),
   );
 
   render(root, form, foot);

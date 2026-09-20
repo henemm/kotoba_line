@@ -1,49 +1,31 @@
 /* ══ 01 Sign in ═══════════════════════════════════════════════════
-   The rail runs the four line colours in order and terminates at the
-   primary action — the start of a line rather than a form. */
+   A name, six digits and the button where the thumb is. The rail with its
+   four coloured stations is gone (v148): it was the last of the metro line
+   anywhere in the app, and it framed a two-field form as a journey. */
 
 .signin {
   flex: 1;
   position: relative;
-  padding: 34px 24px 0 62px;
+  padding: 34px 24px 0;
+  /* The title stays at the top, where it was behind the rail; the button
+     stays at the bottom, where the thumb is. Centring the fields in between
+     was tried (v148) and looked worse: it left the top third empty and moved
+     the app's name to the middle of the screen. */
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
 }
-
-.signin .rail {
-  position: absolute;
-  left: 32px;
-  top: 44px;
-  bottom: 150px;
-  width: 4px;
-  border-radius: 2px;
-  background: linear-gradient(
-    var(--line-choose) 0 22%,
-    var(--line-listen) 22% 48%,
-    var(--line-speak) 48% 74%,
-    var(--line-flip) 74% 100%
-  );
+.signin .title {
+  margin-bottom: 0;
+}
+.signin .name {
+  margin-bottom: 0;
 }
 
 .signin .block {
   position: relative;
 }
 
-.signin .block .stop {
-  position: absolute;
-  left: -40px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--night);
-  box-sizing: border-box;
-}
-
-.signin .title {
-  margin-bottom: 44px;
-}
-.signin .title .stop {
-  top: 8px;
-  border: 5px solid var(--line-choose);
-}
 /* The typeface comes from `.jp`, which the Latin name does without (#139). */
 .signin h1 {
   margin: 0;
@@ -59,13 +41,6 @@
   color: var(--ink-muted);
 }
 
-.signin .name {
-  margin-bottom: 34px;
-}
-.signin .name .stop {
-  top: 26px;
-  border: 5px solid var(--line-listen);
-}
 .signin .name input {
   width: 100%;
   height: 56px;
@@ -80,11 +55,6 @@
 }
 .signin .name input::placeholder {
   color: var(--ink-dim);
-}
-
-.signin .pin .stop {
-  top: 26px;
-  border: 5px solid var(--line-speak);
 }
 
 /* ── the PIN control (01, 52) ─────────────────────────────────────
@@ -174,47 +144,16 @@
   color: var(--ink-muted);
 }
 
-.signin[data-state="error"] .pin .stop {
-  border-color: var(--no);
-}
-
-/* Rate limited: the whole form goes inert and the rail loses its colour. */
-.signin[data-state="limited"] .rail {
-  opacity: 0.35;
-}
-.signin[data-state="limited"] .title .stop {
-  opacity: 0.35;
-}
-.signin[data-state="limited"] .name {
+/* Rate limited: the form goes inert. The cells say the rest (pin-entry). */
+.signin[data-state="limited"] .name,
+.signin[data-state="limited"] .title {
   opacity: 0.45;
-}
-.signin[data-state="limited"] .pin .stop {
-  border-color: var(--surface-hi);
 }
 
 .signin-foot {
   flex: none;
-  padding: 0 24px 30px 62px;
+  padding: 0 24px 30px;
   position: relative;
-}
-.signin-foot .rail-end {
-  position: absolute;
-  left: 32px;
-  bottom: 118px;
-  width: 4px;
-  height: 26px;
-  background: var(--line-flip);
-}
-.signin-foot .stop {
-  position: absolute;
-  left: 22px;
-  bottom: 82px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--night);
-  border: 5px solid var(--line-flip);
-  box-sizing: border-box;
 }
 .signin-foot .note {
   margin: 14px 0 0;
@@ -222,12 +161,6 @@
   line-height: 1.5;
   color: var(--ink-muted);
 }
-.signin[data-state="limited"] ~ .signin-foot .rail-end,
-.signin[data-state="limited"] ~ .signin-foot .stop {
-  border-color: var(--surface-hi);
-  background: var(--surface-hi);
-}
-
 @media (min-width: 700px) {
   /* On a tablet there is no one-handed reach to respect, so the column is
      centred rather than pinned to the bottom. */
@@ -328,28 +261,6 @@
   flex-direction: column;
   overflow-y: auto;
 }
-
-.practise .head {
-  padding: 24px var(--gutter) 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.practise .head h1 {
-  margin: 0;
-  font-family: var(--jp);
-  font-size: 36px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: 0.02em;
-}
-.practise .head p {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--ink-muted);
-}
-
 /* #106: the two places the due numbers go, filled in when they arrive. Not a
    box of their own — the tab's column lays out what is inside them as if
    the wrapper were not there, so every rule below applies unchanged. */
@@ -428,85 +339,16 @@
   text-transform: uppercase;
   color: var(--ink-muted);
 }
-
-.practise .lines {
-  padding: 8px var(--gutter) 20px;
-  position: relative;
-}
 /* The rail runs from the centre of the first station to the centre of the
    last. Anchoring it to both ends rather than giving it a fixed height keeps
    it correct when a row grows — the Japanese line is the tallest thing on the
-   screen and its metrics vary by platform font. */
-.practise .lines .rail {
-  position: absolute;
-  left: calc(var(--gutter) + 13px);
-  top: calc(8px + 14px + 15px);
-  bottom: calc(20px + 14px + 15px);
-  width: 4px;
-  background: var(--surface-hi);
-  border-radius: 2px;
-}
-.practise .line-row {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 14px 0;
-  position: relative;
-  width: 100%;
-  background: none;
-  border: 0;
-  text-align: left;
-  color: inherit;
-}
+   screen and its metrics vary by platform font. *
 /* #58: the prototype's tap feedback on the station dot, dropped somewhere
    along the way — restored so the row it belongs to feels pressable and not
-   just decorative. */
-.practise .line-row .station {
-  transition: transform 0.12s ease;
-}
-.practise .line-row:active .station {
-  transform: scale(0.88);
-}
-.practise .line-row .copy {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-/* #135: the English name in the Japanese name's place. */
-.practise .line-row .name {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-.practise .line-row .jp {
-  font-family: var(--jp);
-  font-size: 23px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-.practise .line-row .en {
-  font-size: 14px;
-  color: var(--ink-muted);
-}
-
+   just decorative. *
+/* #135: the English name in the Japanese name's place. *
 /* The third question, with the day's due count beside it rather than a
-   sentence of its own above the lines. */
-.practise .lines-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 44px var(--gutter) 0;
-}
-.practise .due-count {
-  font-size: 13px;
-  line-height: 1;
-  color: var(--ink-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
+   sentence of its own above the lines. *
 /* A status line, not a question: smaller, set apart by a hairline, with its
    switch beside it. */
 .practise .sound-note {
@@ -974,36 +816,15 @@
   white-space: nowrap;
 }
 
-/* The tab scrolls, and is spaced to read rather than to fit (Henning,
+/* The practise tab is spaced to read rather than to fit (Henning,
    2026-09-14: "sehr gedrängt, nur um scrollen zu verhindern"). A phone-only
    block used to take space back from every gap here so the whole tab stayed
    above the capsule — #56, #109, #65 — until the headings sat on the controls
-   above them. Do not tighten it back to avoid a scroll: the lines are a
-   thumb's reach below the questions, and scrolling to them is fine. */
+   above them. Do not tighten it back to avoid a scroll.
 
-@media (min-width: 700px) {
-  .practise .head h1 {
-    font-size: 52px;
-  }
-  .practise .head p {
-    font-size: 17px;
-  }
-  .practise .lines .rail {
-    left: calc(var(--gutter) + 16px);
-    top: calc(8px + 20px + 18px);
-    bottom: calc(20px + 20px + 18px);
-  }
-  .practise .line-row {
-    gap: 22px;
-    padding: 20px 0;
-  }
-  .practise .line-row .jp {
-    font-size: 28px;
-  }
-  .practise .line-row .en {
-    font-size: 15px;
-  }
-}
+   The rules that drew the four metro lines on this tab went with v148: the
+   tab has been a deck list and a deck page since v74 (#137), and nothing has
+   rendered .lines, .line-row or .practise .head since. */
 
 /* ══ shared: a screen that is still loading ═══════════════════════ */
 .loading {
