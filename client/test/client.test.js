@@ -1206,11 +1206,21 @@ describe("Romaji zeigen on 話す's front (#252)", () => {
 });
 
 describe("Zum Home-Bildschirm (#260)", () => {
-  it("names both places Safari now hides the share sheet", () => {
+  // Measured on Henning's iPhone, iOS 27, two screenshots on 2026-09-20: the
+  // compact tab bar has no ••• and no share icon — bottom right opens the
+  // tabs — and a long press on the address bar opens a menu whose first item
+  // is "Teilen". The ••• wording these assertions used to demand was iOS 26's.
+  it("starts with the long press, because iOS 27 has no button to point at", () => {
     const { steps } = installSteps({ apple: true });
-    assert.match(steps[0], /Teilen-Symbol/);
-    assert.match(steps[0], /drei Punkten/, "iOS 27 moved it behind the ••• (Henning, 2026-09-20)");
+    assert.match(steps[0], /lang auf die Adresszeile/);
+    assert.ok(!steps.some((s) => s.includes("drei Punkten")), "iOS 27 removed the ••• from the compact tab bar");
+    assert.match(steps[1], /Teilen/);
     assert.ok(steps.some((s) => s.includes("Zum Home-Bildschirm")));
+  });
+
+  it("keeps the visible share icon as a note, for an iPhone that still has one", () => {
+    const { tip } = installSteps({ apple: true });
+    assert.match(tip, /Teilen-Symbol/);
   });
 
   it("says what a browser other than Safari calls it", () => {

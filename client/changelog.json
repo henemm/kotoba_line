@@ -1,5 +1,13 @@
 [
   {
+    "version": "v151",
+    "summary": "Die Anleitung „Zum Home-Bildschirm“ passt jetzt zu iOS 27.",
+    "notes": [
+      "In iOS 27 gibt es in Safari keinen Teilen-Knopf mehr. Die Anleitung zeigt jetzt den Weg, der wirklich funktioniert: lang auf die Adresszeile drücken, dann „Teilen“.",
+      "Weil die alte Anleitung ins Leere führte, bekommst du sie einmal noch einmal zu sehen."
+    ]
+  },
+  {
     "version": "v150",
     "summary": "Neu: Anmelden mit Einladungscode – und „Einstellungen“ im Hinweis ist jetzt ein Link.",
     "notes": [
