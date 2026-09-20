@@ -515,13 +515,19 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), ti
  * The deck list with Settings → Einstieg on (#252): Reise 1, then Reise 2 —
  * locked until every Reise 1 card has been said aloud and known once.
  *
- * Only 話す, and the whole deck can do it: Henning's beginner reads the
- * German, says it (with "Romaji zeigen" if need be), records it, and turns
- * the card to hear the native recording beside the attempt.
+ * 話す first: Henning's beginner reads the German, says it (with "Romaji
+ * zeigen" if need be), records it, and turns the card to hear the native
+ * recording beside the attempt. 選ぶ and めくる come with it — every card can
+ * do both, and recognising a word is the easier step before producing it
+ * (Henning, 2026-09-20). 書く and 聞く start off: typing Japanese is the
+ * wrong first hurdle, and only 13 of Reise 1's 21 cards carry a sentence
+ * with a translation, none of them the travel phrase itself.
  */
 export function beginnerDecks(db, userId, now = Math.floor(Date.now() / 1000), timeZone = DEFAULT_TIME_ZONE) {
   const count = db.prepare(
-    `SELECT count(*) AS cards, count(s.card_id) AS seen
+    `SELECT count(*) AS cards, count(s.card_id) AS seen,
+            sum(c.sentence IS NOT NULL AND c.sentence_meaning IS NOT NULL) AS listen,
+            sum(c.word_reading IS NOT NULL OR c.word_furigana IS NOT NULL) AS type
        FROM cards c JOIN tags t ON t.card_id = c.id AND t.tag = ?
        LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       WHERE c.deleted_at IS NULL AND c.deck = 'kaishi'`,
@@ -537,7 +543,10 @@ export function beginnerDecks(db, userId, now = Math.floor(Date.now() / 1000), t
       cards: row.cards,
       seen: row.seen,
       known,
-      ways: { choose: 0, listen: 0, speak: row.cards, type: 0, flip: 0 },
+      // What the cards can do, as in any deck: which of them a Reise deck
+      // *offers* is deck_settings' hiddenModes (deck-settings.js), so the
+      // two it leaves out can still be switched on under Optionen.
+      ways: waysFor(key, row),
       settings: deckSettings(db, userId, key),
     };
     const locked = !unlocked;

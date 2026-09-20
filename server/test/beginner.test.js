@@ -32,7 +32,7 @@ describe("Einstieg (#252)", () => {
     await app.close();
   });
 
-  it("lists Reise 1 and a locked Reise 2, and only saying it aloud", async () => {
+  it("lists Reise 1 and a locked Reise 2, offering three ways of practising", async () => {
     const { app, call } = await signedIn();
     const [one, two] = (await call("GET", "/api/decks")).decks;
     assert.equal(one.key, "travel:1");
@@ -40,7 +40,9 @@ describe("Einstieg (#252)", () => {
     assert.equal(one.cards, 4);
     assert.equal(one.known, 0);
     assert.equal(one.locked, undefined);
-    assert.deepEqual(one.ways, { choose: 0, listen: 0, speak: 4, type: 0, flip: 0 });
+    assert.deepEqual(one.ways, { choose: 4, listen: 0, speak: 4, type: 0, flip: 4 });
+    // Hidden, not impossible: Optionen can still switch the other two on.
+    assert.deepEqual(one.settings.hiddenModes, ["listen", "type"]);
     assert.equal(two.key, "travel:2");
     assert.equal(two.locked, true);
     assert.equal(two.today.total, 0);
