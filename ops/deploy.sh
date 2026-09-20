@@ -131,10 +131,6 @@ if $do_api; then
   # the image it runs, which is the one just built.
   mkdir -p /srv/kotoba/bin
   install -m 755 ops/generate-word-sounds.sh /srv/kotoba/bin/generate-word-sounds.sh
-  # #228: the SessionStart hook reads these from here for the same reason —
-  # a session starts in ~/kotoba_line, which never has the current ops/.
-  install -m 755 ops/seen.sh /srv/kotoba/bin/seen.sh
-  install -m 644 ops/watches.tsv /srv/kotoba/bin/watches.tsv
 
   say "Waiting for health"
   for i in $(seq 1 30); do
@@ -150,6 +146,20 @@ if $do_api; then
     sleep 1
   done
 fi
+
+# #228: the SessionStart hook reads these from here, because a session starts
+# in ~/kotoba_line, which never has the current ops/. Outside both halves on
+# purpose: they read the database and nothing else, so neither the image nor
+# the shell has anything to do with them. They used to sit with the API, and
+# on 2026-09-20 a watches.tsv change was released with --client — status.sh's
+# own recommendation — leaving the deployed copy behind with old start dates,
+# so the hook went on reporting "noch nichts erschienen" against rows that
+# were there. A file that belongs to every deploy is installed by every deploy.
+say "Scripts beside the app"
+mkdir -p /srv/kotoba/bin
+install -m 755 ops/seen.sh /srv/kotoba/bin/seen.sh
+install -m 644 ops/watches.tsv /srv/kotoba/bin/watches.tsv
+echo "  seen.sh, watches.tsv ($(grep -cv '^#' ops/watches.tsv) open watches)"
 
 say "Checks"
 # These are the three that actually catch a broken deploy, and the third is the

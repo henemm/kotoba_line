@@ -167,6 +167,35 @@ else
   warn "ops/deploy.sh" "the API container is not running, so its code cannot be compared — run: ops/deploy.sh"
 fi
 
+# ── What sits beside the app ────────────────────────────────────────
+#
+# Nothing else here would notice these. They are not the shell, so the version
+# comparison above says nothing about them, and they are not in the image, so
+# the file comparison does not reach them either — they are read by cron and by
+# the SessionStart hook straight off the disk. On 2026-09-20 a change to
+# ops/watches.tsv was merged and released with --client, which this script had
+# recommended, and the deployed copy kept its old start dates: the hook went on
+# reporting "noch nichts erschienen" for two watches whose rows were already in
+# the database. deploy.sh now installs seen.sh and watches.tsv in every deploy;
+# this says so when they are behind anyway.
+head_ "Beside the app"
+BIN_DIR=${BIN_DIR:-/srv/kotoba/bin}
+# generate-word-sounds.sh has to match the image that runs it, so it is the
+# one of the three that genuinely needs the full deploy.
+bin_ok=0
+for f in seen.sh watches.tsv generate-word-sounds.sh; do
+  step="ops/deploy.sh"
+  [[ $f == generate-word-sounds.sh ]] || step="ops/deploy.sh --client"
+  if [[ ! -f $BIN_DIR/$f ]]; then
+    warn "$step" "$BIN_DIR/$f is not installed — run: $step"
+  elif ! cmp -s "ops/$f" "$BIN_DIR/$f"; then
+    warn "$step" "$BIN_DIR/$f differs from ops/$f — run: $step"
+  else
+    bin_ok=$((bin_ok + 1))
+  fi
+done
+[[ $bin_ok -eq 3 ]] && ok "$BIN_DIR matches ops/ (seen.sh, watches.tsv, generate-word-sounds.sh)"
+
 # ── The database ────────────────────────────────────────────────────
 head_ "Database"
 if [[ ! -f $DB ]]; then
