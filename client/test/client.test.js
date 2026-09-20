@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
+import { installSteps } from "../src/install.js";
 import { keyBytes, pushStateFrom } from "../src/push.js";
 import { pushOfferText, pushOutcomeText } from "../src/screens/summary.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
@@ -1201,5 +1202,19 @@ describe("Romaji zeigen on 話す's front (#252)", () => {
   });
   it("offers nothing on a kana card, whose romaji is the answer", () => {
     assert.equal(speakPeek({ deck: "hiragana", word: "あ", word_reading: "あ" }, false), undefined);
+  });
+});
+
+describe("Zum Home-Bildschirm (#260)", () => {
+  it("names both places Safari now hides the share sheet", () => {
+    const { steps } = installSteps({ apple: true });
+    assert.match(steps[0], /Teilen-Symbol/);
+    assert.match(steps[0], /drei Punkten/, "iOS 27 moved it behind the ••• (Henning, 2026-09-20)");
+    assert.ok(steps.some((s) => s.includes("Zum Home-Bildschirm")));
+  });
+
+  it("says what a browser other than Safari calls it", () => {
+    const { steps } = installSteps({ apple: false });
+    assert.ok(steps.some((s) => s.includes("App installieren")));
   });
 });

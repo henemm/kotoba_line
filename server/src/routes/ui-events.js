@@ -27,6 +27,10 @@ export const UI_EVENT_NAMES = [
   "beginner_off",
   "travel_unlocked_shown", // #252: the deck list showed Reise 2 unlocked
   "info_opened", // v149: an (i) explanation was opened (detail: which one)
+  "install_hint_shown", // #260: "Zum Home-Bildschirm" (detail: signup | signin | settings)
+  "install_hint_closed",
+  "install_accepted", // Chromium's own prompt, where there is one
+  "install_dismissed",
 ];
 
 const schema = {

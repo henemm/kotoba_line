@@ -1,5 +1,6 @@
 import { ApiError, OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
+import { registerScreen } from "./screens/register.js";
 import { signedOutScreen } from "./screens/signed-out.js";
 import { updateSheet } from "./screens/update-sheet.js";
 import { practiseScreen } from "./screens/practise.js";
@@ -25,6 +26,7 @@ import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
 import { watchPresses } from "./ui/press.js";
+import { offerInstall } from "./install.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
@@ -257,6 +259,7 @@ function currentScreen() {
       // …and no session to carry on from a deck it hides.
       resumable: state.settings.beginner && !isTravelDeck(state.resumable?.filters?.deckKey) ? undefined : state.resumable,
       beginner: state.settings.beginner,
+      onSettings: () => goToTab("settings"),
       onResume: resumeSession,
       japanese: state.settings.japaneseScript,
       scrollTop: app.querySelector(":scope > .practise")?.scrollTop ?? 0,
@@ -1112,26 +1115,70 @@ async function signInAgain(pin) {
   flush().catch(() => {});
 }
 
+/**
+ * #260: the invitation code out of the link the group was sent
+ * (…/kotoba/?einladung=REISE26), uppercased, or undefined. Held in the URL
+ * only until it is used or given up on — `signedUp()` takes it out again, so
+ * a reload after signing up is an ordinary start.
+ */
+let inviteCode = new URLSearchParams(location.search).get("einladung")?.trim().toUpperCase() || undefined;
+
+function forgetInvite() {
+  inviteCode = undefined;
+  const url = new URL(location.href);
+  url.searchParams.delete("einladung");
+  history.replaceState(null, "", url);
+  renderApp();
+}
+
+/** Set at sign-in, spent by renderApp() once the tabs are on screen (#260). */
+let wantsInstallHint;
+
+/** Everything a start needs, whether she signed in or just signed up (#260). */
+function signedIn(user) {
+  state.user = user;
+  state.tab = "practise";
+  clearSignedOut();
+  numbersChanged();
+  setMeta("user", user);
+  checkDeck();
+  loadSettings();
+  // #35: the topic list is needed anywhere she files or filters by one, and
+  // Browse can be reached in two taps from here. Loading it only when the
+  // set sheet opened meant the card-topics sheet came up offering nothing
+  // but "+ new" — every existing topic invisible, and a duplicate one
+  // keystroke away.
+  loadTopics();
+  startFlushing();
+  startFlushingStars();
+  renderApp();
+}
+
 function renderApp() {
+  if (!state.user && inviteCode) {
+    render(app, registerScreen({
+      code: inviteCode,
+      japanese: state.signInScript,
+      onGiveUp: forgetInvite,
+      onSignedIn: (user) => {
+        forgetInvite();
+        // #260: they came from a mailed link, so they are in a browser tab —
+        // where there are no notifications and half the screen height. Shown
+        // once the tabs are up, not over the first-run download.
+        wantsInstallHint = "signup";
+        signedIn(user);
+      },
+    }));
+    return;
+  }
   if (!state.user) {
-    render(app, signInScreen({ japanese: state.signInScript, onSignedIn: (user) => {
-      state.user = user;
-      state.tab = "practise";
-      clearSignedOut();
-      numbersChanged();
-      setMeta("user", user);
-      checkDeck();
-      loadSettings();
-      // #35: the topic list is needed anywhere she files or filters by one,
-      // and Browse can be reached in two taps from here. Loading it only when
-      // the set sheet opened meant the card-topics sheet came up offering
-      // nothing but "+ new" — every existing topic invisible, and a duplicate
-      // one keystroke away.
-      loadTopics();
-      startFlushing();
-      startFlushingStars();
-      renderApp();
-    } }));
+    render(app, signInScreen({
+      japanese: state.signInScript,
+      onSignedIn: (user) => {
+        wantsInstallHint = "signin";
+        signedIn(user);
+      },
+    }));
     return;
   }
 
@@ -1280,6 +1327,14 @@ function renderApp() {
   // appears on the next redraw that reaches the tabs. The set sheet wins while
   // it is open; she is in the middle of choosing.
   render(app, offlineBar(), currentScreen(), tabBar(), state.sheet ?? state.updateNode);
+
+  // #260: the tabs are up, so the start is over — this is the moment for
+  // "Zum Home-Bildschirm", and only in a browser tab (offerInstall checks).
+  if (wantsInstallHint) {
+    const reason = wantsInstallHint;
+    wantsInstallHint = undefined;
+    offerInstall(reason);
+  }
 }
 
 /**
