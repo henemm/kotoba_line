@@ -18,6 +18,7 @@ import { uuid, voiceCircle } from "../ui/voice-circle.js";
 import { kanaMnemonicBlock } from "../ui/kana-mnemonic.js";
 import { stopAllRecording } from "../recording.js";
 import { soundButton } from "../ui/sound-button.js";
+import { infoButton } from "../ui/info.js";
 
 
 /**
@@ -1114,16 +1115,14 @@ export function sessionScreen({
         el("p.peek-note", {
           text: again ? "Mit Romaji-Hilfe – die Karte kommt gleich noch einmal." : "Mit Romaji-Hilfe – zählt als nicht gewusst.",
         }),
-        el("div.ratings.two", {}, ratingButton("Weiter", RATING_AGAIN, () => grade(card, RATING_AGAIN))),
+        ratings(ratingButton("Weiter", RATING_AGAIN, () => grade(card, RATING_AGAIN))),
       );
       settle();
       return;
     }
     render(
       answers,
-      el(
-        "div.ratings.two",
-        {},
+      ratings(
         ratingButton("Nicht gewusst", RATING_AGAIN, () => grade(card, RATING_AGAIN)),
         ratingButton("Gewusst", RATING_GOOD, () => grade(card, RATING_GOOD)),
       ),
@@ -1276,9 +1275,7 @@ export function sessionScreen({
     if (typed !== undefined && !correct) {
       render(
         answers,
-        el(
-          "div.ratings.two",
-          {},
+        ratings(
           // Moved on within the tap rather than on a timer, so the next
           // card's field can still open the keyboard (see `drawType`).
           ratingButton("Nicht gewusst", RATING_AGAIN, () => {
@@ -1337,6 +1334,18 @@ export function sessionScreen({
    * worth the width; 話す passes none, because a yes-or-no question has no
    * interval to compare.
    */
+  /**
+   * The rating row with its (i) under it (#255 follow-up, Henning,
+   * 2026-09-20): what Nochmal and Gewusst do to the next date, and what the
+   * time under a button means, is the question every mode's back raises.
+   */
+  function ratings(...buttons) {
+    const row = buttons.length === 4 ? "div.ratings" : "div.ratings.two";
+    // The (i) sits above the row, not under it: under it lands on the home
+    // indicator, and the row is the thing the thumb goes for.
+    return el("div.ratings-block", {}, el("div.ratings-info", {}, infoButton("ratings")), el(row, {}, buttons));
+  }
+
   function ratingButton(label, rating, onClick, interval) {
     const tone = { 1: "again", 2: "hard", 3: "good", 4: "easy" }[rating];
     return el(
@@ -1674,9 +1683,7 @@ export function sessionScreen({
     const intervals = intervalsFor(card);
     render(
       answers,
-      el(
-        "div.ratings",
-        {},
+      ratings(
         ratingButton("Nochmal", RATING_AGAIN, () => grade(card, RATING_AGAIN), intervals[RATING_AGAIN]),
         ratingButton("Schwer", RATING_HARD, () => grade(card, RATING_HARD), intervals[RATING_HARD]),
         ratingButton("Gut", RATING_GOOD, () => grade(card, RATING_GOOD), intervals[RATING_GOOD]),

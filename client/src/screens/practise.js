@@ -4,6 +4,7 @@ import { seen } from "../seen.js";
 import { topicLabel } from "../topics.js";
 import { activeLabel, isDefault } from "./choose-set.js";
 import { el, num, render } from "../ui/dom.js";
+import { infoButton } from "../ui/info.js";
 
 /**
  * Noji's words for how far a card is (#159), which Charlotte already reads
@@ -164,7 +165,12 @@ export function practiseScreen({
     render(
       today,
       el("span.deck-today-n.tabular", { text: num(total) }),
-      el("span.deck-today-label", { text: total === 1 ? "Karte für heute" : "Karten für heute" }),
+      el(
+        "span.deck-today-label",
+        {},
+        el("span", { text: total === 1 ? "Karte für heute" : "Karten für heute" }),
+        infoButton("today", { label: "Karten für heute" }),
+      ),
       counts ? todaySplit(counts) : null,
     );
     // Below the lines, so drawing it late moves nothing she is about to tap.
@@ -232,7 +238,13 @@ export function practiseScreen({
   function progressBlock(bands) {
     const shown = BANDS.filter((band) => bands[band.key] > 0);
     return [
-      el("h2.deck-progress-title", {}, "Karten im Deck ", el("span.tabular", { text: `(${num(bands.total)})` })),
+      el(
+        "h2.deck-progress-title",
+        {},
+        "Karten im Deck ",
+        el("span.tabular", { text: `(${num(bands.total)})` }),
+        infoButton("bands", { label: "Nicht gelernte, In Bearbeitung, Gemeisterte" }),
+      ),
       el(
         "div.deck-progress-bar",
         { role: "img", "aria-label": BANDS.map((band) => `${num(bands[band.key])} ${band.label}`).join(", ") },
@@ -407,10 +419,15 @@ export function practiseScreen({
         el("button.deck-start", { type: "button", onclick: () => onStart({ mode: mode.key }), text: startLabel(mode) }),
       );
     }
+    // v149, Henning: "Der Play-Button … wirkt auf mich falsch. Das ist eher
+    // wie 'Video abspielen'." Gone, and with it the mode's name as a label:
+    // each row now says what tapping it does, in the same words as the one
+    // big button above when a deck has a single way switched on. The (i)
+    // beside "Üben" explains what each way asks for.
     return el(
       "div.deck-ways",
       {},
-      el("span.set-label", { text: "Üben" }),
+      el("span.set-label", {}, el("span", { text: "Üben" }), infoButton("ways", { label: "Die Übungsarten" })),
       el(
         "div.deck-ways-list",
         {},
@@ -418,13 +435,7 @@ export function practiseScreen({
           el(
             "button.deck-way",
             { type: "button", onclick: () => onStart({ mode: mode.key }) },
-            el(
-              "span.copy",
-              {},
-              el(japanese ? "span.name.jp" : "span.name", { text: modeName(mode, japanese) }),
-              japanese ? el("span.en", { text: mode.en }) : null,
-            ),
-            el("span.play", { "aria-hidden": "true", text: "▶" }),
+            el("span.copy", {}, el("span.name", { text: startLabel(mode) })),
           ),
         ),
       ),

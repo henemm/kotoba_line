@@ -680,28 +680,6 @@
   font-size: 18px;
   font-weight: 700;
 }
-.deck-way .name.jp {
-  font-family: var(--jp);
-  font-size: 20px;
-}
-.deck-way .en {
-  font-size: 14px;
-  color: var(--ink-muted);
-}
-.deck-way .play {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--night);
-  display: grid;
-  place-items: center;
-  /* ▶ sits left of centre in its box; nudged so it looks centred. */
-  padding-left: 3px;
-  font-size: 14px;
-  line-height: 1;
-}
 .deck-more {
   margin: 14px var(--gutter) 0;
   width: auto;
@@ -4949,4 +4927,82 @@ button.kana-tile:active {
 }
 .deck-row.deck-locked:active {
   background: var(--surface);
+}
+
+/* ══ (i) — one explanation, one look ═════════════════════════════
+   Henning, 2026-09-20: "Könntest du die App mit (i) info-Popovers
+   garnieren?" One component (ui/info.js) draws all of them; this is the
+   little round button beside a heading, and the list its sheet can hold. */
+.info {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-left: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-hi);
+  color: var(--ink-muted);
+  font: 700 13px/1 var(--ui);
+  /* A 22px circle with a 44px reach: the target is the finger's, the
+     drawing is the heading's. */
+  position: relative;
+  vertical-align: middle;
+}
+.info::after {
+  content: "";
+  position: absolute;
+  inset: -11px;
+}
+.deck-today-label .info,
+.set-label .info,
+.deck-progress-title .info,
+.jokers-title .info {
+  vertical-align: middle;
+}
+.deck-today-label,
+.set-label,
+.jokers-title {
+  display: inline-flex;
+  align-items: center;
+}
+/* Over the tab bar, and scrolling when the text is long — the five ways of
+   practising are five paragraphs, and "Verstanden" sat under the floating
+   capsule before this (measured in WebKit 394×852). */
+.sheet-scrim.info-sheet {
+  position: fixed;
+  z-index: 20;
+}
+.info-sheet .sheet {
+  max-height: 88dvh;
+  overflow-y: auto;
+}
+.info-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.info-list dt {
+  font-size: 15px;
+  font-weight: 700;
+}
+.info-list dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+/* The rating row keeps its width; the (i) sits under it, out of the way of
+   four buttons that are already tight on a phone. */
+.ratings-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ratings-info {
+  display: flex;
+  justify-content: flex-end;
+}
+.ratings-info .info {
+  margin: 0;
 }

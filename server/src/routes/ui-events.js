@@ -26,6 +26,7 @@ export const UI_EVENT_NAMES = [
   "beginner_on", // #252: Settings → Einstieg switched on / off
   "beginner_off",
   "travel_unlocked_shown", // #252: the deck list showed Reise 2 unlocked
+  "info_opened", // v149: an (i) explanation was opened (detail: which one)
 ];
 
 const schema = {

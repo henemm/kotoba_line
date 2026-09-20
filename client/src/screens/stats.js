@@ -2,6 +2,7 @@ import { OfflineError, api } from "../api.js";
 import { WEEKDAYS, calendarWeeks, dayDetail, dayKind, dayOfMonth, daysPractised } from "../history.js";
 import { byTopicLabel, topicLabel } from "../topics.js";
 import { el, num, render } from "../ui/dom.js";
+import { infoButton } from "../ui/info.js";
 
 /** The level bar is drawn as twelve segments however far apart the levels are. */
 const LEVEL_SEGMENTS = 12;
@@ -357,7 +358,7 @@ export function statsScreen({ onBrowse } = {}) {
       el(
         "div.jokers-head",
         {},
-        el("span.jokers-title", { text: "Joker" }),
+        el("span.jokers-title", {}, el("span", { text: "Joker" }), infoButton("streak", { label: "Serie und Joker" })),
         el("span.jokers-count", { text: `${held} von 3` }),
       ),
       el(
