@@ -1,5 +1,21 @@
 [
   {
+    "version": "v149",
+    "summary": "Kleine (i)-Erklärungen, und die Übungen sagen jetzt, was sie starten.",
+    "notes": [
+      "Neben „Üben“, „Karten für heute“, „Karten im Deck“, unter den Bewertungsknöpfen und bei den Jokern steht jetzt ein (i). Es erklärt in zwei, drei Sätzen, was dahintersteckt und wo du es änderst.",
+      "Die Übungsknöpfe heißen jetzt „Karten laut sagen“, „Bedeutungen wählen“ und so weiter, statt nur den Namen der Übung mit einem ▶ zu zeigen."
+    ]
+  },
+  {
+    "version": "v148",
+    "summary": "Die Anmeldeseite ist aufgeräumt.",
+    "notes": [
+      "Die bunte Linie mit den Punkten am Rand ist weg. Sie war der letzte Rest der alten Ansicht, den es sonst nirgends mehr gibt.",
+      "Das erste PIN-Kästchen sieht nicht mehr aktiv aus, solange du noch den Namen eintippst. Mit der Weiter-Taste springst du vom Namen direkt zur PIN."
+    ]
+  },
+  {
     "version": "v147",
     "summary": "こんにちは und さようなら sprechen jetzt Muttersprachler.",
     "notes": [
