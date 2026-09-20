@@ -4988,6 +4988,16 @@ button.kana-tile:active {
   max-height: 88dvh;
   overflow-y: auto;
 }
+.install-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
 .info-list {
   margin: 0;
   display: flex;

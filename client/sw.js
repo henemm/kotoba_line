@@ -109,6 +109,7 @@ const SHELL_FILES = [
   "src/ui/card-marks.js",
   "src/ui/sound-button.js",
   "src/ui/press.js",
+  "src/install.js",
   "src/ui/info.js",
   "assets/icons/icon-192.png",
   "assets/icons/apple-touch-icon-180.png",

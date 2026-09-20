@@ -7,6 +7,7 @@ import { el, num, render } from "../ui/dom.js";
 import { canRecord, micErrorMessage, startRecording, stopAllRecording } from "../recording.js";
 import { disablePush, enablePush, pushState } from "../push.js";
 import { seen } from "../seen.js";
+import { isStandalone, openInstallHint } from "../install.js";
 
 /**
  * Which app shell this device is running, and which one it has ready.
@@ -145,6 +146,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       script(),
       practice(),
       notifications(),
+      install(),
       account(),
       sources(),
       diagnostics(),
@@ -423,6 +425,19 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
   }
 
   // ── Account ─────────────────────────────────────────────────────
+
+  /** #260: the way back to the instructions, for anyone who tapped "Später". */
+  function install() {
+    if (isStandalone()) return null;
+    return group(
+      "App",
+      row(
+        "Zum Home-Bildschirm",
+        "Im Browser fehlen Benachrichtigungen, und die Seite ist kürzer als der Bildschirm. Als App auf dem Home-Bildschirm nicht.",
+        el("button.btn.small", { type: "button", text: "Anleitung", onclick: () => openInstallHint("settings") }),
+      ),
+    );
+  }
 
   function account() {
     return group(

@@ -26,6 +26,7 @@ import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
 import { watchPresses } from "./ui/press.js";
+import { offerInstall } from "./install.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
@@ -1130,6 +1131,9 @@ function forgetInvite() {
   renderApp();
 }
 
+/** Set at sign-in, spent by renderApp() once the tabs are on screen (#260). */
+let wantsInstallHint;
+
 /** Everything a start needs, whether she signed in or just signed up (#260). */
 function signedIn(user) {
   state.user = user;
@@ -1158,13 +1162,23 @@ function renderApp() {
       onGiveUp: forgetInvite,
       onSignedIn: (user) => {
         forgetInvite();
+        // #260: they came from a mailed link, so they are in a browser tab —
+        // where there are no notifications and half the screen height. Shown
+        // once the tabs are up, not over the first-run download.
+        wantsInstallHint = "signup";
         signedIn(user);
       },
     }));
     return;
   }
   if (!state.user) {
-    render(app, signInScreen({ japanese: state.signInScript, onSignedIn: signedIn }));
+    render(app, signInScreen({
+      japanese: state.signInScript,
+      onSignedIn: (user) => {
+        wantsInstallHint = "signin";
+        signedIn(user);
+      },
+    }));
     return;
   }
 
@@ -1313,6 +1327,14 @@ function renderApp() {
   // appears on the next redraw that reaches the tabs. The set sheet wins while
   // it is open; she is in the middle of choosing.
   render(app, offlineBar(), currentScreen(), tabBar(), state.sheet ?? state.updateNode);
+
+  // #260: the tabs are up, so the start is over — this is the moment for
+  // "Zum Home-Bildschirm", and only in a browser tab (offerInstall checks).
+  if (wantsInstallHint) {
+    const reason = wantsInstallHint;
+    wantsInstallHint = undefined;
+    offerInstall(reason);
+  }
 }
 
 /**

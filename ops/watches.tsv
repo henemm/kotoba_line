@@ -6,3 +6,4 @@
 248	2026-09-20	push_offer_shown,push_offer_yes,push_offer_no,push_granted,push_denied,push_opened	Bietet die App Charlotte nach einer Übung die Benachrichtigung an, erlaubt sie sie, und öffnet sie die App aus einer Benachrichtigung?
 252	2026-09-20	romaji_peek_shown,romaji_peek_tapped,beginner_on,beginner_off,travel_unlocked_shown	Wird „Romaji zeigen“ beim Laut-Sagen angezeigt und angetippt, schaltet jemand den Einstieg ein, und wird Reise 2 freigeschaltet?
 255	2026-09-21	info_opened	Öffnet jemand die (i)-Erklärungen, und welche?
+260	2026-09-21	install_hint_shown,install_hint_closed,install_accepted	Lesen die Reise-Teilnehmer die Anleitung zum Home-Bildschirm, und installieren sie die App?
