@@ -26,7 +26,7 @@ import { SHELL_VERSION } from "./shell-version.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
 import { watchPresses } from "./ui/press.js";
-import { offerInstall } from "./install.js";
+import { hintPending, offerInstall } from "./install.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
@@ -1575,6 +1575,14 @@ state.pendingEvents = await pending();
  * From here on any request can be the one that finds the cookie gone.
  */
 onSessionExpired(noteSignedOut);
+
+// #260: also on a start with a session this device already has. Arming it only
+// at sign-in was measured wrong: Julia signed in on 2026-09-20 at 12:48, saw
+// the steps, closed them, and a session lasts far longer than the mistake in
+// them did — she would never have passed that path again, so a correction
+// could not reach her. `offerInstall` still decides, and it says no to an
+// installed app and to a device that has been told already.
+if (remembered && hintPending()) wantsInstallHint = "start";
 
 renderApp();
 

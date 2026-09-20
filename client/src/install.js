@@ -58,10 +58,14 @@ export function installSteps({ apple = isApple() } = {}) {
       steps: [
         "Drück unten lang auf die Adresszeile – dort, wo „henemm.com“ steht –, bis ein Menü aufklappt.",
         "Ganz oben im Menü steht „Teilen“. Tipp darauf.",
-        "Wisch nach unten, bis „Zum Home-Bildschirm“ kommt – mit einem ⊕ davor –, und tippe darauf.",
+        "Wisch nach unten, bis „Zum Home-Bildschirm“ kommt – mit einem Plus davor –, und tippe darauf.",
         "Oben rechts auf „Hinzufügen“. Danach startest du die App über das neue Symbol, nicht mehr über den Link.",
       ],
-      tip: "Ältere iPhones zeigen das Teilen-Symbol – ein Quadrat mit einem Pfeil nach oben – direkt in der Leiste. Dann geht es auch darüber.",
+      // Not "ältere iPhones": whether the icon is in the bar is the Safari
+      // layout setting (Einstellungen → Apps → Safari → Tabs), not the age of
+      // the phone — "Unten" shows it on iOS 27 too. Saying otherwise would
+      // send someone looking for a button again, which is the whole bug.
+      tip: "Wenn du in der Leiste ein Teilen-Symbol siehst – ein Quadrat mit einem Pfeil nach oben –, geht es auch darüber.",
     };
   }
   return {
