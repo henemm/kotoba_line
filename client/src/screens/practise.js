@@ -82,6 +82,9 @@ export function practiseScreen({
   japanese = true,
   // The ways of practising switched off for this deck (#137, Deck options).
   hiddenModes = [],
+  // #252: the way this deck is meant to be practised goes first — Reise is
+  // built around saying it aloud, and MODES' own order would bury it third.
+  preferMode,
   // The deck's cards, under everything else (deck-cards.js), and the way to add
   // one — only in a deck of hers (#137).
   cardsBlock,
@@ -394,7 +397,8 @@ export function practiseScreen({
   function linesBlock() {
     // A way the deck cannot do is off whatever was stored (Deck options).
     const cannot = Object.entries(deck?.ways ?? {}).filter(([, n]) => n === 0).map(([key]) => key);
-    const modes = visibleModes([...hiddenModes, ...cannot]);
+    const all = visibleModes([...hiddenModes, ...cannot]);
+    const modes = preferMode ? [...all].sort((a, b) => (b.key === preferMode) - (a.key === preferMode)) : all;
     if (modes.length === 1) {
       const [mode] = modes;
       return el(

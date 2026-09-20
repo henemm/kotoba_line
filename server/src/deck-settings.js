@@ -1,4 +1,4 @@
-import { canonicalDeckKey, isKanaDeck } from "./decks.js";
+import { canonicalDeckKey, isKanaDeck, travelDeck } from "./decks.js";
 import { MODE_KEYS } from "./settings.js";
 
 /**
@@ -28,6 +28,13 @@ export const KANA_NEW_PER_DAY = 5;
 export const MAX_PER_DAY_MIN = 10;
 export const MAX_PER_DAY_MAX = 500;
 
+/**
+ * What a Reise deck offers before anyone touches it (#252, 2026-09-20):
+ * saying it aloud, choosing the meaning, turning the card. The other two
+ * are hidden rather than impossible — Optionen can switch them on.
+ */
+export const TRAVEL_HIDDEN_MODES = ["listen", "type"];
+
 export function deckSettings(db, userId, key) {
   // An old spelling ('list:<name>') reads the same row as 'deck:<id>' (migration 016).
   const deckKey = canonicalDeckKey(db, userId, key) ?? key;
@@ -42,7 +49,7 @@ export function deckSettings(db, userId, key) {
     fallback = db.prepare("SELECT new_per_day FROM user_settings WHERE user_id = ?").get(userId)?.new_per_day ?? 15;
   }
   return {
-    hiddenModes: row ? JSON.parse(row.hidden_modes) : [],
+    hiddenModes: row ? JSON.parse(row.hidden_modes) : travelDeck(deckKey) ? [...TRAVEL_HIDDEN_MODES] : [],
     newPerDay: row?.new_per_day ?? fallback,
     maxPerDay: row?.max_per_day ?? null,
     // What she released on top of the allowance, and the day it was for

@@ -330,11 +330,11 @@ export const SCREENS = [
   { name: "Einstellungen", steps: [tab("Einstellungen")] },
   { name: "Einstieg · Decks", steps: [beginner] },
   { name: "Reise 1", steps: [beginner, deck("Reise 1")] },
-  { name: "Reise 1 · vorne", steps: [beginner, deck("Reise 1"), (p) => p.locator("button.deck-start").click(), idle(1500)] },
-  { name: "Reise 1 · Romaji gezeigt", steps: [beginner, deck("Reise 1"), (p) => p.locator("button.deck-start").click(), idle(1500), tapText("Romaji zeigen")] },
+  { name: "Reise 1 · vorne", steps: [beginner, deck("Reise 1"), way("Laut sagen"), idle(1500)] },
+  { name: "Reise 1 · Romaji gezeigt", steps: [beginner, deck("Reise 1"), way("Laut sagen"), idle(1500), tapText("Romaji zeigen")] },
   {
     name: "Reise 1 · Rückseite nach Romaji",
-    steps: [beginner, deck("Reise 1"), (p) => p.locator("button.deck-start").click(), idle(1500), tapText("Romaji zeigen"), reveal, idle(900)],
+    steps: [beginner, deck("Reise 1"), way("Laut sagen"), idle(1500), tapText("Romaji zeigen"), reveal, idle(900)],
   },
 ];
 

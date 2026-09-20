@@ -270,6 +270,7 @@ function currentScreen() {
       readAloud: state.settings.readAloud,
       japanese: state.settings.japaneseScript,
       hiddenModes: state.deck?.settings?.hiddenModes ?? [],
+      preferMode: isTravelDeck(state.deck?.key) ? "speak" : undefined,
       cardsBlock: deckCards(),
       onAddCard: state.deck?.own ? openAddCard : undefined,
       // Best effort for the sound switch under the lines: muting on a train
