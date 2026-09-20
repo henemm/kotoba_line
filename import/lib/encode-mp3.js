@@ -47,3 +47,53 @@ export function encodeMp3(wav, metadata = {}) {
     ffmpeg.stdin.end(wav);
   });
 }
+
+/**
+ * The other direction, for a recording that arrives as MP3 and has to be
+ * measured before it can be levelled (#252's two Commons recordings):
+ * decoded to the 16-bit mono WAV `wav-level.js` reads. The audio itself is
+ * untouched — what is written out is still Wikimedia's own MP3, with only
+ * its gain fields changed (mp3gain.js).
+ */
+export function decodeWav(mp3) {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel", "error",
+      "-i", "pipe:0",
+      "-codec:a", "pcm_s16le",
+      "-ar", "44100",
+      "-ac", "1",
+      // Raw samples, not "-f wav": into a pipe ffmpeg cannot go back and
+      // write the RIFF sizes, and the header it leaves says the data chunk
+      // is longer than the file (parseWav then reads past the end).
+      "-f", "s16le",
+      "pipe:1",
+    ]);
+    const chunks = [];
+    let stderr = "";
+    ffmpeg.stdout.on("data", (c) => chunks.push(c));
+    ffmpeg.stderr.on("data", (c) => (stderr += c));
+    ffmpeg.on("error", (err) => reject(new Error(`ffmpeg not available: ${err.message}`)));
+    ffmpeg.on("close", (code) => (code === 0 ? resolve(riff(Buffer.concat(chunks))) : reject(new Error(`ffmpeg exited ${code}: ${stderr}`))));
+    ffmpeg.stdin.end(mp3);
+  });
+}
+
+/** 44.1 kHz mono 16-bit samples with the header parseWav() expects. */
+function riff(pcm) {
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0, "latin1");
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVEfmt ", 8, "latin1");
+  header.writeUInt32LE(16, 16); // fmt chunk size
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(1, 22); // mono
+  header.writeUInt32LE(44100, 24);
+  header.writeUInt32LE(44100 * 2, 28); // bytes per second
+  header.writeUInt16LE(2, 32); // block align
+  header.writeUInt16LE(16, 34); // bits
+  header.write("data", 36, "latin1");
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
