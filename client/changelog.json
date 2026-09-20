@@ -3,7 +3,8 @@
     "version": "v148",
     "summary": "Die Anmeldeseite ist aufgeräumt.",
     "notes": [
-      "Die bunte Linie mit den Punkten am Rand ist weg. Sie war der letzte Rest der alten Ansicht, den es sonst nirgends mehr gibt."
+      "Die bunte Linie mit den Punkten am Rand ist weg. Sie war der letzte Rest der alten Ansicht, den es sonst nirgends mehr gibt.",
+      "Das erste PIN-Kästchen sieht nicht mehr aktiv aus, solange du noch den Namen eintippst. Mit der Weiter-Taste springst du vom Namen direkt zur PIN."
     ]
   },
   {

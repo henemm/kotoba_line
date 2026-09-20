@@ -20,6 +20,7 @@ const PIN_LENGTH = 6;
  */
 export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState }) {
   let pin = "";
+  let hasFocus = false;
   let state = "default"; // default | error | limited
   let message = "";
   let retryAt = 0;
@@ -42,7 +43,11 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
       cells,
       Array.from({ length: PIN_LENGTH }, (_, i) => {
         const filled = i < pin.length;
-        const focused = i === pin.length && state !== "limited";
+        // Only while the PIN itself has the keyboard (v149, Henning: the
+        // first cell "sieht immer direkt aktiviert aus, obwohl man doch
+        // erst den Namen eintippen muss"). It used to be drawn active from
+        // the moment the screen appeared, with the cursor in the name field.
+        const focused = hasFocus && i === pin.length && state !== "limited";
         return el(
           "div.cell",
           { class: focused ? "focus" : undefined },
@@ -111,6 +116,16 @@ export function pinEntry({ buttonText, onSubmit, canSubmit = () => true, onState
 
   cells.addEventListener("click", () => capture.focus());
 
+  // The cells are a drawing of one hidden field, so they follow its focus.
+  capture.addEventListener("focus", () => {
+    hasFocus = true;
+    drawCells();
+  });
+  capture.addEventListener("blur", () => {
+    hasFocus = false;
+    drawCells();
+  });
+
   async function submit() {
     if (button.disabled) return;
     button.disabled = true;
@@ -178,6 +193,16 @@ export function signInScreen({ onSignedIn, japanese = true }) {
     maxlength: "22",
     placeholder: "dein Name",
     "aria-label": "Name",
+    // Weiter on the keyboard goes where the eye goes next, now that the PIN
+    // cells no longer look active from the start (v149).
+    enterkeyhint: "next",
+  });
+
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      pin.focus();
+    }
   });
 
   const pin = pinEntry({
