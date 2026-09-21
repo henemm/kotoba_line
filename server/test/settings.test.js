@@ -30,6 +30,8 @@ describe("the settings row", () => {
       appearance: "light",
       recordingEnabled: true,
       beginner: false,
+      // #99: „Du hast heute noch nicht geübt", off for everyone.
+      reminder: false,
     });
     db.close();
   });
@@ -113,6 +115,8 @@ describe("GET /api/settings", () => {
       appearance: "light",
       recordingEnabled: true,
       beginner: false,
+      // #99: „Du hast heute noch nicht geübt", off for everyone.
+      reminder: false,
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -163,6 +167,8 @@ describe("PATCH /api/settings", () => {
       appearance: "light",
       recordingEnabled: true,
       beginner: false,
+      // #99: „Du hast heute noch nicht geübt", off for everyone.
+      reminder: false,
     });
     await app.close();
   });
@@ -189,6 +195,8 @@ describe("PATCH /api/settings", () => {
       appearance: "light",
       recordingEnabled: true,
       beginner: false,
+      // #99: „Du hast heute noch nicht geübt", off for everyone.
+      reminder: false,
     });
     await app.close();
   });

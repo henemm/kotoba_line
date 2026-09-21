@@ -421,7 +421,41 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     };
     draw("off", true);
     pushState().then((state) => draw(state), () => draw("unsupported"));
-    return group("Benachrichtigungen", slot);
+    return group("Benachrichtigungen", slot, reminderRow());
+  }
+
+  /**
+   * "Du hast heute noch nicht geübt" (#99, Henning 2026-09-21). Off for
+   * everyone; Noji reminds twice a day, this once, at 18:00 on her own clock,
+   * and only on a day with no answer.
+   *
+   * Its own row rather than a second state of the one above, because they
+   * answer different questions — the first is about a session that ended, and
+   * this one about a day that did not start. The switch is remembered whether
+   * or not notifications are allowed; what it cannot do is deliver one, and
+   * the sentence says so instead of failing quietly.
+   */
+  function reminderRow() {
+    const slot = el("div.push-row");
+    const draw = (allowed) => {
+      const { reminder } = data.settings;
+      render(
+        slot,
+        row(
+          "Wenn du noch nicht geübt hast",
+          allowed
+            ? "Eine Nachricht um 18:00, an einem Tag, an dem noch keine Karte dran war."
+            : "Eine Nachricht um 18:00, an einem Tag, an dem noch keine Karte dran war. Erlaube dafür oben die Benachrichtigungen.",
+          toggle(reminder, "Erinnerung", (on) => {
+            seen(on ? "reminder_on" : "reminder_off");
+            write({ reminder: on });
+          }),
+        ),
+      );
+    };
+    draw(true);
+    pushState().then((state) => draw(state === "on"), () => draw(false));
+    return slot;
   }
 
   // ── Account ─────────────────────────────────────────────────────

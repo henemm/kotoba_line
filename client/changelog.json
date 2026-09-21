@@ -1,5 +1,14 @@
 [
   {
+    "version": "v153",
+    "summary": "Neu: eine Erinnerung um 18:00, wenn du an dem Tag noch nicht geübt hast.",
+    "notes": [
+      "Du schaltest sie selbst ein, unter „Einstellungen“ → „Benachrichtigungen“. Sie ist für alle aus, bis jemand sie anschaltet.",
+      "Sie kommt einmal am Tag um 18:00 deiner Zeit – und nur, wenn an dem Tag noch keine Karte dran war. Hast du schon geübt, bleibt es still.",
+      "Damit sie ankommt, müssen die Benachrichtigungen erlaubt sein. Das steht in derselben Zeile darüber."
+    ]
+  },
+  {
     "version": "v152",
     "summary": "Eine Übung enthält jetzt alle Karten, die heute dran sind – wie bei Noji.",
     "notes": [
