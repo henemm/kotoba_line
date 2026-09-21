@@ -53,13 +53,16 @@ const app = document.getElementById("app");
 /** Reise 1 and 2 (#252), the decks Einstieg lists. */
 const isTravelDeck = (key) => typeof key === "string" && key.startsWith("travel:");
 
-/**
- * The most one sitting asks — MAX_SESSION_LENGTH on the server. Since v74 there
- * is no "How long" (#123, reversed): a session is the deck's cards for today,
- * as in Noji, which the server keeps to the deck's "Max cards per day" if she
- * set one. She can stop at any time, and Carry on keeps the rest.
+/*
+ * There is no session length here any more (#242, Henning 2026-09-21). Since
+ * v74 there was no "How long" question (#123, reversed), but the client still
+ * asked the server for 60 cards at a time — an invisible cap on top of the
+ * deck's own "Maximal pro Tag", which is the limit Noji has and the one that
+ * is hers. A session is now the deck's cards for today, all of them, as in
+ * Noji; she can stop at any time and Carry on keeps the rest. Asking for no
+ * limit means the server's, which is a bound on one response and nothing her
+ * decks can reach (server/src/queue.js).
  */
-const SESSION_MAX = 60;
 
 /*
  * There is no sidebar any more (#159, v76). v72 (#151) drew the tabs and her
@@ -785,7 +788,6 @@ function openSheet() {
     filters: state.filters,
     topics: state.deck?.own ? (state.deckTopics?.list ?? []) : state.topics,
     showTopics: topicsHere(),
-    sessionLength: SESSION_MAX,
     // #120: what the sheet holds is the set, Start or no Start. Written here
     // on every tap rather than on close, because loadTopics() below rebuilds
     // the sheet from state.filters — a tap made before the topics arrived
@@ -1266,7 +1268,6 @@ function renderApp() {
       chosenLabel: isDefault(state.session.filters)
         ? undefined
         : activeLabel(state.session.filters),
-      limit: SESSION_MAX,
       readAloud: state.settings.readAloud,
       // #21: off by default, and read here rather than inside the session so
       // the setting is in one place with the others.

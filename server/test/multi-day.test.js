@@ -69,12 +69,36 @@ describe("thirty days of practice (#242)", () => {
   });
 
   it("brings Schwer and Gut back in the same session when their minutes run out in it (#242)", async () => {
-    const { showings } = await run(PROFILES.fleissig);
+    // One evening session, not the default two. Since the session cap went
+    // (#242, 2026-09-21) the first session of the day takes *all* of the
+    // day's cards, new ones included — as in Noji — so with a morning 選ぶ
+    // session the evening めくる one never meets a new card, and Schwer and
+    // Leicht on a new card (`neu:2`, `neu:4`) stop occurring at all. That is
+    // the change working, not a regression: measured on the same simulation,
+    // the "zweimal" pattern now reports "Neu, Schwer –".
+    const { db, userId } = await learner();
+    const { showings } = await simulate(db, userId, {
+      start: START,
+      days: DAYS,
+      profile: PROFILES.fleissig,
+      pattern: PATTERNS["einmal-abends"],
+    });
     const { ratings } = experience(showings);
-    // Sixty cards and their Nochmal take longer than 8 or 15 minutes, so a
+    // A day's cards and their Nochmal take longer than 8 or 15 minutes, so a
     // new word answered early in a session comes back before it ends.
     assert.ok(ratings["neu:2"].sameSession > 0, `Schwer ${ratings["neu:2"].sameSession} %`);
     assert.ok(ratings["neu:3"].sameSession > 0, `Gut ${ratings["neu:3"].sameSession} %`);
+  });
+
+  it("gives the whole day's cards in one session, as Noji does (#242)", async () => {
+    // The cap was 60. A day of `fleissig` is 15 new words plus their reshows
+    // and everything due — this asserts the session is no longer cut at 60,
+    // which is what "bis alle Karten erledigt sind" means.
+    const { showings } = await run(PROFILES.fleissig);
+    const perSession = new Map();
+    for (const s of showings) perSession.set(s.session, (perSession.get(s.session) ?? 0) + 1);
+    const biggest = Math.max(...perSession.values());
+    assert.ok(biggest > 60, `größte Übung ${biggest} Karten`);
   });
 
   it("brings a Nochmal card back within the session even when she stops after twenty (#242)", async () => {

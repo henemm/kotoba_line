@@ -38,8 +38,21 @@ const LAST_RATING_SQL = `(SELECT e.rating FROM review_events e
      WHERE e.user_id = s.user_id AND e.card_id = c.id
      ORDER BY e.reviewed_at DESC, e.id DESC LIMIT 1)`;
 
-/** §5a and phase-0-plan §3.1 D: "All" is capped so a backlog stays finishable. */
-export const MAX_SESSION_LENGTH = 60;
+/**
+ * §5a and phase-0-plan §3.1 D capped "All" at 60 so a backlog stayed
+ * finishable. #242, Henning 2026-09-21: that cap is gone. It was a second,
+ * invisible limit sitting on top of the deck's own "Maximal pro Tag" — which
+ * is the one Noji has, and the one that belongs to her. Noji runs a session
+ * until the day's cards are done, and the simulation measured what 60 cost:
+ * with 40 % Nochmal the backlog filled the session, and because due cards
+ * come before new ones (§5), no new word was introduced that day at all.
+ *
+ * What is left here is a bound on the size of one response, not a decision
+ * about how long she practises: the queue is a JSON array of card ids and
+ * every one of them is fetched. Nothing in her decks can reach it — the
+ * whole Kaishi deck is 1,526 cards and a day's due count is two figures.
+ */
+export const MAX_SESSION_LENGTH = 500;
 
 /** Design 10's "Practise ahead": cards due in the next two days (#90). */
 const AHEAD_WINDOW_DAYS = 2;
