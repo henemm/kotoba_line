@@ -63,7 +63,9 @@ say("Karte kommt doppelt vor", twice);
 
 // 2. Leere Felder.
 say("Bedeutung fehlt", rows.filter((r) => !r.de?.trim()).map((r) => `${r.id} ${r.word}`));
-say("Satz fehlt", rows.filter((r) => !r.satz?.trim()).map((r) => `${r.id} ${r.word}`));
+// 26 Kaishi-Karten tragen selbst keinen Beispielsatz; dort ist die leere
+// Spalte richtig. Gemeldet wird nur, wo es einen japanischen Satz gibt.
+say("Satz fehlt", rows.filter((r) => !r.satz?.trim() && card.get(r.id)?.sentence?.trim()).map((r) => `${r.id} ${r.word}`));
 
 // 3. Der eigentliche Punkt: zwei Karten, ein Text.
 const byText = new Map();
