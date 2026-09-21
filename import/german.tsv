@@ -1,0 +1,275 @@
+# Deutsche Bedeutungen und Beispielsätze für Kaishi (#134), Henning 2026-09-21.
+#
+# Geschlüsselt auf die KARTEN-ID, nicht auf das Wort: 24 Wörter kommen im Deck
+# doppelt vor, mit verschiedenen Bedeutungen (もう „schon"/„noch", 聞く
+# „hören"/„fragen"). Eine wortgeschlüsselte Datei gäbe beiden Karten dasselbe
+# und verlöre eine davon — siehe #134 und import/lib/tagging.js.
+#
+# Übersetzt wird aus dem JAPANISCHEN; die englische Zeile aus Kaishi ist die
+# Gegenprobe, nicht die Vorlage. Kein Modell schreibt hier Bedeutungen, die es
+# sich ausdenkt: jede Zeile hat drei Quellen, die übereinstimmen müssen — das
+# Wort, die englische Bedeutung und der Beispielsatz.
+#
+# VIER KONVENTIONEN, einmal entschieden und 250-mal gleich angewandt:
+#
+#  1. „to <Verb>" wird der blanke Infinitiv: „machen", nicht „zu machen".
+#  2. Die Zahl der Bedeutungen folgt dem Englischen. „to hit, to strike" wird
+#     zweigliedrig. Das ist es, was die Karten voneinander trennt: mit nur je
+#     einem deutschen Wort fielen im ganzen Deck 395 Karten zusammen statt 67
+#     (gemessen 2026-09-21). Wo Deutsch anders schneiden muss, um zwei Karten
+#     unterscheidbar zu halten, darf es das — und die Zeile bekommt eine Notiz.
+#  3. Klammern bleiben Klammern, an derselben Stelle: „(polite)" → „(höflich)".
+#  4. Substantive groß, Verben und Adjektive klein — deutsche Rechtschreibung,
+#     auch wenn das Englische alles kleinschreibt.
+#
+# Spalten: card_id, wort, wort_de, satz_de, notiz
+1708637439885	する	machen, tun	Er spielt Tennis.	Das Englische erklärt „lit: He does tennis“ — das zeigt する. Auf Deutsch sagt das niemand; die Erklärung gehört zur Wortbedeutung, nicht in den Satz.
+1708637439993	事	Sache, Vorfall	Ich habe im Internet Dinge über Japan nachgeschlagen.	
+1708637439886	なる	werden, sich ergeben, dazu kommen (etwas zu tun)	Japanischlernen gefällt mir inzwischen.	„inzwischen“ trägt なりました (ist geworden).
+1708637439873	ある	vorhanden sein, es gibt (Unbelebtes)	Es gibt einen Stift.	
+1708637439867	それ	das da	Das ist ein Buch.	
+1708637439854	私	ich (höflich, allgemein)	Ich bin Ann.	
+1708637439930	言う	sagen	Sag es bitte langsam.	ください ist höflich, aber nicht siezend — die App duzt durchgehend.
+1708637439872	いる	da sein, es gibt (Lebewesen)	Ich habe einen älteren Bruder.	
+1708637439911	思う	denken, finden	Ich finde, das hier ist gut.	
+1708637439879	その	dieser da	Ist es das Buch da?	これ/それ/あれ und この/その/あの werden im ganzen Deck gleich geschnitten: hier — da — dort drüben. Sonst fallen sie auf Deutsch zusammen.
+1708637439878	この	dieser hier	Welches Buch ist das von Yamada? Dieses hier?	
+1708637439913	そう	so, auf diese Weise	Das finde ich auch.	
+1708637439877	無い	nicht vorhanden, nicht da	Ich habe gerade nicht viel Zeit.	
+1708637439908	来る	kommen	Kommst du morgen?	
+1708637439856	さん	-san (höfliche Anrede)	Bist du Tom?	さん hat kein deutsches Gegenstück. „Herr Tom“ wäre falsch, also steht die Erklärung in der Bedeutung und der Satz lässt es weg.
+1708637439860	いい	gut	Die Person da drüben ist ein guter Mensch.	
+1708637439882	見る	sehen, ansehen	Mein älterer Bruder sieht jeden Tag fern.	
+1708637439945	くれる	geben (mir oder meinen Leuten)	Mein Vater hat mir ein Buch gegeben.	くれる heißt „mir geben“ — das „mir“ steht im Japanischen nicht, gehört im Deutschen aber hin.
+1708637439865	これ	das hier	Das hier ist ein Buch auf Japanisch.	
+1708637440034	俺	ich (männlich, salopp)	Ich höre gern Rock.	俺 ist ein betont männliches, saloppes „ich“ — im Deutschen nicht abbildbar, deshalb die Klammer.
+1708637440068	やる	machen (salopp), erledigen	Lass uns zusammen Hausaufgaben machen.	Bewusst nicht „machen, tun“ wie bei する — sonst fielen die beiden Karten auf Deutsch zusammen.
+1708637439947	物	Ding, Gegenstand	Ich habe viele verschiedene Sachen bekommen.	
+1708637439880	あの	jener dort	Das Buch da drüben?	
+1708637439939	もう	schon, bereits	Er ist schon nach Hause gegangen.	
+1708637439940	もう	noch (mehr), noch einmal	Ich will noch ein bisschen essen.	Dieselbe Vokabel もう wie oben, andere Bedeutung — die zwei Karten bleiben auf Deutsch unterscheidbar.
+1708637439906	行く	gehen, fahren	Ich gehe zur Schule.	
+1708637439891	ここ	hier	Hier ist ein Buch.	
+1708637439866	何	was	A: „Was ist das?“ B: „Ein Buch.“	
+1708637439875	今	jetzt	Er lernt gerade.	
+1708637439991	自分	selbst, sich selbst	Wörter, die du nicht verstehst, schlag bitte selbst nach.	
+1708637439919	聞く	hören	Sie hört gerade Radio.	
+1708637439920	聞く	fragen	Frag Tom.	Dasselbe Wort 聞く, hier „fragen“ statt „hören“.
+1708637439899	知る	kennen, wissen	Kennst du die Person da drüben?	
+1708637439859	人	Mensch, Person	Die Person da drüben ist ein guter Mensch.	
+1708637439861	人	-er (Herkunft, z. B. Japaner)	Ich komme aus Großbritannien.	Wörtlich „Ich bin Brite/Britin“ — Deutsch erzwingt ein Geschlecht, Japanisch nicht. Deshalb umformuliert.
+1708637439949	中	Inneres, Mitte	Mein Vater ist im Haus.	
+1708637440069	顔	Gesicht	Er hat sich das Gesicht mit einem Handtuch abgewischt.	
+1708637439953	前	Vorderseite, vor	Lara steht vor dem Haus.	ちゃん ist eine Koseform — im Satz weggelassen, als Vokabel weiter unten erklärt.
+1708637440070	今朝	heute Morgen	Heute Morgen bin ich früh aus dem Haus gegangen.	
+1708637440071	出る	hinausgehen, verlassen	Heute Morgen bin ich früh aus dem Haus gegangen.	
+1708637440072	そして	und, und dann	Dieser Roboter versteht Sprache. Und er kann auch tanzen.	
+1708637439914	どう	wie	Was meinst du dazu?	どう heißt „wie“. Auf Deutsch sagt man „Was meinst du dazu?“, nicht „Wie denkst du?“ — Wort und Wendung gehen hier auseinander.
+1708637439925	考える	nachdenken, überlegen	Denk bitte gut nach.	Bewusst nicht „denken“ wie bei 思う — die beiden Karten müssen unterscheidbar bleiben.
+1708637439902	はい	ja (höflich)	A: „Bist du Yamada?“ B: „Ja.“	Deutsch erzwingt du oder Sie; Japanisch markiert Höflichkeit anders. Durchgehend „du“, wie in der ganzen App.
+1708637439938	ちょっと	ein bisschen	Das ist ein bisschen teuer, oder?	ね am Satzende sucht Zustimmung — „oder?“ trifft es.
+1708637440073	まだ	noch, noch nicht	Meine Hausaufgaben sind noch nicht fertig.	
+1708637440074	じゃ	dann, also	Dann nehme ich das.	Wörtlich „gib mir das“ — im Laden sagt man auf Deutsch „ich nehme das“.
+1708637439909	また	wieder, außerdem	Morgen komme ich wieder.	
+1708637439900	彼女	sie, Freundin	Kennst du ihren Namen?	
+1708637439898	話	Gespräch, Geschichte	Was du erzählst, ist interessant.	面白い kann „interessant“ oder „lustig“ heißen; 話 ist Erzählung wie Gespräch.
+1708637439950	出来る	können, gut können	Kannst du Ski fahren?	
+1708637439951	本当	Wahrheit, Wirklichkeit	Ist die Geschichte wahr?	
+1708637440075	ため	Zweck, für	Das ist eine Seite für Ärzte.	
+1708637439892	そこ	dort (bei dir)	Da ist die Toilette.	
+1708637439946	もらう	bekommen, erhalten	Ich habe ein Geschenk von ihr bekommen.	
+1708637439961	手	Hand	Wer es verstanden hat, hebt bitte die Hand.	
+1708637439932	待つ	warten	Ich habe eine Stunde auf einen Freund gewartet.	
+1708637439987	言葉	Wort, Sprache	Ich verstehe die Bedeutung dieses Wortes nicht.	
+1708637439954	入る	hineingehen, betreten	Ich gehe in das Restaurant.	
+1708637439901	ちゃん	-chan (Koseform der Anrede)	Das ist Lara.	
+1708637440077	ところ	Ort, Stelle	Ich habe bei einem Freund übernachtet.	
+1708637439973	今日	heute	Fangen wir mit dem Lernen für heute an.	
+1708637439959	声	Stimme, Laut	Er hat mit lauter Stimme gesprochen.	
+1708637439968	持つ	haben, halten	Ich habe ein Auto.	
+1708637439868	あれ	das dort drüben	Was ist das dort?	
+1708637439960	目	Auge	Lara hat große Augen.	
+1708637440078	少し	ein wenig, eine Weile	Ich bin ein wenig müde.	Bewusst „ein wenig“, weil ちょっと schon „ein bisschen“ ist — sonst fielen die beiden Karten zusammen.
+1708637440079	見える	zu sehen sein, sichtbar sein	Von hier aus sieht man den Fuji gut.	Nicht „sehen“ wie 見る: 見える ist, was sich von selbst zeigt.
+1708637440080	違う	sich unterscheiden, falsch sein	Die Antwort ist falsch.	
+1708637439917	方	Richtung, Seite	Er hat in meine Richtung gesehen.	
+1708637439918	方	Person (höfliche Form)	Der Nächste bitte.	Dasselbe Zeichen 方 wie oben, hier als höfliches Wort für „Person“.
+1708637439855	あなた	du, Sie (zu jemandem, den man nicht kennt)	Bist du Tom?	
+1708637440081	男	Mann, männlich	Ein Mann hat uns angesprochen.	
+1708637439970	使う	benutzen, verwenden	Ich benutze jeden Tag den Computer.	
+1708637440066	くん	-kun (Anrede für Jüngere oder Gleichaltrige, meist männlich)	Ken ist ein Jahr alt.	
+1708637439922	分かる	verstehen, begreifen	Ich habe die japanischen Nachrichten überhaupt nicht verstanden.	
+1708637440082	ただ	umsonst, gratis	Diese heiße Quelle ist umsonst.	
+1708637440083	ただ	bloß, nur	Ich wollte bloß mit ihr sprechen.	Dasselbe Wort ただ wie oben, ganz andere Bedeutung.
+1708637440050	僕	ich (männlich, bescheiden)	Ich habe dich sehr lieb.	Auf Englisch steht bei 俺 und 僕 beides „I (male)“ — dieselbe Bedeutung auf zwei Karten. Auf Deutsch lassen sie sich trennen: 俺 salopp, 僕 bescheiden.
+1708637439971	大丈夫	in Ordnung, alles gut	Alles in Ordnung?	
+1708637439857	彼	er, ihn	Er ist Tom.	
+1708637439948	君	du (zu Gleichgestellten oder Jüngeren)	Ich schenke dir dieses Buch.	Nicht dasselbe „du“ wie あなた — die Klammer hält die beiden Karten auseinander.
+1708637440084	人間	Mensch, Menschheit	Das menschliche Herz ist kompliziert.	
+1708637439994	同じ	gleich, derselbe	Ich habe dasselbe gedacht.	
+1708637439974	部屋	Zimmer, Raum	In dem Zimmer ist eine Küche.	
+1708637439975	悪い	schlecht, böse	Die Person da drüben ist ein schlechter Mensch.	
+1708637439876	時間	Zeit, Stunde	Jetzt habe ich keine Zeit.	
+1708637440085	作る	herstellen, zubereiten	Ich mache gerade Frühstück.	Nicht „machen“ wie する oder やる — 作る ist das Herstellen von etwas.
+1708637439896	家	Haus, Zuhause	Hier ist mein Haus.	
+1708637439976	まあ	na ja, nun	Na ja, so wird es gehen.	
+1708637439888	ください	bitte geben, bitte tun	Einen Kaffee bitte.	
+1708637440086	感じる	fühlen, spüren	Ich spüre Schmerzen im Knie.	
+1708637440087	上	oben, über	Schau nach oben.	
+1708637440088	強い	stark	Heute ist der Wind stark.	
+1708637440089	出す	herausnehmen, herausholen	Er hat das Lehrbuch aus der Tasche genommen.	
+1708637439923	よく	gut, genau	Ich habe es gut verstanden.	
+1708637439924	よく	oft	Ich höre oft Jazz-CDs.	Dasselbe Wort よく wie oben — hier die Häufigkeit, dort die Güte.
+1708637440090	笑う	lachen, lächeln	Das Baby lacht.	
+1708637440093	多く	viel, viele	Jedes Jahr reisen viele Menschen ins Ausland.	
+1708637439894	どこ	wo	Wo hast du das Buch hingelegt?	
+1708637440094	くらい	ungefähr, etwa	Ich schlafe jeden Tag ungefähr sieben Stunden.	
+1708637439969	みんな	alle, jeder	Meiner Familie geht es allen gut.	
+1708637439858	好き	gern haben, beliebt	Ich mag Wein.	
+1708637440098	力	Kraft, Stärke	Meine kleine Schwester ist stärker als ich.	
+1708637440099	世界	Welt	Hast du eine Weltkarte?	
+1708637440100	相手	Gegenüber, Gegner	Wer ist der Gegner im Spiel?	
+1708637440101	姿	Gestalt, Erscheinung	Aus der Ferne war ihre Gestalt zu sehen.	
+1708637440102	死ぬ	sterben	Der Hund ist an einer Krankheit gestorben.	
+1708637439895	置く	hinlegen, hinstellen	Wo hast du das Buch hingelegt?	
+1708637439977	食べる	essen	Gestern habe ich Thai-Curry gegessen.	
+1708637439979	場所	Platz, Örtlichkeit	Es gibt viele Plätze, die ich gern sehen würde.	Nicht „Ort, Stelle“ wie ところ — die beiden Karten brauchen verschiedene Wörter.
+1708637440103	早い	früh	A: „Heute Morgen bin ich um fünf aufgestanden.“ B: „Das ist früh, oder?“	
+1708637440104	早い	schnell (zeitlich)	A: „Von Tokio nach Osaka sind es zweieinhalb Stunden.“ B: „Das ist schnell, oder?“	Dasselbe Wort 早い wie oben: einmal der Zeitpunkt, einmal die Dauer.
+1708637440105	頭	Kopf	Seit heute Morgen tut mir der Kopf weh.	
+1708637439928	もっと	mehr, noch mehr	Ich dachte, ich muss mehr lernen.	
+1708637440106	戻る	zurückkehren, zurückgehen	Ich gehe jetzt ins Büro zurück.	
+1708637439980	呼ぶ	rufen, nennen	Rufen wir den Kellner.	
+1708637440003	続ける	fortsetzen, weitermachen	Mach bitte mit deiner Arbeit weiter.	
+1708637440107	ずっと	die ganze Zeit, durchgehend	Ich wollte schon immer in Japan studieren.	
+1708637439927	話す	sprechen, reden	Ich spreche mit dem Lehrer Japanisch.	
+1708637439944	あげる	geben (an andere)	Ich gebe meinem Freund ein Geschenk.	Gegenstück zu くれる: あげる geht von mir weg, くれる kommt zu mir.
+1708637439962	上げる	heben, erhöhen	Wer es verstanden hat, hebt bitte die Hand.	Gleich ausgesprochen wie あげる (geben), aber ein anderes Wort.
+1708637440108	どうして	warum, wieso	Warum weinst du?	
+1708637439967	いつも	immer, gewöhnlich	Sie ist immer gut drauf.	
+1708637439915	会う	treffen, begegnen	Morgen treffe ich ihn.	
+1708637439912	こう	so, folgendermaßen	Machen wir es so.	Nicht „so, auf diese Weise“ wie そう: こう zeigt auf das, was jetzt kommt.
+1708637440109	やっぱり	wie gedacht, letzten Endes	Ich reise eben doch für mein Leben gern.	
+1708637440110	つもり	Absicht, Vorhaben	Ich habe vor, ab morgen mit dem Rauchen aufzuhören.	
+1708637440111	必要	nötig, erforderlich	Das ist ein Buch, das man für den Unterricht braucht.	
+1708637440112	終わる	enden, zu Ende gehen	Die Besprechung endet um vier.	
+1708637440113	者	derjenige, Person (sachlich)	Ich bin derjenige, der vorhin angerufen hat.	Nicht „Mensch, Person“ wie 人 und nicht „Person (höflich)“ wie 方 — 者 ist das sachliche Wort.
+1708637439981	動く	sich bewegen, in Betrieb sein	Der Aufzug fährt gerade.	
+1708637439897	帰る	heimkehren, nach Hause gehen	Gehen wir nach Hause.	Auf Englisch steht bei 帰る und 戻る beides „to return, to go back“. Auf Deutsch trennt sie das Ziel: 帰る geht heim, 戻る irgendwohin zurück.
+1708637440114	後	nach, danach	Nach der Arbeit habe ich einen Film gesehen.	
+1708637440115	こちら	hier entlang, hier	Der Empfang ist hier entlang.	
+1708637440116	向かう	sich zuwenden, sich auf den Weg machen	Ich bin gerade auf dem Weg ins Büro.	
+1708637439982	気持ち	Gefühl, Empfindung	Ich verstehe seine Gefühle nicht.	
+1708637440117	きっと	bestimmt, sicher	Morgen regnet es bestimmt.	
+1708637440118	変わる	sich ändern, wechseln	Die Ampel ist auf Grün gesprungen.	Im Japanischen ist die grüne Ampel 青 (blau) — der Satz sagt trotzdem Grün, weil er auf Deutsch sonst falsch klingt.
+1708637439983	誰	wer	Wen würdest du gern einmal treffen?	
+1708637440119	凄い	toll, gewaltig, jede Menge	Es fing heftig an zu regnen.	
+1708637439916	次	der nächste, folgend	Wann treffen wir uns das nächste Mal?	
+1708637440120	女	Frau, Mädchen	Die Verkäuferin war eine junge Frau.	
+1708637440002	仕事	Arbeit, Beruf	Ich helfe bei der Arbeit meines Vaters.	
+1708637440121	ちゃんと	ordentlich, richtig	Hast du ordentlich gefrühstückt?	
+1708637439972	始める	anfangen, beginnen	Fangt bitte mit dem Test an.	
+1708637440122	音	Geräusch, Klang	Draußen ist ein lautes Geräusch.	
+1708637440004	見せる	zeigen, vorzeigen	Zeig mir bitte die Kamera da.	
+1708637440123	体	Körper	Meine kleine Schwester ist körperlich schwach.	
+1708637439984	子	Kind	Das Kind versteht kein Japanisch.	
+1708637439985	どんな	was für ein	Was für ein Mensch ist Smith?	
+1708637440005	うち	Zuhause, bei uns	Ich gehe nach Hause.	
+1708637439958	大きい	groß	Er wohnt in einem großen Haus.	
+1708637440124	掛ける	hängen, aufhängen	Ich habe die Sachen meines Mannes auf einen Bügel gehängt.	
+1708637439890	教える	beibringen, mitteilen	Sag mir bitte deinen Namen.	
+1708637440125	歩く	zu Fuß gehen, spazieren	Gehen wir zu Fuß zum Bahnhof.	Nicht einfach „gehen“ wie 行く — 歩く ist die Art der Fortbewegung.
+1708637439986	意味	Bedeutung, Sinn	Ich verstehe den Sinn nicht.	
+1708637439988	心配	Sorge, Besorgnis	Meine Mutter macht sich Sorgen.	
+1708637439989	様子	Zustand, Anblick	Ich schaue mal, wie es ihr geht.	Nicht „Gestalt, Erscheinung“ wie 姿 — 様子 ist, wie es um jemanden steht.
+1708637439889	名前	Name	Sag mir bitte deinen Namen.	
+1708637440126	存在	Existenz, Dasein	Glaubst du, dass es Außerirdische gibt?	
+1708637440127	過ぎる	überschreiten, vergehen	Die Zeit vergeht schnell.	
+1708637440128	聞こえる	zu hören sein, hörbar sein	Aus dem Nebenzimmer hört man den Fernseher.	Gebaut wie 見える: nicht „hören“, sondern was von selbst ans Ohr dringt.
+1708637440129	受ける	entgegennehmen, annehmen	Die Worte meines besten Freundes haben mir einen schweren Schock versetzt.	Nicht „bekommen“ wie もらう — 受ける nimmt entgegen, auch Unangenehmes.
+1708637440133	殺す	töten, umbringen	Ich mag es nicht, Lebewesen zu töten.	
+1708637440134	まさか	unmöglich, das darf nicht wahr sein	Das kann doch nicht er gewesen sein, oder?	
+1708637439887	先生	Lehrer, Lehrerin	Ich will Japanisch unterrichten.	Wörtlich „Ich möchte Japanischlehrer(in) werden“ — Deutsch erzwingt ein Geschlecht, deshalb umformuliert.
+1708637440135	絶対	absolut, auf keinen Fall	So etwas kann ich absolut nicht.	
+1708637439990	信じる	glauben, vertrauen	Ich glaube ihm, was er sagt.	
+1708637440136	理由	Grund, Ursache	Sag mir bitte den Grund, warum du zu spät warst.	
+1708637440137	口	Mund	Mach bitte den Mund weit auf.	
+1708637440138	外	draußen, außen	Draußen ist es heiß.	
+1708637440139	逃げる	fliehen, weglaufen	Der Vogel ist aus dem Fenster entwischt.	
+1708637440007	忘れる	vergessen	Vergiss bitte dein Versprechen nicht.	
+1708637440140	誰か	jemand, irgendwer	Frag bitte mal jemanden.	
+1708637440141	まるで	wie, geradezu	Er war ausgelassen wie ein kleines Kind.	
+1708637440142	他	anderes, woanders	Es gibt keinen anderen Weg.	
+1708637440143	他	die Übrigen, Sonstige	Die meisten Austauschstudenten kommen aus Asien, die Übrigen machen 30 Prozent aus.	Dasselbe Zeichen 他 wie oben — hier für den Rest einer Gruppe.
+1708637440010	さっき	eben, vorhin	Lass uns das Gespräch von vorhin fortsetzen.	
+1708637440144	問題	Problem, Frage	Es gibt ein Problem.	
+1708637440011	今度	das nächste Mal	Wohin willst du das nächste Mal?	
+1708637440036	今度	diesmal	Der Test war diesmal sehr schwer.	Dasselbe Wort 今度 wie oben: einmal das kommende Mal, einmal das laufende.
+1708637440146	普通	normal, durchschnittlich	In dem Lokal sind Essen und Bedienung durchschnittlich.	
+1708637439996	もちろん	natürlich, selbstverständlich	Natürlich gehen wir zusammen.	
+1708637440147	心	Herz, Gemüt	Er hat ein aufrichtiges Herz.	Nicht „Gefühl“ wie 気持ち — 心 ist der Sitz davon.
+1708637440152	以上	und mehr, darüber hinaus	Im Sommer gibt es viele Tage mit 30 Grad und mehr.	
+1708637440153	それで	daraufhin, deshalb	Gestern hatte ich Fieber. Deshalb bin ich nicht zur Schule gegangen.	
+1708637440154	生きる	leben, am Leben sein	Ich möchte hundert Jahre alt werden.	
+1708637440155	最初	Anfang, zuerst	Schau bitte auf den Anfang von Seite 5.	
+1708637440156	最後	Ende, zuletzt	Heute ist der letzte Tag der Sommerferien.	
+1708637440157	日	Tag	An freien Tagen lese ich.	
+1708637440008	守る	beschützen, einhalten	Er ist jemand, der Versprechen hält.	
+1708637440158	間	Zwischenraum, Abstand	Zwischen den Wolken kam der Mond hervor.	
+1708637440159	間	Pause, Zwischenzeit	Er hat nach einer kurzen Pause geantwortet.	Dasselbe Wort 間 wie oben: dort der Raum dazwischen, hier die Zeit.
+1708637440160	について	über, bezüglich	Ich recherchiere über die japanische Wirtschaft.	
+1708637440163	感じ	Eindruck, Anmutung	Das Kind macht einen guten Eindruck.	Nicht „Gefühl“ wie 気持ち — 感じ ist, was von außen ankommt.
+1708637440164	胸	Brust, Brustkorb	Ich habe leichte Schmerzen in der Brust.	
+1708637440165	表情	Gesichtsausdruck, Miene	Er hat ein sehr ausdrucksvolles Gesicht.	
+1708637440012	これから	von jetzt an, ab jetzt	Ich denke ab jetzt darüber nach.	
+1708637440166	多い	zahlreich, häufig	Im Juni regnet es viel.	Nicht „viel, viele“ wie 多く — 多い ist das Eigenschaftswort dazu.
+1708637439998	楽しい	lustig, vergnüglich	Er ist ein sehr lustiger Mensch.	
+1708637440167	初めて	zum ersten Mal	Ich bin zum ersten Mal in Tokio.	
+1708637440168	無理	unzumutbar, unmöglich	Jeden Tag zu jobben ist unmöglich.	
+1708637439937	一番	am meisten, am … -sten	Das ist das höchste Gebäude der Stadt.	
+1708637439935	高い	teuer	Die Kamera ist teuer, oder?	
+1708637439936	高い	hoch (in der Höhe)	Das ist das höchste Gebäude der Stadt.	Dasselbe Wort 高い wie oben: dort der Preis, hier die Höhe.
+1708637440169	欲しい	haben wollen, sich wünschen	Ich möchte einen kleinen Computer.	
+1708637439957	大きな	groß (nur vor dem Hauptwort)	Ich möchte in einem großen Haus wohnen.	Auf Englisch steht bei 大きい und 大きな beides „big, large“. Der Unterschied ist die Grammatik, und die Klammer hält die Karten auseinander.
+1708637440170	ごめん	Entschuldigung, tut mir leid	Tut mir leid. Bier haben wir nicht.	
+1708637440171	覚える	sich merken, auswendig lernen	Ich lerne jeden Tag Kanji.	
+1708637440172	別に	nicht besonders	Ich mag es nicht besonders.	
+1708637440173	思い出す	sich erinnern, einfallen	Mir ist eine wichtige Sache eingefallen.	
+1708637439997	とても	sehr	Das Buch ist sehr interessant.	
+1708637439952	立つ	stehen, aufstehen	Er stand auf der Bühne.	
+1708637440174	入れる	hineintun, hineinlegen	Er hat das Notizbuch in die Tasche gesteckt.	Gegenstück zu 入る: 入る geht selbst hinein, 入れる tut etwas hinein.
+1708637440013	止める	anhalten (an einem Ort)	Halt bitte vor dem Gebäude da an.	
+1708637440014	止める	aufhören (mit etwas)	Hör bitte auf zu reden.	Dasselbe Wort 止める wie oben: dort hält etwas an, hier hört jemand auf.
+1708637440175	開く	aufgehen (Tür, von selbst)	Am nächsten Halt gehen die Türen rechts auf.	Auf Englisch heißen beide 開く-Karten „to open“. Auf Deutsch trennt sie, was aufgeht: eine Tür oder ein Buch.
+1708637440176	開く	aufschlagen (Buch, Seite)	Schlag bitte Seite 32 auf.	
+1708637440177	残る	übrig bleiben, zurückbleiben	Es ist viel Essen übrig geblieben.	
+1708637440178	答える	antworten, beantworten	Ich beantworte die Frage des Lehrers.	
+1708637440179	怖い	ängstlich, furchterregend	Ich habe Angst vor Hunden.	
+1708637440015	頼む	bitten, bestellen	Ich habe einen Hamburger bestellt.	
+1708637439929	ゆっくり	langsam, gemächlich	Sprich bitte langsamer.	
+1708637440180	年	Jahre (Zähleinheit)	Ich war fünf Jahre in Südkorea.	
+1708637440181	年	Jahr	Ein neues Jahr hat begonnen.	Dasselbe Zeichen 年 wie oben: dort die Zähleinheit, hier das Jahr selbst.
+1708637440182	取る	nehmen, holen	Ich habe im Test eine gute Note bekommen.	
+1708637440183	全て	alles, gesamt	Ich habe ihm alles erzählt.	Nicht „alle, jeder“ wie みんな — 全て meint die Sachen, みんな die Leute.
+1708637440184	助ける	helfen, retten	Sie hat einem kranken Hund geholfen.	
+1708637440185	状況	Lage, Umstände	Unter diesen Umständen ist die Abreise schwierig.	
+1708637440016	許す	verzeihen, erlauben	Ich habe ihm verziehen.	
+1708637440186	確認	Bestätigung, Überprüfung	Ich habe die Reservierung noch einmal überprüft.	
+1708637440017	嬉しい	froh, erfreut	Ich war froh, ihn treffen zu können.	
+1708637440187	消える	ausgehen, verschwinden	Das Licht ist aus, also ist Tanaka wohl nicht im Zimmer.	
+1708637440018	頑張る	durchhalten, sich anstrengen	Ich gebe mir in der Schule und im Sport Mühe.	
+1708637440019	なるほど	ach so, in der Tat	Ach so, jetzt verstehe ich es.	
+1708637440188	長い	lang	Ihre Haare sind sehr lang.	
+1708637440189	驚く	sich wundern, erschrecken	Mitten in der Nacht war auf der Straße eine laute Stimme, das hat mich erschreckt.	
+1708637440190	腕	Arm	Dreh bitte den Arm im Kreis.	
+1708637440191	以外	außer, abgesehen von	Außer an Regentagen fahre ich mit dem Rad zur Schule.	
+1708637440020	つまり	also, kurz gesagt	Also weißt du gar nichts, oder?	
+1708637440192	困る	in Verlegenheit sein, nicht weiterwissen	Ich habe mein Handy verloren und weiß nicht weiter.	
+1708637441345	一つ	eins (ein Stück)	Gib mir bitte eins davon.	
+1708637440025	今回	dieses Mal, bei dieser Gelegenheit	Na ja, dieses Mal lasse ich es dir durchgehen.	Nah an 今度 „diesmal“ — 今回 meint ausdrücklich diese eine Gelegenheit. Die engste Stelle im ganzen Block.
+1708637440021	国	Land, Staat	Welches Land magst du?	
+1708637440193	離れる	sich entfernen, getrennt sein	Ich war vier Jahre lang von zu Hause weg.	
+1708637440194	気	Sinn, Lust	Sie hat mich gefragt, ob ich Lust habe zu verreisen.	
+1708637440195	書く	schreiben	Ich habe ihm einen Brief geschrieben.	
+1708637440196	光	Licht, Schein	Schön, wie viel Licht in dieses Zimmer fällt, oder?	
+1708637440197	走る	rennen, laufen	Er läuft jeden Abend drei Kilometer.	
