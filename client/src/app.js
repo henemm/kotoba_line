@@ -27,6 +27,7 @@ import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from 
 import { watchViewport } from "./viewport.js";
 import { watchPresses } from "./ui/press.js";
 import { hintPending, offerInstall } from "./install.js";
+import { markOfferAsked, offerAsked, openReminderOffer, shouldOffer } from "./remind-offer.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
 import { appName } from "./script.js";
@@ -1337,7 +1338,45 @@ function renderApp() {
     const reason = wantsInstallHint;
     wantsInstallHint = undefined;
     offerInstall(reason);
+    return;
   }
+
+  // #99 follow-up: the same moment, and never both at once — the install hint
+  // goes first, because on iOS notifications need the installed app anyway,
+  // and two sheets on one start is one too many. This one comes on the next
+  // start instead.
+  maybeOfferReminder();
+}
+
+/**
+ * Ask for the notification permission when the reminder is on and this device
+ * cannot deliver (#99). Asynchronous because `pushState()` is: the sheet
+ * appears a moment after the tabs, which is also when she is looking.
+ *
+ * Guarded against a second sheet while one is open, because renderApp() runs
+ * on every redraw and the answer arrives on its own schedule.
+ */
+let offeringReminder = false;
+function maybeOfferReminder() {
+  if (offeringReminder || offerAsked() || !state.settings.reminder || state.session || state.summary) return;
+  offeringReminder = true;
+  pushState().then(
+    (ps) => {
+      if (!shouldOffer({ reminder: state.settings.reminder, pushState: ps, asked: offerAsked() })) {
+        offeringReminder = false;
+        return;
+      }
+      markOfferAsked();
+      openReminderOffer({
+        onEnable: enablePush,
+        onDecline: declinePush,
+      });
+      offeringReminder = false;
+    },
+    () => {
+      offeringReminder = false;
+    },
+  );
 }
 
 /**
