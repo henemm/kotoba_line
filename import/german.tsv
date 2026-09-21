@@ -318,7 +318,7 @@
 1708637440217	笑顔	Lächeln, lachendes Gesicht	Das Lächeln des Babys ist süß.	
 1708637440042	小さい	klein	Meine Kamera ist klein.	
 1708637440043	選ぶ	wählen, aussuchen	Geschenke auszusuchen macht großen Spaß.	
-1708637440218	先輩	Ältere, Ältere (in Schule oder Beruf)	Hat sich deine Mentorin gemeldet?	先輩 ist, wer länger dabei ist — Schule, Verein, Firma. Im Deutschen gibt es das Wort nicht, die Bedeutung erklärt es.
+1708637440218	先輩	wer länger dabei ist (Schule, Verein, Firma)	Hat sich deine Mentorin gemeldet?	先輩 ist, wer länger dabei ist — Schule, Verein, Firma. Im Deutschen gibt es das Wort nicht, die Bedeutung erklärt es.
 1708637440219	続く	andauern, anhalten	Es regnet schon seit zwei Wochen.	Gegenstück zu 続ける: 続く dauert von selbst an, 続ける setzt jemand fort.
 1708637440220	こんなに	so sehr (wie hier)	So ein interessantes Buch habe ich zum ersten Mal gelesen.	Gebaut wie こ/そ sonst auch: こんなに zeigt auf das Hiesige, そんなに auf das, wovon du sprichst.
 1708637440221	変	komisch, merkwürdig	Ich höre ein komisches Geräusch.	Nicht „seltsam, verdächtig“ wie おかしい — 変 ist das Ungewohnte ohne Verdacht.
@@ -534,7 +534,7 @@
 1708637440410	邪魔	Störung, im Weg	Dieses große Gepäckstück ist sehr im Weg.	
 1708637440411	遊ぶ	spielen	Die Kinder spielen im Park.	
 1708637440412	要る	brauchen, benötigen	Eine Reservierung ist nicht nötig.	
-1708637440413	無くなる	ausgehen, verschwunden sein	Mein Geld ist schon ausgegangen.	
+1708637440413	無くなる	zur Neige gehen, abhandenkommen	Mein Geld ist schon ausgegangen.	
 1708637440414	唇	Lippe	Ihre Lippen sind wirklich hübsch.	
 1708637440415	着る	anziehen, tragen (Kleidung)	Heute trage ich einen Anzug.	
 1708637440416	色々	allerlei, verschiedenerlei	Er weiß allerlei Dinge.	
@@ -646,7 +646,7 @@
 1708637440513	両手	beide Hände	Er hat beide Hände zu Fäusten geballt.	
 1708637440514	増える	zunehmen, mehr werden	In dieser Stadt hat die Einwohnerzahl zugenommen.	
 1708637440515	出会う	zufällig begegnen, kennenlernen	In Amerika habe ich sie kennengelernt.	
-1708637440516	少年	junger Junge	Die Jungen spielen Fußball.	
+1708637440516	少年	Halbwüchsiger, Bursche	Die Jungen spielen Fußball.	
 1708637440517	繰り返す	wiederholen	Sie hat denselben Fehler wiederholt.	
 1708637440518	我慢	Ertragen, Beherrschung	Seine Launen ertrage ich nicht.	
 1708637440519	我々	wir (förmlich)	Unser Entschluss steht fest.	
@@ -1313,3 +1313,239 @@
 1708637441159	調査	Untersuchung, Erhebung	Wir untersuchen dieses Problem.	
 1708637441160	例えば	zum Beispiel	Mit dieser Software kannst du zum Beispiel Japanisch lernen.	
 1708637441161	見送る	verabschieden, zum Abschied begleiten	Ich habe ihn verabschiedet, als er ins Ausland ging.	Gegenstück zu 迎える: 迎える holt ab, 見送る bringt weg.
+1708637441163	従う	folgen, sich fügen	Sie hat den Befehl nicht befolgt.	
+1708637441164	通す	hindurchführen, durchlassen	Fädel bitte den Faden in die Nadel ein.	
+1708637441165	間違える	verwechseln, sich vertun	Bei einer leichten Aufgabe habe ich mich vertan.	
+1708637441166	体力	körperliche Ausdauer, Kondition	Junge Leute haben Kondition, oder?	
+1708637441167	果たす	erfüllen, zu Ende bringen	Er hat seine Verantwortung gewissenhaft erfüllt.	
+1708637441168	騒ぐ	Lärm machen, Krach schlagen	Macht im Zug bitte keinen Lärm.	
+1708637441169	飛び込む	hineinspringen, sich stürzen in	Der Frosch ist in den Teich gesprungen.	
+1708637441170	増す	anwachsen, sich steigern	Durch den starken Regen ist der Fluss angeschwollen.	
+1708637441171	ぶつかる	zusammenstoßen, anprallen	Das Auto ist gegen den Strommast geprallt.	
+1708637441172	思い出	Erinnerungsstück, schöne Erinnerung	Von der Reise habe ich schöne Erinnerungen.	
+1708637441173	天井	Zimmerdecke	Dieses Zimmer hat eine hohe Decke, oder?	
+1708637441174	兵士	Soldat	Bei dem Bombenangriff wurden drei Soldaten verletzt.	
+1708637441175	満ちる	sich füllen, voll werden	Der Mond ist voll geworden, oder?	
+1708637441176	たまらない	nicht auszuhalten, unerträglich	Mein Kopf tut unerträglich weh.	
+1708637441177	味わう	kosten, auskosten	Ich habe das Essen meiner Mutter in Ruhe genossen.	
+1708637441178	出かける	aus dem Haus gehen, losziehen	Sonntags gehe ich oft aus.	
+1708637441179	背負う	auf dem Rücken tragen, schultern	Ich bin mit dem Kind auf dem Rücken durch die Stadt gelaufen.	
+1708637440076	ご飯	gekochter Reis, Mahlzeit	Ich mag Reis lieber als Brot.	
+1708637441180	揃う	vollzählig sein, beisammen sein	Morgens isst die ganze Familie zusammen.	
+1708637441181	呼吸	Atmung, Atemzug	Atme bitte langsam.	
+1708637441182	真似	Nachahmung, Nachmachen	Meine Tochter macht mich oft nach.	
+1708637441183	人気	Beliebtheit	Diese Band ist sehr beliebt.	
+1708637441184	偉い	bedeutend, angesehen	Er ist ein bedeutender Gelehrter.	
+1708637441185	いよいよ	nun endlich, es ist so weit	Morgen ist es so weit, da geht es los.	
+1708637441186	対象	Zielgruppe, Gegenstand	Diese Umfrage richtet sich an Studierende.	
+1708637441187	整える	zurechtmachen, in Ordnung bringen	Vor der Rede hat er seine Kleidung zurechtgerückt.	
+1708637441188	沈む	versinken, untergehen	Das Boot ist im Fluss versunken.	
+1708637441189	地上	über der Erde, oberirdisch	Dieser Zug fährt oberirdisch.	
+1708637441190	用事	Besorgung, Erledigung	Mein Vater ist wegen einer Besorgung unterwegs.	
+1708637441191	よる	zurückgehen auf, herrühren von	Seine Krankheit kommt von der Überarbeitung.	
+1708637441192	反対	Widerspruch, dagegen sein	Ich bin dagegen.	
+1708637441193	保つ	bewahren, aufrechterhalten	Sie versucht verzweifelt, ihre Jugend zu bewahren.	
+1708637441194	歴史	Geschichte (die Historie)	Ich interessiere mich für Geschichte.	
+1708637441195	島	Insel	Auf der Insel wohnt niemand.	
+1708637441196	それほど	in dem Maß, so sehr wie das	Ich wusste nicht, dass er sich so sehr sorgt.	
+1708637441197	実に	in der Tat, geradezu	Das Konzert gestern war in der Tat großartig.	
+1708637441198	恐れる	fürchten, sich ängstigen vor	Er fürchtet, die Prüfung nicht zu bestehen.	
+1708637441199	あくまで	bis zuletzt, unbeirrt	Er ist jemand, der bis zuletzt zu seinen Grundsätzen steht.	
+1708637441200	鼻	Nase	Meine Nase juckt.	
+1708637441201	担当	Zuständigkeit, zuständig sein	Ich bin für den Vertrieb zuständig.	
+1708637441202	片手	eine Hand	Einhändig zu fahren ist gefährlich.	
+1708637441203	幼い	klein (Kind), kindlich	Sie hat einen kleinen Sohn.	
+1708637441204	学ぶ	erlernen, studieren	Ich studiere Philosophie.	
+1708637441205	強引	aufdringlich, mit Gewalt	Die aufdringliche Einladung meines Freundes konnte ich nicht ablehnen.	
+1708637441206	捲る	hochkrempeln, umblättern	Ich habe das Hosenbein hochgekrempelt und angefangen zu arbeiten.	
+1708637441207	漏れる	durchdringen, nach außen dringen	Aus seinen Kopfhörern dringt Musik, oder?	Gegenstück zu 漏らす: 漏れる dringt nach außen, 漏らす lässt jemand durchsickern.
+1708637441208	全体	das Ganze, insgesamt	80 Prozent des Ganzen sind fertig.	
+1708637441337	先日	neulich, letztens	Was ist aus der Sache von neulich geworden?	
+1708637441209	度	Grad, Maß	Seine Rücksichtslosigkeit geht über das Maß hinaus.	
+1708637441210	情けない	jämmerlich, beschämend	Dass du nicht einmal das weißt, ist beschämend.	
+1708637441211	太陽	Sonne	Im Sommer steht die Sonne sehr hoch.	
+1708637441212	甘える	sich anlehnen, in Anspruch nehmen	Ich habe ihre Freundlichkeit in Anspruch genommen.	
+1708637441213	踏む	treten auf	Der Fahrer hat auf die Bremse getreten.	
+1708637441214	印象	Eindruck (den jemand macht)	Er hat einen guten Eindruck auf mich gemacht.	
+1708637441215	死体	Leiche	Im Park wurde eine Leiche gefunden.	
+1708637441216	支配	Herrschaft, Kontrolle	Die Herrschaft dieses Machthabers dauerte über 50 Jahre.	
+1708637441217	現場	Tatort, Einsatzort	Der Unfallort darf nicht betreten werden.	
+1708637441218	絶望	Verzweiflung, Hoffnungslosigkeit	Er hatte mit dem Leben abgeschlossen.	
+1708637441219	察する	erahnen, erspüren	Er hat die Gefahr gespürt und ist geflohen.	
+1708637441220	以来	seither, seit damals	Seitdem habe ich sie nicht mehr gesehen.	
+1708637441221	漂う	treiben, in der Luft liegen	Ein kleines Boot treibt auf dem See.	
+1708637441222	探る	auskundschaften, ausloten	Die Länder kundschaften die Bewegungen der Terroristen aus.	
+1708637441223	最大	größt, maximal	Das ist das größte Schiff der Welt.	
+1708637441224	下げる	herunterdrehen, senken	Dreh bitte die Lautstärke etwas herunter.	Gegenstück zu 下がる: 下がる sinkt, 下げる senkt jemand.
+1708637441225	捕まる	gefasst werden, erwischt werden	Sie wurde schließlich gefasst.	Gegenstück zu 捕まえる: 捕まえる fängt jemand, 捕まる wird gefasst.
+1708637441226	戸惑う	verunsichert sein, nicht wissen wohin	Der plötzliche Antrag hat sie verunsichert.	
+1708637441227	言い訳	Ausrede, Rechtfertigung	Du hast zu viele Ausreden.	
+1708637441228	証明	Nachweis (das Beweisen), Beleg	Das Alibi des Verdächtigen wurde nachgewiesen.	
+1708637441229	参る	gehen, kommen (bescheidene Form)	Nun, wollen wir gehen?	
+1708637441231	見下ろす	hinunterblicken, überblicken	Vom Gipfel habe ich zum Fuß des Bergs hinuntergesehen.	
+1708637441232	燃える	brennen, in Flammen stehen	Der Berg brennt.	
+1708637441233	たまる	sich ansammeln, sich stauen	Bei ihm hat sich viel Stress angestaut.	
+1708637441234	暴れる	toben, randalieren	Er war schlecht betrunken und hat randaliert.	
+1708637441235	越える	überqueren, hinausgehen über	Wir sind über einen hohen Berg gegangen.	
+1708637441236	精神	Geist, seelische Verfassung	Sie ist seelisch gerade nicht stabil.	
+1708637441237	男子	Junge (in der Schule), männlich	Jungen, stellt euch hier an.	
+1708637441238	宣言	Erklärung, Verkündung	Die Regierung hat eine Waffenruhe verkündet.	
+1708637441239	挟む	einklemmen, dazwischenlegen	Ich habe mir den Finger in der Tür eingeklemmt.	
+1708637441240	防ぐ	verhindern, abwehren	Dehn dich bitte gut, um Verletzungen zu verhindern.	
+1708637441336	本日	der heutige Tag (förmlich)	Das heutige Mittagessen ist Hacksteak.	
+1708637441241	預ける	in Verwahrung geben, abgeben	Ich habe ihm den Schlüssel gegeben.	
+1708637441242	限る	sich beschränken auf, nur gelten für	Dieser Dienst gilt nur am Wochenende.	
+1708637441243	責める	Vorwürfe machen, tadeln	Es ist schade, ihm so viele Vorwürfe zu machen.	
+1708637441244	崩れる	einstürzen, abrutschen	Durch den starken Regen ist die Klippe abgerutscht.	
+1708637441245	一度も	kein einziges Mal	Ich war noch kein einziges Mal in Kyoto.	
+1708637440148	春	Frühling	Der Frühling ist dieses Jahr warm, oder?	
+1708637441246	ぼんやり	gedankenverloren, verschwommen	Er hat gedankenverloren in die Ferne gesehen.	
+1708637441247	その内	demnächst, mit der Zeit	Mit der Zeit wird auch sie ihre Eltern verstehen.	
+1708637441248	鏡	Spiegel	Sie hat in den Spiegel gesehen und sich die Haare gerichtet.	
+1708637441249	貫く	durchhalten, durchdringen	Er ist bis zuletzt bei seinem Willen geblieben.	
+1708637441250	固まる	fest werden, erstarren	Ob der Pudding schon fest ist?	
+1708637441251	平和	Frieden	Dieses Land ist friedlich.	
+1708637441252	意志	Wille, Willenskraft	Er ist ein willensstarker Mensch.	
+1708637441253	下手	ungeschickt, schlecht in	Ich singe schlecht.	Gegenstück zu 上手い: 上手い kann es gut, 下手 kann es nicht.
+1708637441254	続き	Fortsetzung	Reden wir am Telefon weiter.	
+1708637441255	祈る	beten, inständig wünschen	Ich bete für den Frieden in der Welt.	
+1708637441256	午後	Nachmittag	Morgen Nachmittag kommt Besuch.	
+1708637441257	同様	ebenso, in gleicher Weise	Wir betrachten ihn wie ein Familienmitglied.	
+1708637441258	外れる	aufgehen (Knopf), danebenliegen	Der Knopf an meinem Hemd ist aufgegangen.	Gegenstück zu 外す: 外す nimmt jemand ab, 外れる geht von selbst auf.
+1708637441259	歌う	singen	Wir singen alle zusammen ein japanisches Lied.	
+1708637441260	回	Mal (Zähleinheit)	Ich gehe dreimal die Woche zum Kiosk.	
+1708637441261	固い	starr, verbohrt	Mein Chef ist ein Dickkopf.	
+1708637441262	最強	stärkst, am stärksten	Er gehört zur stärksten Mannschaft.	
+1708637441263	弾く	spielen (Saiteninstrument), zupfen	Er spielt Gitarre.	
+1708637441264	正解	die richtige Lösung	Neun von zehn Fragen waren richtig.	
+1708637441265	きつい	eng anliegend, anstrengend	Dieses Hemd ist ein bisschen eng.	
+1708637441266	お陰	dank, Verdienst von	Dank meiner Lehrerin habe ich die Aufnahmeprüfung bestanden.	
+1708637441267	地獄	Hölle	Nach dem Erdbeben sah die Stadt aus wie die Hölle.	
+1708637441268	年齢	Lebensalter	Sie ist 27 Jahre alt.	
+1708637441269	病気	Krankheit	Mein Großvater ist krank geworden.	
+1708637441270	携帯	Handy	Morgens stecke ich das Handy in die Tasche.	
+1708637441271	ますます	mehr und mehr, immer stärker	Die Lage ist immer schlechter geworden, oder?	
+1708637441272	並べる	aufreihen, auftischen	Ich habe das Essen auf dem Tisch angerichtet.	Gegenstück zu 並ぶ: 並ぶ stellt sich an, 並べる reiht jemand auf.
+1708637441273	契約	Vertrag, Abschluss	Der Spieler hat bei einer neuen Mannschaft unterschrieben.	
+1708637441274	永遠	Ewigkeit, ewig	Frieden ist das ewige Thema der Menschheit.	
+1708637441275	不意に	unverhofft, aus heiterem Himmel	Sie ist unverhofft aufgestanden.	
+1708637441276	呪い	Fluch, Verwünschung	Die Hexe hat einen schrecklichen Fluch ausgesprochen.	
+1708637441277	組	Klasse (in der Schule), Gruppe	Er ist Schüler der Klasse 1-2.	
+1708637441278	踊る	tanzen	Sie tanzt gern im Club.	
+1708637441279	目覚める	erwachen, zu sich kommen	Heute bin ich um halb sieben aufgewacht.	
+1708637441280	事故	Unfall	Er hat sich bei einem Unfall verletzt.	
+1708637441281	袋	Tüte, Beutel	Ich brauche keine Tüte.	
+1708637441282	派手	auffällig, grell	Ich bin auf dem verschneiten Weg spektakulär hingefallen.	
+1708637441283	今更	jetzt noch, zu diesem späten Zeitpunkt	Jetzt noch zu bereuen ist zu spät.	
+1708637441284	真っ直ぐ	geradeaus, geradeheraus	Geh bitte diesen Weg geradeaus.	
+1708637441285	油断	Unachtsamkeit, Nachlässigkeit	Eine kleine Unachtsamkeit führt zu einem großen Unfall.	
+1708637441286	ぶつける	dagegenfahren, anstoßen	Ich bin mit dem Auto gegen die Wand gefahren.	Gegenstück zu ぶつかる: ぶつかる stößt zusammen, ぶつける stößt jemand dagegen.
+1708637441287	育つ	heranwachsen, gedeihen	Das Gemüse gedeiht gut.	Gegenstück zu 育てる: 育つ wächst heran, 育てる zieht jemand groß.
+1708637441288	傷つく	verletzt werden (auch seelisch)	Ihre Worte haben mich verletzt.	
+1708637441289	発する	von sich geben, aussenden	Er hat kein einziges Wort von sich gegeben.	
+1708637441290	終了	Schluss, Beendigung	Das Konzert endete um 19:05 Uhr.	
+1708637441291	足音	Schritte, Trippeln	Aus dem Flur waren laute Schritte zu hören.	
+1708637441292	決意	Entschluss	Sein Entschluss steht fest.	
+1708637441293	感心	Bewunderung, Anerkennung	Seine Ausdauer hat mich beeindruckt.	
+1708637441294	飲み込む	hinunterschlucken, begreifen	Er hat das Medikament in einem Zug geschluckt.	
+1708637441295	仮に	angenommen, rein hypothetisch	Angenommen, das stimmt, dann ist es trotzdem zu spät.	
+1708637441296	お菓子	Süßigkeiten, Naschwerk	Geben wir allen etwas Süßes.	
+1708637440063	八	acht	Acht Äpfel bitte.	
+1708637441297	染まる	sich färben, angefärbt werden	Leinen lässt sich schön färben.	
+1708637441298	笑い	Gelächter, Lachen	In dem Haus wird ununterbrochen gelacht, oder?	
+1708637441299	買い物	Einkauf, einkaufen	Ich kaufe im Supermarkt ein.	
+1708637441300	歌	Lied	Ich kannte das Lied nicht.	
+1708637441301	庭	Garten, Hof	Im Garten ist ein Hund.	
+1708637441302	生き物	Lebewesen	Gehen wir sorgsam mit Lebewesen um.	
+1708637441303	特殊	speziell, eigengeartet	Er hat eine besondere Fähigkeit.	
+1708637441304	連れて行く	mitnehmen (jemanden irgendwohin)	Nimm mich bitte mit.	
+1708637441305	現状	der derzeitige Stand	Der Stand ist, dass wir das Problem nicht lösen können.	
+1708637441306	大分	beträchtlich, ein gutes Stück	Du bist auf dem Klavier ein gutes Stück besser geworden.	
+1708637441307	底	Boden (eines Gefäßes), Grund	Der Boden des Glases ist nass.	
+1708637441308	学生	Student, Studierende	Mein kleiner Bruder studiert.	
+1708637441309	丁寧	höflich, sorgfältig	Sie arbeitet immer sorgfältig.	
+1708637441310	範囲	Bereich, Umfang	Sag uns bitte, so viel du weißt.	
+1708637441311	テレビ	Fernsehen, Fernseher	Zu Hause habe ich keinen Fernseher.	
+1708637440868	おじさん	Onkel	Gestern habe ich meinen Onkel getroffen.	
+1708637441312	美人	schöne Frau	Seine Mutter ist eine schöne Frau.	
+1708637441313	技	Kunstgriff, Wurf (im Sport)	Seine Judowürfe sind die besten in Japan.	
+1708637441314	将来	die eigene Zukunft, später einmal	Später möchte ich Pilotin werden.	Wörtlich „Pilot(in)“ — Deutsch erzwingt ein Geschlecht, hier steht die weibliche Form, weil die App für Charlotte geschrieben ist.
+1708637441315	記録	Aufzeichnung, Rekord	Beim Marathon gab es einen Weltrekord.	
+1708637441316	大人しい	ruhig (im Wesen), brav	Meine Freundin ist sehr ruhig.	
+1708637441317	骨	Knochen	Kalzium soll gut für die Knochen sein.	
+1708637441318	目標	Zielvorgabe, was man erreichen will	Sie hat ein klares Ziel, oder?	
+1708637441319	肉体	der Leib (fleischlich)	Der Leib vergeht irgendwann.	
+1708637441320	届ける	zustellen, überbringen	Bring ihm das bitte.	Gegenstück zu 届く: 届く kommt an, 届ける bringt jemand hin.
+1708637440151	冬	Winter	Die Winter in Kanada sind sehr kalt.	
+1708637441321	足元	der Boden vor den Füßen	Es ist dunkel, pass bitte auf, wo du hintrittst.	
+1708637441322	捜す	fahnden nach, aufspüren	Die Polizei fahndet nach dem Mann.	Nicht „suchen“ wie 探す — 捜す sucht Verlorenes oder Gesuchte.
+1708637441323	わざと	absichtlich, mit Absicht	Es sah aus, als hätte er absichtlich verloren.	
+1708637441324	いかが	wie wäre es, wie (höflich)	Möchten Sie Wein?	
+1708637441325	布	Stoff, Tuch	Dieser Stoff eignet sich für Vorhänge.	
+1708637441326	種類	Sorte, Art	Es gibt viele Sorten von Rosen.	
+1708637441327	満たす	erfüllen, ausfüllen	Er erfüllt die Bedingungen für die Bewerbung nicht.	Gegenstück zu 満ちる: 満ちる wird voll, 満たす füllt jemand.
+1708637441328	景色	Landschaft, Aussicht	Die Aussicht von hier ist wirklich schön, oder?	
+1708637441329	勇気	Mut	Er hat Mut, oder?	
+1708637441330	強化	Stärkung, Ausbau	Der Staat baut den Unterricht in der Landessprache aus.	
+1708637441331	加える	hinzufügen, beigeben	Gib bitte Salz und Pfeffer dazu.	
+1708637441332	言い出す	damit herausrücken, als Erster sagen	Ich fragte mich, womit du plötzlich herausrückst.	
+1708637441333	収まる	sich legen, hineinpassen	Die Polizei kam und der Aufruhr legte sich.	
+1708637441334	組織	Organisation, Gefüge	Er ist Anführer einer bestimmten Organisation.	
+1708637441335	隙間	Spalt, Ritze	Die Katze ist durch einen Türspalt hereingekommen.	
+1709477898129	評価	Bewertung, Anerkennung	In letzter Zeit bekommt er mehr Anerkennung.	
+1708637440867	お姉さん	ältere Schwester (höflich, auch fremde)	Gestern habe ich deine große Schwester getroffen.	
+1708637441347	三つ	drei Stück	Ich habe drei Becher gekauft.	
+1708637440555	昨夜	gestern Abend, letzte Nacht	Gestern Abend habe ich eine Sternschnuppe gesehen.	
+1708637440131	去年	letztes Jahr	Letztes Jahr war ich in Frankreich.	
+1708637440866	お兄さん	älterer Bruder (höflich, auch fremde)	Wie alt ist dein großer Bruder?	
+1708637440064	九	neun	Beim Baseball besteht eine Mannschaft aus neun Leuten.	
+1708637440150	秋	Herbst	Sie heiratet im Herbst.	
+1708637440869	おばさん	Tante	Meine Tante ist mit ihrer Familie zu Besuch gekommen.	
+1708637440132	来年	nächstes Jahr	Reisen wir nächstes Jahr zusammen.	
+1708637440092	毎年	jedes Jahr, jährlich	Jedes Jahr fahre ich zu Weihnachten in mein Land.	
+1708637439862	日本語	Japanisch (die Sprache)	Ich lerne Japanisch.	
+1708637441348	四つ	vier Stück	Ich habe vier Armbanduhren.	
+1708637441344	日曜日	Sonntag	Am Sonntag waren wir am Meer.	
+1708637439964	おじいさん	Großvater, Opa	Mein Großvater joggt nicht gern.	
+1708637441343	土曜日	Samstag	Samstagabend gehe ich in den Club.	
+1708637440261	来月	nächsten Monat	Ab nächstem Monat studiere ich.	
+1708637441349	五つ	fünf Stück	Fünf Pfirsiche bitte.	
+1708637439903	いいえ	nein (höflich)	A: „Bist du Yamada?“ B: „Nein.“	
+1708637439965	おばあさん	Großmutter, Oma	Sie wohnt bei ihrer Großmutter.	
+1708637441338	月曜日	Montag	Treffen wir uns am Montag.	
+1708637441351	七つ	sieben Stück	Kauf bitte sieben Brötchen.	
+1708637440091	毎月	jeden Monat, monatlich	Ich lege jeden Monat Geld zurück.	
+1708637441342	金曜日	Freitag	Freitagabend gehe ich mit Freunden aus.	
+1708637441350	六つ	sechs Stück	Ich habe sechs Reisbällchen gemacht.	
+1708637440870	いとこ	Cousin, Cousine	Mein Cousin und ich sind gleich alt.	
+1708637441352	八つ	acht Stück	In dem Haus gibt es acht Uhren.	
+1708637441340	水曜日	Mittwoch	Mittwochs habe ich meinen Nebenjob.	
+1708637441339	火曜日	Dienstag	Am Dienstag ist eine Besprechung.	
+1708637441341	木曜日	Donnerstag	Donnerstags habe ich frei.	
+1708637441353	九つ	neun Stück	Mein großer Bruder hat neun Reisbällchen gegessen.	
+9000000000001	こんにちは。	Guten Tag.		
+9000000000002	さようなら。	Auf Wiedersehen. (bei längerem Abschied)		
+9000000000003	トイレはどこですか？	Wo ist die Toilette?		Ein Satz für Fremde — hier steht die Sie-Form, anders als sonst in der App. Auf Japanisch macht das die höfliche Endung.
+9000000000004	英語が話せますか？	Sprechen Sie Englisch?		Ein Satz für Fremde — hier steht die Sie-Form, anders als sonst in der App. Auf Japanisch macht das die höfliche Endung.
+9000000000005	分かりません。	Ich verstehe nicht.		
+9000000000006	お勘定お願いします。	Die Rechnung, bitte.		
+9000000000007	ご馳走さまでした。	Es hat geschmeckt. (nach dem Essen)		Der feste Dank nach dem Essen — im Deutschen sagt man, dass es geschmeckt hat.
+9000000000008	手伝ってください。	Bitte helfen Sie mir.		Ein Satz für Fremde — hier steht die Sie-Form, anders als sonst in der App. Auf Japanisch macht das die höfliche Endung.
+9000000000101	お早うございます。	Guten Morgen.		
+9000000000102	こんばんは。	Guten Abend.		
+9000000000103	ごめんなさい。	Es tut mir leid.		
+9000000000104	助けて！	Hilfe!		
+9000000000105	緊急です。	Es ist ein Notfall.		
+9000000000106	道に迷っています。	Ich habe mich verlaufen.		
+9000000000107	鞄をなくしました。	Ich habe meine Tasche verloren.		
+9000000000108	財布をおとしました。	Ich habe meine Geldbörse verloren.		
+9000000000109	具合がわるいです。	Mir geht es nicht gut.		
+9000000000110	怪我をしました。	Ich habe mich verletzt.		
+9000000000111	英語の出来る医者はいますか？	Gibt es hier einen Arzt, der Englisch spricht?		
+9000000000112	薬局はどこですか？	Wo ist eine Apotheke?		
+9000000000113	この電車はどこ行きですか？	Wohin fährt dieser Zug?		
+9000000000114	空いてる部屋ありますか？	Haben Sie ein Zimmer frei?		Ein Satz für Fremde — hier steht die Sie-Form, anders als sonst in der App. Auf Japanisch macht das die höfliche Endung.
+9000000000115	クレジットカードは使えますか？	Kann ich mit Karte zahlen?		
+9000000000116	二人です。	Ein Tisch für zwei, bitte.		
+9000000000117	メニューを下さい。	Die Karte, bitte.		
+9000000000118	お勧めはありますか？	Was empfehlen Sie?		Ein Satz für Fremde — hier steht die Sie-Form, anders als sonst in der App. Auf Japanisch macht das die höfliche Endung.
