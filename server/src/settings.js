@@ -51,6 +51,7 @@ const COLUMNS = {
   appearance: "appearance",
   recordingEnabled: "recording_enabled",
   beginner: "beginner",
+  reminder: "reminder",
 };
 
 /** Light, dark, or the iPhone's own setting (migration 015). Same list as the CHECK. */
@@ -70,7 +71,8 @@ export function settingsForUser(db, userId) {
   const row = db
     .prepare(
       `SELECT new_per_day, session_length, read_aloud, pitch_accent, romaji, speak_source,
-              japanese_script, hidden_modes, appearance, recording_enabled, beginner
+              japanese_script, hidden_modes, appearance, recording_enabled, beginner,
+              reminder
          FROM user_settings WHERE user_id = ?`,
     )
     .get(userId);
@@ -91,6 +93,7 @@ export function settingsForUser(db, userId) {
     hiddenModes: JSON.parse(row.hidden_modes),
     recordingEnabled: row.recording_enabled === 1,
     beginner: row.beginner === 1,
+    reminder: row.reminder === 1,
   };
 }
 

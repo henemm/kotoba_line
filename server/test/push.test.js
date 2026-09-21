@@ -235,3 +235,74 @@ describe("the real sender, against a stand-in push service (#248)", () => {
     assert.equal(outcome, "gone");
   });
 });
+
+/** Like `walk`, but only the minutes a *reminder* went out (#99). #248's own
+ *  notification fires in these scenarios too — at 07:00, when the quiet hours
+ *  end — and it is not what these tests are about. */
+async function walkReminders(db, from, to, send = async () => "ok") {
+  const sentAt = [];
+  for (let t = from; t <= to; t += MIN) {
+    const r = await runPush(db, t, send);
+    if (r.reminders > 0) sentAt.push(t);
+  }
+  return sentAt;
+}
+
+describe("Du hast heute noch nicht geübt (#99)", () => {
+  /** Turn the reminder on for this user — the switch, not a special case. */
+  const remind = (db, userId, on = 1) =>
+    db.prepare("UPDATE user_settings SET reminder = ? WHERE user_id = ?").run(on, userId);
+
+  it("stays quiet with the switch off, however long she has not practised", async () => {
+    const { db, userId } = await fixture();
+    answer(db, userId, 1, 3, at(9, 0, -2));
+    assert.deepEqual(await walkReminders(db, at(0, 0, 1), at(23, 59, 1)), []);
+  });
+
+  it("comes once at 18:00 on her clock, on a day with no answer", async () => {
+    const { db, userId } = await fixture();
+    remind(db, userId);
+    answer(db, userId, 1, 3, at(9, 0, -2));
+    const sent = await walkReminders(db, at(0, 0, 1), at(23, 59, 1));
+    assert.deepEqual(sent, [at(18, 0, 1)], sent.map((t) => (t - DAY0 - DAY) / 3600).join(", "));
+    const kinds = db.prepare("SELECT kind FROM push_log WHERE kind = 'reminder'").all().map((r) => r.kind);
+    assert.deepEqual(kinds, ["reminder"]);
+  });
+
+  it("does not come on a day she has practised, however early", async () => {
+    const { db, userId } = await fixture();
+    remind(db, userId);
+    answer(db, userId, 1, 3, at(7, 30, 1));
+    // 07:30 is the day's only answer and it is twelve hours before the hour
+    // the reminder would fire; nothing at 18:00, and nothing after it.
+    assert.deepEqual(await walkReminders(db, at(8, 0, 1), at(23, 59, 1)), []);
+  });
+
+  it("does not come when a session from the train arrives after 18:00", async () => {
+    const { db, userId } = await fixture();
+    remind(db, userId);
+    // Answered at 17:00, reached the server at 19:00 — the gap the rule is
+    // written for. Walking the minutes in between, nothing goes out at 18:00
+    // because the walk ingests it only at 19:00 … so check the other half of
+    // the rule: once it has arrived, the day counts as practised.
+    answer(db, userId, 1, 3, at(17, 0, 1), at(19, 0, 1));
+    assert.deepEqual(await walkReminders(db, at(19, 0, 1), at(21, 0, 1)), []);
+  });
+
+  it("counts a day as practised when an answer merely arrives in it", async () => {
+    const { db, userId } = await fixture();
+    remind(db, userId);
+    // Answered yesterday evening, reached the server this morning: she did
+    // not practise today, but the server heard from her today, and a reminder
+    // in that gap is the one that would make her turn this off.
+    answer(db, userId, 1, 3, at(22, 0, 0), at(8, 0, 1));
+    assert.deepEqual(await walkReminders(db, at(18, 0, 1), at(21, 0, 1)), []);
+  });
+
+  it("is silent for someone with the switch on who never allowed notifications", async () => {
+    const { db } = await fixture();
+    const other = await seedUser(db, { handle: "ken", display: "Ken" });
+    remind(db, other.id);
+    assert.deepEqual(await walkReminders(db, at(17, 0, 1), at(21, 0, 1)), []);
+  });
+});

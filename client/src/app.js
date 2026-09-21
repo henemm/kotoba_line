@@ -139,6 +139,8 @@ const state = {
     recordingEnabled: true,
     // #252: Einstieg — the deck list is Reise 1 and 2 (server/src/queue.js).
     beginner: false,
+    // #99: „Du hast heute noch nicht geübt", 18:00 her time. Off by default.
+    reminder: false,
   },
   online: navigator.onLine,
   // 52: the server is reachable and the cookie is not. Two flags, because the

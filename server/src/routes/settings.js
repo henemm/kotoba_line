@@ -41,6 +41,8 @@ const patchSchema = {
       appearance: { type: "string", enum: APPEARANCES },
       recordingEnabled: { type: "boolean" },
       beginner: { type: "boolean" },
+      // #99: „Du hast heute noch nicht geübt", once a day at 18:00 her time.
+      reminder: { type: "boolean" },
       // #133: at most four of the five, so one line always remains.
       hiddenModes: {
         type: "array",
