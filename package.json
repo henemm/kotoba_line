@@ -17,6 +17,8 @@
     "test:client": "node --test client/test/*.test.js",
     "import-travel": "node import/import-travel.js",
     "import-travel-sounds": "node import/travel-sounds.js",
-    "sentence-romaji": "node import/sentence-romaji.js"
+    "sentence-romaji": "node import/sentence-romaji.js",
+    "import-german": "node import/import-german.js",
+    "check-german": "node import/check-german.js"
   }
 }

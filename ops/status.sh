@@ -267,6 +267,12 @@ const out = {
     ? one("SELECT count(*) n FROM cards WHERE deleted_at IS NULL AND word_audio_generated_for = word AND word_audio_checked = 1")
     : "absent",
 };
+// #134: die deutsche Bedeutung. `word_meaning_en` ist gefüllt, sobald
+// import-german gelaufen ist — an `word_meaning` selbst ist das nicht zu
+// sehen, weil dort vorher das Englische stand und nachher das Deutsche.
+out.german = has("word_meaning_en")
+  ? one("SELECT count(*) n FROM cards WHERE deck = 'kaishi' AND deleted_at IS NULL AND word_meaning_en IS NOT NULL")
+  : "absent";
 for (const col of ["word_reading", "word_pitch"]) {
   out[col] = has(col)
     ? one(`SELECT count(*) n FROM cards WHERE deck = 'kaishi' AND ${col} IS NOT NULL AND ${col} != ''`)
@@ -313,6 +319,19 @@ NODE
         ok "$col filled on $filled of ${F_cards}"
       fi
     done
+
+    # #134: German meanings, written by `npm run import-german` — which a
+    # deploy does not run either. Half-run shows as a number below the card
+    # count rather than as silence.
+    if [[ ${F_german:-absent} == absent ]]; then
+      : # migration 034 not applied yet; the migration check above says so
+    elif [[ ${F_german:-0} -eq 0 ]]; then
+      warn "npm run import-german" "no card carries a German meaning yet — run: npm run import-german"
+    elif [[ ${F_german:-0} -lt ${F_cards:-0} ]]; then
+      warn "npm run import-german" "German on ${F_german} of ${F_cards} cards — the run did not finish"
+    else
+      ok "German meanings on all ${F_german} Kaishi cards"
+    fi
 
     # #158: 104 cards in each script (import/lib/kana.js). Written by their
     # own import, which a deploy does not run.
@@ -487,7 +506,7 @@ fi
 
 printf '  In this order:\n\n'
 step=1
-for cmd in "git pull" "git merge --ff-only origin/main" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run tag" "chmod"; do
+for cmd in "git pull" "git merge --ff-only origin/main" "ops/deploy.sh" "ops/deploy.sh --client" "npm run import" "npm run import-kana" "npm run import-german" "npm run tag" "chmod"; do
   for n in "${NEEDED[@]}"; do
     [[ $n == "$cmd" ]] || continue
     case $cmd in
