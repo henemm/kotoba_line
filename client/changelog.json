@@ -1,5 +1,14 @@
 [
   {
+    "version": "v152",
+    "summary": "Eine Übung enthält jetzt alle Karten, die heute dran sind – wie bei Noji.",
+    "notes": [
+      "Bisher war bei 60 Karten Schluss, auch wenn mehr fällig war. Diese versteckte Grenze gibt es nicht mehr.",
+      "Wie viel am Tag höchstens kommt, bestimmst nur noch du selbst: im Deck unter „Optionen“ → „Maximal pro Tag“.",
+      "Du kannst jederzeit aufhören. Was übrig bleibt, wartet auf dich."
+    ]
+  },
+  {
     "version": "v151",
     "summary": "Die Anleitung „Zum Home-Bildschirm“ passt jetzt zu iOS 27.",
     "notes": [

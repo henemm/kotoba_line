@@ -182,7 +182,6 @@ export function sessionScreen({
   mode = "choose",
   filters = {},
   chosenLabel,
-  limit = 20,
   readAloud = true,
   pitchAccent = false,
   romaji = false,
@@ -299,7 +298,8 @@ export function sessionScreen({
         // returns are ignored in favour of the ones she was already working
         // through. Re-composing the queue would silently swap her session for
         // a different one under the same name.
-        sessionQueue({ ...filters, mode, limit }),
+        // #242: no limit — the session is the deck's cards for today.
+        sessionQueue({ ...filters, mode }),
       ]);
       // A fresh queue can name a card the cached deck does not have yet; the
       // deck's difference is then worth its wait (deck.js).
@@ -1866,7 +1866,7 @@ export function sessionScreen({
     let stillDue;
     if (chosenLabel && accepted) {
       stillDue = await api
-        .queue({ limit: 60 })
+        .queue({})
         .then((q) => q.available ?? q.cardIds.length)
         .catch(() => undefined);
     }

@@ -105,7 +105,6 @@ export function chooseSetScreen({
   // Topics are the Kaishi deck's (#137): in one of her lists a topic chip
   // would only ever count zero.
   showTopics = true,
-  sessionLength = 20,
   onChange,
   onApply,
   onClose,
@@ -251,7 +250,6 @@ export function chooseSetScreen({
 
   function foot() {
     const total = available;
-    const willPractise = Math.min(sessionLength, total ?? sessionLength);
 
     // 38: the button is inert, not hidden, and the chips that produced the
     // empty set are outlined — the cause is marked rather than shouted at.
@@ -286,12 +284,10 @@ export function chooseSetScreen({
       el("button.btn-primary", {
         type: "button",
         disabled: empty || counting,
-        text:
-          total === undefined || counting
-            ? "Los"
-            : total > willPractise
-              ? `${num(willPractise)} von ${num(total)} üben`
-              : `${num(total)} üben`,
+        // #242: no longer "20 von 34 üben". There is no session cap any more,
+        // so the set she chose is the session — the two numbers could only
+        // ever be the same one.
+        text: total === undefined || counting ? "Los" : `${num(total)} üben`,
         onclick: () => onApply?.({ ...chosen }),
       }),
     );
@@ -303,7 +299,7 @@ export function chooseSetScreen({
     counting = true;
     redrawFoot();
     try {
-      const answer = await api.queue({ ...chosen, limit: sessionLength });
+      const answer = await api.queue({ ...chosen });
       if (mine !== generation) return;
       available = answer.available ?? answer.cardIds.length;
       capReached = Boolean(answer.newCapReached);
