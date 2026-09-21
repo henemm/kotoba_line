@@ -363,6 +363,24 @@ export const SCREENS = [
   // function, because it has no DOM. Reached from Einstellungen, which is
   // where it lives after the one automatic offer.
   { name: "Zum Home-Bildschirm", steps: [tab("Einstellungen"), tapText("Anleitung")] },
+  // #99: the sheet that asks for the notification permission on a start. The
+  // tour cannot reach it the way she does — it needs the reminder on *and* a
+  // device that could still be asked, and Playwright's WebKit reports the
+  // state of an iPhone outside the home-screen app, where asking leads
+  // nowhere. So it is opened directly, with a stand-in for the system dialog
+  // that answers "denied": the buttons are what this checks.
+  {
+    name: "Erinnerung erlauben",
+    steps: [
+      tab("Einstellungen"),
+      async (page) =>
+        page.evaluate(async () => {
+          const m = await import("./src/remind-offer.js");
+          m.openReminderOffer({ onEnable: async () => "denied" });
+        }),
+      idle(300),
+    ],
+  },
   { name: "Einstieg · Decks", steps: [beginner] },
   { name: "Reise 1", steps: [beginner, deck("Reise 1")] },
   { name: "Reise 1 · vorne", steps: [beginner, deck("Reise 1"), way("Karten laut sagen"), idle(1500)] },

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
 import { installSteps } from "../src/install.js";
+import { shouldOffer } from "../src/remind-offer.js";
 import { keyBytes, pushStateFrom } from "../src/push.js";
 import { pushOfferText, pushOutcomeText } from "../src/screens/summary.js";
 import { ApiError, isSessionExpired, query } from "../src/api.js";
@@ -1226,5 +1227,42 @@ describe("Zum Home-Bildschirm (#260)", () => {
   it("says what a browser other than Safari calls it", () => {
     const { steps } = installSteps({ apple: false });
     assert.ok(steps.some((s) => s.includes("App installieren")));
+  });
+});
+
+describe("asking for the notification permission at a moment she sees (#99)", () => {
+  const base = { reminder: true, pushState: "ask", asked: false };
+
+  it("asks when the reminder is on and this device has never been asked", () => {
+    assert.equal(shouldOffer(base), true);
+  });
+
+  it("asks a device whose permission is granted but is not subscribed", () => {
+    assert.equal(shouldOffer({ ...base, pushState: "off" }), true);
+  });
+
+  it("asks again after a No to the summary's own offer, because the switch is a clearer answer", () => {
+    assert.equal(shouldOffer({ ...base, pushState: "declined" }), true);
+  });
+
+  it("stays quiet with the reminder off", () => {
+    assert.equal(shouldOffer({ ...base, reminder: false }), false);
+  });
+
+  it("stays quiet once this device has been asked", () => {
+    assert.equal(shouldOffer({ ...base, asked: true }), false);
+  });
+
+  it("stays quiet when it already works", () => {
+    assert.equal(shouldOffer({ ...base, pushState: "on" }), false);
+  });
+
+  // iOS takes "Nicht erlauben" once and only its own settings undo it, so a
+  // second sheet would be a dead end; and a browser tab on an iPhone cannot
+  // receive at all until the app is on the home screen.
+  it("stays quiet where asking leads nowhere", () => {
+    for (const state of ["denied", "install", "unsupported"]) {
+      assert.equal(shouldOffer({ ...base, pushState: state }), false, state);
+    }
   });
 });

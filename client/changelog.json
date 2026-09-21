@@ -1,5 +1,13 @@
 [
   {
+    "version": "v154",
+    "summary": "Wenn deine Erinnerung an ist, fragt die App beim Öffnen einmal nach der Erlaubnis.",
+    "notes": [
+      "Bisher wurde die Erlaubnis nur nach einer Übung angeboten – also genau dann nicht, wenn du gerade nicht übst.",
+      "Jetzt fragt die App einmal beim Öffnen, wenn du die Erinnerung eingeschaltet hast und dein Gerät sie noch nicht erlauben durfte. Einmal, nicht wieder und wieder."
+    ]
+  },
+  {
     "version": "v153",
     "summary": "Neu: eine Erinnerung um 18:00, wenn du an dem Tag noch nicht geübt hast.",
     "notes": [
