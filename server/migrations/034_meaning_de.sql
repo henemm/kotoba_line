@@ -1,0 +1,21 @@
+-- Deutsche Bedeutungen für Kaishi (#134), Henning 2026-09-21.
+--
+-- Die deutsche Bedeutung zieht in `word_meaning` ein, nicht in eine eigene
+-- Spalte: `word_meaning` heißt „die Bedeutung, die gezeigt wird“, und sie
+-- wird an rund zwanzig Stellen im Client gelesen (die Rückseite, die
+-- Auswahl-Antworten, die Kartenliste, die Suche, das Löschen-Blatt). Eine
+-- zweite Spalte hieße, jede dieser Stellen um eine Fallunterscheidung zu
+-- erweitern — und eine davon zu vergessen.
+--
+-- Diese Spalten halten dafür das Englische fest:
+--
+--  * damit `import/import-german.js` wiederholbar ist. Ein erneutes
+--    `npm run import` schreibt das Englische aus dem .apkg zurück; ohne diese
+--    Spalte wüsste der zweite Lauf nicht mehr, was einmal dort stand.
+--  * damit die Suche im Wörter-Tab beides findet. Sie suchte seit v69 im
+--    englischen Text (server/src/queue.js); ohne diese Spalte verlöre sie
+--    diesen Index stillschweigend — genau die Sorte Fehler, vor der CLAUDE.md
+--    warnt („die Lesungs-Suche funktioniert — das Feld war nie importiert“).
+--  * damit die Sache umkehrbar bleibt. Es sind ihre Karten.
+ALTER TABLE cards ADD COLUMN word_meaning_en TEXT;
+ALTER TABLE cards ADD COLUMN sentence_meaning_en TEXT;

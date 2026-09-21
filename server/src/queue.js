@@ -763,9 +763,18 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
     where +=
       " AND (c.word LIKE ? OR c.word_reading LIKE ? OR c.word_furigana LIKE ? OR " +
       `${normalisedGloss("c.word_meaning")} LIKE ?` +
+      // #134: seit die Kaishi-Bedeutung deutsch ist, liegt das Englische in
+      // word_meaning_en. Ohne diese Zeile fände „to hit“ nichts mehr — die
+      // Suche hätte einen Index verloren, den sie seit v69 hatte, und zwar
+      // stillschweigend. Bei einer Karte ohne Übersetzung ist die Spalte
+      // NULL, und NULL LIKE ? ist NULL, also kein Treffer: harmlos.
+      ` OR ${normalisedGloss("c.word_meaning_en")} LIKE ?` +
       (romajiKey ? " OR instr(search_romaji(c.word, c.word_reading), ?) > 0" : "") +
       ")";
-    whereParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`, ...(romajiKey ? [` ${romajiKey}`] : []));
+    whereParams.push(
+      `%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`, `% ${q.toLowerCase()}%`,
+      ...(romajiKey ? [` ${romajiKey}`] : []),
+    );
   }
   if (deck) {
     where += " AND c.deck = ?";
