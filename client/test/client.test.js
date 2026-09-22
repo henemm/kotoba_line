@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
-import { installSteps } from "../src/install.js";
+import { installSteps, shouldOffer as offersInstallHint } from "../src/install.js";
 import { shouldOffer } from "../src/remind-offer.js";
 import { keyBytes, pushStateFrom } from "../src/push.js";
 import { pushOfferText, pushOutcomeText } from "../src/screens/summary.js";
@@ -1227,6 +1227,27 @@ describe("Zum Home-Bildschirm (#260)", () => {
   it("says what a browser other than Safari calls it", () => {
     const { steps } = installSteps({ apple: false });
     assert.ok(steps.some((s) => s.includes("App installieren")));
+  });
+
+  // "Nicht mehr zeigen" (Henning, 2026-09-22). The sheet itself needs a DOM;
+  // what is worth pinning down is which flag wins, and that is pure.
+  it("offers the steps to a browser tab that has not been told yet", () => {
+    assert.equal(offersInstallHint({ standalone: false, shown: false, dismissed: false }), true);
+  });
+
+  it("says nothing to the installed app, told or not", () => {
+    assert.equal(offersInstallHint({ standalone: true, shown: false, dismissed: false }), false);
+  });
+
+  it("comes once per device", () => {
+    assert.equal(offersInstallHint({ standalone: false, shown: true, dismissed: false }), false);
+  });
+
+  // The one that matters: a correction to the steps renames the "shown" key
+  // (install.js), which offers them once more to everyone still in a tab.
+  // "Nicht mehr zeigen" has to outlive exactly that, so it is a second key.
+  it("stays away after Nicht mehr zeigen, even when the steps are rewritten", () => {
+    assert.equal(offersInstallHint({ standalone: false, shown: false, dismissed: true }), false);
   });
 });
 
