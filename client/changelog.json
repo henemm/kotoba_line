@@ -1,5 +1,14 @@
 [
   {
+    "version": "v155",
+    "summary": "Die Anleitung „Zum Home-Bildschirm“ kannst du jetzt für immer wegtippen.",
+    "notes": [
+      "Sie kommt einmal pro Gerät – und noch einmal, wenn wir sie überarbeitet haben, damit die bessere Fassung auch ankommt.",
+      "Mit „Nicht mehr zeigen“ ist damit Schluss: dann fragt die App von sich aus nie wieder danach.",
+      "Die Anleitung bleibt in den Einstellungen, falls du sie doch noch brauchst."
+    ]
+  },
+  {
     "version": "v154",
     "summary": "Wenn deine Erinnerung an ist, fragt die App beim Öffnen einmal nach der Erlaubnis.",
     "notes": [

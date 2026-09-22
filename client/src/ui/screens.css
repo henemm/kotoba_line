@@ -5007,6 +5007,31 @@ button.kana-tile:active {
   color: var(--ink-muted);
   opacity: 0.8;
 }
+/* #260: the way to end the automatic offer for good. Under the row and quiet,
+   so it never competes with "Verstanden" or "Installieren" — but a 44px
+   target, not small print. Button and note are one child of the sheet, which
+   is a flex column with an 18px gap: two children would put that gap between
+   a button and the sentence explaining it. */
+.sheet-dismiss {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: -6px;
+}
+.sheet-dismiss button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: 600 15px/1 var(--ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sheet-dismiss .sheet-note {
+  text-align: center;
+}
 .info-list {
   margin: 0;
   display: flex;

@@ -363,6 +363,23 @@ export const SCREENS = [
   // function, because it has no DOM. Reached from Einstellungen, which is
   // where it lives after the one automatic offer.
   { name: "Zum Home-Bildschirm", steps: [tab("Einstellungen"), tapText("Anleitung")] },
+  // #260 follow-up: the same sheet as it arrives by itself, which is the only
+  // form that carries "Nicht mehr zeigen" — from Einstellungen the sheet was
+  // asked for, so switching it off there would mean nothing. Opened directly
+  // for the same reason as the one below: the automatic offer comes once per
+  // device, and the tour's device has been told already.
+  {
+    name: "Zum Home-Bildschirm · von selbst",
+    steps: [
+      tab("Einstellungen"),
+      async (page) =>
+        page.evaluate(async () => {
+          const m = await import("./src/install.js");
+          m.openInstallHint("start");
+        }),
+      idle(300),
+    ],
+  },
   // #99: the sheet that asks for the notification permission on a start. The
   // tour cannot reach it the way she does — it needs the reminder on *and* a
   // device that could still be asked, and Playwright's WebKit reports the

@@ -21,6 +21,13 @@
  * app is *not* already installed. Afterwards it lives in Settings, because
  * the one thing worse than a hint nobody wanted is a hint nobody can find
  * again.
+ *
+ * "Nicht mehr zeigen" ends it for good (Henning, 2026-09-22: "Ansonsten nervt
+ * das ja nur"). Once per device was already true — what it does not cover is
+ * a correction to the steps: the flag carries their version, so a rewrite
+ * offers them once more to everyone still in a browser tab, and that is how
+ * Julia got the sheet twice. The button is the answer to that case and to
+ * every later one, for a traveller who has decided the browser tab is fine.
  */
 import { seen } from "./seen.js";
 import { el } from "./ui/dom.js";
@@ -91,12 +98,37 @@ export function openInstallHint(reason = "settings") {
   // download, and every redraw of #app would take the sheet with it. The
   // scrim is `position: fixed` for exactly this.
   const host = document.body;
-  const close = (how) => {
-    seen("install_hint_closed", how);
+  const teardown = () => {
     scrim.remove();
     document.removeEventListener("keydown", onKey);
   };
+  const close = (how) => {
+    seen("install_hint_closed", how);
+    teardown();
+  };
   const onKey = (e) => e.key === "Escape" && close("escape");
+
+  // Its own event rather than a detail on `install_hint_closed`: the watch
+  // list prints event names and not their details (ops/seen.sh --watches), so
+  // "she has switched it off" would otherwise be invisible beside "she closed
+  // it". Not offered from Settings, where the sheet was asked for.
+  const dismiss =
+    reason === "settings"
+      ? null
+      : el(
+          "div.sheet-dismiss",
+          {},
+          el("button", {
+            type: "button",
+            text: "Nicht mehr zeigen",
+            onclick: () => {
+              markHintDismissed();
+              seen("install_hint_never", reason);
+              teardown();
+            },
+          }),
+          el("p.sheet-note", { text: "Die Anleitung bleibt in den Einstellungen." }),
+        );
 
   // Chromium can do it in one tap; Safari cannot, and there the list is all
   // there is. A button that only sometimes exists is better than a button
@@ -132,6 +164,7 @@ export function openInstallHint(reason = "settings") {
         el("button.btn", { type: "button", text: install ? "Später" : "Verstanden", onclick: () => close("ok") }),
         install,
       ),
+      dismiss,
     ),
   );
   document.addEventListener("keydown", onKey);
@@ -155,21 +188,52 @@ export function openInstallHint(reason = "settings") {
  */
 const SEEN_KEY = "installHint.longpress";
 
-export function hintPending() {
-  if (isStandalone()) return false;
-  try {
-    return localStorage.getItem(SEEN_KEY) !== "1";
-  } catch {
-    return true;
-  }
+/*
+ * And this one carries no version, on purpose: it is the answer to the
+ * mechanism above, not to one wording of the steps. Renaming SEEN_KEY is how
+ * a correction reaches everybody, so a "never again" that a rename could
+ * clear would be no such thing.
+ */
+const NEVER_KEY = "installHint.never";
+
+/**
+ * Whether to offer the steps by themselves. Pure, because the interesting
+ * part is which of the three flags wins — and because the client suite has no
+ * localStorage to set.
+ */
+export function shouldOffer({ standalone, shown, dismissed }) {
+  if (standalone) return false;
+  if (dismissed) return false;
+  return !shown;
 }
 
-export function markHintShown() {
+const flag = (key) => {
   try {
-    localStorage.setItem(SEEN_KEY, "1");
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const setFlag = (key) => {
+  try {
+    localStorage.setItem(key, "1");
   } catch {
     /* private mode: the hint comes once more, which is not a fault */
   }
+};
+
+export function hintPending() {
+  return shouldOffer({ standalone: isStandalone(), shown: flag(SEEN_KEY), dismissed: flag(NEVER_KEY) });
+}
+
+export function markHintShown() {
+  setFlag(SEEN_KEY);
+}
+
+/** "Nicht mehr zeigen": no automatic offer again, whatever the steps say. */
+export function markHintDismissed() {
+  setFlag(NEVER_KEY);
 }
 
 /** Show it once, after a start in a browser tab. */
