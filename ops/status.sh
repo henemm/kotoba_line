@@ -252,7 +252,8 @@ const out = {
   reviews: one("SELECT count(*) n FROM review_events"),
   stars: one("SELECT count(*) n FROM card_stars"),
   ownTags: one("SELECT count(*) n FROM card_user_tags"),
-  ownCards: one("SELECT count(*) n FROM cards WHERE deck = 'personal' AND deleted_at IS NULL"),
+  // Words she wrote, not the reverses of any deck's words (#284).
+  ownCards: one("SELECT count(*) n FROM cards WHERE deck = 'personal' AND deleted_at IS NULL AND reverse_of IS NULL"),
   // v118 (#183): words with no recording, and how many still wait for their
   // generated one (ops/generate-word-sounds.sh).
   wordSoundsWaiting: has("word_audio_generated")

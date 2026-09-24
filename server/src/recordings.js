@@ -26,6 +26,16 @@ export const RECORDING_LIMIT = 1;
 
 const now = () => Math.floor(Date.now() / 1000);
 
+/**
+ * The card a recording belongs to (#284): a word's, whichever direction she
+ * is looking at. A reverse (reverse.js) is its original asked the other way
+ * round, and a native speaker says the word once — so a recording made on
+ * either is stored on, and read from, the original.
+ */
+function wordCard(db, cardId) {
+  return db.prepare("SELECT coalesce(reverse_of, id) AS id FROM cards WHERE id = ?").get(cardId)?.id ?? cardId;
+}
+
 /** Every live (not deleted) recording on a card, oldest first. */
 export function recordingsFor(db, userId, cardId) {
   return db
@@ -34,7 +44,7 @@ export function recordingsFor(db, userId, cardId) {
         WHERE user_id = ? AND card_id = ? AND deleted_at IS NULL AND kind = 'native'
         ORDER BY recorded_at`,
     )
-    .all(userId, cardId);
+    .all(userId, wordCard(db, cardId));
 }
 
 /**
@@ -46,14 +56,24 @@ export function recordingsFor(db, userId, cardId) {
  */
 export function recordingsAmong(db, userId, cardIds) {
   if (!cardIds?.length) return [];
-  const holes = cardIds.map(() => "?").join(",");
+  // #284: a reverse in the queue gets its word's recordings, under its own
+  // id — the id the session looks them up by.
+  const asked = new Map();
+  for (const id of cardIds) {
+    const word = wordCard(db, id);
+    if (!asked.has(word)) asked.set(word, []);
+    asked.get(word).push(id);
+  }
+  const words = [...asked.keys()];
+  const holes = words.map(() => "?").join(",");
   return db
     .prepare(
       `SELECT card_id, id, kind, file, recorded_at FROM card_recordings
         WHERE user_id = ? AND deleted_at IS NULL AND kind = 'native' AND card_id IN (${holes})
         ORDER BY recorded_at`,
     )
-    .all(userId, ...cardIds);
+    .all(userId, ...words)
+    .flatMap((r) => asked.get(r.card_id).map((id) => ({ ...r, card_id: id })));
 }
 
 /**
@@ -72,6 +92,8 @@ export async function addRecording(db, userId, { cardId, kind, id, audio, mediaD
   if (!/^[0-9a-zA-Z-]{8,64}$/.test(id)) return { ok: false, reason: "invalid_id" };
   if (!visibleCard(db, userId, cardId)) return { ok: false, reason: "not_found" };
   if (db.prepare("SELECT 1 FROM card_recordings WHERE id = ?").get(id)) return { ok: true, already: true };
+  // #284: recorded on a reverse, it is the word's (see `wordCard`).
+  cardId = wordCard(db, cardId);
 
   const { n } = db
     .prepare("SELECT count(*) n FROM card_recordings WHERE user_id = ? AND card_id = ? AND kind = ? AND deleted_at IS NULL")

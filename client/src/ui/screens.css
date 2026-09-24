@@ -3024,7 +3024,7 @@
   color: var(--ink);
 }
 
-:is(.settings, .deck-options, .add-word) .toggle {
+:is(.settings, .deck-options, .add-word, .reverse-switch) .toggle {
   flex: none;
   width: 52px;
   height: 32px;
@@ -3039,22 +3039,22 @@
   cursor: pointer;
 }
 /* #133: the last practice line still shown cannot be switched off. */
-:is(.settings, .deck-options, .add-word) .toggle:disabled {
+:is(.settings, .deck-options, .add-word, .reverse-switch) .toggle:disabled {
   opacity: 0.45;
   cursor: default;
 }
-:is(.settings, .deck-options, .add-word) .toggle .knob {
+:is(.settings, .deck-options, .add-word, .reverse-switch) .toggle .knob {
   width: 26px;
   height: 26px;
   border-radius: 50%;
   background: var(--ink-muted);
   display: block;
 }
-:is(.settings, .deck-options, .add-word) .toggle[aria-checked="true"] {
+:is(.settings, .deck-options, .add-word, .reverse-switch) .toggle[aria-checked="true"] {
   background: var(--ink);
   justify-content: flex-end;
 }
-:is(.settings, .deck-options, .add-word) .toggle[aria-checked="true"] .knob {
+:is(.settings, .deck-options, .add-word, .reverse-switch) .toggle[aria-checked="true"] .knob {
   background: var(--night);
 }
 
@@ -5201,14 +5201,20 @@ button.kana-tile:active {
   font: 600 15px/1 inherit;
 }
 
-/* #284: „Auch andersherum abfragen" under the Japanese, laid out like a deck
-   option row: the words on the left, the switch on the right. */
-.add-reverse {
+/* #284: „Auch andersherum abfragen" — under the Japanese in the card form
+   (.add-reverse), on Search's sheet and on the back of a card in めくる
+   (.reverse-switch): the words on the left, the switch on the right, like a
+   deck option row. */
+:is(.add-reverse, .reverse-switch) {
   display: flex;
   align-items: center;
   gap: 14px;
 }
-.add-reverse .copy {
+.reverse-switch {
+  margin-top: 12px;
+  text-align: left;
+}
+:is(.add-reverse, .reverse-switch) .copy {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -5219,7 +5225,11 @@ button.kana-tile:active {
   font-size: 16px;
   font-weight: 600;
 }
-.add-reverse .note {
+.reverse-switch .name {
+  font-size: 15px;
+  font-weight: 600;
+}
+:is(.add-reverse, .reverse-switch) .note {
   font-size: 13px;
   line-height: 1.35;
   color: var(--ink-muted);

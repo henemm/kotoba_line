@@ -172,6 +172,28 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           }),
         ),
       ),
+      // #284: Henning, 2026-09-24 — „je Deck sagen, ob man auch in die
+      // Gegenrichtung lernen will". Every card of the deck at once, as Noji's
+      // "Select all → Reverse"; one card can still be set apart on its own.
+      el(
+        "div.option-row.reverse-row",
+        {},
+        el(
+          "span.copy",
+          {},
+          el("span.name", { text: "Auch andersherum abfragen" }),
+          el("span.note", {
+            text: "Jede Karte kommt ein zweites Mal, mit der anderen Seite vorne. Jede Richtung hat ihren eigenen Lernstand. Einzelne Karten kannst du auch einzeln umstellen.",
+          }),
+        ),
+        el("button.toggle", {
+          type: "button",
+          role: "switch",
+          "aria-checked": String(Boolean(settings.reverse)),
+          "aria-label": "Auch andersherum abfragen",
+          onclick: () => change({ reverse: !settings.reverse }),
+        }, el("span.knob")),
+      ),
     ];
   }
 

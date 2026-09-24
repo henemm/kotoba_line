@@ -1,5 +1,14 @@
 [
   {
+    "version": "v163",
+    "summary": "„Auch andersherum abfragen“ gibt es jetzt in jedem Deck, auch in Kaishi.",
+    "notes": [
+      "In den Optionen eines Decks schaltest du es für alle Karten auf einmal ein.",
+      "Einzelne Wörter stellst du direkt beim Karte-Umdrehen um, auf der Rückseite der Karte. Oder in der Suche, wenn du ein Wort antippst.",
+      "Jede Richtung hat ihren eigenen Lernstand, und ein Wort kommt nie in beiden Richtungen in derselben Übung."
+    ]
+  },
+  {
     "version": "v162",
     "summary": "Karten können jetzt auch andersherum abgefragt werden, wie „Reverse“ in Noji.",
     "notes": [

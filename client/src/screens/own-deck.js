@@ -52,6 +52,8 @@ export function addWordScreen({
   onSaved,
   onDeleted,
   onCancel,
+  // #284: a new card starts as the deck's „Auch andersherum abfragen" stands.
+  reverse: reverseDefault = false,
   // #135: the placeholders 日本語, かな and 文を書く are decoration too.
   japanese = true,
 }) {
@@ -112,7 +114,7 @@ export function addWordScreen({
   // on elsewhere may not have reached it — so what the switch shows is only
   // sent when she has moved it. An edit that leaves it alone leaves the
   // reverse alone, whatever this phone believed.
-  let reverse = editing ? Boolean(card.reverse) : false;
+  let reverse = editing ? Boolean(card.reverse) : Boolean(reverseDefault);
   let reverseMoved = false;
   const reverseSlot = el("div.add-reverse");
   loadDeck()
@@ -279,7 +281,7 @@ export function addWordScreen({
           onclick: () => {
             reverse = !reverse;
             reverseMoved = true;
-            seen(reverse ? "reverse_on" : "reverse_off");
+            seen(reverse ? "reverse_on" : "reverse_off", "form");
             drawReverse();
           },
         },

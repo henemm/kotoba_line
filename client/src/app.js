@@ -519,14 +519,36 @@ function openDeckOptions() {
     onChange: (patch, settings) => {
       state.deck = { ...state.deck, settings };
       numbersChanged();
+      // #284: the reverse switch only when it was the one moved — it sets
+      // every card of the deck, and sent with every other change it would
+      // undo each card she had set apart since.
+      const reversing = "reverse" in patch;
+      const key = state.deck.key;
       api
-        .updateDeckSettings(state.deck.key, {
+        .updateDeckSettings(key, {
           hiddenModes: settings.hiddenModes,
           newPerDay: settings.newPerDay,
           maxPerDay: settings.maxPerDay ?? null,
           ...(settings.flipFront ? { flipFront: settings.flipFront } : {}),
+          ...(reversing ? { reverse: patch.reverse } : {}),
         })
-        .catch(() => {});
+        .then(async () => {
+          if (!reversing) return;
+          // Counted once it happened, not at the tap (#284 watch).
+          seen(patch.reverse ? "reverse_on" : "reverse_off", "deck");
+          // The deck's numbers count both ways now, and the new cards are on
+          // the server until this phone fetches them.
+          await syncDeck().catch(() => {});
+          numbersChanged();
+        })
+        .catch(() => {
+          // Offline, nothing was switched: the deck's settings say so again,
+          // rather than a switch that shows on for cards that are not there.
+          if (reversing && state.deck?.key === key) {
+            state.deck = { ...state.deck, settings: { ...state.deck.settings, reverse: !patch.reverse } };
+            renderApp();
+          }
+        });
     },
     onRename: state.deck.own ? openRenameDeck : undefined,
     onDelete: state.deck.own ? deleteOpenDeck : undefined,
@@ -872,6 +894,8 @@ function openAddCard() {
   state.overlay = addWordScreen({
     tags: state.topics.map((t) => ({ tag: t.tag, n: t.total ?? t.n ?? 0 })),
     deck: { id: deck.id, name: deck.name },
+    // #284: a new card starts the way the deck's switch stands, as in Noji.
+    reverse: Boolean(deck.settings?.reverse),
     japanese: state.settings.japaneseScript,
     onCancel: closeOverlay,
     onSaved: async (_, { next = false } = {}) => {
@@ -982,6 +1006,19 @@ function wordsScreen() {
  * about one row of the list behind it, and taking the screen would lose the
  * search she may have typed to get there.
  */
+/**
+ * #284: one card asked the other way round too, or not — from Search's sheet
+ * and from the back of a card in めくる. The new card is made on the server;
+ * the phone fetches it, and the deck's numbers count it.
+ */
+async function setCardReverse(cardId, on, where) {
+  await api.setReverse(cardId, on);
+  // Counted once it happened: an offline tap springs back and is not a choice (#284 watch).
+  seen(on ? "reverse_on" : "reverse_off", where);
+  numbersChanged();
+  syncDeck().catch(() => {});
+}
+
 function openCardTopics(card, list = {}) {
   // Kept so loadTopics can rebuild this sheet if the list arrives after it
   // opened — the same trick openSheet uses, for the same reason.
@@ -993,6 +1030,7 @@ function openCardTopics(card, list = {}) {
     // #187: the star, written by the list that owns the row and its count.
     canStar: list.canStar,
     onStar: list.star,
+    onReverse: (on) => setCardReverse(card.id, on, "sheet"),
     topicNames,
     onClose: () => {
       state.topicsFor = undefined;
@@ -1326,6 +1364,8 @@ function renderApp() {
       // its options sheet may have just changed it; a session resumed from
       // the deck list finds its deck there.
       flipFront: deckSettingsFor(state.session.filters?.deckKey)?.flipFront,
+      // #284: the switch on the back of a card in めくる.
+      onReverse: (cardId, on) => setCardReverse(cardId, on, "session"),
       onExit: () => {
         state.session = undefined;
         // Her answers change the count (#106).

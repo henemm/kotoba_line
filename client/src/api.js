@@ -195,6 +195,8 @@ export const api = {
   // route's comment for why the client is not asked to compute a difference.
   setCardTags: (cardId, tags) =>
     request(`/cards/${cardId}/tags`, { method: "PUT", body: { tags } }),
+  // #284: one card asked the other way round too — any deck's, for her alone.
+  setReverse: (cardId, on) => request(`/cards/${cardId}/reverse`, { method: "POST", body: { on } }),
   events: (events) => request("/events", { method: "POST", body: { events } }),
   // #228: what appeared on her screen and what she did with it (seen.js).
   uiEvents: (events) => request("/ui-events", { method: "POST", body: { events } }),

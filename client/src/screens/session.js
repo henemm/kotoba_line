@@ -19,6 +19,7 @@ import { kanaMnemonicBlock } from "../ui/kana-mnemonic.js";
 import { stopAllRecording } from "../recording.js";
 import { soundButton } from "../ui/sound-button.js";
 import { infoButton } from "../ui/info.js";
+import { reverseSwitch } from "../ui/card-marks.js";
 import { madeTodayCount } from "./streak.js";
 
 
@@ -200,6 +201,9 @@ export function sessionScreen({
   // #275: the deck's "Karte umdrehen: vorne …", or undefined outside a deck
   // (`flipsMeaningFirst`).
   flipFront,
+  // #284: `(originalId, on)` switches a word's reverse from the back of a
+  // card in めくる, resolving once the server has it. Without it, no switch.
+  onReverse,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -1692,6 +1696,14 @@ export function sessionScreen({
         card.sentence_meaning ? el("div.sentence-en.reveal", { text: card.sentence_meaning }) : null,
       );
       if (readAloud && showsSentence(card, japanese)) voice(card.sentence, card.sentence_audio, { rate: 0.85 });
+    }
+    // #284: this word the other way round too, from the card in front of her —
+    // Henning: without leaving the session to look for the card. On a reverse
+    // it is the same switch, for its original.
+    if (!isKana(card) && onReverse) {
+      const original = card.reverse_of ?? card.id;
+      const on = card.reverse_of != null || [...deck.values()].some((c) => c.reverse_of === original && !c.deleted_at);
+      area.append(reverseSwitch({ on, onToggle: (next) => onReverse(original, next) }));
     }
 
     // §6 and screen 41: hard and easy are offered here and nowhere else,
