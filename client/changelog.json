@@ -1,5 +1,14 @@
 [
   {
+    "version": "v159",
+    "summary": "Deine Serie wie bei Noji: nach der Übung, die deinen Tag zählen lässt.",
+    "notes": [
+      "Einmal am Tag, sobald du 10 Karten wiederholt hast: die Flamme mit deiner Serie und darunter die Woche von Montag bis Sonntag.",
+      "Tage, die ein Joker gerettet hat, sehen aus wie bei Noji die Eis-Tage.",
+      "„Fortfahren“ bringt dich zur Übersicht der Übung, „Statistik“ zu deinem ganzen Kalender."
+    ]
+  },
+  {
     "version": "v158",
     "summary": "In der Kartenliste deines Decks steht jetzt bei jeder Karte, wann sie wieder dran ist.",
     "notes": [
