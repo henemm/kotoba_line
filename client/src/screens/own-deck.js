@@ -33,6 +33,16 @@ const MAX_TAGS = 5;
  * are one disclosure below them. "Save and add next" keeps the form open on
  * the same deck, for a list typed in one go.
  */
+/**
+ * #284: the `reverse` a save sends. A new card says what the switch says;
+ * an edit only what she changed — the switch can start from a phone's copy
+ * of the deck that is behind, and a typo fixed on such a phone must not
+ * switch off a reverse it had not heard of yet. Pure, for the test.
+ */
+export function reverseField({ editing, reverse, moved }) {
+  return !editing || moved ? { reverse } : {};
+}
+
 export function addWordScreen({
   tags = [],
   initialWord = "",
@@ -96,21 +106,22 @@ export function addWordScreen({
   const offers = el("div.kaishi-offer");
 
   // #284: "Auch andersherum abfragen", as Noji's Reverse. Whether an edited
-  // card has one is read from the phone's copy of the deck, where its reverse
-  // is a card of its own (`reverse_of`). Until that copy has been read the
-  // form does not know, and an edit then leaves the reverse as it is rather
-  // than switching it off.
-  let reverse = false;
-  let reverseKnown = !editing;
+  // card has one: `card.reverse` where the card came from the server, else
+  // the phone's copy of the deck, where a reverse is a card of its own
+  // (`reverse_of`). That copy can be behind the server — a reverse switched
+  // on elsewhere may not have reached it — so what the switch shows is only
+  // sent when she has moved it. An edit that leaves it alone leaves the
+  // reverse alone, whatever this phone believed.
+  let reverse = editing ? Boolean(card.reverse) : false;
+  let reverseMoved = false;
   const reverseSlot = el("div.add-reverse");
   loadDeck()
     .then((deck) => {
       kaishi = [...deck.values()].filter((c) => c.deck === "kaishi");
       if (editing && !linkDropped) link = kaishiOf(card, kaishi);
       drawOffers();
-      if (editing && !reverseKnown) {
+      if (editing && card.reverse === undefined && !reverseMoved) {
         reverse = [...deck.values()].some((c) => c.reverse_of === card.id && !c.deleted_at);
-        reverseKnown = true;
         drawReverse();
       }
     })
@@ -265,9 +276,9 @@ export function addWordScreen({
           role: "switch",
           "aria-checked": String(reverse),
           "aria-label": "Auch andersherum abfragen",
-          disabled: !reverseKnown,
           onclick: () => {
             reverse = !reverse;
+            reverseMoved = true;
             seen(reverse ? "reverse_on" : "reverse_off");
             drawReverse();
           },
@@ -543,7 +554,7 @@ export function addWordScreen({
       tags: [...chosen],
       deckId: deck?.id,
       kaishiId,
-      ...(reverseKnown ? { reverse } : {}),
+      ...reverseField({ editing, reverse, moved: reverseMoved }),
     };
     try {
       // Editing sends the whole card; a field she emptied is left out and the

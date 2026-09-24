@@ -925,14 +925,26 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
 export function setStar(db, userId, cardId, starred, changedAt = Math.floor(Date.now() / 1000)) {
   if (!visibleCard(db, userId, cardId)) return { ok: false, reason: "unknown_card" };
 
-  db.prepare(
+  // #284: a star is on the word, so on both of its directions — starred in a
+  // session on the reverse, it shows on the word in her list and in Search.
+  const word = db
+    .prepare(
+      `SELECT id FROM cards
+        WHERE deleted_at IS NULL
+          AND (id = (SELECT coalesce(reverse_of, id) FROM cards WHERE id = ?)
+               OR reverse_of = (SELECT coalesce(reverse_of, id) FROM cards WHERE id = ?))`,
+    )
+    .all(cardId, cardId)
+    .map((r) => r.id);
+  const write = db.prepare(
     `INSERT INTO card_stars (user_id, card_id, starred, changed_at)
      VALUES (?, ?, ?, ?)
      ON CONFLICT (user_id, card_id) DO UPDATE SET
        starred = excluded.starred,
        changed_at = excluded.changed_at
      WHERE excluded.changed_at >= card_stars.changed_at`,
-  ).run(userId, cardId, starred ? 1 : 0, changedAt);
+  );
+  for (const id of new Set([cardId, ...word])) write.run(userId, id, starred ? 1 : 0, changedAt);
 
   const row = db
     .prepare("SELECT starred FROM card_stars WHERE user_id = ? AND card_id = ?")

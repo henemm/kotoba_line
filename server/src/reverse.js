@@ -90,5 +90,12 @@ export function setReverse(db, cardId, on, seconds) {
     ).run(Math.min(lowest, 0) - 1, seconds, cardId);
   }
   mirror(db, cardId, seconds);
+  // A star is on the word (queue.js, `setStar`), so a reverse starts with the
+  // original's.
+  db.prepare(
+    `INSERT OR REPLACE INTO card_stars (user_id, card_id, starred, changed_at)
+     SELECT user_id, (SELECT id FROM cards WHERE reverse_of = ?), starred, changed_at
+       FROM card_stars WHERE card_id = ?`,
+  ).run(cardId, cardId);
   return true;
 }

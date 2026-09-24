@@ -126,6 +126,21 @@ describe("a card with its reverse on (#284)", () => {
     await app.close();
   });
 
+  it("shares the word's star and her own topics, set from either direction", async () => {
+    const { app, db, card, json, reverseRow } = await setup();
+    const rev = reverseRow();
+    const now = Math.floor(Date.now() / 1000);
+    await json("POST", "/api/stars", { cardId: rev.id, starred: true, changedAt: now });
+    const stars = db.prepare("SELECT card_id FROM card_stars WHERE starred = 1 ORDER BY card_id").all().map((r) => r.card_id);
+    assert.deepEqual(stars.sort(), [card.id, rev.id].sort(), "starred in a session on the reverse, the word is starred");
+
+    await json("PUT", `/api/cards/${rev.id}/tags`, { tags: ["reise"] });
+    const mine = (id) => db.prepare("SELECT tag FROM card_user_tags WHERE card_id = ?").all(id).map((r) => r.tag);
+    assert.deepEqual(mine(card.id), ["reise"]);
+    assert.deepEqual(mine(rev.id), ["reise"]);
+    await app.close();
+  });
+
   it("rebuilds to the same state from the log, like any card (§4)", async () => {
     const { app, db, reverseRow, answer } = await setup();
     const rev = reverseRow();
