@@ -102,6 +102,7 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           );
         }),
       ),
+      flipFrontChoice(),
       el("span.options-label", { id: "new-per-day-label", text: "Neue Karten pro Tag" }),
       el(
         "div.choice",
@@ -141,6 +142,37 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
           )
         : null,
     );
+  }
+
+  /**
+   * #275: which side „Karte umdrehen" shows first, for this deck. Charlotte
+   * asked whether Kaishi's Japanese-first could be set; Henning wanted a
+   * setting, and a deck's settings live here. Not in a kana deck, whose
+   * front is the character, nor where the way is switched off or impossible.
+   */
+  function flipFrontChoice() {
+    const flip = MODES.find((m) => m.key === "flip");
+    if (!settings.flipFront || !possible(flip) || (settings.hiddenModes ?? []).includes("flip")) return null;
+    if (deck.key === "hiragana" || deck.key === "katakana") return null;
+    const sides = [
+      ["meaning", "Deutsch"],
+      ["word", "Japanisch"],
+    ];
+    return [
+      el("span.options-label", { id: "flip-front-label", text: `${flip.en}: vorne steht` }),
+      el(
+        "div.choice",
+        { role: "group", "aria-labelledby": "flip-front-label" },
+        sides.map(([side, text]) =>
+          el("button", {
+            type: "button",
+            text,
+            "aria-pressed": String(side === settings.flipFront),
+            onclick: () => side !== settings.flipFront && change({ flipFront: side }),
+          }),
+        ),
+      ),
+    ];
   }
 
   /** Asked first, with what goes: every card in it. The safe choice is the solid one. */
