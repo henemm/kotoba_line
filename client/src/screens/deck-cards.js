@@ -92,16 +92,24 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
   render(root, heading, add, search, list);
   load();
 
+  // app.js keeps this block for as long as the deck is open, sessions in it
+  // included, so the labels asked for when it was built would outlive the
+  // answers that change them — measured live on v159: three cards answered,
+  // the list back with no label at all. It calls this after a session.
+  function askDue() {
+    if (!deck.key) return;
+    api.deckDue(deck.key).then(
+      (answer) => {
+        due = answer.due ?? {};
+        if (all) drawList();
+      },
+      () => {},
+    );
+  }
+  root.refreshDue = askDue;
+
   async function load() {
-    if (deck.key) {
-      api.deckDue(deck.key).then(
-        (answer) => {
-          due = answer.due ?? {};
-          if (all) drawList();
-        },
-        () => {},
-      );
-    }
+    askDue();
     try {
       all = [...(await loadDeck()).values()];
     } catch {

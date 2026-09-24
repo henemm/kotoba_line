@@ -1,5 +1,13 @@
 [
   {
+    "version": "v160",
+    "summary": "Die Angabe „Heute“, „Morgen“, „In 9 Tagen“ in der Kartenliste stimmt jetzt auch direkt nach dem Üben.",
+    "notes": [
+      "Bisher blieb die Kartenliste so, wie sie beim Öffnen des Decks war – nach einer Übung fehlten die Angaben für die Karten, die du gerade gelernt hast.",
+      "Jetzt fragt die Liste nach jeder Übung neu nach."
+    ]
+  },
+  {
     "version": "v159",
     "summary": "Deine Serie wie bei Noji: nach der Übung, die deinen Tag zählen lässt.",
     "notes": [
