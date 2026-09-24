@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { addRecording, recordingsAmong, recordingsFor } from "../src/recordings.js";
 import { replayCardState } from "../src/replay.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
 
@@ -291,6 +295,24 @@ describe("the other way round in every deck (#284, Henning 2026-09-24)", () => {
       assert.ok(ids.includes(1), only);
       assert.ok(!ids.includes(rev.id), `the reverse waits${only}`);
     }
+    await app.close();
+  });
+
+  it("a native recording is the word's: made on a reverse, both directions play it", async () => {
+    const { app, db, A, reverseOfOne } = await twoOnKaishi();
+    await A("POST", "/api/cards/1/reverse", { on: true });
+    const rev = reverseOfOne()[0];
+    const mediaDir = mkdtempSync(join(tmpdir(), "kotoba-reverse-rec-"));
+    const made = await addRecording(db, rev.owner_id, {
+      cardId: rev.id, kind: "native", id: "aaaaaaaa-0000-4000-8000-000000000284",
+      audio: Buffer.from("x"), mediaDir, encode: async () => Buffer.from("mp3"),
+    });
+    assert.equal(made.ok, true);
+    assert.equal(db.prepare("SELECT card_id FROM card_recordings").get().card_id, 1, "stored on the word");
+    assert.equal(recordingsFor(db, rev.owner_id, rev.id).length, 1);
+    const among = recordingsAmong(db, rev.owner_id, [1, rev.id]);
+    assert.deepEqual(among.map((r) => r.card_id).sort((a, b) => a - b), [rev.id, 1].sort((a, b) => a - b), "under the id each asked by");
+    rmSync(mediaDir, { recursive: true, force: true });
     await app.close();
   });
 

@@ -523,7 +523,6 @@ function openDeckOptions() {
       // every card of the deck, and sent with every other change it would
       // undo each card she had set apart since.
       const reversing = "reverse" in patch;
-      if (reversing) seen(patch.reverse ? "reverse_on" : "reverse_off", "deck");
       const key = state.deck.key;
       api
         .updateDeckSettings(key, {
@@ -535,6 +534,8 @@ function openDeckOptions() {
         })
         .then(async () => {
           if (!reversing) return;
+          // Counted once it happened, not at the tap (#284 watch).
+          seen(patch.reverse ? "reverse_on" : "reverse_off", "deck");
           // The deck's numbers count both ways now, and the new cards are on
           // the server until this phone fetches them.
           await syncDeck().catch(() => {});
@@ -1011,8 +1012,9 @@ function wordsScreen() {
  * the phone fetches it, and the deck's numbers count it.
  */
 async function setCardReverse(cardId, on, where) {
-  seen(on ? "reverse_on" : "reverse_off", where);
   await api.setReverse(cardId, on);
+  // Counted once it happened: an offline tap springs back and is not a choice (#284 watch).
+  seen(on ? "reverse_on" : "reverse_off", where);
   numbersChanged();
   syncDeck().catch(() => {});
 }
