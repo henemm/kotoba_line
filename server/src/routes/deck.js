@@ -13,6 +13,7 @@ import {
   MAX_SESSION_LENGTH,
   ONLY_MODES,
   browseCards,
+  deckDue,
   decksForUser,
   outlookForUser,
   queueForUser,
@@ -199,6 +200,27 @@ export default async function deckRoutes(app) {
   app.get("/api/decks", { preHandler: app.requireUser }, async (req) => ({
     decks: decksForUser(db, req.user.id, undefined, timeZoneOf(req)),
   }));
+
+  /**
+   * #274: when each card in one deck comes back, for the labels in its card
+   * list. Its own request rather than part of the deck list: only the deck
+   * page with the list open wants it, and there for every card.
+   */
+  app.get(
+    "/api/decks/due",
+    {
+      schema: {
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          required: ["deckKey"],
+          properties: { deckKey: { type: "string", pattern: DECK_KEY_PATTERN } },
+        },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req) => ({ due: deckDue(db, req.user.id, req.query.deckKey, undefined, timeZoneOf(req)) }),
+  );
 
   /** #137: one deck's ways of practising and daily limit, from its options sheet. */
   app.patch(

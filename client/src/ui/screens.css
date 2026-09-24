@@ -4474,15 +4474,29 @@ button.deck-card:active {
   flex-direction: column;
   gap: 3px;
 }
-.deck-card .copy > :first-child {
+.deck-card .deck-card-meaning {
   font-size: 16px;
   font-weight: 650;
   overflow-wrap: anywhere;
 }
-.deck-card .copy > :last-child {
+.deck-card .deck-card-word {
   font-size: 14px;
   color: var(--ink-muted);
   overflow-wrap: anywhere;
+}
+/* #274: "Heute", "Morgen", "In 9 Tagen" above the card, as in Noji. */
+.deck-card .deck-card-due {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.deck-card .deck-card-due .band-dot {
+  width: 8px;
+  height: 8px;
 }
 .deck-card .deck-card-word.jp {
   font-family: var(--jp);

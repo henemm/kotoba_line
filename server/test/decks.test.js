@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import Database from "better-sqlite3";
 import { deckSettings } from "../src/deck-settings.js";
+import { deckDue } from "../src/queue.js";
 import { seedUser, signIn, testApp } from "./helpers.js";
 
 /**
@@ -148,6 +149,35 @@ describe("her own decks (#137)", () => {
     // A kana deck's front is the character, whatever is sent.
     const kana = await call("PATCH", "/api/decks/settings", { deckKey: "hiragana", flipFront: "meaning" });
     assert.equal(kana.body.settings.flipFront, "word");
+    await app.close();
+  });
+
+  it("says when each card in her deck comes back, in calendar days on her clock (#274)", async () => {
+    const { app, db, user, call } = await signedIn();
+    const deck = (await call("POST", "/api/decks", { name: "100 vokabeln" })).body.deck;
+    const add = async (word) => (await call("POST", "/api/cards", { word, meaning: word, deckId: deck.id })).body.card.id;
+    const ids = {};
+    for (const w of ["Heute", "Mitternacht", "Neun", "Alt", "Neu", "Gemeistert"]) ids[w] = await add(w);
+    // 23:00 in Tokyo on 24 September.
+    const now = Date.parse("2026-09-24T14:00:00Z") / 1000;
+    const state = db.prepare("INSERT INTO card_state (user_id, card_id, due_at, reps, last_review) VALUES (?, ?, ?, 1, ?)");
+    state.run(user.id, ids.Heute, now + 50 * 60, now - 60); // 23:50, still today
+    state.run(user.id, ids.Mitternacht, now + 70 * 60, now - 60); // 00:10, tomorrow
+    state.run(user.id, ids.Neun, now + 9 * 86400, now);
+    state.run(user.id, ids.Alt, now - 3 * 86400, now - 5 * 86400); // overdue
+    state.run(user.id, ids.Gemeistert, now + 30 * 86400, now);
+    const due = deckDue(db, user.id, `deck:${deck.id}`, now, "Asia/Tokyo");
+    assert.deepEqual(due[ids.Heute], { band: "learning", days: 0 });
+    assert.deepEqual(due[ids.Mitternacht], { band: "learning", days: 1 });
+    assert.deepEqual(due[ids.Neun], { band: "learning", days: 9 });
+    assert.deepEqual(due[ids.Alt], { band: "learning", days: 0 });
+    assert.deepEqual(due[ids.Gemeistert], { band: "mastered", days: 30 });
+    assert.equal(due[ids.Neu], undefined, "a card never answered has no label, as in Noji");
+    // The same moment in Berlin is 16:00, and 00:10 in Tokyo is still today there.
+    assert.equal(deckDue(db, user.id, `deck:${deck.id}`, now, "Europe/Berlin")[ids.Mitternacht].days, 0);
+    const res = await call("GET", `/api/decks/due?deckKey=deck:${deck.id}`);
+    assert.equal(res.status, 200);
+    assert.ok(res.body.due[ids.Neun]);
     await app.close();
   });
 

@@ -1,5 +1,14 @@
 [
   {
+    "version": "v158",
+    "summary": "In der Kartenliste deines Decks steht jetzt bei jeder Karte, wann sie wieder dran ist.",
+    "notes": [
+      "Wie bei Noji: „Heute“, „Morgen“ oder „In 9 Tagen“ über der Karte.",
+      "Der Punkt davor zeigt die Farbe von „In Bearbeitung“ oder „Gemeisterte“ – wie oben auf der Deck-Seite.",
+      "Karten, die du noch nie gelernt hast, haben keine Angabe. Ohne Internet fehlt die Angabe auch, statt etwas Veraltetes zu zeigen."
+    ]
+  },
+  {
     "version": "v157",
     "summary": "Nach „Nochmal“ kommt die Karte erst nach 10 anderen wieder, nicht schon nach 3.",
     "notes": [

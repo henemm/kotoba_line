@@ -41,6 +41,21 @@ export function cardsOfDeck(deck, cards, q = "") {
   return found.sort(exactFirst(q, (a, b) => a.id - b.id));
 }
 
+/**
+ * #274: what Noji writes above a card in its list — "Heute", "Morgen",
+ * "In 9 Tagen". `days` is from her today to the card's due day, 0 for today
+ * or overdue (server/src/queue.js, `deckDue`).
+ */
+export function dueLabel(days) {
+  if (days <= 0) return "Heute";
+  if (days === 1) return "Morgen";
+  if (days < 30) return `In ${days} Tagen`;
+  const months = Math.round(days / 30);
+  if (months < 12) return months === 1 ? "In einem Monat" : `In ${months} Monaten`;
+  const years = Math.round(days / 365);
+  return years === 1 ? "In einem Jahr" : `In ${years} Jahren`;
+}
+
 export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
   const root = el("div.deck-cards");
   const list = el("div.deck-cards-list");
@@ -48,6 +63,10 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
   let q = "";
   let shown = ROWS_PER_PAGE;
   let all;
+  // #274: card id → { band, days }, asked of the server. The list itself is
+  // the phone's copy and works on a train; without a connection the labels
+  // are simply not there, rather than a day's-old "Heute".
+  let due = {};
 
   const search = el("input.deck-cards-search", {
     type: "search",
@@ -74,6 +93,15 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
   load();
 
   async function load() {
+    if (deck.key) {
+      api.deckDue(deck.key).then(
+        (answer) => {
+          due = answer.due ?? {};
+          if (all) drawList();
+        },
+        () => {},
+      );
+    }
     try {
       all = [...(await loadDeck()).values()];
     } catch {
@@ -126,7 +154,13 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
       text: shownWord(card, japanese),
     });
     const meaning = el("span.deck-card-meaning", { text: card.word_meaning ?? "" });
-    return el("button.deck-card", { type: "button", onclick: () => onCard?.(card) }, el("span.copy", {}, meaning, word));
+    // #274: above the card, as in Noji — the band's dot where Noji has its
+    // clock and cap, in the colours the deck page counts them in.
+    const when = due[card.id];
+    const label = when
+      ? el("span.deck-card-due", {}, el(`span.band-dot.${when.band}`, { "aria-hidden": "true" }), dueLabel(when.days))
+      : null;
+    return el("button.deck-card", { type: "button", onclick: () => onCard?.(card) }, el("span.copy", {}, label, meaning, word));
   }
 
   return root;
