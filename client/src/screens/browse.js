@@ -495,7 +495,8 @@ export function browseScreen({
     }
     const matches = [...deck.values()]
       // Words only, as on the server (#158): not the kana decks' letters.
-      .filter((c) => !c.deleted_at && !isKana(c) && matchesQuery(c, state.q))
+      // Nor a reverse (#284): the same word again, as on the server.
+      .filter((c) => !c.deleted_at && c.reverse_of == null && !isKana(c) && matchesQuery(c, state.q))
       .sort(exactFirst(state.q, byFrequencyThenId));
     state.total = matches.length;
     state.cards = matches.slice(0, (page + 1) * PAGE_SIZE);

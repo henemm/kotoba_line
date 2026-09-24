@@ -312,7 +312,9 @@ export function sessionScreen({
       deck = loaded;
       // Wrong answers are drawn from the whole deck, not from the session —
       // twenty cards is far too small a pool to find plausible ones in.
-      pool = [...deck.values()];
+      // Not a reverse (#284): it is its original again, and would offer the
+      // same meaning twice among four.
+      pool = [...deck.values()].filter((c) => c.reverse_of == null);
       labelSets = {
         intervals: q.intervals ?? {},
         intervalsTomorrow: q.intervalsTomorrow,
@@ -1372,6 +1374,9 @@ export function sessionScreen({
   /** めくる — the classic flashcard, and the only mode with four ratings. */
   function drawFlip(card, area, answers) {
     prime(isKana(card) ? card.word_audio : soundOf(card).file, showsSentence(card, japanese) && card.sentence_audio);
+    // #284: whether the other direction reaches her at all (ops/watches.tsv).
+    // How she answers it is in her log already; this says which days.
+    if (card.reverse_of != null) seen("reverse_shown", undefined, { oncePerDay: true });
     if (flipsMeaningFirst(card, flipFront)) {
       // No speaker and no reading aloud: the word is the answer. But she is
       // meant to say it herself before turning the card, the same as 話す
@@ -2069,9 +2074,14 @@ export function sentenceKana(sentenceFurigana) {
  * an older shell — each card goes by where it came from, as before. A kana
  * card never turns round: its front is the character, and its "meaning" is
  * the reading, which is the answer.
+ *
+ * #284: a reverse — Noji's "Reverse", a card of its own with `reverse_of` —
+ * asks its original the other way round, whichever way that is.
  */
-export const flipsMeaningFirst = (card, front) =>
-  isKana(card) ? false : front ? front === "meaning" : isInHerDeck(card);
+export const flipsMeaningFirst = (card, front) => {
+  const forward = isKana(card) ? false : front ? front === "meaning" : isInHerDeck(card);
+  return card?.reverse_of != null ? !forward : forward;
+};
 
 /**
  * A card of hers in one of her decks (#137, migration 016) — all of hers are.

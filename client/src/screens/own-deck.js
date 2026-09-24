@@ -6,6 +6,7 @@ import { plainSentence } from "./session.js";
 import { topicLabel } from "../topics.js";
 import { el, render } from "../ui/dom.js";
 import { soundButton } from "../ui/sound-button.js";
+import { seen } from "../seen.js";
 
 /**
  * Her own words — designs 28, 29 and 30.
@@ -93,11 +94,25 @@ export function addWordScreen({
   let link;
   let linkDropped = false;
   const offers = el("div.kaishi-offer");
+
+  // #284: "Auch andersherum abfragen", as Noji's Reverse. Whether an edited
+  // card has one is read from the phone's copy of the deck, where its reverse
+  // is a card of its own (`reverse_of`). Until that copy has been read the
+  // form does not know, and an edit then leaves the reverse as it is rather
+  // than switching it off.
+  let reverse = false;
+  let reverseKnown = !editing;
+  const reverseSlot = el("div.add-reverse");
   loadDeck()
     .then((deck) => {
       kaishi = [...deck.values()].filter((c) => c.deck === "kaishi");
       if (editing && !linkDropped) link = kaishiOf(card, kaishi);
       drawOffers();
+      if (editing && !reverseKnown) {
+        reverse = [...deck.values()].some((c) => c.reverse_of === card.id && !c.deleted_at);
+        reverseKnown = true;
+        drawReverse();
+      }
     })
     .catch(() => {
       /* no cache yet: the form works, it just offers nothing */
@@ -177,6 +192,7 @@ export function addWordScreen({
           el("p.add-hint", { text: "In Romaji oder Kana, so wie du es in Noji schreiben würdest." }),
           offers,
         ),
+        reverseSlot,
         ...(moreOpen
           ? [
               group(
@@ -224,6 +240,41 @@ export function addWordScreen({
       focusAsked = true;
       setTimeout(() => fields.meaning?.focus(), 50);
     }
+  }
+
+  /**
+   * #284: the switch, in its own slot like the Kaishi offers, so setting it
+   * never redraws the fields under her keyboard. Not reset by "Speichern und
+   * nächste": in Noji, too, it stays on for the cards that follow.
+   */
+  function drawReverse() {
+    render(
+      reverseSlot,
+      el(
+        "span.copy",
+        {},
+        el("span.name", { text: "Auch andersherum abfragen" }),
+        el("span.note", {
+          text: "Beim Karte-Umdrehen kommt sie dann ein zweites Mal, mit der anderen Seite vorne. Jede Richtung hat ihren eigenen Lernstand, wie in Noji.",
+        }),
+      ),
+      el(
+        "button.toggle",
+        {
+          type: "button",
+          role: "switch",
+          "aria-checked": String(reverse),
+          "aria-label": "Auch andersherum abfragen",
+          disabled: !reverseKnown,
+          onclick: () => {
+            reverse = !reverse;
+            seen(reverse ? "reverse_on" : "reverse_off");
+            drawReverse();
+          },
+        },
+        el("span.knob"),
+      ),
+    );
   }
 
   /**
@@ -492,6 +543,7 @@ export function addWordScreen({
       tags: [...chosen],
       deckId: deck?.id,
       kaishiId,
+      ...(reverseKnown ? { reverse } : {}),
     };
     try {
       // Editing sends the whole card; a field she emptied is left out and the
@@ -528,5 +580,6 @@ export function addWordScreen({
   }
 
   draw();
+  drawReverse();
   return root;
 }

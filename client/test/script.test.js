@@ -114,6 +114,19 @@ describe("選ぶ's wrong answers (#135, #137)", () => {
     assert.equal(flipsMeaningFirst(ka, "meaning"), false, "a kana's front is the character");
   });
 
+  it("asks a reverse the other way round from its original, whichever way that is (#284)", () => {
+    const back = { ...densha, id: -99, reverse_of: densha.id };
+    assert.equal(flipsMeaningFirst(back), false, "her German-first list: Japanese in front");
+    assert.equal(flipsMeaningFirst(back, "meaning"), false);
+    assert.equal(flipsMeaningFirst(back, "word"), true, "a deck turned round turns its reverses too");
+  });
+
+  it("lists a word once, not its reverse as well (#284)", () => {
+    const deck = { id: 7, name: "100 vokabeln" };
+    const own = (id, extra = {}) => ({ id, deck: "personal", deck_id: 7, word: "Kyoudai", word_meaning: "Geschwister", ...extra });
+    assert.deepEqual(cardsOfDeck(deck, [own(-5), own(-9, { reverse_of: -5 })]).map((c) => c.id), [-5]);
+  });
+
   it("keeps her German lists and the English deck apart", () => {
     assert.deepEqual(meaningPool(densha, pool, false).map((c) => c.id), [-2]);
     assert.ok(!meaningPool(taberu, pool, true).some((c) => c.list_name));

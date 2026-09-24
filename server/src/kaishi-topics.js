@@ -25,6 +25,7 @@
  */
 
 import { MAX_TAGS } from "./cards.js";
+import { mirror } from "./reverse.js";
 // The client's own module, as in queue.js: the same keys the search uses.
 import { romajiQuery, searchRomaji } from "../../client/src/romaji.js";
 
@@ -82,7 +83,9 @@ export function offerKaishiTopics(db, { cardIds, now = Date.now() } = {}) {
   const pending = db
     .prepare(
       `SELECT id, word, word_reading, word_audio, sentence FROM cards
-        WHERE deck = 'personal' AND topics_offered_at IS NULL AND deleted_at IS NULL`,
+        WHERE deck = 'personal' AND topics_offered_at IS NULL AND deleted_at IS NULL
+          -- A reverse (#284) takes its original's topics by \`mirror\`.
+          AND reverse_of IS NULL`,
     )
     .all()
     .filter((c) => !cardIds || cardIds.includes(c.id));
@@ -110,6 +113,7 @@ export function offerKaishiTopics(db, { cardIds, now = Date.now() } = {}) {
         touch.run(seconds, card.id);
         gained += 1;
       }
+      mirror(db, card.id, seconds);
     }
   })();
   return gained;

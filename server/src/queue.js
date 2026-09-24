@@ -294,11 +294,18 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // Someone else's own words are never in her queue (#84).
   const visible = visibleTo(userId);
 
+  // #284: a reverse asks its original with the other side in front, which
+  // only めくる has. In any other way of practising it would ask the
+  // original's question a second time — 選ぶ already shows the Japanese and
+  // asks for the German. Without a mode (the deck page's count) it counts,
+  // as Noji counts it.
+  const forwardOnly = mode != null && mode !== "flip" ? " AND c.reverse_of IS NULL" : "";
+
   const base = (extra, params) =>
     `SELECT c.id FROM cards c
       LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
       ${starredOnly ? "JOIN card_stars st ON st.card_id = c.id AND st.user_id = ? AND st.starred = 1" : ""}
-      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deckKey, deck, list, tag }, params, userId)} ${extra}`;
+      WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deckKey, deck, list, tag }, params, userId)}${forwardOnly} ${extra}`;
 
   const run = (extra, order, extraParams = []) => {
     const params = [userId];
@@ -332,11 +339,18 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     newAllowance === 0
       ? []
       : run(
-          "AND s.card_id IS NULL",
+          // #284: a reverse is new only once its original is not — answered
+          // on an earlier day of hers. Otherwise the two meet in one session
+          // and the second is answered by the first, which she saw a minute
+          // ago; and a word she has never met would arrive back to front.
+          `AND s.card_id IS NULL AND (c.reverse_of IS NULL OR EXISTS (
+             SELECT 1 FROM review_events e
+              WHERE e.user_id = ? AND e.card_id = c.reverse_of AND e.reviewed_at < ?))`,
           // Personal cards have no rank; among them, ascending id — the order
           // of an imported list (#137), and newest first for words she added.
-          "ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC LIMIT ?",
-          [newAllowance],
+          // A reverse takes its original's place, right after it (#284).
+          "ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, coalesce(c.reverse_of, c.id) ASC, c.reverse_of IS NOT NULL LIMIT ?",
+          [userId, dayStart, newAllowance],
         );
 
   let groups = { due, lapsed, fresh };
@@ -779,7 +793,8 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
   const whereParams = [...visible.params];
   // Search finds words (#158): a kana card is a letter, and "ka" would bring
   // か and カ up among the Kaishi words, opening a topics sheet for a letter.
-  let where = `WHERE c.deleted_at IS NULL AND c.deck NOT IN ('hiragana', 'katakana') AND ${visible.sql}`;
+  // A reverse (#284) is the same word again, and a word is listed once.
+  let where = `WHERE c.deleted_at IS NULL AND c.reverse_of IS NULL AND c.deck NOT IN ('hiragana', 'katakana') AND ${visible.sql}`;
   let romajiKey;
 
   if (q) {

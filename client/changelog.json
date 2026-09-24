@@ -1,5 +1,14 @@
 [
   {
+    "version": "v162",
+    "summary": "Karten, die du in Noji in beide Richtungen lernst, kommen jetzt auch hier andersherum.",
+    "notes": [
+      "61 Karten in „100 vokabeln“ hast du in Noji auf „Reverse“ gestellt. Beim Karte-Umdrehen kommen sie jetzt ein zweites Mal, mit Japanisch vorne.",
+      "Jede Richtung hat ihren eigenen Lernstand, wie in Noji. Die andere Richtung kommt erst, wenn du die Karte an einem früheren Tag schon einmal geübt hast.",
+      "Beim Bearbeiten einer Karte kannst du das mit „Auch andersherum abfragen“ an- und ausschalten."
+    ]
+  },
+  {
     "version": "v161",
     "summary": "„Nochmal üben“ nach einer Übung bringt nur die Wörter, die du noch nicht kannst, und ein paar neue.",
     "notes": [

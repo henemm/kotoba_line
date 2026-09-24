@@ -9,3 +9,4 @@
 260	2026-09-20	install_hint_shown,install_hint_closed,install_accepted,install_hint_never	Lesen die Reise-Teilnehmer die Anleitung zum Home-Bildschirm, installieren sie die App, und tippt jemand „Nicht mehr zeigen“?
 99	2026-09-21	reminder_on,reminder_off,remind_offer_shown,remind_offer_yes,remind_offer_no,push_granted	Schaltet jemand die Erinnerung „noch nicht geübt“ ein, und erlaubt endlich jemand die Benachrichtigungen?
 273	2026-09-24	streak_shown,streak_stats_tapped	Sieht Charlotte nach der Übung die Serie wie bei Noji, und tippt sie „Statistik“ an?
+284	2026-09-24	reverse_shown,reverse_on,reverse_off	Kommen bei Charlotte die Gegenrichtungen beim Karte-Umdrehen dran, und schaltet sie selbst welche an oder aus?
