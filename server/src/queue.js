@@ -224,6 +224,30 @@ function byTag(tag, params, userId) {
   );
 }
 
+/**
+ * #284: a word and its reverse never in one session. The one met second is
+ * answered by the one met first — measured live on 2026-09-24: 食べる came
+ * due as "essen" and, two cards later, new as 食べる, with "essen" still on
+ * screen a minute before. It happens on exactly the day a reverse is first
+ * offered, since the original is then usually due too. So the reverse waits
+ * for a day on which its original is not in the session, as Anki buries a
+ * card's siblings. It stays due; nothing about its schedule changes.
+ */
+export function siblingsApart({ due, lapsed, fresh }, db) {
+  const all = [...due, ...lapsed, ...fresh];
+  const reverses = all.filter((id) => id < 0);
+  if (reverses.length === 0) return { due, lapsed, fresh };
+  const inQueue = new Set(all);
+  const originalOf = new Map(
+    db
+      .prepare(`SELECT id, reverse_of FROM cards WHERE reverse_of IS NOT NULL AND id IN (${reverses.map(() => "?").join(",")})`)
+      .all(...reverses)
+      .map((r) => [r.id, r.reverse_of]),
+  );
+  const keep = (id) => !inQueue.has(originalOf.get(id));
+  return { due: due.filter(keep), lapsed: lapsed.filter(keep), fresh: fresh.filter(keep) };
+}
+
 export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() / 1000), random = Math.random) {
   const { mode, deckKey, deck, list, tag, only, timeZone = DEFAULT_TIME_ZONE } = opts;
   const filtered = isFiltered({ tag, only });
@@ -353,7 +377,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
           [userId, dayStart, newAllowance],
         );
 
-  let groups = { due, lapsed, fresh };
+  let groups = siblingsApart({ due, lapsed, fresh }, db);
 
   // The day's maximum takes reviews first, then new cards, in the order the
   // session meets them — as Noji does. What it holds back is due tomorrow still.
