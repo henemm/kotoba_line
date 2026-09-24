@@ -521,6 +521,7 @@ function openDeckOptions() {
           hiddenModes: settings.hiddenModes,
           newPerDay: settings.newPerDay,
           maxPerDay: settings.maxPerDay ?? null,
+          ...(settings.flipFront ? { flipFront: settings.flipFront } : {}),
         })
         .catch(() => {});
     },
@@ -529,6 +530,13 @@ function openDeckOptions() {
     onClose: closeSheet,
   });
   renderApp();
+}
+
+/** One deck's settings by key (#275): the open deck's, else the deck list's. */
+function deckSettingsFor(key) {
+  if (!key) return undefined;
+  if (state.deck?.key === key) return state.deck.settings;
+  return state.lastDecks?.find((d) => d.key === key)?.settings;
 }
 
 /** A deck from `/api/decks`' shape, for one just made and not yet counted. */
@@ -1283,6 +1291,10 @@ function renderApp() {
       // are Kaishi's, and "say this sentence" is not a beginner's first step.
       speakSource: isTravelDeck(state.session.filters?.deckKey) ? "word" : state.settings.speakSource,
       recordingEnabled: state.settings.recordingEnabled,
+      // #275: the front her deck asks for in めくる. The open deck first, as
+      // its options sheet may have just changed it; a session resumed from
+      // the deck list finds its deck there.
+      flipFront: deckSettingsFor(state.session.filters?.deckKey)?.flipFront,
       onExit: () => {
         state.session = undefined;
         // Her answers change the count (#106).

@@ -221,6 +221,8 @@ export default async function deckRoutes(app) {
             newPerDay: { type: "integer", minimum: NEW_PER_DAY_MIN, maximum: NEW_PER_DAY_MAX },
             // Migration 017: null is "no limit".
             maxPerDay: { type: ["integer", "null"], minimum: MAX_PER_DAY_MIN, maximum: MAX_PER_DAY_MAX },
+            // #275: what „Karte umdrehen" shows first.
+            flipFront: { type: "string", enum: ["word", "meaning"] },
           },
         },
       },

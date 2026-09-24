@@ -1,5 +1,14 @@
 [
   {
+    "version": "v156",
+    "summary": "Bei „Karte umdrehen“ stellst du jetzt pro Deck ein, was vorne steht: Deutsch oder Japanisch.",
+    "notes": [
+      "Im Deck unter „Optionen“: „Karte umdrehen: vorne steht“ – Deutsch oder Japanisch.",
+      "So kannst du auch Kaishi zuerst auf Deutsch üben, wie deine eigenen Decks. Bisher stand dort immer zuerst das japanische Wort.",
+      "Solange du nichts änderst, bleibt alles wie bisher."
+    ]
+  },
+  {
     "version": "v155",
     "summary": "Die Anleitung „Zum Home-Bildschirm“ kannst du jetzt für immer wegtippen.",
     "notes": [

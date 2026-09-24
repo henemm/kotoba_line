@@ -196,6 +196,9 @@ export function sessionScreen({
   // everywhere in this session. What a ♪ plays is still labelled — that is
   // about the card, not about recording.
   recordingEnabled = true,
+  // #275: the deck's "Karte umdrehen: vorne …", or undefined outside a deck
+  // (`flipsMeaningFirst`).
+  flipFront,
   // 51: a session she left. The queue and the position are restored; the
   // answers she already gave are in the outbox and never came from here.
   resuming,
@@ -1359,7 +1362,7 @@ export function sessionScreen({
   /** めくる — the classic flashcard, and the only mode with four ratings. */
   function drawFlip(card, area, answers) {
     prime(isKana(card) ? card.word_audio : soundOf(card).file, showsSentence(card, japanese) && card.sentence_audio);
-    if (flipsMeaningFirst(card)) {
+    if (flipsMeaningFirst(card, flipFront)) {
       // No speaker and no reading aloud: the word is the answer. But she is
       // meant to say it herself before turning the card, the same as 話す
       // (#32) — so this front records the attempt, and the back puts it
@@ -1613,7 +1616,7 @@ export function sessionScreen({
     // playback included (code review, 2026-09-17).
     stopAllRecording();
     stop();
-    const meaningFirst = flipsMeaningFirst(card);
+    const meaningFirst = flipsMeaningFirst(card, flipFront);
     // #113: the word stays where the front showed it — or, with the meaning on
     // the front (#137), the meaning does, and the word comes in under it.
     const settle = holdInPlace(area, meaningFirst ? ".prompt-label" : ".word");
@@ -2042,12 +2045,18 @@ export function sentenceKana(sentenceFurigana) {
  *
  * Her Noji lists were learned that way round — German on the front, the
  * Japanese on the back — and a card from them keeps it. The Kaishi deck keeps
- * the word on the front: its meanings are English, and those cards were never
- * asked the other way. Decided by where a card came from rather than by a
- * setting, so one session over both decks asks each card the way it was
- * written.
+ * the word on the front, as it always has.
+ *
+ * #275: `front` is the deck's own choice from its options ("word" or
+ * "meaning"), for a session started in that deck. Charlotte asked for Kaishi
+ * German first; that it kept the word first because "its meanings are
+ * English" stopped being true with #134. Without a deck — a session saved by
+ * an older shell — each card goes by where it came from, as before. A kana
+ * card never turns round: its front is the character, and its "meaning" is
+ * the reading, which is the answer.
  */
-export const flipsMeaningFirst = (card) => isInHerDeck(card);
+export const flipsMeaningFirst = (card, front) =>
+  isKana(card) ? false : front ? front === "meaning" : isInHerDeck(card);
 
 /**
  * A card of hers in one of her decks (#137, migration 016) — all of hers are.

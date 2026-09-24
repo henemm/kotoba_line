@@ -73,7 +73,7 @@ describe("migration 016: her lists become decks", () => {
     for (const file of readdirSync(migrations).filter((f) => f.endsWith(".sql") && f > "016_decks.sql").sort()) {
       db.exec(readFileSync(new URL(file, migrations), "utf8"));
     }
-    const expected = { hiddenModes: ["speak", "type"], newPerDay: 15, maxPerDay: null, extraNew: 0, extraNewDay: null };
+    const expected = { hiddenModes: ["speak", "type"], newPerDay: 15, maxPerDay: null, extraNew: 0, extraNewDay: null, flipFront: "meaning" };
     assert.deepEqual(deckSettings(db, her.id, `deck:${idOf(her.id, "100 vokabeln")}`), expected);
     assert.deepEqual(deckSettings(db, her.id, "list:100 vokabeln"), expected, "and the old key reads the same row");
   });
@@ -127,6 +127,27 @@ describe("her own decks (#137)", () => {
     assert.equal(moved.body.card.deck_id, b.id);
     const edited = await call("PUT", `/api/cards/${card.id}`, { word: "Densha", meaning: "Der Zug" });
     assert.equal(edited.body.card.deck_id, b.id, "a phone from before decks edits without moving");
+    await app.close();
+  });
+
+  it("lets each deck choose what „Karte umdrehen“ shows first (#275)", async () => {
+    const { app, db, user, call } = await signedIn();
+    const deck = (await call("POST", "/api/decks", { name: "100 vokabeln" })).body.deck;
+    const front = async (key) => deckSettings(db, user.id, key).flipFront;
+    // Unset, every deck does what it did before the setting existed.
+    assert.equal(await front("kaishi"), "word");
+    assert.equal(await front(`deck:${deck.id}`), "meaning");
+    const set = await call("PATCH", "/api/decks/settings", { deckKey: "kaishi", flipFront: "meaning" });
+    assert.equal(set.body.settings.flipFront, "meaning");
+    assert.equal(await front("kaishi"), "meaning");
+    // Another setting on the same deck leaves it alone.
+    await call("PATCH", "/api/decks/settings", { deckKey: "kaishi", newPerDay: 10 });
+    assert.equal(await front("kaishi"), "meaning");
+    assert.equal(await front(`deck:${deck.id}`), "meaning", "only that deck");
+    assert.equal((await call("PATCH", "/api/decks/settings", { deckKey: "kaishi", flipFront: "german" })).status, 400);
+    // A kana deck's front is the character, whatever is sent.
+    const kana = await call("PATCH", "/api/decks/settings", { deckKey: "hiragana", flipFront: "meaning" });
+    assert.equal(kana.body.settings.flipFront, "word");
     await app.close();
   });
 

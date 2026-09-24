@@ -96,6 +96,14 @@ describe("選ぶ's wrong answers (#135, #137)", () => {
     assert.equal(flipsMeaningFirst({ ...taberu, list_name: null }), false);
   });
 
+  it("follows the deck's own choice once it has one (#275)", () => {
+    assert.equal(flipsMeaningFirst(taberu, "meaning"), true, "Kaishi German first, as Charlotte asked");
+    assert.equal(flipsMeaningFirst(densha, "word"), false);
+    assert.equal(flipsMeaningFirst(densha, "meaning"), true);
+    const ka = { id: 9, word: "か", word_reading: "か", word_meaning: "ka", deck: "hiragana" };
+    assert.equal(flipsMeaningFirst(ka, "meaning"), false, "a kana's front is the character");
+  });
+
   it("keeps her German lists and the English deck apart", () => {
     assert.deepEqual(meaningPool(densha, pool, false).map((c) => c.id), [-2]);
     assert.ok(!meaningPool(taberu, pool, true).some((c) => c.list_name));
