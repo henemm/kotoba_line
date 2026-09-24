@@ -425,6 +425,8 @@ function practiseNumbers() {
 function numbersChanged() {
   numbers = undefined;
   decks = undefined;
+  // #274: the open deck's card list says when each card comes back.
+  state.deckCards?.block?.refreshDue?.();
 }
 
 /**
