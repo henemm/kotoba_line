@@ -470,6 +470,34 @@ export function deckProgress(db, userId, deckKey) {
 }
 
 /**
+ * When each card of a deck she has answered comes back (#274) — Noji's card
+ * list says "Heute", "Morgen", "In 9 Tagen" above each card, and Charlotte
+ * sent it to show what ours lacks.
+ *
+ * Card id → `{ band, days }`: the band as the deck page counts it, and the
+ * calendar days from her today to the card's due day, 0 for today or
+ * anything overdue. Calendar days on her device's clock (#122), the way
+ * review cards fall due (#215) — a learning step due at 23:50 is "Heute",
+ * one due at 00:10 is "Morgen". A card never answered has no entry: Noji
+ * leaves those unlabelled too.
+ */
+export function deckDue(db, userId, deckKey, now = Math.floor(Date.now() / 1000), timeZone = DEFAULT_TIME_ZONE) {
+  const params = [userId];
+  const visible = visibleTo(userId);
+  params.push(...visible.params);
+  const sql = `SELECT c.id, s.due_at, s.last_review, s.reps FROM cards c
+    JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
+    WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deckKey }, params, userId)}`;
+  const today = Date.parse(`${dayIn(now, timeZone)}T00:00:00Z`);
+  const due = {};
+  for (const row of db.prepare(sql).all(...params)) {
+    const days = Math.round((Date.parse(`${dayIn(row.due_at, timeZone)}T00:00:00Z`) - today) / 86400000);
+    due[row.id] = { band: progressBand(row), days: Math.max(0, days) };
+  }
+  return due;
+}
+
+/**
  * The practise tab's deck list (#137): her decks, the way Noji starts — each
  * with its cards for today.
  *

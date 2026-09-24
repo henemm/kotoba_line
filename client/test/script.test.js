@@ -4,7 +4,17 @@ import { MODES } from "../src/modes.js";
 import { toRomaji } from "../src/romaji.js";
 import { appName, modeName, showsScript, shownWord, visibleModes, wordRomaji } from "../src/script.js";
 import { canVoice, flipsMeaningFirst, isInHerDeck, meaningPool, showsSentence } from "../src/screens/session.js";
-import { cardsOfDeck } from "../src/screens/deck-cards.js";
+import { cardsOfDeck, dueLabel } from "../src/screens/deck-cards.js";
+
+describe("dueLabel (#274)", () => {
+  it("says it the way Noji's card list does", () => {
+    assert.deepEqual([0, 1, 2, 9, 22].map(dueLabel), ["Heute", "Morgen", "In 2 Tagen", "In 9 Tagen", "In 22 Tagen"]);
+  });
+
+  it("counts long intervals in months and years, not in hundreds of days", () => {
+    assert.deepEqual([30, 75, 400, 800].map(dueLabel), ["In einem Monat", "In 3 Monaten", "In einem Jahr", "In 2 Jahren"]);
+  });
+});
 
 describe("Japanese script off (#135)", () => {
   const kaishi = { word: "大丈夫", word_furigana: "大丈夫[だいじょうぶ]", word_reading: "だいじょうぶ" };
