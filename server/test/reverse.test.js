@@ -20,8 +20,8 @@ async function setup() {
   const { card } = await json("POST", "/api/cards", { word: "Kyoudai", meaning: "Geschwister", reverse: true });
   const deckKey = `deck:${card.deck_id}`;
   const reverseRow = () => db.prepare("SELECT * FROM cards WHERE reverse_of = ?").get(card.id);
-  const answer = (cardId, n, reviewedAt, mode = "flip") =>
-    json("POST", "/api/events", { events: [{ id: uid(n), card_id: cardId, mode, rating: 3, reviewed_at: reviewedAt }] });
+  const answer = (cardId, n, reviewedAt, mode = "flip", rating = 3) =>
+    json("POST", "/api/events", { events: [{ id: uid(n), card_id: cardId, mode, rating, reviewed_at: reviewedAt }] });
   const queue = (mode) => json("GET", `/api/queue?deckKey=${encodeURIComponent(deckKey)}${mode ? `&mode=${mode}` : ""}`);
   return { app, db, card, deckKey, call, json, reverseRow, answer, queue };
 }
@@ -69,18 +69,34 @@ describe("a card with its reverse on (#284)", () => {
     let flip = await queue("flip");
     assert.deepEqual(flip.cardIds, [card.id], "the word first, the right way round");
 
-    await answer(card.id, 1, now - 60);
+    // Leicht, so the original is not due again yet and the two cannot meet.
+    await answer(card.id, 2, now - 2 * DAY, "flip", 4);
     flip = await queue("flip");
-    assert.ok(!flip.cardIds.includes(rev.id), "not on the day she met the word");
-
-    await answer(card.id, 2, now - 2 * DAY);
-    flip = await queue("flip");
+    assert.ok(!flip.cardIds.includes(card.id));
     assert.ok(flip.cardIds.includes(rev.id), "the day after, it is new");
     for (const mode of ["choose", "listen", "speak", "type"]) {
       assert.ok(!(await queue(mode)).cardIds.includes(rev.id), `${mode} would ask the original's question again`);
     }
     // The deck page (no mode) counts it, as Noji's 380 does.
     assert.ok((await queue()).cardIds.includes(rev.id));
+    await app.close();
+  });
+
+  it("is not new on the day she met the word", async () => {
+    const { app, card, reverseRow, answer, queue } = await setup();
+    await answer(card.id, 1, Math.floor(Date.now() / 1000) - 60);
+    assert.ok(!(await queue("flip")).cardIds.includes(reverseRow().id));
+    await app.close();
+  });
+
+  it("waits while its original is in the same session — as live on 2026-09-24, 食べる after „essen“", async () => {
+    const { app, card, reverseRow, answer, queue } = await setup();
+    const rev = reverseRow();
+    // Gut two days ago: the original is due again today, and the reverse new.
+    await answer(card.id, 1, Math.floor(Date.now() / 1000) - 2 * DAY);
+    const flip = await queue("flip");
+    assert.ok(flip.cardIds.includes(card.id));
+    assert.ok(!flip.cardIds.includes(rev.id), "the reverse would be answered by its original");
     await app.close();
   });
 
