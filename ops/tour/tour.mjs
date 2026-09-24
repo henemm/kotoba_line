@@ -291,9 +291,18 @@ async function answerOne(page) {
   if (await next.count()) await next.click();
   await page.waitForTimeout(2800);
 }
-/** Answers until the summary shows — Hiragana's five new cards a day. */
+/**
+ * Answers until the session ends — Hiragana's five new cards a day. Since
+ * #273 the end can be the streak screen first: the tour account's answers
+ * take the day to ten, and it comes before the summary.
+ */
 async function finish(page) {
-  for (let i = 0; i < 20 && !(await page.locator(".summary").count()); i++) await answerOne(page);
+  for (let i = 0; i < 20 && !(await page.locator(".summary, .streak-screen").count()); i++) await answerOne(page);
+}
+/** #273: past the streak screen, to the summary it leads to. */
+async function pastStreak(page) {
+  const go = page.getByRole("button", { name: "Fortfahren", exact: true });
+  if (await go.count()) await go.click();
 }
 const idle = (ms) => async (page) => page.waitForTimeout(ms);
 
@@ -344,7 +353,8 @@ export const SCREENS = [
     { name: `${mode} · Rückseite`, steps: [deck("Kaishi"), way(button), idle(1500), reveal, idle(900)] },
   ]),
   { name: "Übung verlassen?", steps: [deck("Kaishi"), way("Bedeutungen wählen"), idle(1200), answerOne, (p) => p.locator("button.session-close").click()] },
-  { name: "Zusammenfassung", steps: [deck("Hiragana"), way("Bedeutungen wählen"), idle(1200), finish, idle(1500)] },
+  { name: "Serie", steps: [deck("Hiragana"), way("Bedeutungen wählen"), idle(1200), finish, idle(1500)] },
+  { name: "Zusammenfassung", steps: [deck("Hiragana"), way("Bedeutungen wählen"), idle(1200), finish, idle(1500), pastStreak, idle(1500)] },
   { name: "Hiragana", steps: [deck("Hiragana")] },
   { name: "Hiragana · Zeichen", steps: [deck("Hiragana"), idle(800), (p) => p.locator("button.kana-tile").first().click()] },
   { name: "Eigenes Deck", steps: [deck("Rundgang")] },
