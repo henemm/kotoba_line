@@ -8,7 +8,7 @@
  * the end, a session she leaves early never reached it: the multi-day
  * simulation measured a Nochmal card back in the same session 7 % of the
  * time for twenty-card sessions on the train, and 100 % only for someone who
- * always finishes all sixty. Three cards is about a minute in every mode.
+ * always finishes all sixty. How many cards on: see `RESHOW_AFTER` (#272).
  *
  * #242 too: Schwer and Gut on a card still in its learning steps (8 and 15
  * minutes since v140, Noji's numbers) bring it back in the same session once
@@ -21,7 +21,15 @@
  * A copy there would keep passing after these changed.
  */
 export const MAX_RESHOWS = 3;
-export const RESHOW_AFTER = 3;
+// #272: three was too close. Charlotte, 2026-09-24: „das war nur 2 Vokabeln
+// weiter" — at her pace (median 6 s a card, her whole log) three cards were
+// 24 s, so she stopped pressing Nochmal (10× that day, 100× Schwer) and
+// Schwer kept cards on the 8-minute step all day. Ten cards measured over the
+// same log: back after a median 105 s, which is what "1 Min" under the button
+// promises, and still in the same session for 54 % of her Nochmal answers
+// counting only sessions that went on — a session that simply runs out puts
+// the card at its end (`reshowPosition`), so it is not lost there either.
+export const RESHOW_AFTER = 10;
 
 const RATING_AGAIN = 1;
 

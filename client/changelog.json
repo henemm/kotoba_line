@@ -1,5 +1,14 @@
 [
   {
+    "version": "v157",
+    "summary": "Nach „Nochmal“ kommt die Karte erst nach 10 anderen wieder, nicht schon nach 3.",
+    "notes": [
+      "Bisher war eine Nochmal-Karte nach ein paar Sekunden wieder da. Jetzt lernst du erst 10 andere Karten, bei deinem Tempo etwa eine bis zwei Minuten.",
+      "Sind weniger als 10 Karten übrig, kommt sie am Ende der Übung.",
+      "„Schwer“ holt eine Karte nach 8 Minuten zurück. Für Wörter, die du nicht wusstest, ist „Nochmal“ jetzt wieder die richtige Wahl."
+    ]
+  },
+  {
     "version": "v156",
     "summary": "Bei „Karte umdrehen“ stellst du jetzt pro Deck ein, was vorne steht: Deutsch oder Japanisch.",
     "notes": [

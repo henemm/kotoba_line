@@ -65,7 +65,9 @@ describe("thirty days of practice (#242)", () => {
     const { ratings } = experience(showings);
     // She finishes every session here, so every Nochmal comes round.
     assert.equal(ratings["neu:1"].sameSession, 100);
-    assert.equal(ratings["neu:1"].median, "1 Min");
+    // Ten cards on (#272) at this simulation's 20 s an answer. At Charlotte's
+    // own pace, 6 s, the same ten cards measured 105 s over her log.
+    assert.equal(ratings["neu:1"].median, "4 Min");
   });
 
   it("brings Schwer and Gut back in the same session when their minutes run out in it (#242)", async () => {
@@ -111,7 +113,13 @@ describe("thirty days of practice (#242)", () => {
     // is on, not the one before, which changes which cards are due in it:
     // 79 % (92 of 117) — measured 2026-09-19, and of the misses, 4 were not
     // among a session's last three cards, where before #250 it was 7.
-    assert.ok(ratings["neu:1"].sameSession >= 75, `${ratings["neu:1"].sameSession} %`);
+    //
+    // #272 moved it ten cards on, because three was 24 s at her pace and she
+    // stopped pressing Nochmal. The price is paid here, in twenty-card
+    // sessions she abandons: 47 % (measured 2026-09-24). The rest are due a
+    // minute later and open the next session; nothing is lost, it is only
+    // not seen again on the same train.
+    assert.ok(ratings["neu:1"].sameSession >= 40, `${ratings["neu:1"].sameSession} %`);
     // What the buttons say for a new card is Noji's.
     assert.deepEqual(
       [1, 2, 3, 4].map((r) => ratings[`neu:${r}`]?.label),

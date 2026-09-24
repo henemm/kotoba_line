@@ -231,8 +231,8 @@ export function sessionScreen({
   // until she dismisses it, not vanish with the card that happened to be on
   // screen when it appeared.
   let showBreakHint = false;
-  // #214: a card she rated Nochmal goes back into this queue three cards on
-  // (#242, `reshowPosition` — it was the end) and comes round again until it
+  // #214: a card she rated Nochmal goes back into this queue ten cards on
+  // (#272; three in #242, and the end before that — `reshowPosition`) and comes round again until it
   // earns a Gut — what the "1 Min" under the button
   // already means, and what Noji does ("shown for you in 1 minute in the
   // same study session again"). Before this the queue was fixed, and on

@@ -1083,8 +1083,8 @@ describe("comesRoundAgain (#214, shared with the multi-day simulation, #242)", (
 });
 
 describe("reshowPosition (#242)", () => {
-  it("puts a Nochmal card three cards on, or at the end when fewer are left", () => {
-    assert.equal(reshowPosition(0, 60), 4);
+  it("puts a Nochmal card ten cards on, or at the end when fewer are left (#272)", () => {
+    assert.equal(reshowPosition(0, 60), 11);
     assert.equal(reshowPosition(10, 12), 12);
     assert.equal(reshowPosition(59, 60), 60);
   });
