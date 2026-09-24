@@ -7,6 +7,7 @@ import { practiseScreen } from "./screens/practise.js";
 import { decksScreen } from "./screens/decks.js";
 import { deckOptionsSheet } from "./screens/deck-options.js";
 import { jokerSpentScreen, statsScreen, streakResetScreen } from "./screens/stats.js";
+import { streakScreen } from "./screens/streak.js";
 import { browseScreen } from "./screens/browse.js";
 import { cardTopicsSheet } from "./screens/card-topics.js";
 import { addWordScreen } from "./screens/own-deck.js";
@@ -1231,6 +1232,26 @@ function renderApp() {
     return;
   }
 
+  // #273: Noji's order — the streak first, then the session's summary.
+  if (state.summary?.streak) {
+    render(
+      app,
+      streakScreen({
+        stats: state.summary.streak,
+        onContinue: () => {
+          state.summary.streak = undefined;
+          renderApp();
+        },
+        onStats: () => {
+          seen("streak_stats_tapped");
+          state.summary = undefined;
+          goToTab("stats");
+        },
+      }),
+    );
+    return;
+  }
+
   if (state.summary) {
     render(
       app,
@@ -1309,6 +1330,7 @@ function renderApp() {
         numbersChanged();
         state.resumable = undefined;
         state.summary = result.empty ? undefined : result;
+        if (state.summary?.streak) seen("streak_shown", String(state.summary.streak.streak));
         offerPush(state.summary);
         // Design 11. This used to read `state.jokerBadge || false` on a level
         // up, so the badge could never light (#86).

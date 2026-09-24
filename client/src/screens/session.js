@@ -19,6 +19,7 @@ import { kanaMnemonicBlock } from "../ui/kana-mnemonic.js";
 import { stopAllRecording } from "../recording.js";
 import { soundButton } from "../ui/sound-button.js";
 import { infoButton } from "../ui/info.js";
+import { madeTodayCount } from "./streak.js";
 
 
 /**
@@ -1894,6 +1895,9 @@ export function sessionScreen({
       // A joker is earned by the day's tenth review, which happens inside a
       // session, so the same two server answers that give the XP give this.
       jokerEarned: Boolean(before && after && after.jokers > before.jokers),
+      // #273: Noji's streak screen, once a day — after the session whose
+      // answers made today count. The stats it draws are the same answer.
+      streak: madeTodayCount(before, after) ? after : undefined,
     });
   }
 

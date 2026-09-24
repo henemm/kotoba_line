@@ -51,6 +51,14 @@
   --row-band-learning: #8A93A8;
   --row-band-young:    #B9C0D0;
 
+  /* #273: the streak screen, after Noji's — its flame and its frozen days.
+     Not the ways of practising' colours (design 02): a warm amber that none
+     of them is, and an ice blue drawn only as a tint. Used there and on
+     nothing else. */
+  --streak:     #F5A623;
+  --joker-ice:  rgba(120, 190, 235, 0.28);
+  --joker-edge: #78BEEB;
+
   /* KanjiVG draws its strokes black (#158): turned round on the dark ground. */
   --stroke-drawing: invert(0.92);
 
@@ -127,6 +135,9 @@
   --row-band-learning: #A3ABBC;
   --row-band-young:    #6B7489;
   --stroke-drawing: none;
+  --streak:     #E08A00;
+  --joker-ice:  rgba(60, 150, 215, 0.22);
+  --joker-edge: #3C96D7;
   color-scheme: light;
 }
 
@@ -154,6 +165,9 @@
     --row-band-learning: #A3ABBC;
     --row-band-young:    #6B7489;
     --stroke-drawing: none;
+    --streak:     #E08A00;
+    --joker-ice:  rgba(60, 150, 215, 0.22);
+    --joker-edge: #3C96D7;
     color-scheme: light;
   }
 }

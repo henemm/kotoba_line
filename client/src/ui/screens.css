@@ -5076,3 +5076,127 @@ button.kana-tile:active {
 .ratings-info .info {
   margin: 0;
 }
+
+/* ── the streak, Noji's way (#273) ────────────────────────────────
+   Same order as the screen Charlotte sent: flame and number, the words,
+   this week Monday to Sunday, and at the foot the wide "Fortfahren" with a
+   small second button beside it where Noji has "Teilen" — ours goes to the
+   Stats tab. A joker day is Noji's frozen day: ice, in a square; a day that
+   counted is filled; today wears the flame's ring. */
+.streak-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--night);
+}
+.streak-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 var(--gutter);
+}
+.streak-count {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.streak-flame {
+  width: 56px;
+  height: 56px;
+  fill: none;
+  stroke: var(--streak);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.streak-number {
+  font-size: 88px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+.streak-words {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.streak-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  margin-top: 30px;
+}
+.streak-weekday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.streak-weekday-name {
+  font-size: 14px;
+  color: var(--ink);
+}
+.streak-day {
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.streak-day.counted,
+.streak-day.some {
+  background: var(--surface-hi);
+  color: var(--ink);
+  font-weight: 700;
+}
+.streak-day.joker {
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, var(--joker-ice) 0 6px, transparent 6px 9px), var(--joker-ice);
+  border: 2px solid var(--joker-edge);
+  color: var(--ink);
+  font-weight: 700;
+}
+.streak-day.today {
+  border: 2px solid var(--streak);
+  background: color-mix(in srgb, var(--streak) 30%, transparent);
+  color: var(--ink);
+  font-weight: 700;
+}
+.streak-note {
+  margin: 22px 0 0;
+  max-width: 320px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+.streak-actions {
+  flex: none;
+  display: flex;
+  gap: 12px;
+  padding: 0 var(--gutter) 30px;
+}
+.streak-actions .streak-continue {
+  flex: 1;
+  width: auto;
+}
+.streak-stats {
+  flex: none;
+  height: 58px;
+  padding: 0 18px;
+  border: 1.5px solid var(--surface-hi);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 15px/1 inherit;
+}

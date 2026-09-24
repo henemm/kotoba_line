@@ -31,6 +31,19 @@ export const UI_EVENT_NAMES = [
   "install_hint_closed",
   "install_accepted", // Chromium's own prompt, where there is one
   "install_dismissed",
+  // The seven below were sent by the client and refused here, and a refused
+  // batch is dropped whole (client/src/seen.js) — the #99 and #260 watches
+  // could never report them. ui-events.test.js now reads every name the
+  // client sends against this list.
+  "install_hint_never", // #260: „Nicht mehr zeigen"
+  "remind_offer_shown", // #99: the offer to allow the 18:00 reminder
+  "remind_offer_yes",
+  "remind_offer_no",
+  "remind_offer_closed",
+  "reminder_on", // #99: Settings → Erinnerung switched on / off
+  "reminder_off",
+  "streak_shown", // #273: the Noji-style streak screen after a session
+  "streak_stats_tapped",
 ];
 
 const schema = {
