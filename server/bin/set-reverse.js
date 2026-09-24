@@ -55,7 +55,7 @@ db.transaction(() => {
       continue;
     }
     if (args.dryRun) continue;
-    if (setReverse(db, matches[0].id, true, seconds)) result.switchedOn += 1;
+    if (setReverse(db, matches[0].id, true, seconds, user.id)) result.switchedOn += 1;
     else result.alreadyOn += 1;
   }
 })();

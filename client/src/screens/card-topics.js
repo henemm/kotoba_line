@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { showsScript, shownWord } from "../script.js";
-import { starButton, topicChips } from "../ui/card-marks.js";
+import { reverseSwitch, starButton, topicChips } from "../ui/card-marks.js";
 import { soundButton } from "../ui/sound-button.js";
 import { el, render } from "../ui/dom.js";
 import { cardHistoryBlock } from "./card-history.js";
@@ -23,7 +23,7 @@ import { cardHistoryBlock } from "./card-history.js";
  * may have typed to get here.
  */
 
-export function cardTopicsSheet({ card, topics = [], topicNames, onSaved, onClose, onStar, canStar = false, japanese = true }) {
+export function cardTopicsSheet({ card, topics = [], topicNames, onSaved, onClose, onStar, onReverse, canStar = false, japanese = true }) {
   const root = el("div.sheet-scrim", {
     onclick: (e) => e.target === root && onClose?.(),
   });
@@ -98,6 +98,19 @@ export function cardTopicsSheet({ card, topics = [], topicNames, onSaved, onClos
         }),
       ),
       topicsBlock,
+      // #284: this word the other way round too, for her alone. `canStar`
+      // is whether the row came from the server — the same condition, since
+      // `card.reverse` is only known there.
+      onReverse
+        ? reverseSwitch({
+            on: card.reverse,
+            disabled: !canStar,
+            onToggle: async (on) => {
+              await onReverse(on);
+              card.reverse = on;
+            },
+          })
+        : null,
       history,
     ),
   );

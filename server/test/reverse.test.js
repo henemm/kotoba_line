@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { replayCardState } from "../src/replay.js";
-import { seedUser, signIn, testApp } from "./helpers.js";
+import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
 
 /**
  * A card asked the other way round (#284) — Noji's "Reverse": a card of its
@@ -171,6 +171,139 @@ describe("a card with its reverse on (#284)", () => {
     const { app, card, json, reverseRow } = await setup();
     await json("PUT", `/api/cards/${card.id}`, { word: "Kyoudai", meaning: "Geschwister" });
     assert.equal(reverseRow().deleted_at, null);
+    await app.close();
+  });
+});
+
+describe("the other way round in every deck (#284, Henning 2026-09-24)", () => {
+  async function twoOnKaishi() {
+    const { app, db, config } = await testApp();
+    await seedUser(db, { handle: "a", pin: "111111", display: "A" });
+    await seedUser(db, { handle: "b", pin: "222222", display: "B" });
+    seedCards(db, 3);
+    db.prepare("INSERT INTO tags (card_id, tag) VALUES (1, 'travel 1')").run();
+    const a = await signIn(app, config, { handle: "a", pin: "111111" });
+    const b = await signIn(app, config, { handle: "b", pin: "222222" });
+    const as = (cookie) => async (method, url, payload) =>
+      (await app.inject({ method, url, headers: { cookie }, payload })).json();
+    const reverseOfOne = () => db.prepare("SELECT * FROM cards WHERE reverse_of = 1 AND deleted_at IS NULL").all();
+    return { app, db, A: as(a), B: as(b), reverseOfOne };
+  }
+
+  it("a Kaishi word's reverse is the switching account's alone", async () => {
+    const { app, db, A, B, reverseOfOne } = await twoOnKaishi();
+    assert.deepEqual(await A("POST", "/api/cards/1/reverse", { on: true }), { cardId: 1, reverse: true });
+    const [rev] = reverseOfOne();
+    assert.equal(rev.deck, "personal", "a card of hers, so visibleTo keeps it hers");
+    assert.equal(rev.frequency_rank, 1, "in the original's place in Kaishi's order");
+
+    const mine = await A("GET", "/api/deck");
+    assert.equal(mine.cards.find((c) => c.id === rev.id).reverse_of, 1);
+    const theirs = await B("GET", "/api/deck");
+    const seen = theirs.cards.find((c) => c.id === rev.id);
+    assert.ok(seen.deleted_at && seen.word === undefined, "a tombstone for someone else's, and nothing of it");
+    assert.equal(db.prepare("SELECT count(*) n FROM cards WHERE deck = 'kaishi'").get().n, 3, "Kaishi itself is untouched");
+
+    // Practised in Kaishi, and in Reise, whose cards are Kaishi's — by its original's topic.
+    const now = Math.floor(Date.now() / 1000);
+    await A("POST", "/api/events", { events: [{ id: uid(50), card_id: 1, mode: "flip", rating: 4, reviewed_at: now - 2 * DAY }] });
+    assert.ok((await A("GET", "/api/queue?deckKey=kaishi&mode=flip")).cardIds.includes(rev.id));
+    assert.ok((await A("GET", "/api/queue?deckKey=travel%3A1&mode=flip")).cardIds.includes(rev.id));
+    assert.ok(!(await A("GET", "/api/queue?deckKey=kaishi&mode=choose")).cardIds.includes(rev.id));
+    assert.ok(!(await B("GET", "/api/queue?deckKey=kaishi&mode=flip")).cardIds.includes(rev.id));
+
+    const search = await A("GET", "/api/browse?q=");
+    assert.equal(search.cards.find((c) => c.id === 1).reverse, true, "the sheet's switch starts on");
+    assert.equal((await B("GET", "/api/browse?q=")).cards.find((c) => c.id === 1).reverse, false);
+    await app.close();
+  });
+
+  it("two accounts each have their own reverse of one Kaishi word, and a star stays with its account", async () => {
+    const { app, db, A, B, reverseOfOne } = await twoOnKaishi();
+    await A("POST", "/api/cards/1/reverse", { on: true });
+    await B("POST", "/api/cards/1/reverse", { on: true });
+    const [ra, rb] = reverseOfOne();
+    assert.notEqual(ra.owner_id, rb.owner_id);
+    await A("POST", "/api/stars", { cardId: ra.id, starred: true, changedAt: Math.floor(Date.now() / 1000) });
+    const starred = db.prepare("SELECT user_id, card_id FROM card_stars WHERE starred = 1").all();
+    assert.ok(starred.every((s) => s.user_id === ra.owner_id), "B's reverse is not starred by A");
+    assert.ok(!starred.some((s) => s.card_id === rb.id));
+    await app.close();
+  });
+
+  it("the deck's switch sets every card of the deck, and says how many", async () => {
+    const { app, db, A, reverseOfOne } = await twoOnKaishi();
+    const on = await A("PATCH", "/api/decks/settings", { deckKey: "kaishi", reverse: true });
+    assert.equal(on.settings.reverse, true);
+    assert.equal(on.reversed, 3);
+    const decks = await A("GET", "/api/decks");
+    assert.equal(decks.decks.find((d) => d.key === "kaishi").cards, 6, "three words, both ways, as Noji counts");
+
+    // One card set apart, then the deck switched again: the deck's switch wins, as Select all does.
+    await A("POST", "/api/cards/1/reverse", { on: false });
+    assert.equal(reverseOfOne().length, 0);
+    const off = await A("PATCH", "/api/decks/settings", { deckKey: "kaishi", reverse: false });
+    assert.equal(off.reversed, 2);
+    assert.equal(db.prepare("SELECT count(*) n FROM cards WHERE reverse_of IS NOT NULL AND deleted_at IS NULL").get().n, 0);
+    await app.close();
+  });
+
+  it("a card added to a deck whose switch is on starts both ways", async () => {
+    const { app, db, A } = await twoOnKaishi();
+    const { card } = await A("POST", "/api/cards", { word: "Neko", meaning: "Katze" });
+    await A("PATCH", "/api/decks/settings", { deckKey: `deck:${card.deck_id}`, reverse: true });
+    const { card: next } = await A("POST", "/api/cards", { word: "Inu", meaning: "Hund", deckId: card.deck_id });
+    assert.equal(next.reverse, true);
+    const { card: apart } = await A("POST", "/api/cards", { word: "Tori", meaning: "Vogel", deckId: card.deck_id, reverse: false });
+    assert.equal(apart.reverse, false, "unless she switched it off in the form");
+    assert.equal(db.prepare("SELECT count(*) n FROM cards WHERE reverse_of IS NOT NULL AND deleted_at IS NULL").get().n, 2);
+    await app.close();
+  });
+
+  it("a reverse that waits for another day leaves its new-card place to another word", async () => {
+    const { app, A } = await twoOnKaishi();
+    // Kaishi's 3 words both ways; word 1 answered two days ago with Gut, so it
+    // is due today and its reverse would be new today.
+    await A("PATCH", "/api/decks/settings", { deckKey: "kaishi", reverse: true, newPerDay: 5 });
+    const now = Math.floor(Date.now() / 1000);
+    await A("POST", "/api/events", { events: [{ id: uid(60), card_id: 1, mode: "flip", rating: 3, reviewed_at: now - 2 * DAY }] });
+    const flip = await A("GET", "/api/queue?deckKey=kaishi&mode=flip");
+    // Word 1 due, words 2 and 3 new; 1's reverse waits. Nothing else is eligible.
+    assert.deepEqual([...flip.cardIds].sort((a, b) => a - b), [1, 2, 3]);
+    await app.close();
+  });
+
+  it("a deck's daily maximum does not put a word and its reverse back together", async () => {
+    const { app, db, A, reverseOfOne } = await twoOnKaishi();
+    await A("POST", "/api/cards/1/reverse", { on: true });
+    const rev = reverseOfOne()[0];
+    const now = Math.floor(Date.now() / 1000);
+    // Both directions answered two days ago with Gut: both due today.
+    await A("POST", "/api/events", {
+      events: [
+        { id: uid(70), card_id: 1, mode: "flip", rating: 3, reviewed_at: now - 2 * DAY },
+        { id: uid(71), card_id: rev.id, mode: "flip", rating: 3, reviewed_at: now - 2 * DAY },
+      ],
+    });
+    await A("PATCH", "/api/decks/settings", { deckKey: "kaishi", maxPerDay: 20 });
+    for (const only of ["", "&only=ahead"]) {
+      const ids = (await A("GET", `/api/queue?deckKey=kaishi&mode=flip${only}`)).cardIds;
+      assert.ok(ids.includes(1), only);
+      assert.ok(!ids.includes(rev.id), `the reverse waits${only}`);
+    }
+    await app.close();
+  });
+
+  it("a kana has no other way round, and a reverse is switched by its original", async () => {
+    const { app, db, A, reverseOfOne } = await twoOnKaishi();
+    db.prepare("INSERT INTO cards (id, word, word_meaning, deck) VALUES (10000001, 'か', 'ka', 'hiragana')").run();
+    const call = (id) => A("POST", `/api/cards/${id}/reverse`, { on: true });
+    assert.equal((await call(10000001)).error, "not_found");
+    await call(1);
+    assert.equal((await call(reverseOfOne()[0].id)).error, "not_found");
+    const kana = await A("PATCH", "/api/decks/settings", { deckKey: "hiragana", reverse: true });
+    assert.equal(kana.settings.reverse, false);
+    assert.equal(kana.reversed, 0);
     await app.close();
   });
 });

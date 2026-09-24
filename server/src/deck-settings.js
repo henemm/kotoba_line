@@ -48,7 +48,7 @@ export function deckSettings(db, userId, key) {
   const deckKey = canonicalDeckKey(db, userId, key) ?? key;
   const row = db
     .prepare(
-      "SELECT hidden_modes, new_per_day, max_per_day, extra_new, extra_new_day, flip_front FROM deck_settings WHERE user_id = ? AND deck_key = ?",
+      "SELECT hidden_modes, new_per_day, max_per_day, extra_new, extra_new_day, flip_front, reverse FROM deck_settings WHERE user_id = ? AND deck_key = ?",
     )
     .get(userId, deckKey);
   // Reise 1 and 2 (#252) pace like a list: Reise 1's 21 cards over three days.
@@ -68,6 +68,9 @@ export function deckSettings(db, userId, key) {
     // question — it depends on the device's zone.
     extraNew: row?.extra_new ?? 0,
     extraNewDay: row?.extra_new_day ?? null,
+    // #284: „Auch andersherum abfragen" — what the deck's switch last set
+    // every card to. A kana deck has no other way round.
+    reverse: isKanaDeck(deckKey) ? false : row?.reverse === 1,
   };
 }
 
@@ -111,8 +114,11 @@ export function updateDeckSettings(db, userId, key, patch, now = Date.now()) {
   const deckKey = canonicalDeckKey(db, userId, key);
   if (!deckKey) return undefined;
   const current = db
-    .prepare("SELECT hidden_modes, new_per_day, max_per_day, flip_front FROM deck_settings WHERE user_id = ? AND deck_key = ?")
+    .prepare("SELECT hidden_modes, new_per_day, max_per_day, flip_front, reverse FROM deck_settings WHERE user_id = ? AND deck_key = ?")
     .get(userId, deckKey);
+  // #284: the switch only. Switching the deck's cards is the caller's
+  // (routes/deck.js), which knows which cards the deck holds.
+  const reverse = isKanaDeck(deckKey) ? null : "reverse" in patch ? (patch.reverse ? 1 : 0) : (current?.reverse ?? null);
   const hidden = patch.hiddenModes
     ? JSON.stringify(MODE_KEYS.filter((k) => patch.hiddenModes.includes(k)))
     : (current?.hidden_modes ?? "[]");
@@ -121,12 +127,12 @@ export function updateDeckSettings(db, userId, key, patch, now = Date.now()) {
   const maxPerDay = "maxPerDay" in patch ? patch.maxPerDay : (current?.max_per_day ?? null);
   const flipFront = isKanaDeck(deckKey) ? null : "flipFront" in patch ? patch.flipFront : (current?.flip_front ?? null);
   db.prepare(
-    `INSERT INTO deck_settings (user_id, deck_key, hidden_modes, new_per_day, max_per_day, flip_front, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO deck_settings (user_id, deck_key, hidden_modes, new_per_day, max_per_day, flip_front, reverse, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (user_id, deck_key) DO UPDATE
        SET hidden_modes = excluded.hidden_modes, new_per_day = excluded.new_per_day,
            max_per_day = excluded.max_per_day, flip_front = excluded.flip_front,
-           updated_at = excluded.updated_at`,
-  ).run(userId, deckKey, hidden, perDay, maxPerDay, flipFront, Math.floor(now / 1000));
+           reverse = excluded.reverse, updated_at = excluded.updated_at`,
+  ).run(userId, deckKey, hidden, perDay, maxPerDay, flipFront, reverse, Math.floor(now / 1000));
   return deckSettings(db, userId, deckKey);
 }

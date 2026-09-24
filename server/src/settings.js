@@ -136,7 +136,8 @@ export function updateSettings(db, userId, patch) {
 export function deckCounts(db, userId) {
   const v = visibleTo(userId);
   const rows = db
-    .prepare(`SELECT c.deck, count(*) n FROM cards c WHERE c.deleted_at IS NULL AND ${v.sql} GROUP BY c.deck`)
+    // Words, not directions (#284): a reverse is its original again.
+    .prepare(`SELECT c.deck, count(*) n FROM cards c WHERE c.deleted_at IS NULL AND c.reverse_of IS NULL AND ${v.sql} GROUP BY c.deck`)
     .all(...v.params);
   const byDeck = new Map(rows.map((r) => [r.deck, r.n]));
   return DECKS.map((d) => ({ ...d, cards: byDeck.get(d.key) ?? 0 }));

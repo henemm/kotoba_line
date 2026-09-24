@@ -7,12 +7,14 @@ import {
   setUserTags,
   updateCard,
   userTags,
+  visibleCard,
 } from "../cards.js";
 import {
   DECK_KEY_PATTERN,
   MAX_SESSION_LENGTH,
   ONLY_MODES,
   browseCards,
+  deckCardIds,
   deckDue,
   decksForUser,
   outlookForUser,
@@ -27,6 +29,7 @@ import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, releaseNewCards, updateDeckSettings }
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 import { recordingsAmong } from "../recordings.js";
+import { reversible, setDeckReverse, setReverse } from "../reverse.js";
 
 export default async function deckRoutes(app) {
   const { db } = app;
@@ -251,6 +254,8 @@ export default async function deckRoutes(app) {
             maxPerDay: { type: ["integer", "null"], minimum: MAX_PER_DAY_MIN, maximum: MAX_PER_DAY_MAX },
             // #275: what „Karte umdrehen" shows first.
             flipFront: { type: "string", enum: ["word", "meaning"] },
+            // #284: „Auch andersherum abfragen" — every card of the deck.
+            reverse: { type: "boolean" },
           },
         },
       },
@@ -260,7 +265,41 @@ export default async function deckRoutes(app) {
       const { deckKey, ...patch } = req.body;
       const settings = updateDeckSettings(db, req.user.id, deckKey, patch);
       if (!settings) return reply.code(404).send({ error: "not_found" });
-      return { settings };
+      // As Noji's "Select all → Reverse": the switch sets every card of the
+      // deck, including one she had set apart before.
+      const reversed =
+        "reverse" in patch
+          ? setDeckReverse(db, deckCardIds(db, req.user.id, deckKey), patch.reverse, Math.floor(Date.now() / 1000), req.user.id)
+          : undefined;
+      return { settings, ...(reversed === undefined ? {} : { reversed }) };
+    },
+  );
+
+  /**
+   * #284: one card asked the other way round too, or not — from Search's
+   * sheet and from the back of a card in めくる. Any card she can see: a
+   * Kaishi word's reverse is hers alone (reverse.js). A reverse or a kana is
+   * refused; a reverse is switched by its original.
+   */
+  app.post(
+    "/api/cards/:id/reverse",
+    {
+      schema: {
+        params: { type: "object", properties: { id: { type: "integer" } } },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["on"],
+          properties: { on: { type: "boolean" } },
+        },
+      },
+      preHandler: app.requireUser,
+    },
+    async (req, reply) => {
+      const id = req.params.id;
+      if (!visibleCard(db, req.user.id, id) || !reversible(db, id)) return reply.code(404).send({ error: "not_found" });
+      db.transaction(() => setReverse(db, id, req.body.on, Math.floor(Date.now() / 1000), req.user.id))();
+      return { cardId: id, reverse: req.body.on };
     },
   );
 

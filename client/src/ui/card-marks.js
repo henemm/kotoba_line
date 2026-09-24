@@ -184,3 +184,58 @@ export function topicChips({ fixed = [], chosen = [], names, save }) {
 
   return root;
 }
+
+/**
+ * #284: „Auch andersherum abfragen" for one card — on Search's sheet and on
+ * the back of a card in めくる, where she notices that she wants a word both
+ * ways without leaving the session to find it. The same words as the switch
+ * in the card form and in a deck's options.
+ *
+ * `onToggle(on)` does the writing and resolves when the server has it; the
+ * switch holds still meanwhile, and goes back if the write fails. Offline it
+ * is inert: the second card is made on the server, and a switch that showed
+ * on for a card that does not exist yet would say something untrue.
+ */
+export function reverseSwitch({ on, onToggle, disabled = false }) {
+  let state = Boolean(on);
+  let busy = false;
+  const root = el("div.reverse-switch");
+  const draw = () =>
+    render(
+      root,
+      el(
+        "span.copy",
+        {},
+        el("span.name", { text: "Auch andersherum abfragen" }),
+        el("span.note", {
+          text: disabled ? "Braucht Internet." : "Beim Karte-Umdrehen kommt sie dann auch mit der anderen Seite vorne.",
+        }),
+      ),
+      el(
+        "button.toggle",
+        {
+          type: "button",
+          role: "switch",
+          "aria-checked": String(state),
+          "aria-label": "Auch andersherum abfragen",
+          disabled: disabled || busy,
+          onclick: async () => {
+            const next = !state;
+            state = next;
+            busy = true;
+            draw();
+            try {
+              await onToggle(next);
+            } catch {
+              state = !next;
+            }
+            busy = false;
+            draw();
+          },
+        },
+        el("span.knob"),
+      ),
+    );
+  draw();
+  return root;
+}

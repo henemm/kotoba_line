@@ -192,7 +192,7 @@ function filterClause({ deckKey, deck, list, tag }, params, userId) {
   // clients send, and keep working for a phone that has not updated yet.
   const scope = parseDeckKey(deckKey);
   if (scope) {
-    sql += " AND c.deck = ?";
+    sql += ` AND ${HOME_DECK} = ?`;
     params.push(scope.deck);
     if (scope.deckId !== undefined) {
       sql += " AND c.deck_id = ?";
@@ -215,13 +215,34 @@ function filterClause({ deckKey, deck, list, tag }, params, userId) {
   return sql;
 }
 
+/**
+ * The deck a card is practised in (#284). A reverse of a Kaishi word is a
+ * card of hers (`deck = 'personal'`, reverse.js) and is practised in Kaishi,
+ * its original's deck — Reise 1 and 2 included, whose cards are Kaishi's.
+ */
+export const HOME_DECK = "coalesce((SELECT o.deck FROM cards o WHERE o.id = c.reverse_of), c.deck)";
+
 function byTag(tag, params, userId) {
   params.push(tag, userId, tag);
+  // A reverse's topics are its original's (#284): read from there, so a
+  // topic the import gives a Kaishi word later is on its reverses too.
   return (
-    " AND (EXISTS (SELECT 1 FROM tags t WHERE t.card_id = c.id AND t.tag = ?)" +
+    " AND (EXISTS (SELECT 1 FROM tags t WHERE t.card_id = coalesce(c.reverse_of, c.id) AND t.tag = ?)" +
     " OR EXISTS (SELECT 1 FROM card_user_tags ut" +
-    " WHERE ut.card_id = c.id AND ut.user_id = ? AND ut.tag = ?))"
+    " WHERE ut.card_id = coalesce(c.reverse_of, c.id) AND ut.user_id = ? AND ut.tag = ?))"
   );
+}
+
+/**
+ * The cards a deck's „Auch andersherum abfragen" switches (#284): its
+ * originals that this account can see, the way the queue scopes the deck.
+ */
+export function deckCardIds(db, userId, deckKey) {
+  const visible = visibleTo(userId);
+  const params = [...visible.params];
+  const sql = `SELECT c.id FROM cards c
+    WHERE c.deleted_at IS NULL AND c.reverse_of IS NULL AND ${visible.sql} ${filterClause({ deckKey }, params, userId)}`;
+  return db.prepare(sql).all(...params).map((r) => r.id);
 }
 
 /**
@@ -359,7 +380,11 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // ── group 3: new ────────────────────────────────────────────────
   // §5a: a deliberately chosen session is never capped by the daily limit.
   const newAllowance = filtered ? limit : Math.max(0, newPerDay - introducedToday);
-  const fresh =
+  // Asked for beyond the allowance, and cut to it only once `siblingsApart`
+  // has taken out the reverses that wait for another day (#284): cut first,
+  // every one of those took the place of a new card — measured on a copy of
+  // her data with Kaishi both ways, めくる brought 22 cards and 選ぶ 30.
+  const freshCandidates =
     newAllowance === 0
       ? []
       : run(
@@ -374,21 +399,25 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
           // of an imported list (#137), and newest first for words she added.
           // A reverse takes its original's place, right after it (#284).
           "ORDER BY c.frequency_rank IS NULL, c.frequency_rank ASC, coalesce(c.reverse_of, c.id) ASC, c.reverse_of IS NOT NULL LIMIT ?",
-          [userId, dayStart, newAllowance],
+          [userId, dayStart, MAX_SESSION_LENGTH],
         );
 
-  let groups = siblingsApart({ due, lapsed, fresh }, db);
+  const apart = siblingsApart({ due, lapsed, fresh: freshCandidates }, db);
+  const fresh = apart.fresh.slice(0, newAllowance);
+  let groups = { due: apart.due, lapsed: apart.lapsed, fresh };
 
   // The day's maximum takes reviews first, then new cards, in the order the
   // session meets them — as Noji does. What it holds back is due tomorrow still.
   let maxReached = false;
   if (leftToday !== undefined) {
-    const reviews = [...new Set([...due, ...lapsed])];
+    // From `groups`, not the lists before `siblingsApart` (#284): taken from
+    // those, a deck with a maximum put a word and its reverse back together.
+    const reviews = [...new Set([...groups.due, ...groups.lapsed])];
     const kept = new Set(reviews.slice(0, leftToday));
     maxReached = leftToday === 0 && reviews.length + fresh.length > 0;
     groups = {
-      due: due.filter((id) => kept.has(id)),
-      lapsed: lapsed.filter((id) => kept.has(id)),
+      due: groups.due.filter((id) => kept.has(id)),
+      lapsed: groups.lapsed.filter((id) => kept.has(id)),
       fresh: fresh.slice(0, Math.max(0, leftToday - kept.size)),
     };
   }
@@ -424,15 +453,19 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     // for a case no one has reported, and would need `only=ahead`'s own tests
     // rewritten (#90) rather than merely read differently. Left for a
     // follow-up if it turns out to matter in practice.
-    groups = {
-      due: run(
-        "AND s.card_id IS NOT NULL AND s.due_at <= ?",
-        "ORDER BY s.due_at ASC",
-        [now + AHEAD_WINDOW_DAYS * DAY],
-      ),
-      lapsed: [],
-      fresh: [],
-    };
+    // A word and its reverse apart here too (#284).
+    groups = siblingsApart(
+      {
+        due: run(
+          "AND s.card_id IS NOT NULL AND s.due_at <= ?",
+          "ORDER BY s.due_at ASC",
+          [now + AHEAD_WINDOW_DAYS * DAY],
+        ),
+        lapsed: [],
+        fresh: [],
+      },
+      db,
+    );
   }
 
   // Whether today's new cards are what is missing (#137): unseen cards are
@@ -569,7 +602,7 @@ export function decksForUser(db, userId, now = Math.floor(Date.now() / 1000), ti
             sum(c.sentence IS NOT NULL AND c.sentence_meaning IS NOT NULL) AS listen,
             sum(c.word_reading IS NOT NULL OR c.word_furigana IS NOT NULL) AS type
        FROM cards c LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
-      WHERE c.deleted_at IS NULL AND c.deck = ? AND (c.deck <> 'personal' OR c.owner_id = ?)
+      WHERE c.deleted_at IS NULL AND ${HOME_DECK} = ? AND (c.deck <> 'personal' OR c.owner_id = ?)
         AND (? IS NULL OR c.deck_id = ?)`,
   );
 
@@ -884,7 +917,10 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
               CASE WHEN c.word_audio_generated_for = c.word THEN c.word_audio_generated END AS word_audio_generated,
               c.deck, c.frequency_rank, c.deck_id, d.name AS deck_name,
               COALESCE(st.starred, 0) AS starred,
-              s.due_at, s.reps, s.last_review
+              s.due_at, s.reps, s.last_review,
+              -- #284: whether this account asks it the other way round too,
+              -- for the switch on the row's sheet.
+              EXISTS (SELECT 1 FROM cards r WHERE r.reverse_of = c.id AND r.owner_id = ? AND r.deleted_at IS NULL) AS reverse
          FROM cards c
          LEFT JOIN card_stars st ON st.card_id = c.id AND st.user_id = ?
          LEFT JOIN card_state  s ON s.card_id  = c.id AND s.user_id  = ?
@@ -894,8 +930,8 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
         ORDER BY ${exactFirst}c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC
         LIMIT ? OFFSET ?`,
     )
-    .all(userId, userId, ...whereParams, ...(romajiKey ? [` ${romajiKey}|`] : []), size, offset)
-    .map((r) => ({ ...r, starred: Boolean(r.starred) }));
+    .all(userId, userId, userId, ...whereParams, ...(romajiKey ? [` ${romajiKey}|`] : []), size, offset)
+    .map((r) => ({ ...r, starred: Boolean(r.starred), reverse: Boolean(r.reverse) }));
 
   // Both halves of a card's topics, per row (#35): the deck's, which she
   // cannot change, and hers, which she can. One query each for the whole page
@@ -956,9 +992,9 @@ export function setStar(db, userId, cardId, starred, changedAt = Math.floor(Date
       `SELECT id FROM cards
         WHERE deleted_at IS NULL
           AND (id = (SELECT coalesce(reverse_of, id) FROM cards WHERE id = ?)
-               OR reverse_of = (SELECT coalesce(reverse_of, id) FROM cards WHERE id = ?))`,
+               OR (reverse_of = (SELECT coalesce(reverse_of, id) FROM cards WHERE id = ?) AND owner_id = ?))`,
     )
-    .all(cardId, cardId)
+    .all(cardId, cardId, userId)
     .map((r) => r.id);
   const write = db.prepare(
     `INSERT INTO card_stars (user_id, card_id, starred, changed_at)

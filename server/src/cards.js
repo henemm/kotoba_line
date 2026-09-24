@@ -26,6 +26,7 @@
 
 import { MY_WORDS, deckIdFor, ownDeck } from "./decks.js";
 import { offerKaishiTopics } from "./kaishi-topics.js";
+import { deckSettings } from "./deck-settings.js";
 import { mirror, reverseOf, setReverse } from "./reverse.js";
 
 /**
@@ -193,8 +194,10 @@ export function createCard(db, userId, input, now = Date.now()) {
       userId, seconds, deckId,
     );
     replaceTags(db, id, f.tags);
-    // #284: "Auch andersherum abfragen", ticked in the form she added it in.
-    if (input.reverse) setReverse(db, id, true, seconds);
+    // #284: "Auch andersherum abfragen", as set in the form she added it in —
+    // which starts from the deck's own switch. A phone from before v163 sends
+    // nothing, and the deck's switch decides.
+    if (input.reverse ?? deckSettings(db, userId, `deck:${deckId}`).reverse) setReverse(db, id, true, seconds, userId);
   })();
   // #209: added to whatever topics she picked in the form.
   offerKaishiTopics(db, { cardIds: [id], now });
@@ -255,7 +258,7 @@ export function updateCard(db, userId, id, input, now = Date.now()) {
     );
     replaceTags(db, id, f.tags);
     // #284: left out — a phone from before v162 — the reverse stays as it is.
-    if (input.reverse !== undefined) setReverse(db, id, input.reverse, seconds);
+    if (input.reverse !== undefined) setReverse(db, id, input.reverse, seconds, userId);
     mirror(db, id, seconds);
   })();
 
@@ -273,7 +276,8 @@ export function getCard(db, id) {
     .get(id);
   if (!card) return undefined;
   card.tags = db.prepare("SELECT tag FROM tags WHERE card_id = ?").all(id).map((r) => r.tag);
-  const rev = reverseOf(db, id);
+  const { owner_id } = db.prepare("SELECT owner_id FROM cards WHERE id = ?").get(id);
+  const rev = owner_id == null ? undefined : reverseOf(db, id, owner_id);
   card.reverse = Boolean(rev && !rev.deleted_at);
   return card;
 }
@@ -355,7 +359,7 @@ export function deleteCard(db, userId, id, now = Date.now()) {
     db.prepare("DELETE FROM card_state WHERE card_id = ?").run(id);
     db.prepare("DELETE FROM card_stars WHERE card_id = ?").run(id);
     // #284: its reverse goes with it.
-    setReverse(db, id, false, seconds);
+    setReverse(db, id, false, seconds, userId);
   })();
 
   return { ok: true };
