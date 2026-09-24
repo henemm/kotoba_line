@@ -37,7 +37,9 @@ export const ROWS_PER_PAGE = 50;
  */
 export function cardsOfDeck(deck, cards, q = "") {
   const inDeck = (c) => c.deck === "personal" && (c.deck_id === deck.id || (c.deck_id == null && c.list_name === deck.name));
-  const found = cards.filter((c) => !c.deleted_at && inDeck(c) && matchesQuery(c, q));
+  // A reverse (#284) is its original asked the other way round, not a second
+  // word: the list shows the word once, and editing it edits both.
+  const found = cards.filter((c) => !c.deleted_at && c.reverse_of == null && inDeck(c) && matchesQuery(c, q));
   return found.sort(exactFirst(q, (a, b) => a.id - b.id));
 }
 

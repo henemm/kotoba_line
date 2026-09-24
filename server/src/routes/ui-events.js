@@ -44,6 +44,9 @@ export const UI_EVENT_NAMES = [
   "reminder_off",
   "streak_shown", // #273: the Noji-style streak screen after a session
   "streak_stats_tapped",
+  "reverse_shown", // #284: a card asked the other way round, drawn in めくる
+  "reverse_on", // #284: „Auch andersherum abfragen" in the card form
+  "reverse_off",
 ];
 
 const schema = {

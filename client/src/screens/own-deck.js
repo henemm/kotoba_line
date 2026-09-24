@@ -6,6 +6,7 @@ import { plainSentence } from "./session.js";
 import { topicLabel } from "../topics.js";
 import { el, render } from "../ui/dom.js";
 import { soundButton } from "../ui/sound-button.js";
+import { seen } from "../seen.js";
 
 /**
  * Her own words — designs 28, 29 and 30.
@@ -32,6 +33,16 @@ const MAX_TAGS = 5;
  * are one disclosure below them. "Save and add next" keeps the form open on
  * the same deck, for a list typed in one go.
  */
+/**
+ * #284: the `reverse` a save sends. A new card says what the switch says;
+ * an edit only what she changed — the switch can start from a phone's copy
+ * of the deck that is behind, and a typo fixed on such a phone must not
+ * switch off a reverse it had not heard of yet. Pure, for the test.
+ */
+export function reverseField({ editing, reverse, moved }) {
+  return !editing || moved ? { reverse } : {};
+}
+
 export function addWordScreen({
   tags = [],
   initialWord = "",
@@ -93,11 +104,26 @@ export function addWordScreen({
   let link;
   let linkDropped = false;
   const offers = el("div.kaishi-offer");
+
+  // #284: "Auch andersherum abfragen", as Noji's Reverse. Whether an edited
+  // card has one: `card.reverse` where the card came from the server, else
+  // the phone's copy of the deck, where a reverse is a card of its own
+  // (`reverse_of`). That copy can be behind the server — a reverse switched
+  // on elsewhere may not have reached it — so what the switch shows is only
+  // sent when she has moved it. An edit that leaves it alone leaves the
+  // reverse alone, whatever this phone believed.
+  let reverse = editing ? Boolean(card.reverse) : false;
+  let reverseMoved = false;
+  const reverseSlot = el("div.add-reverse");
   loadDeck()
     .then((deck) => {
       kaishi = [...deck.values()].filter((c) => c.deck === "kaishi");
       if (editing && !linkDropped) link = kaishiOf(card, kaishi);
       drawOffers();
+      if (editing && card.reverse === undefined && !reverseMoved) {
+        reverse = [...deck.values()].some((c) => c.reverse_of === card.id && !c.deleted_at);
+        drawReverse();
+      }
     })
     .catch(() => {
       /* no cache yet: the form works, it just offers nothing */
@@ -177,6 +203,7 @@ export function addWordScreen({
           el("p.add-hint", { text: "In Romaji oder Kana, so wie du es in Noji schreiben würdest." }),
           offers,
         ),
+        reverseSlot,
         ...(moreOpen
           ? [
               group(
@@ -224,6 +251,41 @@ export function addWordScreen({
       focusAsked = true;
       setTimeout(() => fields.meaning?.focus(), 50);
     }
+  }
+
+  /**
+   * #284: the switch, in its own slot like the Kaishi offers, so setting it
+   * never redraws the fields under her keyboard. Not reset by "Speichern und
+   * nächste": in Noji, too, it stays on for the cards that follow.
+   */
+  function drawReverse() {
+    render(
+      reverseSlot,
+      el(
+        "span.copy",
+        {},
+        el("span.name", { text: "Auch andersherum abfragen" }),
+        el("span.note", {
+          text: "Beim Karte-Umdrehen kommt sie dann ein zweites Mal, mit der anderen Seite vorne. Jede Richtung hat ihren eigenen Lernstand, wie in Noji.",
+        }),
+      ),
+      el(
+        "button.toggle",
+        {
+          type: "button",
+          role: "switch",
+          "aria-checked": String(reverse),
+          "aria-label": "Auch andersherum abfragen",
+          onclick: () => {
+            reverse = !reverse;
+            reverseMoved = true;
+            seen(reverse ? "reverse_on" : "reverse_off");
+            drawReverse();
+          },
+        },
+        el("span.knob"),
+      ),
+    );
   }
 
   /**
@@ -492,6 +554,7 @@ export function addWordScreen({
       tags: [...chosen],
       deckId: deck?.id,
       kaishiId,
+      ...reverseField({ editing, reverse, moved: reverseMoved }),
     };
     try {
       // Editing sends the whole card; a field she emptied is left out and the
@@ -528,5 +591,6 @@ export function addWordScreen({
   }
 
   draw();
+  drawReverse();
   return root;
 }

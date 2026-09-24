@@ -64,6 +64,8 @@ export default async function deckRoutes(app) {
                   sentence, sentence_furigana, sentence_meaning, sentence_audio,
                   frequency_rank, deck, owner_id, updated_at, deleted_at, list_name, deck_id,
                   word_examples, word_mnemonic,
+                  -- #284: set on a card that asks its original the other way round.
+                  reverse_of,
                   -- #183: only while it is still a recording of this word
                   -- (migration 025 says why).
                   CASE WHEN word_audio_generated_for = word THEN word_audio_generated END AS word_audio_generated,
@@ -449,6 +451,9 @@ const cardBody = {
     // takes a recording off. Left out — an older phone — nothing is chosen,
     // and a changed word loses a recording that no longer fits.
     kaishiId: { type: ["integer", "null"], minimum: 1 },
+    // #284: "Auch andersherum abfragen". Left out — a phone from before
+    // v162 — the card keeps whatever it had.
+    reverse: { type: "boolean" },
     tags: {
       type: "array",
       maxItems: MAX_TAGS,

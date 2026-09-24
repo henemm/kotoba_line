@@ -65,7 +65,8 @@ export function topicLabel(tag) {
 export function deckTopics(cards, deckId) {
   const counts = new Map();
   for (const c of cards) {
-    if (c.deck !== "personal" || c.deck_id !== deckId || c.deleted_at) continue;
+    // A reverse (#284) is a word counted once, as in the deck's list.
+    if (c.deck !== "personal" || c.deck_id !== deckId || c.deleted_at || c.reverse_of != null) continue;
     for (const tag of c.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
   return [...counts]

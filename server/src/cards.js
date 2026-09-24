@@ -26,6 +26,7 @@
 
 import { MY_WORDS, deckIdFor, ownDeck } from "./decks.js";
 import { offerKaishiTopics } from "./kaishi-topics.js";
+import { mirror, reverseOf, setReverse } from "./reverse.js";
 
 /**
  * The SQL condition for "this user may see this card", with its parameter.
@@ -192,6 +193,8 @@ export function createCard(db, userId, input, now = Date.now()) {
       userId, seconds, deckId,
     );
     replaceTags(db, id, f.tags);
+    // #284: "Auch andersherum abfragen", ticked in the form she added it in.
+    if (input.reverse) setReverse(db, id, true, seconds);
   })();
   // #209: added to whatever topics she picked in the form.
   offerKaishiTopics(db, { cardIds: [id], now });
@@ -214,14 +217,15 @@ export function createCard(db, userId, input, now = Date.now()) {
 export function updateCard(db, userId, id, input, now = Date.now()) {
   const card = db
     .prepare(
-      `SELECT deck, owner_id, deleted_at, word, word_furigana, word_reading, word_pitch, word_audio,
+      `SELECT deck, owner_id, deleted_at, reverse_of, word, word_furigana, word_reading, word_pitch, word_audio,
               sentence, sentence_furigana, sentence_audio
          FROM cards WHERE id = ?`,
     )
     .get(id);
   // Someone else's word answers exactly like a missing one: saying "not
-  // yours" would confirm that the id exists.
-  if (!card || card.deleted_at || (card.deck === "personal" && card.owner_id !== userId)) {
+  // yours" would confirm that the id exists. A reverse (#284) is not edited
+  // on its own: it is the original's copy, and the phone edits the original.
+  if (!card || card.deleted_at || card.reverse_of != null || (card.deck === "personal" && card.owner_id !== userId)) {
     return { ok: false, reason: "not_found" };
   }
   if (card.deck !== "personal") return { ok: false, reason: "not_yours" };
@@ -250,6 +254,9 @@ export function updateCard(db, userId, id, input, now = Date.now()) {
       f.sentenceMeaning, seconds, input.deckId ?? null, id,
     );
     replaceTags(db, id, f.tags);
+    // #284: left out — a phone from before v162 — the reverse stays as it is.
+    if (input.reverse !== undefined) setReverse(db, id, input.reverse, seconds);
+    mirror(db, id, seconds);
   })();
 
   return { ok: true, card: getCard(db, id) };
@@ -260,12 +267,14 @@ export function getCard(db, id) {
     .prepare(
       `SELECT id, word, word_furigana, word_reading, word_pitch, word_meaning, word_audio,
               sentence, sentence_furigana, sentence_meaning, sentence_audio,
-              frequency_rank, deck, updated_at, deck_id, list_name
+              frequency_rank, deck, updated_at, deck_id, list_name, reverse_of
          FROM cards WHERE id = ?`,
     )
     .get(id);
   if (!card) return undefined;
   card.tags = db.prepare("SELECT tag FROM tags WHERE card_id = ?").all(id).map((r) => r.tag);
+  const rev = reverseOf(db, id);
+  card.reverse = Boolean(rev && !rev.deleted_at);
   return card;
 }
 
@@ -282,10 +291,13 @@ export function personalCards(db, userId) {
   const rows = db
     .prepare(
       `SELECT c.id, c.word, c.word_reading, c.word_meaning, c.sentence, c.sentence_meaning,
-              c.updated_at, c.deck_id, s.due_at, s.reps, s.last_review
+              c.updated_at, c.deck_id, s.due_at, s.reps, s.last_review,
+              EXISTS (SELECT 1 FROM cards r WHERE r.reverse_of = c.id AND r.deleted_at IS NULL) AS reverse
          FROM cards c
          LEFT JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
-        WHERE c.deck = 'personal' AND c.owner_id = ? AND c.deleted_at IS NULL
+        -- A reverse (#284) is not a word of its own: it is listed as its
+        -- original's "reverse".
+        WHERE c.deck = 'personal' AND c.owner_id = ? AND c.deleted_at IS NULL AND c.reverse_of IS NULL
         ORDER BY c.id ASC`,
     )
     .all(userId, userId);
@@ -304,7 +316,7 @@ export function personalCards(db, userId) {
   }
 
   // Ids are negative epoch milliseconds, so ascending id *is* newest first.
-  return rows.map((c) => ({ ...c, tags: byCard.get(c.id) ?? [] }));
+  return rows.map((c) => ({ ...c, reverse: Boolean(c.reverse), tags: byCard.get(c.id) ?? [] }));
 }
 
 /**
@@ -317,9 +329,10 @@ export function personalCards(db, userId) {
  * a foreign key, so a reviewed card cannot be removed outright at all.
  */
 export function deleteCard(db, userId, id, now = Date.now()) {
-  const card = db.prepare("SELECT id, deck, owner_id, deleted_at FROM cards WHERE id = ?").get(id);
-  // Someone else's word is "not found", for the reason given in updateCard.
-  if (!card || (card.deck === "personal" && card.owner_id !== userId)) {
+  const card = db.prepare("SELECT id, deck, owner_id, deleted_at, reverse_of FROM cards WHERE id = ?").get(id);
+  // Someone else's word is "not found", for the reason given in updateCard,
+  // and so is a reverse (#284): it goes with its original, or by the switch.
+  if (!card || card.reverse_of != null || (card.deck === "personal" && card.owner_id !== userId)) {
     return { ok: false, reason: "not_found" };
   }
   if (card.deck !== "personal") return { ok: false, reason: "not_yours" };
@@ -341,6 +354,8 @@ export function deleteCard(db, userId, id, now = Date.now()) {
     // star on a deleted card would count towards a set she cannot practise.
     db.prepare("DELETE FROM card_state WHERE card_id = ?").run(id);
     db.prepare("DELETE FROM card_stars WHERE card_id = ?").run(id);
+    // #284: its reverse goes with it.
+    setReverse(db, id, false, seconds);
   })();
 
   return { ok: true };
@@ -381,13 +396,17 @@ export function setUserTags(db, userId, cardId, tags, now = Date.now()) {
 
   const clean = [...new Set((tags ?? []).map(normaliseTag).filter(Boolean))].slice(0, MAX_TAGS);
   const seconds = Math.floor(now / 1000);
+  // #284: her topic on a word is on both of its directions, so a topic set
+  // on a reverse — from the sheet in a session — is set on its original.
+  const original = db.prepare("SELECT coalesce(reverse_of, id) AS id FROM cards WHERE id = ?").get(cardId).id;
 
   db.transaction(() => {
-    db.prepare("DELETE FROM card_user_tags WHERE user_id = ? AND card_id = ?").run(userId, cardId);
+    db.prepare("DELETE FROM card_user_tags WHERE user_id = ? AND card_id = ?").run(userId, original);
     const insert = db.prepare(
       "INSERT INTO card_user_tags (user_id, card_id, tag, added_at) VALUES (?, ?, ?, ?)",
     );
-    for (const tag of clean) insert.run(userId, cardId, tag, seconds);
+    for (const tag of clean) insert.run(userId, original, tag, seconds);
+    mirror(db, original, seconds);
   })();
 
   return { ok: true, cardId, tags: clean };

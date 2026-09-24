@@ -1,5 +1,14 @@
 [
   {
+    "version": "v162",
+    "summary": "Karten können jetzt auch andersherum abgefragt werden, wie „Reverse“ in Noji.",
+    "notes": [
+      "Beim Bearbeiten einer Karte gibt es den Schalter „Auch andersherum abfragen“. Dann kommt sie beim Karte-Umdrehen ein zweites Mal, mit der anderen Seite vorne.",
+      "Jede Richtung hat ihren eigenen Lernstand. Die andere Richtung kommt erst, wenn du die Karte an einem früheren Tag schon geübt hast.",
+      "Karten, die du in Noji auf „Reverse“ gestellt hast, sind hier schon so eingestellt."
+    ]
+  },
+  {
     "version": "v161",
     "summary": "„Nochmal üben“ nach einer Übung bringt nur die Wörter, die du noch nicht kannst, und ein paar neue.",
     "notes": [

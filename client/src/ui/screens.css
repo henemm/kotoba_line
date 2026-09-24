@@ -3024,7 +3024,7 @@
   color: var(--ink);
 }
 
-:is(.settings, .deck-options) .toggle {
+:is(.settings, .deck-options, .add-word) .toggle {
   flex: none;
   width: 52px;
   height: 32px;
@@ -3039,22 +3039,22 @@
   cursor: pointer;
 }
 /* #133: the last practice line still shown cannot be switched off. */
-:is(.settings, .deck-options) .toggle:disabled {
+:is(.settings, .deck-options, .add-word) .toggle:disabled {
   opacity: 0.45;
   cursor: default;
 }
-:is(.settings, .deck-options) .toggle .knob {
+:is(.settings, .deck-options, .add-word) .toggle .knob {
   width: 26px;
   height: 26px;
   border-radius: 50%;
   background: var(--ink-muted);
   display: block;
 }
-:is(.settings, .deck-options) .toggle[aria-checked="true"] {
+:is(.settings, .deck-options, .add-word) .toggle[aria-checked="true"] {
   background: var(--ink);
   justify-content: flex-end;
 }
-:is(.settings, .deck-options) .toggle[aria-checked="true"] .knob {
+:is(.settings, .deck-options, .add-word) .toggle[aria-checked="true"] .knob {
   background: var(--night);
 }
 
@@ -5199,4 +5199,28 @@ button.kana-tile:active {
   background: transparent;
   color: var(--ink);
   font: 600 15px/1 inherit;
+}
+
+/* #284: „Auch andersherum abfragen" under the Japanese, laid out like a deck
+   option row: the words on the left, the switch on the right. */
+.add-reverse {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.add-reverse .copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.add-reverse .name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.add-reverse .note {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink-muted);
 }
