@@ -61,6 +61,8 @@ function deckLabel({ deck, list }) {
  */
 function onlyLabel(only) {
   if (only === "ahead") return "In zwei Tagen fällig";
+  // #271: the summary's "Nochmal" — not on the sheet, reached only from there.
+  if (only === "again") return "Nochmal üben";
   return ONLY.find((o) => o.value === only)?.label.replace("★ ", "") ?? only;
 }
 

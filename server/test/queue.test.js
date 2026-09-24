@@ -369,6 +369,21 @@ describe("queueForUser", () => {
     await app.close();
   });
 
+  it("only=again returns the cards asked for, due or not, and five new ones (#271)", async () => {
+    const { app, db, user } = await fixture();
+    setState(db, user.id, 8, { dueAt: NOW + 8 * 60 }); // Schwer a minute ago: not due yet
+    setState(db, user.id, 9, { dueAt: NOW + 60 }); // Nochmal
+    setState(db, user.id, 10, { dueAt: NOW - 100 }); // due, but not asked for
+    const q = queueForUser(db, user.id, { only: "again", cards: [8, 9, 999999], limit: 40 }, NOW, () => 0);
+    assert.ok(q.cardIds.includes(8) && q.cardIds.includes(9));
+    assert.ok(!q.cardIds.includes(10), "only what she missed, not the day's queue");
+    assert.ok(!q.cardIds.includes(999999), "a card that does not exist is left out");
+    const fresh = q.cardIds.filter((id) => ![8, 9].includes(id));
+    assert.equal(fresh.length, 5, "„ein paar neue mit eingefügt\"");
+    assert.equal(q.filtered, true);
+    await app.close();
+  });
+
   it("only=new introduces fresh cards regardless of what is due", async () => {
     const { app, db, user } = await fixture();
     setState(db, user.id, 1, { dueAt: NOW - 100 });

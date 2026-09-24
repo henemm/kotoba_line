@@ -1270,7 +1270,15 @@ function renderApp() {
           state.summary = undefined;
           renderApp();
         },
-        onAgain: () => startSession({ mode: state.summary.mode, ...scopeOf(state.filters) }),
+        // #271: Charlotte — „wenn ich nochmal üben anklicke, dann sollten nur
+        // die Vokabeln kommen, die ich noch nicht kann, oder ein paar neue mit
+        // eingefügt". The cards she answered Nochmal or Schwer, and a few new
+        // ones; a session with none of those starts the day's queue, as before.
+        onAgain: () => {
+          const { mode, struggled = [] } = state.summary;
+          const again = struggled.length > 0 ? { only: "again", cards: struggled.join(",") } : {};
+          startSession({ mode, ...scopeOf(state.filters), ...again });
+        },
         // 40: back to the day's real queue, which means clearing the filters
         // as well as starting a session — otherwise "carry on" would run the
         // chosen set again.
