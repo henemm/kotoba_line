@@ -57,7 +57,10 @@ export const MAX_SESSION_LENGTH = 500;
 /** Design 10's "Practise ahead": cards due in the next two days (#90). */
 const AHEAD_WINDOW_DAYS = 2;
 
-export const ONLY_MODES = ["starred", "lapsed", "new", "ahead"];
+export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again"];
+
+/** #271: the new cards "Nochmal" after a session mixes in — „ein paar neue". */
+export const AGAIN_NEW = 5;
 
 /**
  * §215: a card in review state — its last interval was a day or more, the
@@ -353,7 +356,17 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   }
 
   // §5a's `only=` narrows to one group rather than mixing.
-  if (only === "lapsed") groups = { due: [], lapsed, fresh: [] };
+  if (only === "again") {
+    // #271: "Nochmal" after a session. Charlotte: „dann sollten nur die
+    // Vokabeln kommen, die ich noch nicht kann, oder ein paar neue mit
+    // eingefügt" — the cards she answered Nochmal or Schwer in the session
+    // just finished (the client sends them as `cards`), whether or not the
+    // scheduler has them due yet, and a few new ones from the same deck.
+    // Only cards she can see and that are in the scope asked for.
+    const asked = (opts.cards ?? []).slice(0, MAX_SESSION_LENGTH);
+    const found = asked.length === 0 ? new Set() : new Set(run(`AND c.id IN (${asked.map(() => "?").join(",")})`, "", asked));
+    groups = { due: asked.filter((id) => found.has(id)), lapsed: [], fresh: fresh.slice(0, AGAIN_NEW) };
+  } else if (only === "lapsed") groups = { due: [], lapsed, fresh: [] };
   else if (only === "new") groups = { due: [], lapsed: [], fresh };
   else if (only === "ahead") {
     // #90: design 10 offers this when nothing is due, and it is what it says —

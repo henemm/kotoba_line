@@ -145,6 +145,9 @@ export default async function deckRoutes(app) {
             list: { type: "string", minLength: 1, maxLength: 100 },
             tag: { type: "string", maxLength: 32 },
             only: { type: "string", enum: ONLY_MODES },
+            // #271: with only=again, the cards to practise again, comma
+            // separated. Her own cards have negative ids (rule 4).
+            cards: { type: "string", maxLength: 8000, pattern: "^-?[0-9]{1,15}(,-?[0-9]{1,15})*$" },
           },
         },
       },
@@ -153,7 +156,8 @@ export default async function deckRoutes(app) {
     async (req) => {
       // Today is the device's day (#122): it bounds the new cards allowed.
       const timeZone = timeZoneOf(req);
-      const answer = queueForUser(db, req.user.id, { ...req.query, timeZone });
+      const cards = req.query.cards ? req.query.cards.split(",").map(Number) : undefined;
+      const answer = queueForUser(db, req.user.id, { ...req.query, cards, timeZone });
 
       // Screen 41 prints, under each of めくる's four buttons, the interval
       // that button would give. It rides along with the queue rather than

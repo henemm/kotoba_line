@@ -246,6 +246,7 @@ export function sessionScreen({
   // session brings it.
   const reshows = new Map();
   const results = []; // one entry per card, for the station strip afterwards
+  const struggled = new Set(); // #271: card ids answered Nochmal or Schwer here
   let answered = 0;
   let before;
   // What the queue brought for めくる's rating row (reshow.js, `labelsAt`):
@@ -324,7 +325,12 @@ export function sessionScreen({
       for (const r of q.recordings ?? []) {
         if (r.kind === "native") recordings.set(r.card_id, r);
       }
-      const ids = resuming?.cardIds ?? q.cardIds;
+      // #271: "Nochmal" after a session names its cards itself, so on a
+      // train with no signal it still has them — without the few new ones,
+      // which only the server can pick.
+      const ids =
+        resuming?.cardIds ??
+        (q.never && filters.only === "again" && filters.cards ? String(filters.cards).split(",").map(Number) : q.cardIds);
       // A resumed queue can already hold a card twice (#214, #242); what the
       // session-start labels said no longer holds for the second copy.
       // How often each came round after Nochmal is saved with it since v140;
@@ -641,6 +647,9 @@ export function sessionScreen({
     for (const button of root.querySelectorAll(".ratings button")) button.disabled = true;
     const ok = recalled(rating);
     results[index] = ok;
+    // #271: what "Nochmal" on the summary brings back — every card she
+    // answered Nochmal or Schwer in this session.
+    if (rating <= 2) struggled.add(card.id);
     if (ok) right += 1;
     else if (!missed.some((m) => m.id === card.id)) missed.push(card);
     // #214: Nochmal — and only Nochmal — brings the card round again. Put
@@ -1898,6 +1907,8 @@ export function sessionScreen({
       // #273: Noji's streak screen, once a day — after the session whose
       // answers made today count. The stats it draws are the same answer.
       streak: madeTodayCount(before, after) ? after : undefined,
+      // #271: the cards "Nochmal" on the summary practises again.
+      struggled: [...struggled],
     });
   }
 

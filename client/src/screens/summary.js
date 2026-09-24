@@ -104,7 +104,9 @@ export function summaryScreen(result, { onDone, onAgain, onCarryOn, onPushYes, o
       "div.summary-foot",
       {},
       el("button.summary-done", { type: "button", text: "Fertig", onclick: onDone }),
-      el("button.summary-again", { type: "button", text: "Nochmal", onclick: onAgain }),
+      // #271: with cards she answered Nochmal or Schwer, it practises those
+      // and a few new ones (app.js); the label says it is not the same round.
+      el("button.summary-again", { type: "button", text: result.struggled?.length ? "Nochmal üben" : "Nochmal", onclick: onAgain }),
     ),
   );
 
