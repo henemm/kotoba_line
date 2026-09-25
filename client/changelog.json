@@ -1,5 +1,12 @@
 [
   {
+    "version": "v167",
+    "summary": "„Nächste Karten laden“ in den Deck-Optionen sieht jetzt wie ein richtiger Knopf aus.",
+    "notes": [
+      "Vorher stand da nur fetter Text – jetzt hat der Knopf einen Rahmen und eine eigene Fläche, wie „Weitermachen“ oder „Zurück“ an anderen Stellen der App."
+    ]
+  },
+  {
     "version": "v166",
     "summary": "„Nächste Karten für unterwegs laden“ ist jetzt klar als Knopf zu erkennen.",
     "notes": [

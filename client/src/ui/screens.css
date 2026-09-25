@@ -788,20 +788,19 @@
   line-height: 1.35;
   color: var(--ink-muted);
 }
-/* #290: "Nächste Karten für unterwegs laden" — a plain row like .options-deck,
-   above it since it applies to every deck, not only hers. #294: needs the
-   same .options-label above it that .options-deck has — without one the row
-   read as another sentence between the .options-hint paragraphs around it,
-   not as a button. */
+/* #290: "Nächste Karten laden", above it since it applies to every deck, not
+   only hers. #294: a plain .action row, even with a label above it, still
+   read as text rather than a control — Henning: "da ist immer noch kein
+   Button zu erkennen". .btn-secondary is the app's actual bordered button
+   shape, so the row is shorter now that the shape itself says "button". */
 .options-prefetch {
   margin-top: 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
-.options-prefetch .action {
-  border-bottom: 0;
-  padding: 15px 0 0;
+.options-prefetch .btn-secondary[disabled] {
+  color: var(--ink-muted);
 }
 /* "No limit" beside four numbers, on a phone. */
 .deck-options .choice button {
