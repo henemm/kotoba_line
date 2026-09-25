@@ -136,18 +136,19 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
       el("p.options-hint", { text: "Neue und zu wiederholende Karten zusammen. Du kannst jederzeit früher aufhören." }),
       // #290: any deck, not only hers — the point is to fetch audio ahead of
       // a train ride, and Kaishi is where most of her cards live.
-      // #294: a bare .action row read as another explanatory sentence
-      // between the two .options-hint paragraphs around it — "Umbenennen"/
-      // "Deck löschen" below read as actions only because "Dieses Deck"
-      // announces them first. Same fix here.
+      // #294: a label above a bare .action row (the first fix here) still
+      // read as text, not as a button — Henning: "da ist immer noch kein
+      // Button zu erkennen". .btn-secondary is the app's actual bordered
+      // button shape (first-run.js, session.js, own-deck.js); this is the
+      // first time a sheet uses it mid-list instead of in a footer.
       onPrefetchAudio
         ? el(
             "div.options-prefetch",
             {},
             el("span.options-label", { text: "Unterwegs" }),
-            el("button.action", {
+            el("button.btn-secondary", {
               type: "button",
-              text: prefetchStatus === "running" ? "Lädt …" : "Nächste Karten für unterwegs laden",
+              text: prefetchStatus === "running" ? "Lädt …" : "Nächste Karten laden",
               disabled: prefetchStatus === "running",
               onclick: () => runPrefetch(),
             }),
