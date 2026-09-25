@@ -17,3 +17,6 @@ media/
 # here describes the project, only whoever is working on it right now.
 .claude/settings.local.json
 .claude/worktrees/
+.claude/session-locks/
+.claude/workflows/
+.claude/user_override_token.json
