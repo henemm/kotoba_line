@@ -35,9 +35,13 @@ const CANNOT = {
  */
 const CANNOT_IN_KANA = "Bei Kana nicht möglich – übe sie mit „Bedeutung wählen“ oder „Karte umdrehen“";
 
-export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, onDelete, onClose }) {
+export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, onDelete, onClose, onPrefetchAudio }) {
   let settings = { hiddenModes: [], ...(deck.settings ?? {}) };
   const ways = deck.ways ?? {};
+  // #290: undefined before the first tap, "running" while it is in flight,
+  // else what it found — a result to show in place of the explanation, the
+  // same shape "Löschen" gives with `problem` in `askToDelete` below.
+  let prefetchStatus;
 
   const scrim = el("div.sheet-scrim.deck-options", {
     onclick: (e) => e.target === e.currentTarget && onClose?.(),
@@ -130,6 +134,26 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
         ),
       ),
       el("p.options-hint", { text: "Neue und zu wiederholende Karten zusammen. Du kannst jederzeit früher aufhören." }),
+      // #290: any deck, not only hers — the point is to fetch audio ahead of
+      // a train ride, and Kaishi is where most of her cards live.
+      onPrefetchAudio
+        ? el(
+            "div.options-prefetch",
+            {},
+            el("button.action", {
+              type: "button",
+              text: prefetchStatus === "running" ? "Lädt …" : "Nächste Karten für unterwegs laden",
+              disabled: prefetchStatus === "running",
+              onclick: () => runPrefetch(),
+            }),
+            el("p.options-hint", {
+              text:
+                prefetchStatus && prefetchStatus !== "running"
+                  ? prefetchStatus
+                  : "Lädt den Ton der als Nächstes fälligen Karten, damit er unterwegs ohne Netz da ist.",
+            }),
+          )
+        : null,
       // #137: a deck of hers can be renamed and deleted here, where Noji keeps
       // a deck's menu. Kaishi is everyone's and cannot.
       deck.own && (onRename || onDelete)
@@ -231,6 +255,13 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
     settings = { ...settings, ...patch };
     draw();
     onChange?.(patch, settings);
+  }
+
+  async function runPrefetch() {
+    prefetchStatus = "running";
+    draw();
+    prefetchStatus = await onPrefetchAudio();
+    draw();
   }
 
   return scrim;

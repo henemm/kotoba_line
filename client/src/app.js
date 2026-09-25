@@ -15,7 +15,7 @@ import { cardActionsSheet, deckCardsBlock, deckNameSheet } from "./screens/deck-
 import { kanaCardSheet, kanaGridBlock } from "./screens/kana-deck.js";
 import { firstRunScreen } from "./screens/first-run.js";
 import { DEFAULT_FILTERS, activeLabel, chooseSetScreen, isDefault, scopeOf } from "./screens/choose-set.js";
-import { sessionScreen } from "./screens/session.js";
+import { exampleAudio, sessionScreen, showsSentence } from "./screens/session.js";
 import { settingsScreen } from "./screens/settings.js";
 import { summaryScreen } from "./screens/summary.js";
 import { flush, offlineStatus, pending, startFlushing, subscribe } from "./outbox.js";
@@ -31,7 +31,9 @@ import { hintPending, offerInstall } from "./install.js";
 import { markOfferAsked, offerAsked, openReminderOffer, shouldOffer } from "./remind-offer.js";
 import { notesSince, startingPoint, versionNumber } from "./whats-new.js";
 import { el, render } from "./ui/dom.js";
-import { appName } from "./script.js";
+import { appName, isKana } from "./script.js";
+import { mediaUrl } from "./audio.js";
+import { wordSound } from "./sound.js";
 import { seen } from "./seen.js";
 import { declinePush, enablePush, pushState, refreshPush } from "./push.js";
 import { deckTopics } from "./topics.js";
@@ -553,8 +555,59 @@ function openDeckOptions() {
     onRename: state.deck.own ? openRenameDeck : undefined,
     onDelete: state.deck.own ? deleteOpenDeck : undefined,
     onClose: closeSheet,
+    onPrefetchAudio: () => prefetchAudioFor(state.deck),
   });
   renderApp();
+}
+
+/**
+ * #290: what "Nächste Karten für unterwegs laden" fetches — the same cards
+ * `practiseNumbers()` already asks about for this deck, not the whole deck.
+ * `MEDIA_MAX` in sw.js caps the audio cache at about 300 files ("a week of
+ * study"); her own deck alone has over a thousand cards, so downloading all
+ * of it would evict itself and spend mobile data if she taps this off WiFi
+ * by mistake. This is the same `limit: 60` the deck page already fetches.
+ */
+async function prefetchAudioFor(deck) {
+  let queue;
+  try {
+    queue = await api.queue({ limit: 60, deckKey: deck.key });
+  } catch {
+    return "Geht nicht ohne Verbindung.";
+  }
+  const cards = await loadDeck();
+  const recordings = new Map();
+  for (const r of queue.recordings ?? []) {
+    if (r.kind === "native") recordings.set(r.card_id, r);
+  }
+  const files = new Set();
+  for (const id of queue.cardIds) {
+    const card = cards.get(id);
+    if (!card) continue;
+    for (const file of audioFilesFor(card, state.settings.japaneseScript, recordings.get(id))) {
+      files.add(file);
+    }
+  }
+  if (files.size === 0) return "Keine Karten fällig.";
+  const results = await Promise.allSettled(
+    [...files].map((file) =>
+      fetch(mediaUrl(file)).then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.arrayBuffer();
+      }),
+    ),
+  );
+  const ok = results.filter((r) => r.status === "fulfilled").length;
+  if (ok === 0) return "Geht nicht ohne Verbindung.";
+  return ok === files.size ? `${ok} geladen.` : `${ok} von ${files.size} geladen.`;
+}
+
+/** Same files a real session primes for this card (session.js) — word, its sentence if shown, a kana's examples. */
+function audioFilesFor(card, japanese, recording) {
+  if (isKana(card)) return [card.word_audio, ...exampleAudio(card)].filter(Boolean);
+  const files = [wordSound(card, recording).file];
+  if (showsSentence(card, japanese) && card.sentence_audio) files.push(card.sentence_audio);
+  return files.filter(Boolean);
 }
 
 /** One deck's settings by key (#275): the open deck's, else the deck list's. */
