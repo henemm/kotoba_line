@@ -333,6 +333,18 @@ is shown (#116), so ♪ plays at once, and they stay in the cache. That is about
 read-aloud fetches most of it anyway. After a week of use the cache holds exactly the
 words she is actually studying.
 
+A media fetch that neither succeeds nor is refused — a throttled connection,
+not a dead one — aborts after 10s (`MEDIA_TIMEOUT_MS`, same shape as the API
+client's `REQUEST_TIMEOUT_MS`, #288). Without a bound it hung indefinitely and
+the fallback to speech synthesis never ran, because no `error` ever reached
+the `<audio>` element.
+
+A deck's options offer "Nächste Karten für unterwegs laden" (#290): fetches
+audio for that deck's next-due cards only — the same `limit: 60` the deck page
+already asks for its due count, not the whole deck. Still governed by the
+300-entry cache above; the point is to move *when* those files download (onto
+WiFi, ahead of a session) without changing *how much* the app ever holds.
+
 **iOS specifics to plan for:**
 
 - There is no install prompt. The app must show a one-time hint explaining
