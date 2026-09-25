@@ -789,7 +789,10 @@
   color: var(--ink-muted);
 }
 /* #290: "Nächste Karten für unterwegs laden" — a plain row like .options-deck,
-   above it since it applies to every deck, not only hers. */
+   above it since it applies to every deck, not only hers. #294: needs the
+   same .options-label above it that .options-deck has — without one the row
+   read as another sentence between the .options-hint paragraphs around it,
+   not as a button. */
 .options-prefetch {
   margin-top: 18px;
   display: flex;
