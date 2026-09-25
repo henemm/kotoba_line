@@ -1,5 +1,12 @@
 [
   {
+    "version": "v165",
+    "summary": "Neuer Knopf in den Deck-Optionen: „Nächste Karten für unterwegs laden“.",
+    "notes": [
+      "Lädt den Ton der als Nächstes fälligen Karten dieses Decks vorab – ideal, solange du noch WLAN hast, bevor es auf die Bahn geht."
+    ]
+  },
+  {
     "version": "v164",
     "summary": "Ton wechselt jetzt auch bei ganz langsamem Netz zur Sprachausgabe.",
     "notes": [
