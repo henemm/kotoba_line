@@ -1,5 +1,12 @@
 [
   {
+    "version": "v166",
+    "summary": "„Nächste Karten für unterwegs laden“ ist jetzt klar als Knopf zu erkennen.",
+    "notes": [
+      "In den Deck-Optionen stand der Knopf bisher zwischen zwei Erklärtexten und sah selbst wie Text aus. Jetzt steht „Unterwegs“ als Überschrift darüber, so wie bei „Dieses Deck“."
+    ]
+  },
+  {
     "version": "v165",
     "summary": "Neuer Knopf in den Deck-Optionen: „Nächste Karten für unterwegs laden“.",
     "notes": [

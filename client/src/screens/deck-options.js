@@ -136,10 +136,15 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
       el("p.options-hint", { text: "Neue und zu wiederholende Karten zusammen. Du kannst jederzeit früher aufhören." }),
       // #290: any deck, not only hers — the point is to fetch audio ahead of
       // a train ride, and Kaishi is where most of her cards live.
+      // #294: a bare .action row read as another explanatory sentence
+      // between the two .options-hint paragraphs around it — "Umbenennen"/
+      // "Deck löschen" below read as actions only because "Dieses Deck"
+      // announces them first. Same fix here.
       onPrefetchAudio
         ? el(
             "div.options-prefetch",
             {},
+            el("span.options-label", { text: "Unterwegs" }),
             el("button.action", {
               type: "button",
               text: prefetchStatus === "running" ? "Lädt …" : "Nächste Karten für unterwegs laden",
