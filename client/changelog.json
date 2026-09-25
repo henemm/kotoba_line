@@ -1,5 +1,12 @@
 [
   {
+    "version": "v164",
+    "summary": "Ton wechselt jetzt auch bei ganz langsamem Netz zur Sprachausgabe.",
+    "notes": [
+      "Wenn eine Aufnahme zu lange braucht (zum Beispiel bei gedrosseltem Datenvolumen), hört die App nach 10 Sekunden auf zu warten und liest das Wort stattdessen vor."
+    ]
+  },
+  {
     "version": "v163",
     "summary": "„Auch andersherum abfragen“ gibt es jetzt in jedem Deck, auch in Kaishi.",
     "notes": [

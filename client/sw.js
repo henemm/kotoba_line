@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v163";
+const VERSION = "v164";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -292,6 +292,17 @@ async function media(request) {
 const inflight = new Map();
 
 /**
+ * Same reasoning as `REQUEST_TIMEOUT_MS` in api.js (#72), for the one fetch
+ * that never got it (#288). A dead connection fails fast; a throttled one
+ * — her data capped and slowed by the carrier rather than gone — neither
+ * succeeds nor is refused. Without a bound, that fetch hangs, no `error`
+ * ever reaches the `<audio>` element that is waiting on it, and the
+ * fallback to speech synthesis in `say()` — which only runs on an error —
+ * never fires. The card just stays silent.
+ */
+const MEDIA_TIMEOUT_MS = 10000;
+
+/**
  * One file, from the cache or else from the network — once, however many ask.
  *
  * The cache always holds the whole file, never a slice, and the network is
@@ -311,7 +322,14 @@ function wholeFile(url) {
       const cache = await caches.open(MEDIA);
       const hit = await cache.match(url);
       if (hit) return hit;
-      const res = await fetch(url);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), MEDIA_TIMEOUT_MS);
+      let res;
+      try {
+        res = await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
       if (res.ok) {
         await cache.put(url, res.clone());
         await evict(cache);
