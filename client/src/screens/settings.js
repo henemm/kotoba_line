@@ -7,6 +7,7 @@ import { el, num, render } from "../ui/dom.js";
 import { canRecord, micErrorMessage, startRecording, stopAllRecording } from "../recording.js";
 import { disablePush, enablePush, pushState } from "../push.js";
 import { seen } from "../seen.js";
+import { describe as traceLine, recent, stuckCount, unsentCount } from "../trace.js";
 import { isStandalone, openInstallHint } from "../install.js";
 
 /**
@@ -111,7 +112,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     } catch (err) {
       // The new version is already on the phone, so offline is no reason to
       // hide it.
-      render(root, header(), waitingUpdate(), problem(err));
+      render(root, header(), waitingUpdate(), problem(err), recorder());
       return;
     }
     draw();
@@ -150,6 +151,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       account(),
       sources(),
       diagnostics(),
+      recorder(),
     );
   }
 
@@ -681,6 +683,21 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
     if (data.cachedAudio === undefined) return "nicht gezählt";
     if (data.cachedAudio === 0) return "noch nichts";
     return `${num(data.cachedAudio)} ${data.cachedAudio === 1 ? "Datei" : "Dateien"}`;
+  }
+
+  /**
+   * #299: the flight recorder's newest lines. Drawn on the offline screen
+   * too — that is when they matter most, and when nothing else here can be
+   * shown: with no request getting through, a photo of this is the only way
+   * they leave the device.
+   */
+  function recorder() {
+    return el(
+      "div.diagnostics.recorder",
+      {},
+      diagnostic("Protokoll", `${num(stuckCount())}× hängen geblieben · ${num(unsentCount())} nicht gesendet`),
+      el("div.recorder-lines", {}, ...recent(15).reverse().map((line) => el("div", { text: traceLine(line) }))),
+    );
   }
 
   function diagnostic(label, value) {

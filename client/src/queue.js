@@ -14,6 +14,7 @@
  * is still in the outbox or has already been sent.
  */
 import { OfflineError, answerSoon, api, isSessionExpired, query } from "./api.js";
+import { note } from "./trace.js";
 import { answeredOnDevice, getMeta, outbox, setMeta } from "./store.js";
 
 const key = (opts) => `queue${query(opts)}`;
@@ -66,6 +67,8 @@ export async function sessionQueue(opts) {
   let outcome = await answerSoon(asking);
   if (!outcome) {
     const cached = await reading;
+    // #299: a session started from the device's copy, not the server's.
+    note("queue", { from: cached ? "device" : "waiting", deck: opts?.deckKey });
     if (cached) return fromCache(cached);
     // Nothing on the device to go on with, so the only answer is the server's.
     outcome = await asking.then(

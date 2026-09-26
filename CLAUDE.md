@@ -111,6 +111,15 @@ button on every screen in WebKit against a copy of the live database and
 writes `report.md`; it exits 1 for a button without an answer, or a sound
 with nothing pulsing. A new screen gets a line in its `SCREENS`.
 
+**A report from her device starts with `ops/device-log.sh <name>`.** The app
+writes down, on the device, what it did while offline (`client/src/trace.js`,
+#299) — starts, every request and how it ended, a screen that sat on "…"
+with what it waited for — and sends it with the next request that gets
+through. Read that timeline before forming a theory: #297 had to be guessed
+at because her iPad's last request was 80 minutes before her screenshot.
+With no request getting through at all, Settings → Diagnose shows the newest
+lines, and a photo of it is the report.
+
 **Use WebKit for anything that has to hold on her phone.** Chromium is fine for
 layout and copy, but every device trap listed here was invisible in it: the
 `Range` request for audio, `height: 100%` short of the bottom, the safe-area

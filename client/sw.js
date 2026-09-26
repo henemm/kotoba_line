@@ -22,7 +22,7 @@
  * the app switcher. Now it installs, waits, and the page asks her
  * (`src/update.js`).
  */
-const VERSION = "v168";
+const VERSION = "v169";
 const SHELL = `kotoba-shell-${VERSION}`;
 const MEDIA = "kotoba-media";
 
@@ -76,6 +76,7 @@ const SHELL_FILES = [
   "src/stars.js",
   "src/store.js",
   "src/topics.js",
+  "src/trace.js",
   "src/typing.js",
   "src/update.js",
   "src/viewport.js",

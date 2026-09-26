@@ -12,6 +12,7 @@
  */
 import { ApiError, OfflineError, api } from "./api.js";
 import { flushSeen } from "./seen.js";
+import { flushTrace, note } from "./trace.js";
 import { acknowledge, enqueue, noteAnswered, outbox, outboxCount } from "./store.js";
 
 const listeners = new Set();
@@ -63,9 +64,20 @@ let flushing;
  * from "could not send".
  */
 export function flush() {
-  flushing ??= doFlush().finally(() => {
-    flushing = undefined;
-  });
+  flushing ??= doFlush()
+    .then((result) => {
+      // Here, not in startFlushing(): the flush at the end of a session is a
+      // direct call, and that is the one that fails on a train (#299 found
+      // it — v168 retried only the flushes startFlushing() had fired).
+      retryIfStuck(result);
+      // #299: every attempt that had something to send, since "24 warten"
+      // with no trace of a try is exactly what could not be explained.
+      if (result.remaining || result.sent) note("flush", result);
+      return result;
+    })
+    .finally(() => {
+      flushing = undefined;
+    });
   return flushing;
 }
 
@@ -179,10 +191,9 @@ export function startFlushing() {
   const attempt = () =>
     flush()
       .catch(() => {})
-      .then((result) => {
-        retryIfStuck(result);
-        return flushSeen().catch(() => {});
-      });
+      .then(() => flushSeen().catch(() => {}))
+      // #299: the flight recorder last, behind her reviews and the moments.
+      .then(() => flushTrace((device, lines) => api.deviceLog(device, lines)));
   if (flushingStarted) return attempt();
   flushingStarted = true;
 

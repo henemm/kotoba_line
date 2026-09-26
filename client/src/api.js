@@ -6,6 +6,8 @@
  * where the app itself was served, so the same build works at the root during
  * development and under /kotoba/ in production.
  */
+import { requestStarted } from "./trace.js";
+
 // Guarded so the module can be imported by a test runner with no DOM.
 const documentBase =
   typeof document !== "undefined" ? document.baseURI : "http://localhost/";
@@ -108,8 +110,15 @@ export function onSessionExpired(fn) {
  */
 async function request(path, { method = "GET", body, blob, signal } = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
   signal?.addEventListener("abort", () => controller.abort(), { once: true });
+  // #299: every request into the flight recorder — except the recorder's own
+  // uploads, which would otherwise write a line for every line they send.
+  const ended = path === "/device-log" ? () => {} : requestStarted(`${method} ${path}`);
 
   let res;
   let text;
@@ -130,10 +139,12 @@ async function request(path, { method = "GET", body, blob, signal } = {}) {
   } catch {
     // An abort rejects the body read too, and a connection lost part way
     // through a reply is no less offline than one lost before it.
+    ended(timedOut ? "timeout" : signal?.aborted ? "aborted" : "net");
     throw new OfflineError();
   } finally {
     clearTimeout(timer);
   }
+  ended(res.ok ? "ok" : res.status);
 
   const parsed = text ? safeJson(text) : undefined;
 
@@ -200,6 +211,8 @@ export const api = {
   events: (events) => request("/events", { method: "POST", body: { events } }),
   // #228: what appeared on her screen and what she did with it (seen.js).
   uiEvents: (events) => request("/ui-events", { method: "POST", body: { events } }),
+  // #299: the flight recorder's lines, a batch at a time.
+  deviceLog: (device, lines) => request("/device-log", { method: "POST", body: { device, lines } }),
   // #248: "Deine nächsten Karten sind bereit" (push.js).
   pushKey: () => request("/push/key"),
   pushSubscribe: (subscription) => request("/push/subscribe", { method: "POST", body: { subscription } }),

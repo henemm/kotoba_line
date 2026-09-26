@@ -3,6 +3,7 @@ import { modeByKey } from "../modes.js";
 import { describe } from "../resume.js";
 import { modeName } from "../script.js";
 import { seen } from "../seen.js";
+import { note } from "../trace.js";
 import { el, num, render } from "../ui/dom.js";
 
 /**
@@ -51,18 +52,26 @@ export function decksScreen({
    * so on a stalled connection "…" stood for the whole REQUEST_TIMEOUT_MS
    * (measured on the live app in WebKit, API stalled: "…" at 9 s, the list at
    * 12 s; Henning sent a screenshot of it from Charlotte's iPad on next to
-   * no WLAN, 2026-09-26). The answer, when it comes, redraws the same rows with today's numbers.
+   * no WLAN, 2026-09-26). The answer, when it comes, redraws the same rows
+   * with today's numbers.
    */
   async function load() {
+    const started = Date.now();
     const soon = await answerSoon(decks);
-    if (soon) fill(soon);
-    else {
+    if (soon) {
+      fill(soon);
+      note("decks", { from: soon.error ? "none" : "server", ms: Date.now() - started });
+    } else {
       const kept = await keptDecks?.().catch(() => undefined);
       if (kept) {
         fill({ value: kept });
         if (scrollTop) root.scrollTop = scrollTop;
       }
-      fill(await decks.then((value) => ({ value }), (error) => ({ error })));
+      // #299: which of the two she saw, and when.
+      note("decks", { from: kept ? "device" : "waiting", ms: Date.now() - started });
+      const late = await decks.then((value) => ({ value }), (error) => ({ error }));
+      fill(late);
+      note("decks", { from: late.error ? "none" : "late", ms: Date.now() - started });
     }
     if (scrollTop) root.scrollTop = scrollTop;
   }

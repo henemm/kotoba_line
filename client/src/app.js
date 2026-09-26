@@ -24,6 +24,7 @@ import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { deckCatchingUp, loadDeck, syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
+import { note, startTrace } from "./trace.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
 import { watchPresses } from "./ui/press.js";
@@ -1619,6 +1620,11 @@ subscribe(({ waiting, sent, status }) => {
   // Design 25: "Synced · N reviews sent" is a confirmation, not a state — it
   // shows what just went up and then removes itself after two seconds.
   if (sent > 0) {
+    // The server took them, so this device is not offline, whatever it said
+    // before. Only an "online" event used to say so, and thin WLAN that
+    // recovers never fires one: the strip went on saying "Offline" after
+    // the reviews had gone up (measured, #299).
+    state.online = true;
     // What went up is now in the server's count (#106).
     numbersChanged();
     state.justSent = sent;
@@ -1721,6 +1727,17 @@ async function loadSettings() {
  * start, or after signing out — waits, because the sign-in screen needs the
  * server anyway.
  */
+/** Which screen is up, in a word or two, for the flight recorder (#299). */
+function whereNow() {
+  if (!state.user) return "signin";
+  if (state.session) return `session ${state.session.mode}`;
+  if (state.summary) return "summary";
+  if (state.overlay) return "overlay";
+  if (state.sheet) return "sheet";
+  if (state.tab === "practise") return state.deck ? `deck ${state.deck.key}` : "decks";
+  return state.tab;
+}
+
 async function checkSession() {
   try {
     const user = await api.me();
@@ -1733,7 +1750,13 @@ async function checkSession() {
   }
 }
 
+// #299: before anything that can wait — the first read of IndexedDB included,
+// so a start that hangs there still leaves "start" without "boot".
+const booting = Date.now();
+startTrace({ version: SHELL_VERSION, where: whereNow, root: app });
+
 const remembered = await getMeta("user");
+note("boot", { user: !!remembered, ms: Date.now() - booting });
 const sessionCheck = checkSession();
 // #133/#135: the settings this device last saw stand in until the server's
 // arrive, so an offline start keeps her script and her lines. Laid over the

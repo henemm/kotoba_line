@@ -3137,6 +3137,16 @@
   justify-content: space-between;
   gap: 16px;
 }
+/* #299: the flight recorder's lines — small, and wrapping rather than
+   widening the page, since a line can carry the requests still open. */
+.settings .recorder {
+  margin-top: 18px;
+}
+.settings .recorder-lines {
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 .mic-test-row {
   display: flex;
   align-items: center;
