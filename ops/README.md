@@ -294,6 +294,31 @@ card with no audio is an ordinary thing. It sounds like it works. The console
 now warns when a file was named and could not be played; that warning is the
 signal.
 
+## What did her device do? (#299)
+
+```sh
+/srv/kotoba/bin/device-log.sh charlotte          # the last 2 days, Tokyo time
+/srv/kotoba/bin/device-log.sh charlotte 2026-09-26
+TZ_NAME=Europe/Berlin /srv/kotoba/bin/device-log.sh julia 7
+```
+
+The app writes down, on the device, what it did — starts and returns, every
+request with its duration and outcome, which screen was up, a "…" that stood
+for 5 s or longer together with the requests it was waiting for, errors,
+every attempt to send her reviews — and sends it up with the next request
+that gets through (`client/src/trace.js`). This prints it as a timeline:
+`!!` marks a hang, a request that got no answer and an error; a gap of more
+than ten minutes is marked; a line sent up long after it happened says when
+it arrived. Technical lines only — a search is logged as `/browse`, never
+what was searched for. Kept a week on the device, 60 days here.
+
+Start any "it did not work on her phone" here, before a theory. If her device
+reaches the server not at all, Settings → Diagnose shows its newest lines,
+and a photo of that is the report. The session-start hook (`seen.sh
+--watches`) prints when each person's lines last arrived and how many hangs
+they hold — not counting Statistik and Einstellungen, which wait for the
+server offline by design.
+
 ## If the deep link 404s
 
 `alias` combined with `try_files` is a known source of confusing 404s in nginx.
