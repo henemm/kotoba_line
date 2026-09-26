@@ -50,8 +50,8 @@ export function decksScreen({
    * latter, and `deckList()` falls back to the kept list only on a failure —
    * so on a stalled connection "…" stood for the whole REQUEST_TIMEOUT_MS
    * (measured on the live app in WebKit, API stalled: "…" at 9 s, the list at
-   * 12 s; Charlotte on next to no WLAN, 2026-09-26, sent a screenshot of it).
-   * The answer, when it comes, redraws the same rows with today's numbers.
+   * 12 s; Henning sent a screenshot of it from Charlotte's iPad on next to
+   * no WLAN, 2026-09-26). The answer, when it comes, redraws the same rows with today's numbers.
    */
   async function load() {
     const soon = await answerSoon(decks);

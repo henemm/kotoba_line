@@ -151,10 +151,38 @@ export function offlineStatus({ online, waiting = 0, justSent = 0, signedOut = f
 
 let flushingStarted = false;
 
+/**
+ * #297: on a weak signal a flush gives up after REQUEST_TIMEOUT_MS, and
+ * nothing asked again while the app stayed open — thin WLAN that recovers
+ * fires no "online" event, since the device never counted as offline. Her
+ * reviews sat under "24 Wiederholungen warten aufs Senden" until she left the
+ * app or ended a session (measured in WebKit: still 3 waiting 45 s after the
+ * API came back). So an attempt that could not reach the server is tried
+ * again after RETRY_MS, while the app is on screen. One small request, and
+ * only while something is waiting. A refused flush (401) is not retried: it
+ * needs her to sign in, not a timer.
+ */
+const RETRY_MS = 30 * 1000;
+let retry;
+
+function retryIfStuck(result) {
+  if (!result?.offline || retry) return;
+  retry = setTimeout(() => {
+    retry = undefined;
+    if (document.visibilityState === "visible") startFlushing();
+  }, RETRY_MS);
+}
+
 export function startFlushing() {
   // #228: what she was shown goes up on the same occasions, never ahead of
   // her reviews and never counted with them.
-  const attempt = () => flush().catch(() => {}).then(() => flushSeen().catch(() => {}));
+  const attempt = () =>
+    flush()
+      .catch(() => {})
+      .then((result) => {
+        retryIfStuck(result);
+        return flushSeen().catch(() => {});
+      });
   if (flushingStarted) return attempt();
   flushingStarted = true;
 
