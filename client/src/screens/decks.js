@@ -22,6 +22,9 @@ export function decksScreen({
   // `{ decks }` from `/api/decks`, as a promise the shell owns — the same
   // reasoning as the practise tab's numbers (#106).
   decks,
+  // The last list this device was given, or undefined (#297). What the list
+  // shows while `decks` is still out.
+  keptDecks,
   onOpen,
   // #137: "New deck", at the end of the list, as in the mockup Henning chose.
   onNewDeck,
@@ -41,11 +44,26 @@ export function decksScreen({
   render(root, el("h1.decks-title", { text: "Deine Decks" }), resumeRow(), list);
   load();
 
+  /**
+   * #297: the list the device already holds goes up once the server has had
+   * its PATIENCE_MS, not once the request gives up. It used to wait for the
+   * latter, and `deckList()` falls back to the kept list only on a failure —
+   * so on a stalled connection "…" stood for the whole REQUEST_TIMEOUT_MS
+   * (measured on the live app in WebKit, API stalled: "…" at 9 s, the list at
+   * 12 s; Charlotte on next to no WLAN, 2026-09-26, sent a screenshot of it).
+   * The answer, when it comes, redraws the same rows with today's numbers.
+   */
   async function load() {
     const soon = await answerSoon(decks);
     if (soon) fill(soon);
-    const outcome = soon ?? (await decks.then((value) => ({ value }), (error) => ({ error })));
-    if (!soon) fill(outcome);
+    else {
+      const kept = await keptDecks?.().catch(() => undefined);
+      if (kept) {
+        fill({ value: kept });
+        if (scrollTop) root.scrollTop = scrollTop;
+      }
+      fill(await decks.then((value) => ({ value }), (error) => ({ error })));
+    }
     if (scrollTop) root.scrollTop = scrollTop;
   }
 
