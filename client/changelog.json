@@ -1,5 +1,13 @@
 [
   {
+    "version": "v172",
+    "summary": "Die App lädt die Karten aller Decks für unterwegs vor, sobald sie Netz hat.",
+    "notes": [
+      "Du musst ein Deck nicht mehr vorher mit Netz öffnen, damit du es ohne Netz üben kannst – jedes Deck geht in jeder Übungsart.",
+      "Das braucht nur wenige Kilobyte. Den Ton lädt die App nicht von selbst vor, dafür gibt es weiter „Nächste Karten laden“ in den Deck-Optionen."
+    ]
+  },
+  {
     "version": "v171",
     "summary": "Ohne Netz kannst du jetzt jedes Deck in jeder Übungsart üben, das du zuletzt online geöffnet hast.",
     "notes": [

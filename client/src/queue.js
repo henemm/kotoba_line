@@ -73,6 +73,64 @@ export function keepForAnyWay(opts, answer) {
   return setMeta(anyWayKey(opts), kept(answer)).catch(() => {});
 }
 
+/** How often the queues of every deck are fetched ahead (#306). */
+export const PRELOAD_EVERY_MS = 15 * 60 * 1000;
+/** A deck page's own count asks for this many; the same here, so both keep alike. */
+const PRELOAD_LIMIT = 60;
+
+/**
+ * Which decks to fetch ahead: every deck that can be practised. Pure.
+ * Not a locked Reise deck (#252) and not an empty one of hers.
+ */
+export function decksToPreload(decks) {
+  return (decks ?? []).filter((d) => d.key && !d.locked && (d.cards ?? 0) > 0).map((d) => d.key);
+}
+
+let preloadedAt = 0;
+let preloading;
+
+/**
+ * Every deck's queue, kept for any way of practising (#306).
+ *
+ * v171 kept the queue of a deck whose page had been opened online. Henning,
+ * 2026-09-26: "Kannst du nicht sinnvoll preloaden?" — so a train can have any
+ * deck, not only the ones looked at before it. A queue is card ids and the
+ * intervals the buttons print, about half a kilobyte a deck as nginx sends it
+ * (measured, Kaishi at 60 cards: 535 bytes gzipped); the cards themselves are
+ * on the device already. Sound is not fetched here: that is megabytes, and
+ * stays behind "Nächste Karten laden", which she chooses.
+ *
+ * Called when the server has just answered /api/decks, so only with a
+ * connection that works. One deck after another, and the first request that
+ * fails ends the round — a signal that just failed would only fail five more
+ * times, each for ten seconds. At most every PRELOAD_EVERY_MS: a card
+ * answered since is taken out on the device anyway (`stillToAnswer`).
+ */
+export function preloadQueues(decks, { now = Date.now() } = {}) {
+  if (preloading || now - preloadedAt < PRELOAD_EVERY_MS) return preloading;
+  const keys = decksToPreload(decks);
+  if (keys.length === 0) return undefined;
+  preloading = (async () => {
+    const started = Date.now();
+    let kept = 0;
+    for (const deckKey of keys) {
+      try {
+        keepForAnyWay({ deckKey }, await api.queue({ limit: PRELOAD_LIMIT, deckKey }));
+        kept += 1;
+      } catch {
+        break;
+      }
+    }
+    // Only a round that got through counts: a failed one is tried again the
+    // next time the deck list comes from the server.
+    if (kept === keys.length) preloadedAt = Date.now();
+    note("preload", { decks: keys.length, kept, ms: Date.now() - started });
+  })().finally(() => {
+    preloading = undefined;
+  });
+  return preloading;
+}
+
 /** The exact queue, or the deck's in any way — whichever is newer. */
 async function cachedFor(opts) {
   const [exact, any] = await Promise.all([getMeta(key(opts)), getMeta(anyWayKey(opts))]);

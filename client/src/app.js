@@ -24,7 +24,7 @@ import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { deckCatchingUp, loadDeck, syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
-import { keepForAnyWay } from "./queue.js";
+import { keepForAnyWay, preloadQueues } from "./queue.js";
 import { note, startTrace } from "./trace.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
@@ -452,6 +452,9 @@ function deckList() {
       (answer) => {
         setMeta("decks", answer).catch(() => {});
         state.lastDecks = answer.decks ?? [];
+        // #306: the server just answered, so the connection works — fetch
+        // every deck's queue ahead, in the background, for offline.
+        preloadQueues(answer.decks);
         return answer;
       },
       async (error) => {
