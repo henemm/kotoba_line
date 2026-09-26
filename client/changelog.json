@@ -1,5 +1,12 @@
 [
   {
+    "version": "v173",
+    "summary": "Die Serie erscheint jetzt zuverlässig nach der Übung, die deinen Tag zählen lässt.",
+    "notes": [
+      "Bei langsamer Verbindung fiel sie manchmal aus, ausgerechnet an dem Tag, an dem sie gewachsen ist."
+    ]
+  },
+  {
     "version": "v172",
     "summary": "Die App lädt die Karten aller Decks für unterwegs vor, sobald sie Netz hat.",
     "notes": [
