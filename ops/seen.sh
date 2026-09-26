@@ -74,14 +74,15 @@ if arg == "--watches":
     if db.execute("SELECT 1 FROM sqlite_master WHERE name = 'device_log'").fetchone():
         week = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp() * 1000)
         rows = db.execute(
-            """SELECT u.handle, max(l.received_at), sum(l.kind = 'stuck' AND l.at >= ?),
+            """SELECT u.handle, max(l.received_at), sum(l.kind = 'stuck' AND l.at >= ?
+                          AND coalesce(json_extract(l.data, '$.w'), '') NOT IN ('settings', 'stats')),
                       sum(l.kind IN ('error', 'rejection') AND l.at >= ?)
                FROM device_log l JOIN users u ON u.id = l.user_id
                GROUP BY u.handle ORDER BY u.handle""",
             (week, week),
         ).fetchall()
         if rows:
-            print("Fahrtenschreiber (#299, ops/device-log.sh <name>) — letzte 7 Tage:")
+            print("Fahrtenschreiber (#299, ops/device-log.sh <name>) — letzte 7 Tage, ohne Statistik/Einstellungen offline:")
             for handle, last, stuck, errors in rows:
                 when = (datetime.fromtimestamp(last / 1000, timezone.utc) + timedelta(hours=9)).strftime("%d.%m. %H:%M")
                 print(f"  {handle}: zuletzt empfangen {when} (Tokio), {stuck}× hängen geblieben, {errors} Fehler")

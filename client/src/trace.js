@@ -101,7 +101,10 @@ let dirty;
 function load() {
   if (lines) return;
   lines = trimmed(read(LOG, []), Date.now());
-  seq = lines.length ? lines[lines.length - 1].s : read(SENT, 0);
+  // Never below what was sent: the log is written a second after a line,
+  // SENT at once, so an app ended inside that second would otherwise number
+  // its next lines at or below SENT — and they would never go up.
+  seq = Math.max(lines.length ? lines[lines.length - 1].s : 0, read(SENT, 0));
 }
 
 function persist() {
@@ -175,7 +178,14 @@ export function flushTrace(post) {
     for (let round = 0; round < 10; round++) {
       const batch = unsent(lines, read(SENT, 0));
       if (batch.length === 0) return;
-      await post(deviceId(), batch);
+      try {
+        await post(deviceId(), batch);
+      } catch (err) {
+        // A batch the server refuses (400, 413) would be refused again every
+        // time, and stop every line after it: let it go, as seen.js does.
+        // Offline, signed out or a server that lacks the route: try later.
+        if (!(err?.status === 400 || err?.status === 413)) throw err;
+      }
       write(SENT, batch[batch.length - 1].s);
     }
   })()

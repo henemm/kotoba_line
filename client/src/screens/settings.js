@@ -99,7 +99,9 @@ const APPEARANCES = [
 
 export function settingsScreen({ user, update, onSignOut, onSettings }) {
   const root = el("div.settings");
-  render(root, el("div.loading", { text: "…" }));
+  // #299: the recorder's lines at once, not only after the ten seconds an
+  // offline start takes to give up — that is when a photo of them is wanted.
+  render(root, el("div.loading", { text: "…" }), recorder());
 
   let data;
   let updating = false;

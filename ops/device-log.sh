@@ -55,12 +55,18 @@ if not rows:
 
 devices = sorted({r[0] for r in rows})
 names = {d: f"G{i + 1}" for i, d in enumerate(devices)}
+# Statistik and Einstellungen wait for the server by design (§7) and say so
+# after the timeout; a hang there is not the kind this looks for.
+DESIGNED = ("settings", "stats")
 counts = {}
 for r in rows:
+    if r[3] == "stuck" and json.loads(r[4] or "{}").get("w") in DESIGNED:
+        counts["stuck_designed"] = counts.get("stuck_designed", 0) + 1
+        continue
     counts[r[3]] = counts.get(r[3], 0) + 1
 bad = sum(1 for r in rows if r[3] == "req" and json.loads(r[4] or "{}").get("r") != "ok")
 print(f"  {len(rows)} Zeilen von {len(devices)} Gerät(en): " + ", ".join(f"{names[d]}={d[:8]}" for d in devices))
-print(f"  hängen geblieben {counts.get('stuck', 0)}×, Anfragen ohne Antwort {bad}, Fehler {counts.get('error', 0) + counts.get('rejection', 0)}, Ton-Ersatz {counts.get('audio', 0)}")
+print(f"  hängen geblieben {counts.get('stuck', 0)}× (dazu {counts.get('stuck_designed', 0)}× Statistik/Einstellungen ohne Netz), Anfragen ohne Antwort {bad}, Fehler {counts.get('error', 0) + counts.get('rejection', 0)}, Ton-Ersatz {counts.get('audio', 0)}")
 print()
 
 prev = None
