@@ -20,6 +20,68 @@ import { answeredOnDevice, getMeta, outbox, setMeta } from "./store.js";
 const key = (opts) => `queue${query(opts)}`;
 
 /**
+ * The same cards in any way of practising (#304): the filters without the
+ * mode or a limit, in a fixed order so two callers that spread them
+ * differently still meet.
+ *
+ * The exact key above is kept only for a session started online in that very
+ * way, in that very deck. Henning, 2026-09-26, offline in a deck he had opened
+ * online but not practised in: "Du bist offline, und diese Auswahl wurde noch
+ * nie online geübt" in every deck and every way — his flight recorder showed
+ * the deck pages loaded online, and no session. The server's queue differs
+ * between ways only in leaving out reversed cards outside めくる (#284), which
+ * `playableIn` does on the device too; so any queue for the deck will do.
+ */
+const anyWayKey = (opts) => {
+  const { mode, limit, ...rest } = opts ?? {};
+  return `queue.any${query(Object.fromEntries(Object.entries(rest).sort(([a], [b]) => a.localeCompare(b))))}`;
+};
+
+/** What is kept of an answer, for either key. */
+function kept(answer) {
+  return {
+    cardIds: answer.cardIds,
+    // The intervals are cached with the queue on purpose: めくる prints them
+    // under every button, and a session on a train would otherwise show four
+    // blanks where the reason for four buttons should be.
+    intervals: answer.intervals,
+    // What the buttons say after a Nochmal (#242), for the same reason.
+    againIntervals: answer.againIntervals,
+    // And after Schwer or Gut on the first showing (#242).
+    stepIntervals: answer.stepIntervals,
+    // Tomorrow's, and when each day ends (#246): a queue cached today can
+    // be run on tomorrow's train, when the intervals have grown a day.
+    intervalsTomorrow: answer.intervalsTomorrow,
+    labelDays: answer.labelDays,
+    // Cached for the same reason as the intervals: the session draws a star
+    // on every card (#35), and a session on a train would otherwise draw all
+    // of them empty — which reads as "nothing is starred", not as "unknown".
+    starred: answer.starred,
+    // Her own and a native speaker's recordings (#183 follow-up) — same
+    // reasoning as starred: known offline, not "none" until the next sync.
+    recordings: answer.recordings,
+    at: Date.now(),
+  };
+}
+
+/**
+ * Keep a queue the app was given anyway (#304) — the deck page's count, the
+ * "Nächste Karten laden" button's — for any way of practising offline. It
+ * costs no request: those answers were already on the device and dropped.
+ */
+export function keepForAnyWay(opts, answer) {
+  return setMeta(anyWayKey(opts), kept(answer)).catch(() => {});
+}
+
+/** The exact queue, or the deck's in any way — whichever is newer. */
+async function cachedFor(opts) {
+  const [exact, any] = await Promise.all([getMeta(key(opts)), getMeta(anyWayKey(opts))]);
+  if (!exact) return any;
+  if (!any) return exact;
+  return (any.at ?? 0) > (exact.at ?? 0) ? any : exact;
+}
+
+/**
  * The card ids for a session, and where they came from.
  *
  * `stale` is true when they are the cached set, so the session can say so
@@ -35,34 +97,13 @@ const key = (opts) => `queue${query(opts)}`;
  */
 export async function sessionQueue(opts) {
   const asking = api.queue(opts).then(async (answer) => {
-    // The intervals are cached with the queue on purpose: めくる prints them
-    // under every button, and a session on a train would otherwise show four
-    // blanks where the reason for four buttons should be.
-    await setMeta(key(opts), {
-      cardIds: answer.cardIds,
-      intervals: answer.intervals,
-      // What the buttons say after a Nochmal (#242), for the same reason.
-      againIntervals: answer.againIntervals,
-      // And after Schwer or Gut on the first showing (#242).
-      stepIntervals: answer.stepIntervals,
-      // Tomorrow's, and when each day ends (#246): a queue cached today can
-      // be run on tomorrow's train, when the intervals have grown a day.
-      intervalsTomorrow: answer.intervalsTomorrow,
-      labelDays: answer.labelDays,
-      // Cached for the same reason as the intervals: the session draws a star
-      // on every card (#35), and a session on a train would otherwise draw all
-      // of them empty — which reads as "nothing is starred", not as "unknown".
-      starred: answer.starred,
-      // Her own and a native speaker's recordings (#183 follow-up) — same
-      // reasoning as starred: known offline, not "none" until the next sync.
-      recordings: answer.recordings,
-      at: Date.now(),
-    });
+    const entry = kept(answer);
+    await Promise.all([setMeta(key(opts), entry), setMeta(anyWayKey(opts), entry)]);
     return answer;
   });
   // Read alongside the request rather than after it, so a slow server costs
   // the wait and not the wait plus a disk read.
-  const reading = getMeta(key(opts));
+  const reading = cachedFor(opts);
 
   let outcome = await answerSoon(asking);
   if (!outcome) {
