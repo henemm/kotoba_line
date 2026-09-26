@@ -386,6 +386,8 @@ export default async function deckRoutes(app) {
           additionalProperties: false,
           properties: {
             q: { type: "string", maxLength: 64 },
+            // #302: one card, for a deck list's row — any id, hers are negative.
+            id: { type: "integer" },
             deck: { type: "string", maxLength: 32 },
             tag: { type: "string", maxLength: 32 },
             starred: { type: "boolean" },

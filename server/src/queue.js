@@ -840,7 +840,7 @@ function withSearchRomaji(db) {
  * §5a's browse screen: search by Japanese or by English gloss, filter by deck
  * and tag, and see what is starred.
  */
-export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageSize = 50 } = {}) {
+export function browseCards(db, userId, { q, id, deck, tag, starred, page = 0, pageSize = 50 } = {}) {
   // Join parameters and filter parameters are kept apart deliberately: mixing
   // them is how a query ends up reading a user id as a search term.
   // A card she deleted leaves every list, but its row stays for the event log
@@ -888,6 +888,12 @@ export function browseCards(db, userId, { q, deck, tag, starred, page = 0, pageS
       `%${q}%`, `%${q}%`, `%${q}%`, `% ${q.toLowerCase()}%`, `% ${q.toLowerCase()}%`,
       ...(romajiKey ? [` ${romajiKey}`] : []),
     );
+  }
+  // #302: the row Search would show for one card, for the sheet a deck
+  // list opens — the list is the phone's copy and has no star or topics.
+  if (id !== undefined) {
+    where += " AND c.id = ?";
+    whereParams.push(id);
   }
   if (deck) {
     where += " AND c.deck = ?";

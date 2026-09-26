@@ -3,7 +3,7 @@ import { deckCatchingUp, loadDeck } from "../deck.js";
 import { stopAllRecording } from "../recording.js";
 import { wordSound } from "../sound.js";
 import { showsScript, shownWord } from "../script.js";
-import { exactFirst, matchesQuery } from "./browse.js";
+import { byFrequencyThenId, exactFirst, matchesQuery } from "./browse.js";
 import { cardHistoryBlock } from "./card-history.js";
 import { el, num, render } from "../ui/dom.js";
 import { voiceCircle } from "../ui/voice-circle.js";
@@ -23,24 +23,42 @@ import { soundButton } from "../ui/sound-button.js";
 /** Rows drawn before "Show more". Her 1000 list has 232; a page should not draw them all. */
 export const ROWS_PER_PAGE = 50;
 
+/** Reise 1 and 2 (#252): Kaishi's cards under one travel topic, as the server scopes them. */
+const TRAVEL_TAGS = { "travel:1": "travel 1", "travel:2": "travel 2" };
+
 /**
- * Which cached cards belong to one of her decks, in the order of her list with
- * the newest card on top (own ids are negative epoch milliseconds, so
- * ascending id is exactly that). A search puts an exact romaji match first.
+ * Which cached cards belong to one deck — the same cards the server counts
+ * for it (`filterClause`, server/src/queue.js).
  *
- * Her decks only (v69): Kaishi's page has no card list. Its 1,500 cards are
- * not hers to edit, so a row there led nowhere (Henning, 2026-09-14), and
- * finding a Kaishi word is what Search is for.
+ * Every deck but the two kana ones (#302). Kaishi's page had no list from v69:
+ * its cards are not hers to edit, and a tap on a row led nowhere (Henning,
+ * 2026-09-14). A Kaishi card has had its own sheet since — star, her topics,
+ * "Auch andersherum", its record — so the reason was gone, and three decks
+ * behaving three ways was left (Henning, 2026-09-26: "ich verstehe nicht,
+ * warum sich die Decks im UI unterschiedlich verhalten").
+ *
+ * Her own decks in the order of her list, the newest card on top (own ids are
+ * negative epoch milliseconds, so ascending id is exactly that). Kaishi and
+ * Reise in the order their new cards come, most frequent first — the order
+ * Search lists them in. A search puts an exact romaji match first.
  *
  * `list_name` stands in for `deck_id` on a card cached before migration 016
  * reached this phone; the next sync replaces it.
  */
 export function cardsOfDeck(deck, cards, q = "") {
-  const inDeck = (c) => c.deck === "personal" && (c.deck_id === deck.id || (c.deck_id == null && c.list_name === deck.name));
+  const travel = TRAVEL_TAGS[deck.key];
+  // Hers unless it is one of the shared decks — the flag /api/decks sends,
+  // or failing it the key, since those are the only two shared kinds listed.
+  const own = deck.own ?? !(deck.key === "kaishi" || travel);
+  const inDeck = own
+    ? (c) => c.deck === "personal" && (c.deck_id === deck.id || (c.deck_id == null && c.list_name === deck.name))
+    : travel
+      ? (c) => c.deck === "kaishi" && (c.tags ?? []).includes(travel)
+      : (c) => c.deck === deck.key;
   // A reverse (#284) is its original asked the other way round, not a second
   // word: the list shows the word once, and editing it edits both.
   const found = cards.filter((c) => !c.deleted_at && c.reverse_of == null && inDeck(c) && matchesQuery(c, q));
-  return found.sort(exactFirst(q, (a, b) => a.id - b.id));
+  return found.sort(exactFirst(q, own ? (a, b) => a.id - b.id : byFrequencyThenId));
 }
 
 /**
@@ -135,7 +153,7 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
     const matching = q ? cardsOfDeck(deck, all, q) : cards;
     heading.textContent = `Karten in diesem Deck · ${num(cards.length)}`;
     if (cards.length === 0) {
-      render(list, el("p.deck-cards-note", { text: "Noch keine Karten. Tippe auf + Karte hinzufügen, um die erste zu schreiben." }));
+      render(list, el("p.deck-cards-note", { text: onAdd ? "Noch keine Karten. Tippe auf + Karte hinzufügen, um die erste zu schreiben." : "Die Karten dieses Decks sind noch nicht auf diesem Gerät." }));
       return;
     }
     if (matching.length === 0) {
@@ -158,7 +176,7 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
     );
   }
 
-  /** Her cards lead with the German she wrote, as on the front in Noji. */
+  /** The German leads, as on the front in Noji — hers as she wrote it, Kaishi's since #134. */
   function row(card) {
     const word = el(showsScript(card, japanese) ? "span.deck-card-word.jp" : "span.deck-card-word", {
       text: shownWord(card, japanese),

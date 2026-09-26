@@ -197,6 +197,24 @@ describe("the cards on a deck's page (#137, v68)", () => {
     assert.ok(cardsOfDeck(imZug, cards, "suru").every((c) => c.deck === "personal"));
   });
 
+  it("lists Kaishi too, most frequent first, and none of hers (#302)", () => {
+    const deck = { key: "kaishi", name: "Kaishi", own: false };
+    assert.deepEqual(cardsOfDeck(deck, cards).map((c) => c.id), [1, 2]);
+    // A reverse of a Kaishi word is a card of hers, and the word is listed once.
+    const reverse = hers(-600, "する", "to do", undefined, { reverse_of: 1 });
+    assert.deepEqual(cardsOfDeck(deck, [...cards, reverse]).map((c) => c.id), [1, 2]);
+  });
+
+  it("lists a Reise deck as the server scopes it: Kaishi's cards under its travel topic (#302)", () => {
+    const tagged = [
+      { ...kaishi(7, "駅", "Bahnhof", 50), tags: ["travel 1", "place"] },
+      { ...kaishi(8, "切符", "Fahrkarte", 40), tags: ["travel 2"] },
+      ...cards,
+    ];
+    assert.deepEqual(cardsOfDeck({ key: "travel:1", name: "Reise 1", own: false }, tagged).map((c) => c.id), [7]);
+    assert.deepEqual(cardsOfDeck({ key: "travel:2", name: "Reise 2", own: false }, tagged).map((c) => c.id), [8]);
+  });
+
   it("finds a card by its German or its romaji", () => {
     assert.deepEqual(cardsOfDeck(imZug, cards, "bahnhof").map((c) => c.id), [-100]);
     assert.deepEqual(cardsOfDeck(imZug, cards, "densha").map((c) => c.id), [-300]);

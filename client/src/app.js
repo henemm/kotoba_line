@@ -1,4 +1,4 @@
-import { ApiError, OfflineError, api, isSessionExpired, onSessionExpired } from "./api.js";
+import { ApiError, OfflineError, answerSoon, api, isSessionExpired, onSessionExpired } from "./api.js";
 import { signInScreen } from "./screens/signin.js";
 import { registerScreen } from "./screens/register.js";
 import { signedOutScreen } from "./screens/signed-out.js";
@@ -715,10 +715,10 @@ async function deleteOpenDeck() {
  * arrive, and a new list each time would lose her search mid-word.
  */
 function deckCards() {
-  // Her decks, and the kana decks' letters (#208). Not Kaishi (v69): see
-  // cardsOfDeck.
-  const kana = state.deck?.key === "hiragana" || state.deck?.key === "katakana";
-  if (!state.deck?.own && !kana) return undefined;
+  // Every deck (#302): the kana decks as their table of letters (#208), every
+  // other one as its list of cards — Kaishi's and Reise's too, see cardsOfDeck.
+  if (!state.deck) return undefined;
+  const kana = state.deck.key === "hiragana" || state.deck.key === "katakana";
   if (state.deckCards?.key !== state.deck.key) {
     state.deckCards = {
       key: state.deck.key,
@@ -727,12 +727,39 @@ function deckCards() {
         : deckCardsBlock({
             deck: state.deck,
             japanese: state.settings.japaneseScript,
-            onCard: openCardActions,
-            onAdd: openAddCard,
+            // Hers open edit, move and delete; a Kaishi word the sheet Search
+            // opens for it, since it is not hers to edit.
+            onCard: state.deck.own ? openCardActions : openSharedCard,
+            onAdd: state.deck.own ? openAddCard : undefined,
           }),
     };
   }
   return state.deckCards.block;
+}
+
+/**
+ * A Kaishi or Reise card from its deck's list (#302): the same sheet Search
+ * opens for it. The list is the phone's copy, which knows nothing of her star,
+ * her topics on the card or its reverse; Search's row does, so the row is
+ * asked for — given the server's usual patience, not its ten seconds. Without
+ * an answer the sheet opens from the phone's copy with those three inert,
+ * exactly as Search's offline rows are (#22), rather than guessing ☆.
+ */
+async function openSharedCard(card) {
+  const asking = api.browse({ id: card.id, pageSize: 1 });
+  const soon = await answerSoon(asking);
+  const row = soon?.value?.cards?.[0];
+  if (!row) {
+    openCardTopics({ ...card, deck_name: state.deck?.name }, {});
+    return;
+  }
+  openCardTopics(row, {
+    canStar: true,
+    star: (wanted) => {
+      row.starred = wanted;
+      setStar(row.id, wanted);
+    },
+  });
 }
 
 /** One kana from the deck's grid (#208): hear it, see its picture, record a native speaker. */

@@ -1,5 +1,13 @@
 [
   {
+    "version": "v170",
+    "summary": "Jedes Deck zeigt jetzt seine Karten – auch Kaishi und die Reise-Decks.",
+    "notes": [
+      "Unter „Karten im Deck“ stehen bei Kaishi jetzt alle Wörter, die häufigsten zuerst, mit „Heute“, „Morgen“ oder „In 9 Tagen“ darüber, wie bei deinen eigenen Decks.",
+      "Tippst du auf ein Kaishi-Wort, kannst du es anhören, markieren, einem Thema zuordnen oder auch andersherum abfragen lassen. Bearbeiten und löschen kannst du nur deine eigenen Karten."
+    ]
+  },
+  {
     "version": "v169",
     "summary": "Die App schreibt jetzt mit, was sie ohne Netz tut – damit Fehler unterwegs sich später finden lassen.",
     "notes": [
