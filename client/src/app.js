@@ -453,8 +453,12 @@ function deckList() {
         setMeta("decks", answer).catch(() => {});
         state.lastDecks = answer.decks ?? [];
         // #306: the server just answered, so the connection works — fetch
-        // every deck's queue ahead, in the background, for offline.
-        preloadQueues(answer.decks);
+        // every deck's queue ahead, in the background, for offline. A few
+        // seconds later and never under a session: a session started at once
+        // asks for the day's stats first, and five queues in front of that
+        // answer made it late enough to lose the streak screen (the tour's
+        // "Serie" missing in 1 of 2 runs), which it drops rather than guess.
+        schedulePreload();
         return answer;
       },
       async (error) => {
@@ -482,6 +486,17 @@ async function keptDecks() {
   const kept = await getMeta("decks");
   if (kept && !state.lastDecks?.length) state.lastDecks = kept.decks ?? [];
   return kept;
+}
+
+const PRELOAD_DELAY_MS = 5000;
+let preloadTimer;
+
+function schedulePreload() {
+  clearTimeout(preloadTimer);
+  preloadTimer = setTimeout(() => {
+    if (state.session) return schedulePreload();
+    preloadQueues(state.lastDecks);
+  }, PRELOAD_DELAY_MS);
 }
 
 /** Into a deck's page (#137). Anything narrowed in another deck is left behind. */
