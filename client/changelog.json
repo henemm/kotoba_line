@@ -1,5 +1,14 @@
 [
   {
+    "version": "v168",
+    "summary": "Deine Decks erscheinen bei schwachem Netz sofort, statt lange bei „…“ zu hängen.",
+    "notes": [
+      "Die App zeigt nach anderthalb Sekunden die Decks, die schon auf dem Gerät sind, und aktualisiert die Zahlen, sobald das Netz antwortet. Vorher wartete sie bis zu zehn Sekunden auf den Server.",
+      "Die Suche genauso: Sie durchsucht nach anderthalb Sekunden die Wörter auf dem Gerät, statt zehn Sekunden auf „…“ zu stehen.",
+      "Wartende Wiederholungen werden alle 30 Sekunden erneut gesendet, solange die App offen ist – vorher erst, wenn du die App verlassen und wieder geöffnet hast."
+    ]
+  },
+  {
     "version": "v167",
     "summary": "„Nächste Karten laden“ in den Deck-Optionen sieht jetzt wie ein richtiger Knopf aus.",
     "notes": [

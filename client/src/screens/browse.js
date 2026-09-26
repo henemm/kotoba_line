@@ -1,4 +1,4 @@
-import { OfflineError, api } from "../api.js";
+import { OfflineError, answerSoon, api } from "../api.js";
 import { loadDeck } from "../deck.js";
 import { isKana } from "../script.js";
 import { romajiQuery, searchRomaji } from "../romaji.js";
@@ -137,6 +137,10 @@ export function browseScreen({
     // has to draw its rows differently — never as a guessed ☆.
     offline: false,
   };
+
+  // Which fetchPage() is the latest (#297). Up here, not beside it: the
+  // first search runs before the code below the draw() call is reached.
+  let asked = 0;
 
   const list = el("div.browse-list", { onscroll: maybePage });
   const search = el("input.browse-search-input", {
@@ -440,22 +444,49 @@ export function browseScreen({
     await fetchPage();
   }
 
+  /**
+   * #297: the device's own answer goes up once the server has had its
+   * PATIENCE_MS, not once the request gives up. It used to wait for the
+   * latter, so on a stalled connection every search sat on "…" for the whole
+   * REQUEST_TIMEOUT_MS (measured on the live app in WebKit, API stalled: the
+   * list at 10.1 s) while the deck it searches was on the device all along.
+   * A late answer still replaces it — unless she has typed on since, which
+   * `asked` notices, or it is a further page of a list the device drew.
+   */
   async function fetchPage() {
     const page = state.page;
-    try {
-      const answer = await api.browse({
-        q: state.q || undefined,
-        starred: state.starredOnly || undefined,
-        page,
-        pageSize: PAGE_SIZE,
-      });
+    const mine = ++asked;
+    const request = api.browse({
+      q: state.q || undefined,
+      starred: state.starredOnly || undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    });
+    let outcome = await answerSoon(request);
+    let fromDevice = false;
+    if (!outcome && !state.starredOnly) {
+      await fetchOfflinePage(page);
+      if (mine !== asked) return;
+      fromDevice = true;
+      state.loading = false;
+      drawChrome();
+      drawList();
+    }
+    outcome ??= await request.then((value) => ({ value }), (error) => ({ error }));
+    if (mine !== asked) return;
+    if (outcome.value && !(fromDevice && page > 0)) {
+      const answer = outcome.value;
       state.cards = page === 0 ? answer.cards : [...state.cards, ...answer.cards];
       state.total = answer.total;
       state.more = state.cards.length < answer.total;
       state.offline = false;
-    } catch (err) {
-      if (err instanceof OfflineError) await fetchOfflinePage(page);
-      else state.error = "Das Deck konnte nicht geladen werden.";
+      state.error = undefined;
+    } else if (fromDevice) {
+      // What the device drew stands; a late failure has nothing better.
+    } else if (outcome.error instanceof OfflineError) {
+      await fetchOfflinePage(page);
+    } else if (outcome.error) {
+      state.error = "Das Deck konnte nicht geladen werden.";
     }
     state.loading = false;
     drawChrome();

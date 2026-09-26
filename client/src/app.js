@@ -262,6 +262,7 @@ function currentScreen() {
   if (state.tab === "practise" && !state.deck) {
     return decksScreen({
       decks: deckList(),
+      keptDecks,
       onOpen: openDeck,
       // #252: Einstieg lists no decks of her own to add to.
       onNewDeck: state.settings.beginner ? undefined : openNewDeck,
@@ -463,6 +464,16 @@ function deckList() {
   });
   decks = entry;
   return entry.promise;
+}
+
+/**
+ * The last deck list the server gave this device (#297), for the deck list to
+ * show while a fresh one is still on its way.
+ */
+async function keptDecks() {
+  const kept = await getMeta("decks");
+  if (kept && !state.lastDecks?.length) state.lastDecks = kept.decks ?? [];
+  return kept;
 }
 
 /** Into a deck's page (#137). Anything narrowed in another deck is left behind. */
