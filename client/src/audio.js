@@ -5,6 +5,8 @@
  * what the Settings screen promises and what the personal deck will need, since
  * her own words come with no recordings (§8).
  */
+import { note } from "./trace.js";
+
 /**
  * Where nginx serves the deck's audio (§9: `location /kotoba/media/`).
  *
@@ -175,6 +177,9 @@ export async function say(text, file, { rate = 0.9, onEnded: callerEnded } = {})
       // A card with no audio is ordinary; a card that *names* a file we cannot
       // play is not, and speech would otherwise hide it forever.
       console.warn(`could not play ${file}, falling back to speech`, err);
+      // #299: the one trace a silent recording leaves — the name only. Not
+      // an AbortError: that is her next tap cutting the sound short.
+      if (err?.name !== "AbortError") note("audio", { r: "speech", e: String(err?.name ?? err).slice(0, 40) });
       current = undefined;
       currentInterrupted = undefined;
     }

@@ -11,6 +11,7 @@ import settingsRoutes from "./routes/settings.js";
 import statsRoutes from "./routes/stats.js";
 import recordingRoutes from "./routes/recordings.js";
 import uiEventRoutes from "./routes/ui-events.js";
+import deviceLogRoutes from "./routes/device-log.js";
 import pushRoutes from "./routes/push.js";
 
 /**
@@ -58,6 +59,7 @@ export async function buildApp({ db, config = defaultConfig, logger } = {}) {
   await app.register(settingsRoutes);
   await app.register(recordingRoutes);
   await app.register(uiEventRoutes);
+  await app.register(deviceLogRoutes);
   await app.register(pushRoutes);
 
   app.addHook("onClose", async () => database.close());

@@ -1,5 +1,15 @@
 [
   {
+    "version": "v169",
+    "summary": "Die App schreibt jetzt mit, was sie ohne Netz tut – damit Fehler unterwegs sich später finden lassen.",
+    "notes": [
+      "Nur Technisches: wann die App geöffnet wurde, welche Anfragen wie lange gebraucht haben, wo etwas hängen geblieben ist. Nichts von dem, was du lernst oder suchst.",
+      "Die letzten Einträge stehen in den Einstellungen unter der Diagnose.",
+      "Wiederholungen, die du ohne Netz geübt hast, werden jetzt auch nach dem Ende einer Übung alle 30 Sekunden erneut gesendet – bisher blieben sie liegen, bis du die App verlassen hast.",
+      "Der Hinweis „Offline“ verschwindet, sobald deine Wiederholungen angekommen sind, auch wenn das iPhone oder iPad selbst nicht merkt, dass das Netz zurück ist."
+    ]
+  },
+  {
     "version": "v168",
     "summary": "Deine Decks erscheinen bei schwachem Netz sofort, statt lange bei „…“ zu hängen.",
     "notes": [
