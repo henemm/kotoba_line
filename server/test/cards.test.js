@@ -495,6 +495,20 @@ describe("her own topics on any card (#35)", () => {
     await app.close();
   });
 
+  it("gives one card's row by id, with her topics and star (#302)", async () => {
+    const { app, config } = await fixture();
+    const cookie = await signIn(app, config);
+    await app.inject({ method: "PUT", url: "/api/cards/2/tags", headers: { cookie }, payload: { tags: ["school"] } });
+    await app.inject({ method: "POST", url: "/api/stars", headers: { cookie }, payload: { cardId: 2, starred: true, changedAt: Date.now() } });
+    const one = (await app.inject({ method: "GET", url: "/api/browse?id=2", headers: { cookie } })).json();
+    assert.deepEqual(one.cards.map((c) => c.id), [2]);
+    assert.deepEqual(one.cards[0].myTags, ["school"]);
+    assert.equal(one.cards[0].starred, true);
+    const none = (await app.inject({ method: "GET", url: "/api/browse?id=-424242", headers: { cookie } })).json();
+    assert.deepEqual(none.cards, [], "a negative id is a valid question, and someone else's card is not an answer");
+    await app.close();
+  });
+
   it("404s a card that does not exist, and refuses more than five topics", async () => {
     const { app, config } = await fixture();
     const cookie = await signIn(app, config);
