@@ -24,6 +24,7 @@ import { cardCount, clearPersonal, getMeta, setMeta } from "./store.js";
 import { deckCatchingUp, loadDeck, syncDeck } from "./deck.js";
 import { forget, openSession } from "./resume.js";
 import { SHELL_VERSION } from "./shell-version.js";
+import { keepForAnyWay } from "./queue.js";
 import { note, startTrace } from "./trace.js";
 import { applyUpdate, lastSeen, markSeen, readChangelog, watchForUpdates } from "./update.js";
 import { watchViewport } from "./viewport.js";
@@ -405,6 +406,9 @@ function practiseNumbers() {
     at: Date.now(),
     // Inside the open deck (#137), which is what a line runs.
     promise: Promise.all([api.queue({ limit: 60, ...scopeOf(state.filters) }), api.stats()]).then(([queue, stats]) => {
+      // #304: kept, so any way of practising this deck works offline — not
+      // only one already started online.
+      keepForAnyWay(scopeOf(state.filters), queue);
       // #86: the joker notice is decided from these same numbers, so they are
       // not fetched twice.
       considerJokerNotice(stats);
@@ -584,6 +588,8 @@ async function prefetchAudioFor(deck) {
   let queue;
   try {
     queue = await api.queue({ limit: 60, deckKey: deck.key });
+    // #304: "für unterwegs" means the cards too, not only their sound.
+    keepForAnyWay({ deckKey: deck.key }, queue);
   } catch {
     return "Geht nicht ohne Verbindung.";
   }

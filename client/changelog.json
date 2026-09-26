@@ -1,5 +1,12 @@
 [
   {
+    "version": "v171",
+    "summary": "Ohne Netz kannst du jetzt jedes Deck in jeder Übungsart üben, das du zuletzt online geöffnet hast.",
+    "notes": [
+      "Bisher ging eine Übung ohne Netz nur in genau der Übungsart, die du in diesem Deck schon einmal mit Netz gestartet hattest. Jetzt reicht es, das Deck einmal mit Netz zu öffnen – oder „Nächste Karten laden“ zu tippen."
+    ]
+  },
+  {
     "version": "v170",
     "summary": "Jedes Deck zeigt jetzt seine Karten – auch Kaishi und die Reise-Decks.",
     "notes": [

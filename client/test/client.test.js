@@ -492,6 +492,14 @@ describe("which cards a mode can actually ask about", () => {
     }
   });
 
+  it("asks a reversed card only in めくる, since a queue kept for any way still holds it (#304)", () => {
+    const cards = [card(), card({ id: -2, reverse_of: 1 })];
+    assert.deepEqual(playableIn("flip", cards).map((c) => c.id), [1, -2]);
+    for (const mode of ["choose", "speak", "listen", "type"]) {
+      assert.ok(!playableIn(mode, cards).some((c) => c.reverse_of != null), mode);
+    }
+  });
+
   it("keeps her own cards unaffected by any of the three speak sources", () => {
     // No sentence at all — her own cards, and the pre-#77 fallback everyone
     // else already relied on.

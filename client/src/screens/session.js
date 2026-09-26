@@ -2244,6 +2244,9 @@ export function plainSentence(sentence) {
  * personal deck will have none.
  */
 export function playableIn(mode, cards, speaks = canSpeak()) {
+  // A reversed card (#284) is only asked in めくる. The server leaves it out
+  // of any other way's queue; a queue kept for any way (#304) still has it.
+  if (mode !== "flip") cards = cards.filter((c) => c.reverse_of == null);
   // 書く needs a reading to check the answer against. Every deck card has one
   // (measured: 1,500 of 1,500); her own kanji words without the optional
   // Reading field do not, and could only be answered on a Japanese keyboard
