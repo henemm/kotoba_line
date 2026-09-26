@@ -18,14 +18,23 @@ import { el, num } from "../ui/dom.js";
 /**
  * Whether this session is the one that made today count: fewer answers than
  * a streak day needs before it, enough after. Once a day, the way Noji shows
- * its screen when the streak grows. Without both snapshots — offline, or a
- * stats answer that came late — it is not shown rather than guessed at.
+ * its screen when the streak grows. Without the server's answer after the
+ * session — offline — it is not shown rather than guessed at.
+ *
+ * #308: the count before the session is the snapshot taken at its start when
+ * that arrived in time, and otherwise the count after less this session's own
+ * answers (`answered`, all of which the server has by then — `after` is only
+ * asked for once the outbox is empty). The snapshot is dropped when it lands
+ * after the first answer (#106), and that used to drop the screen with it:
+ * the tour's "Serie" was missing in 1 of 8 runs, on the day it counted.
  */
-export function madeTodayCount(before, after) {
-  if (!before || !after) return false;
+export function madeTodayCount(before, after, answered) {
+  if (!after) return false;
   const perDay = after.reviewsPerQualifyingDay;
   if (!perDay || !(after.streak > 0)) return false;
-  return (before.reviewsToday ?? 0) < perDay && (after.reviewsToday ?? 0) >= perDay;
+  const was = before ? (before.reviewsToday ?? 0) : answered > 0 ? (after.reviewsToday ?? 0) - answered : undefined;
+  if (was === undefined) return false;
+  return was < perDay && (after.reviewsToday ?? 0) >= perDay;
 }
 
 /** A YYYY-MM-DD `n` days after `day`, in the same calendar (history.js reads days as UTC). */

@@ -1923,7 +1923,7 @@ export function sessionScreen({
       jokerEarned: Boolean(before && after && after.jokers > before.jokers),
       // #273: Noji's streak screen, once a day — after the session whose
       // answers made today count. The stats it draws are the same answer.
-      streak: madeTodayCount(before, after) ? after : undefined,
+      streak: madeTodayCount(before, after, answered) ? after : undefined,
       // #271: the cards "Nochmal" on the summary practises again.
       struggled: [...struggled],
     });

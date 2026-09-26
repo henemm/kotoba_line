@@ -17,10 +17,20 @@ describe("madeTodayCount (#273)", () => {
     assert.equal(madeTodayCount(stats(2), stats(7)), false);
   });
 
-  it("is false without both answers — offline it is not guessed at", () => {
-    assert.equal(madeTodayCount(undefined, stats(12)), false);
+  it("is false without the answer after — offline it is not guessed at", () => {
+    assert.equal(madeTodayCount(undefined, stats(12)), false, "and nothing to count back from");
     assert.equal(madeTodayCount(stats(4), undefined), false);
+    assert.equal(madeTodayCount(undefined, undefined, 8), false);
     assert.equal(madeTodayCount(stats(4), stats(12, 0)), false, "no streak to show");
+  });
+
+  it("counts back from the answer after when the one before came late (#308)", () => {
+    assert.equal(madeTodayCount(undefined, stats(12), 8), true, "4 before, 12 after");
+    assert.equal(madeTodayCount(undefined, stats(10), 10), true, "the first session of the day");
+    assert.equal(madeTodayCount(undefined, stats(30), 18), false, "12 before: today had counted already");
+    assert.equal(madeTodayCount(undefined, stats(7), 7), false, "still short");
+    // A snapshot that did come in time is what counts.
+    assert.equal(madeTodayCount(stats(12), stats(20), 8), false);
   });
 });
 
