@@ -1091,10 +1091,16 @@ describe("comesRoundAgain (#214, shared with the multi-day simulation, #242)", (
 });
 
 describe("reshowPosition (#242)", () => {
-  it("puts a Nochmal card ten cards on, or at the end when fewer are left (#272)", () => {
-    assert.equal(reshowPosition(0, 60), 11);
+  it("puts a Nochmal card at the end, behind every card still to come (#310)", () => {
+    assert.equal(reshowPosition(0, 60), 60);
     assert.equal(reshowPosition(10, 12), 12);
     assert.equal(reshowPosition(59, 60), 60);
+  });
+
+  it("keeps several Nochmal cards in the order she met them (#310)", () => {
+    const queue = ["a", "b", "c", "d"];
+    for (const [index, card] of [[0, "a"], [1, "b"]]) queue.splice(reshowPosition(index, queue.length), 0, card);
+    assert.deepEqual(queue, ["a", "b", "c", "d", "a", "b"]);
   });
 });
 

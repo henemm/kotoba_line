@@ -4,11 +4,21 @@
  * what Noji does ("the card will be shown for you in 1 minute in the same
  * study session again", help.noji.io, checked 2026-09-19).
  *
- * #242: after `RESHOW_AFTER` other cards, not at the end of the session. At
- * the end, a session she leaves early never reached it: the multi-day
- * simulation measured a Nochmal card back in the same session 7 % of the
- * time for twenty-card sessions on the train, and 100 % only for someone who
- * always finishes all sixty. How many cards on: see `RESHOW_AFTER` (#272).
+ * #310: at the end of the session, behind every card still to come. Charlotte,
+ * 2026-09-29: „die Vokabeln wo ich 1 min andrücke kommen immer noch direkt
+ * wieder kannst du das so machen dass sie erst hinten rangegangen werden".
+ * Her log that day: 24 Nochmal in one session of 103 answers, every one back
+ * after exactly ten cards (40 s to 2 min at her pace). The session ends only
+ * once those cards have come round, so a session she finishes still asks
+ * every one of them again.
+ *
+ * History, so this is not undone by accident: the end was the first rule;
+ * #242 moved it to three cards on because a session left early never
+ * reached the end (the simulation: back in the same session 7 % of the time
+ * for twenty-card sessions on the train); #272 widened three to ten. Since
+ * #242 lifted the cap on a session's length she finishes most of them (29
+ * Sept: 113 and 103 answers, both to the summary), and one she leaves early
+ * loses nothing — a Nochmal card is due and leads the next session.
  *
  * #242 too: Schwer and Gut on a card still in its learning steps (8 and 15
  * minutes since v140, Noji's numbers) bring it back in the same session once
@@ -21,16 +31,6 @@
  * A copy there would keep passing after these changed.
  */
 export const MAX_RESHOWS = 3;
-// #272: three was too close. Charlotte, 2026-09-24: „das war nur 2 Vokabeln
-// weiter" — at her pace (median 6 s a card, her whole log) three cards were
-// 24 s, so she stopped pressing Nochmal (10× that day, 100× Schwer) and
-// Schwer kept cards on the 8-minute step all day. Ten cards measured over the
-// same log: back after a median 105 s, which is what "1 Min" under the button
-// promises, and still in the same session for 54 % of her Nochmal answers
-// counting only sessions that went on — a session that simply runs out puts
-// the card at its end (`reshowPosition`), so it is not lost there either.
-export const RESHOW_AFTER = 10;
-
 const RATING_AGAIN = 1;
 
 /** Whether this answer sends the card round again, given how often it already has. */
@@ -38,12 +38,9 @@ export function comesRoundAgain(rating, timesSoFar = 0) {
   return rating === RATING_AGAIN && timesSoFar < MAX_RESHOWS;
 }
 
-/**
- * Where in the queue the card goes: `RESHOW_AFTER` cards after the one just
- * answered at `index`, or the end when fewer are left.
- */
+/** Where in the queue the card goes: at the end, behind every card still to come (#310). */
 export function reshowPosition(index, length) {
-  return Math.min(index + 1 + RESHOW_AFTER, length);
+  return length;
 }
 
 /** Shorter than this, an interval is a learning step: minutes, not days. */

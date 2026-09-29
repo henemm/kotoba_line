@@ -1,5 +1,12 @@
 [
   {
+    "version": "v174",
+    "summary": "Karten, bei denen du „Nochmal“ drückst, kommen jetzt erst am Ende der Übung wieder.",
+    "notes": [
+      "Bisher kamen sie schon nach zehn Karten zurück. Jetzt stellen sie sich hinten an – die Übung ist erst fertig, wenn du sie noch einmal gesehen hast."
+    ]
+  },
+  {
     "version": "v173",
     "summary": "Die Serie erscheint jetzt zuverlässig nach der Übung, die deinen Tag zählen lässt.",
     "notes": [

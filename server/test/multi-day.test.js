@@ -65,9 +65,9 @@ describe("thirty days of practice (#242)", () => {
     const { ratings } = experience(showings);
     // She finishes every session here, so every Nochmal comes round.
     assert.equal(ratings["neu:1"].sameSession, 100);
-    // Ten cards on (#272) at this simulation's 20 s an answer. At Charlotte's
-    // own pace, 6 s, the same ten cards measured 105 s over her log.
-    assert.equal(ratings["neu:1"].median, "4 Min");
+    // At the end of the session (#310): after every card still to come, at
+    // this simulation's 20 s an answer. Ten cards on (#272) it was 4 Min.
+    assert.equal(ratings["neu:1"].median, "26 Min");
   });
 
   it("brings Schwer and Gut back in the same session when their minutes run out in it (#242)", async () => {
@@ -103,7 +103,7 @@ describe("thirty days of practice (#242)", () => {
     assert.ok(biggest > 60, `größte Übung ${biggest} Karten`);
   });
 
-  it("brings a Nochmal card back within the session even when she stops after twenty (#242)", async () => {
+  it("brings a Nochmal card back the same day even when she stops after twenty (#242, #310)", async () => {
     const { db, userId } = await learner();
     const { violations, showings } = await simulate(db, userId, { start: START, days: DAYS, profile: PROFILES.realistisch, pattern: PATTERNS.pendeln });
     assert.deepEqual(violations.slice(0, 10), [], `${violations.length} violations`);
@@ -119,7 +119,13 @@ describe("thirty days of practice (#242)", () => {
     // sessions she abandons: 47 % (measured 2026-09-24). The rest are due a
     // minute later and open the next session; nothing is lost, it is only
     // not seen again on the same train.
-    assert.ok(ratings["neu:1"].sameSession >= 40, `${ratings["neu:1"].sameSession} %`);
+    //
+    // #310 put it at the end, as Charlotte asked (2026-09-29), knowing this
+    // price: for someone who leaves every twenty-card session early it is
+    // back in the same session 5 % of the time (measured 2026-09-29), and
+    // back the same day 76 %. She finishes her sessions (29 Sept: 113 and
+    // 103 answers, both to the summary), where it is 100 % — see above.
+    assert.ok(ratings["neu:1"].withinDay >= 70, `${ratings["neu:1"].withinDay} % the same day`);
     // What the buttons say for a new card is Noji's.
     assert.deepEqual(
       [1, 2, 3, 4].map((r) => ratings[`neu:${r}`]?.label),
