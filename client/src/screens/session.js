@@ -852,6 +852,9 @@ export function sessionScreen({
       sound: { text, file, rate },
       className: `.speaker${ghost ? ".ghost" : ""}${big ? ".big" : ""}${small ? ".small" : ""}`,
       label,
+      // #312: with Vorlesen off (hers is), a tap on ♪ is the only way she
+      // hears the word to say it after.
+      onTap: () => seen("sound_tapped", mode),
     });
   }
 
@@ -1513,7 +1516,12 @@ export function sessionScreen({
    */
   function answerRecorderFor(card) {
     if (!recordingEnabled) return null;
-    recorder = answerRecorder(attempt);
+    // #312: whether she speaks here at all — Henning asked her to, and her
+    // log shows 93 % めくる with nothing to say whether she speaks in it.
+    recorder = answerRecorder(attempt, {
+      onRecorded: () => seen("answer_recorded", mode),
+      onPlayed: () => seen("answer_played", mode),
+    });
     return recorder?.root ?? null;
   }
 

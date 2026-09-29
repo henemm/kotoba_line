@@ -23,7 +23,7 @@ import { followsSound, soundButton } from "./sound-button.js";
  * replaces the DOM this lives in when the card turns. Absent, not inert, on
  * a device that cannot record at all — the same rule as every ♪ in the app.
  */
-export function answerRecorder(attempt) {
+export function answerRecorder(attempt, { onRecorded, onPlayed } = {}) {
   if (!canRecord()) return null;
 
   // v144: the pulse of every ♪ (ui/sound-button.js) for as long as her
@@ -92,6 +92,8 @@ export function answerRecorder(attempt) {
       if (blob.size > 0) {
         if (attempt.url) URL.revokeObjectURL(attempt.url);
         attempt.url = URL.createObjectURL(blob);
+        // #312: that she said something — never what.
+        onRecorded?.();
       }
     } catch {
       status.textContent = "Die Aufnahme hat nicht geklappt.";
@@ -101,6 +103,7 @@ export function answerRecorder(attempt) {
   }
 
   function onPlay() {
+    onPlayed?.();
     state = "playing";
     paint();
     playUrl(attempt.url, {
