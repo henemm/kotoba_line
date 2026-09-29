@@ -24,13 +24,15 @@ import { el } from "./dom.js";
  * it is on screen (a recording made in the same sheet, a sentence being
  * typed). The CSS for both signals is keyed on `.sound`, not on the looks.
  */
-export function soundButton({ sound, className = "", label = "Vorlesen", content = "♪" }) {
+export function soundButton({ sound, className = "", label = "Vorlesen", content = "♪", onTap }) {
   const current = typeof sound === "function" ? sound : () => sound;
   const button = el(`button${className}`, {
     type: "button",
     "aria-label": label,
     text: content,
     onclick: () => {
+      // #312: that she tapped it, for whoever asked (the session).
+      onTap?.();
       const { text, file, url, rate } = current() ?? {};
       unlock();
       // Her own attempt (#185) is an object URL, not a file on the server.

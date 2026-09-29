@@ -47,6 +47,9 @@ export const UI_EVENT_NAMES = [
   "reverse_shown", // #284: a card asked the other way round, drawn in めくる
   "reverse_on", // #284: „Auch andersherum abfragen" in the card form
   "reverse_off",
+  "answer_recorded", // #312: she recorded her own answer in a session (detail: the way)
+  "answer_played", // #312: …and listened to it
+  "sound_tapped", // #312: she tapped a card's ♪ in a session (detail: the way)
 ];
 
 const schema = {

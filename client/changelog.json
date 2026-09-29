@@ -1,5 +1,12 @@
 [
   {
+    "version": "v175",
+    "summary": "Kleine Verbesserung im Hintergrund.",
+    "notes": [
+      "Die App merkt sich jetzt, ob beim Üben das Mikrofon und der ♪-Knopf benutzt werden – nur dass, nicht was. Aufnahmen werden weiterhin nicht gespeichert."
+    ]
+  },
+  {
     "version": "v174",
     "summary": "Karten, bei denen du „Nochmal“ drückst, kommen jetzt erst am Ende der Übung wieder.",
     "notes": [
