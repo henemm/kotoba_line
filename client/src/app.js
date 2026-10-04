@@ -417,6 +417,8 @@ function practiseNumbers() {
         today: queue.today,
         outlook: queue.outlook,
         maxReached: queue.maxReached,
+        // #314: why no (or fewer) new words came today.
+        openLimit: queue.openLimit,
         // #159: the open deck in Noji's three bands.
         progress: queue.progress,
         stats,
@@ -565,6 +567,7 @@ function openDeckOptions() {
           hiddenModes: settings.hiddenModes,
           newPerDay: settings.newPerDay,
           maxPerDay: settings.maxPerDay ?? null,
+          maxOpen: settings.maxOpen ?? null,
           ...(settings.flipFront ? { flipFront: settings.flipFront } : {}),
           ...(reversing ? { reverse: patch.reverse } : {}),
         })

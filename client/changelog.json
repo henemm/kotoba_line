@@ -1,5 +1,13 @@
 [
   {
+    "version": "v176",
+    "summary": "Wörter, bei denen du „Schwer“ drückst, kommen nicht mehr jeden Tag wieder.",
+    "notes": [
+      "Bisher blieb so ein Wort im 8-Minuten-Takt hängen, auch Tage später. Jetzt rückt es ab dem zweiten Tag weiter: erst einen Tag, dann immer länger.",
+      "Neu in den Optionen eines Decks: „Höchstens gleichzeitig lernen“. Dann kommen neue Wörter erst dazu, wenn die bisherigen sitzen."
+    ]
+  },
+  {
     "version": "v175",
     "summary": "Kleine Verbesserung im Hintergrund.",
     "notes": [

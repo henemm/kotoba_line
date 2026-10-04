@@ -28,6 +28,10 @@ export const KANA_NEW_PER_DAY = 5;
 export const MAX_PER_DAY_MIN = 10;
 export const MAX_PER_DAY_MAX = 500;
 
+/** „Höchstens gleichzeitig lernen" (#314, migration 039). Same bounds as the CHECK. */
+export const MAX_OPEN_MIN = 10;
+export const MAX_OPEN_MAX = 500;
+
 /**
  * What a Reise deck offers before anyone touches it (#252, 2026-09-20):
  * saying it aloud, choosing the meaning, turning the card. The other two
@@ -48,7 +52,7 @@ export function deckSettings(db, userId, key) {
   const deckKey = canonicalDeckKey(db, userId, key) ?? key;
   const row = db
     .prepare(
-      "SELECT hidden_modes, new_per_day, max_per_day, extra_new, extra_new_day, flip_front, reverse FROM deck_settings WHERE user_id = ? AND deck_key = ?",
+      "SELECT hidden_modes, new_per_day, max_per_day, max_open, extra_new, extra_new_day, flip_front, reverse FROM deck_settings WHERE user_id = ? AND deck_key = ?",
     )
     .get(userId, deckKey);
   // Reise 1 and 2 (#252) pace like a list: Reise 1's 21 cards over three days.
@@ -60,6 +64,9 @@ export function deckSettings(db, userId, key) {
     hiddenModes: row ? JSON.parse(row.hidden_modes) : travelDeck(deckKey) ? [...TRAVEL_HIDDEN_MODES] : [],
     newPerDay: row?.new_per_day ?? fallback,
     maxPerDay: row?.max_per_day ?? null,
+    // #314: how many of the deck's cards may be open at once before new
+    // ones wait. Null is no limit.
+    maxOpen: row?.max_open ?? null,
     // #275: never null here, so the options sheet draws the choice as it
     // stands. A kana deck's front is the character; there is no choice.
     flipFront: isKanaDeck(deckKey) ? "word" : (row?.flip_front ?? defaultFlipFront(deckKey)),
@@ -114,7 +121,7 @@ export function updateDeckSettings(db, userId, key, patch, now = Date.now()) {
   const deckKey = canonicalDeckKey(db, userId, key);
   if (!deckKey) return undefined;
   const current = db
-    .prepare("SELECT hidden_modes, new_per_day, max_per_day, flip_front, reverse FROM deck_settings WHERE user_id = ? AND deck_key = ?")
+    .prepare("SELECT hidden_modes, new_per_day, max_per_day, max_open, flip_front, reverse FROM deck_settings WHERE user_id = ? AND deck_key = ?")
     .get(userId, deckKey);
   // #284: the switch only. Switching the deck's cards is the caller's
   // (routes/deck.js), which knows which cards the deck holds.
@@ -125,14 +132,16 @@ export function updateDeckSettings(db, userId, key, patch, now = Date.now()) {
   const perDay = "newPerDay" in patch ? patch.newPerDay : (current?.new_per_day ?? null);
   // `null` is a value here — "no limit" — so only a missing key keeps the old one.
   const maxPerDay = "maxPerDay" in patch ? patch.maxPerDay : (current?.max_per_day ?? null);
+  const maxOpen = "maxOpen" in patch ? patch.maxOpen : (current?.max_open ?? null);
   const flipFront = isKanaDeck(deckKey) ? null : "flipFront" in patch ? patch.flipFront : (current?.flip_front ?? null);
   db.prepare(
-    `INSERT INTO deck_settings (user_id, deck_key, hidden_modes, new_per_day, max_per_day, flip_front, reverse, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO deck_settings (user_id, deck_key, hidden_modes, new_per_day, max_per_day, max_open, flip_front, reverse, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (user_id, deck_key) DO UPDATE
        SET hidden_modes = excluded.hidden_modes, new_per_day = excluded.new_per_day,
-           max_per_day = excluded.max_per_day, flip_front = excluded.flip_front,
+           max_per_day = excluded.max_per_day, max_open = excluded.max_open,
+           flip_front = excluded.flip_front,
            reverse = excluded.reverse, updated_at = excluded.updated_at`,
-  ).run(userId, deckKey, hidden, perDay, maxPerDay, flipFront, reverse, Math.floor(now / 1000));
+  ).run(userId, deckKey, hidden, perDay, maxPerDay, maxOpen, flipFront, reverse, Math.floor(now / 1000));
   return deckSettings(db, userId, deckKey);
 }

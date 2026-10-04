@@ -24,6 +24,13 @@ const NEW_PER_DAY_CHOICES = [5, 10, 15, 20, 30];
  */
 const MAX_PER_DAY_CHOICES = [null, 20, 30, 50, 100];
 
+/**
+ * #314, migration 039: how many of the deck's words may be open at once
+ * before new ones wait — Charlotte's own number was 50. `null` is no limit
+ * and every deck's default.
+ */
+const MAX_OPEN_CHOICES = [null, 30, 50, 100];
+
 const CANNOT = {
   listen: "Hier nicht möglich: keine Beispielsätze mit Übersetzung",
   type: "Hier nicht möglich: keine Wörter mit Lesung zum Prüfen",
@@ -134,6 +141,22 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
         ),
       ),
       el("p.options-hint", { text: "Neue und zu wiederholende Karten zusammen. Du kannst jederzeit früher aufhören." }),
+      el("span.options-label", { id: "max-open-label", text: "Höchstens gleichzeitig lernen" }),
+      el(
+        "div.choice",
+        { role: "group", "aria-labelledby": "max-open-label" },
+        openChoicesFor(settings.maxOpen ?? null).map((n) =>
+          el("button", {
+            type: "button",
+            text: n === null ? "Unbegrenzt" : String(n),
+            "aria-pressed": String(n === (settings.maxOpen ?? null)),
+            onclick: () => n !== (settings.maxOpen ?? null) && change({ maxOpen: n }),
+          }),
+        ),
+      ),
+      el("p.options-hint", {
+        text: "Neue Wörter kommen erst dazu, wenn weniger Wörter als hier noch nicht sitzen. Ein Wort sitzt, sobald es erst nach einer Woche oder später wiederkommt.",
+      }),
       // #290: any deck, not only hers — the point is to fetch audio ahead of
       // a train ride, and Kaishi is where most of her cards live.
       // #294: a label above a bare .action row (the first fix here) still
@@ -277,6 +300,12 @@ export function deckOptionsSheet({ deck, japanese = true, onChange, onRename, on
 export function maxChoicesFor(current) {
   if (MAX_PER_DAY_CHOICES.includes(current)) return MAX_PER_DAY_CHOICES;
   return [null, ...[...MAX_PER_DAY_CHOICES.slice(1), current].sort((a, b) => a - b)];
+}
+
+/** The choices for „Höchstens gleichzeitig lernen", and hers among them if it is another number. */
+export function openChoicesFor(current) {
+  if (MAX_OPEN_CHOICES.includes(current)) return MAX_OPEN_CHOICES;
+  return [null, ...[...MAX_OPEN_CHOICES.slice(1), current].sort((a, b) => a - b)];
 }
 
 /** The five choices, and hers among them if it was set to something else (Settings allowed 5 to 40 in fives). */
