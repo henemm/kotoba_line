@@ -160,7 +160,7 @@ export function practiseScreen({
       render(today, el("div.deck-today-state", { text: outcome ? "Konnte nicht prüfen" : "Wird geprüft …" }));
       return;
     }
-    const { due, today: counts, outlook, stats, maxReached, progress: bands } = outcome.value;
+    const { due, today: counts, outlook, stats, maxReached, openLimit, progress: bands } = outcome.value;
     const total = counts?.total ?? due;
     render(
       today,
@@ -172,6 +172,7 @@ export function practiseScreen({
         infoButton("today", { label: "Karten für heute" }),
       ),
       counts ? todaySplit(counts) : null,
+      openNote(openLimit),
     );
     // Below the lines, so drawing it late moves nothing she is about to tap.
     render(progress, ...(bands ? progressBlock(bands) : []));
@@ -191,6 +192,18 @@ export function practiseScreen({
     if (!reached) return null;
     return el("p.deck-max-note", {
       text: "Das ist das Maximum für heute in diesem Deck. Du kannst es unter Optionen ändern.",
+    });
+  }
+
+  /**
+   * #314: the deck's „Höchstens gleichzeitig lernen" held new words back
+   * today. Said where the count of new ones is, so a 0 there reads as her
+   * own setting at work and not as the deck running dry.
+   */
+  function openNote(limit) {
+    if (!limit) return null;
+    return el("p.deck-open-note", {
+      text: `Neue Wörter kommen dazu, sobald weniger als ${num(limit.max)} noch nicht sitzen – gerade sind es ${num(limit.open)}.`,
     });
   }
 

@@ -1,4 +1,4 @@
-import { createEmptyCard, fsrs, generatorParameters, Rating } from "ts-fsrs";
+import { createEmptyCard, fsrs, generatorParameters, Rating, State } from "ts-fsrs";
 import { DEFAULT_TIME_ZONE, offsetAt } from "./day.js";
 
 /**
@@ -39,6 +39,37 @@ const engine = fsrs(
     w: weights,
   }),
 );
+
+/**
+ * Schwer on a card still in its learning steps, answered on a later day than
+ * its last answer, takes it out of the steps (#314). ts-fsrs repeats the step
+ * (8 minutes) however many days have passed, so a card she always rates
+ * Schwer never left them: on 2026-10-03, 93 of her cards had done so for up
+ * to 8 days, and 85 % of a week's answers went to them. Measured on one:
+ * "Was bedeutet das?", 29 answers on 8 days, still on an 8-minute step.
+ *
+ * The same engine without steps gives the card its FSRS interval (a day for
+ * a weak card) and a review state from which it grows. On the day a card is
+ * first met, Schwer still means "again in 8 minutes", as in Noji.
+ */
+const graduate = fsrs(
+  generatorParameters({
+    enable_fuzz: false,
+    learning_steps: [],
+    relearning_steps: [],
+    w: weights,
+  }),
+);
+
+function engineFor(card, at, rating) {
+  if (rating !== Rating.Hard) return engine;
+  if (card.state !== State.Learning && card.state !== State.Relearning) return engine;
+  if (!card.last_review) return engine;
+  // `at` and `last_review` are both wall clock (see `wall`), so their UTC
+  // dates are her calendar days.
+  const day = (d) => d.toISOString().slice(0, 10);
+  return day(at) > day(card.last_review) ? graduate : engine;
+}
 
 const RATINGS = {
   1: Rating.Again,
@@ -125,7 +156,8 @@ function fold(ordered) {
   for (const e of ordered) {
     const rating = RATINGS[e.rating];
     if (!rating) throw new Error(`unknown rating ${e.rating} on event ${e.id}`);
-    card = engine.next(card, wall(e.reviewed_at, e.time_zone), rating).card;
+    const at = wall(e.reviewed_at, e.time_zone);
+    card = engineFor(card, at, rating).next(card, at, rating).card;
   }
   const last = ordered[ordered.length - 1];
   return { card, shift: offsetAt(last.reviewed_at, last.time_zone ?? DEFAULT_TIME_ZONE) };
@@ -151,9 +183,10 @@ export function previewIntervals(events, now = new Date(), timeZone = DEFAULT_TI
   const scheduled = engine.repeat(card, at);
   const out = {};
   for (const [value, rating] of Object.entries(RATINGS)) {
+    const next = engineFor(card, at, rating) === engine ? scheduled[rating] : graduate.next(card, at, rating);
     out[value] = Math.max(
       0,
-      Math.round((scheduled[rating].card.due.getTime() - at.getTime()) / 1000),
+      Math.round((next.card.due.getTime() - at.getTime()) / 1000),
     );
   }
   return out;

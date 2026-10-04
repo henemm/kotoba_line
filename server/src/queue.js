@@ -57,6 +57,12 @@ export const MAX_SESSION_LENGTH = 500;
 /** Design 10's "Practise ahead": cards due in the next two days (#90). */
 const AHEAD_WINDOW_DAYS = 2;
 
+// #314: a card counts as still open for „Höchstens gleichzeitig lernen"
+// until the scheduler puts a week between two answers. Measured on a copy of
+// her data (21 simulated days, her own Schwer-heavy answers): at 7 days and
+// 50 open, 15–56 answers a day; at 3 days the limit almost never held.
+export const OPEN_DAYS = 7;
+
 export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again"];
 
 /** #271: the new cards "Nochmal" after a session mixes in — „ein paar neue". */
@@ -379,7 +385,31 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
 
   // ── group 3: new ────────────────────────────────────────────────
   // §5a: a deliberately chosen session is never capped by the daily limit.
-  const newAllowance = filtered ? limit : Math.max(0, newPerDay - introducedToday);
+  let newAllowance = filtered ? limit : Math.max(0, newPerDay - introducedToday);
+
+  // „Höchstens gleichzeitig lernen" (#314, migration 039): new cards only
+  // while fewer than that many of the deck's cards are still open. Charlotte,
+  // 2026-10-04: „den ersten Durchlauf mit höchstens fünfzig Vokabeln und dann
+  // nachher, wenn ich die gemeistert habe, … dass dann erst die Vokabeln
+  // dazukommen." Open is answered but not yet OPEN_DAYS apart — not Noji's
+  // „Gemeistert" (three weeks), which would hold new words back for a month.
+  // What she released today on the deck page still comes (#179): the limit
+  // paces her, a tap of hers overrides it for the day.
+  let openLimit;
+  if (!filtered && ofDeck?.maxOpen != null) {
+    const { open } = db
+      .prepare(
+        `SELECT count(*) open FROM card_state s JOIN cards c ON c.id = s.card_id
+          WHERE s.user_id = ? AND c.deleted_at IS NULL AND s.reps > 0
+            AND s.due_at - coalesce(s.last_review, s.due_at) < ?${scopeSql}`,
+      )
+      .get(userId, OPEN_DAYS * DAY, ...scopeParams);
+    const room = Math.max(0, ofDeck.maxOpen - open) + releasedToday;
+    if (room < newAllowance) {
+      newAllowance = room;
+      openLimit = { open, max: ofDeck.maxOpen };
+    }
+  }
   // Asked for beyond the allowance, and cut to it only once `siblingsApart`
   // has taken out the reverses that wait for another day (#284): cut first,
   // every one of those took the place of a new card — measured on a copy of
@@ -516,6 +546,9 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     ...(progress ? { progress: progress.counts } : {}),
     newCapReached,
     maxReached,
+    // #314: set only when „Höchstens gleichzeitig lernen" held new cards back
+    // today, so the deck page can say why none (or fewer) came.
+    ...(openLimit ? { openLimit } : {}),
     cardIds: shuffle(queue, random),
   };
 }

@@ -25,7 +25,7 @@ import {
 import { dayIn, timeZoneOf } from "../day.js";
 import { VALID_MODES } from "../scheduler.js";
 import { intervalsForCards } from "../labels.js";
-import { MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, releaseNewCards, updateDeckSettings } from "../deck-settings.js";
+import { MAX_OPEN_MAX, MAX_OPEN_MIN, MAX_PER_DAY_MAX, MAX_PER_DAY_MIN, releaseNewCards, updateDeckSettings } from "../deck-settings.js";
 import { DECK_NAME_MAX, createDeck, deleteDeck, renameDeck } from "../decks.js";
 import { MODE_KEYS, NEW_PER_DAY_MAX, NEW_PER_DAY_MIN } from "../settings.js";
 import { recordingsAmong } from "../recordings.js";
@@ -252,6 +252,8 @@ export default async function deckRoutes(app) {
             newPerDay: { type: "integer", minimum: NEW_PER_DAY_MIN, maximum: NEW_PER_DAY_MAX },
             // Migration 017: null is "no limit".
             maxPerDay: { type: ["integer", "null"], minimum: MAX_PER_DAY_MIN, maximum: MAX_PER_DAY_MAX },
+            // #314, migration 039: null is "no limit".
+            maxOpen: { type: ["integer", "null"], minimum: MAX_OPEN_MIN, maximum: MAX_OPEN_MAX },
             // #275: what „Karte umdrehen" shows first.
             flipFront: { type: "string", enum: ["word", "meaning"] },
             // #284: „Auch andersherum abfragen" — every card of the deck.
