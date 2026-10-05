@@ -1,5 +1,12 @@
 [
   {
+    "version": "v178",
+    "summary": "Ein neues Deck lässt sich wieder üben, auch wenn gerade viele Wörter offen sind.",
+    "notes": [
+      "Bisher sprang die Übung sofort zurück, weil „Höchstens gleichzeitig lernen“ alle neuen Wörter zurückhielt. Jetzt nimmt ein Tipp auf eine Übungsart die nächsten Wörter dazu – wie „Mehr neue Wörter“."
+    ]
+  },
+  {
     "version": "v177",
     "summary": "Ein Wort, das du heute dreimal nicht wusstest, hat bis morgen Pause.",
     "notes": [
