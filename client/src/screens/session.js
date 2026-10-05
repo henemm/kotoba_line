@@ -5,7 +5,7 @@ import { modeByKey } from "../modes.js";
 import { flush, record } from "../outbox.js";
 import { accentLabel, accentsOf, contour } from "../pitch.js";
 import { sessionQueue } from "../queue.js";
-import { comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../reshow.js";
+import { comesRoundAgain, labelsAfter, labelsAt, reshowPosition, restsToday, returnsAfter, takeDue } from "../reshow.js";
 import { forget, remember } from "../resume.js";
 import { inScript, isKana, modeName, showsScript, shownWord, wordRomaji } from "../script.js";
 import { seen } from "../seen.js";
@@ -249,6 +249,10 @@ export function sessionScreen({
   // ending — after that it is due again in a minute anyway, and the next
   // session brings it.
   const reshows = new Map();
+  // #314: card id → Nochmal answers today, the server's count at queue time
+  // plus this session's. At AGAIN_PER_DAY a card rests until tomorrow: it
+  // does not come round again, and „Nochmal üben" does not bring it.
+  const againsToday = new Map();
   const results = []; // one entry per card, for the station strip afterwards
   const struggled = new Set(); // #271: card ids answered Nochmal or Schwer here
   let answered = 0;
@@ -351,6 +355,8 @@ export function sessionScreen({
         met.add(id);
       }
       if (Array.isArray(resuming?.reshows)) for (const [id, n] of resuming.reshows) reshows.set(id, n);
+      for (const [id, n] of Object.entries(q.againToday ?? {})) againsToday.set(Number(id), n);
+      if (Array.isArray(resuming?.againsToday)) for (const [id, n] of resuming.againsToday) againsToday.set(id, n);
       const due = ids.map((id) => deck.get(id)).filter(Boolean);
       queue = playableIn(mode, due);
       if (resuming) index = Math.min(resuming.index ?? 0, Math.max(queue.length - 1, 0));
@@ -656,13 +662,14 @@ export function sessionScreen({
     // #271: what "Nochmal" on the summary brings back — every card she
     // answered Nochmal or Schwer in this session.
     if (rating <= 2) struggled.add(card.id);
+    if (rating === RATING_AGAIN) againsToday.set(card.id, (againsToday.get(card.id) ?? 0) + 1);
     if (ok) right += 1;
     else if (!missed.some((m) => m.id === card.id)) missed.push(card);
     // #214: Nochmal — and only Nochmal — brings the card round again. Put
     // back before the strip and the session note below are written, so both
     // already count it; on the last card this is what keeps `next()` from
     // finishing.
-    if (comesRoundAgain(rating, reshows.get(card.id) ?? 0)) {
+    if (comesRoundAgain(rating, reshows.get(card.id) ?? 0) && !restsToday(againsToday.get(card.id) ?? 0)) {
       queue.splice(reshowPosition(index, queue.length), 0, card);
       reshows.set(card.id, (reshows.get(card.id) ?? 0) + 1);
     }
@@ -700,6 +707,7 @@ export function sessionScreen({
       // or a learning step that ran out — and only Nochmal counts towards
       // MAX_RESHOWS. The ids alone cannot tell them apart on resume.
       reshows: [...reshows],
+      againsToday: [...againsToday],
     }).catch(() => {});
 
     // Redraw the strip so the marker just answered takes its colour.
@@ -1131,7 +1139,7 @@ export function sessionScreen({
     // at; after MAX_RESHOWS the card waits for the scheduler, and the line
     // does not promise otherwise.
     if (peeked) {
-      const again = comesRoundAgain(RATING_AGAIN, reshows.get(card.id) ?? 0);
+      const again = comesRoundAgain(RATING_AGAIN, reshows.get(card.id) ?? 0) && !restsToday((againsToday.get(card.id) ?? 0) + 1);
       render(
         answers,
         el("p.peek-note", {
@@ -1933,7 +1941,8 @@ export function sessionScreen({
       // answers made today count. The stats it draws are the same answer.
       streak: madeTodayCount(before, after, answered) ? after : undefined,
       // #271: the cards "Nochmal" on the summary practises again.
-      struggled: [...struggled],
+      // #314: not the ones resting until tomorrow.
+      struggled: [...struggled].filter((id) => !restsToday(againsToday.get(id) ?? 0)),
     });
   }
 

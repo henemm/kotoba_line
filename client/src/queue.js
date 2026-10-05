@@ -60,6 +60,9 @@ function kept(answer) {
     // Her own and a native speaker's recordings (#183 follow-up) — same
     // reasoning as starred: known offline, not "none" until the next sync.
     recordings: answer.recordings,
+    // #314: Nochmal answers so far today, so a session on a train still lets
+    // a card rest after its third.
+    againToday: answer.againToday,
     at: Date.now(),
   };
 }
@@ -187,6 +190,7 @@ export async function sessionQueue(opts) {
       labelDays: answer.labelDays,
       starred: answer.starred ?? [],
       recordings: answer.recordings ?? [],
+      againToday: answer.againToday ?? {},
       stale: false,
     };
   }
@@ -215,6 +219,8 @@ async function fromCache(cached) {
     labelDays: cached.labelDays,
     starred: cached.starred ?? [],
     recordings: cached.recordings ?? [],
+    // #314: yesterday's count is no count for today.
+    againToday: cached.at && new Date(cached.at).toDateString() === new Date().toDateString() ? (cached.againToday ?? {}) : {},
     stale: true,
     at: cached.at,
   };

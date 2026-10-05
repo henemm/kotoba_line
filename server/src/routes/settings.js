@@ -11,6 +11,7 @@ import {
   syncStateForUser,
   updateSettings,
 } from "../settings.js";
+import { MAX_OPEN_MAX, MAX_OPEN_MIN } from "../deck-settings.js";
 
 const version = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -43,6 +44,8 @@ const patchSchema = {
       beginner: { type: "boolean" },
       // #99: „Du hast heute noch nicht geübt", once a day at 18:00 her time.
       reminder: { type: "boolean" },
+      // #314: „Höchstens gleichzeitig lernen", every deck together; null is no limit.
+      maxOpen: { type: ["integer", "null"], minimum: MAX_OPEN_MIN, maximum: MAX_OPEN_MAX },
       // #133: at most four of the five, so one line always remains.
       hiddenModes: {
         type: "array",

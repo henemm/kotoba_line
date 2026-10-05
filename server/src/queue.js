@@ -67,6 +67,8 @@ export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again"];
 
 /** #271: the new cards "Nochmal" after a session mixes in — „ein paar neue". */
 export const AGAIN_NEW = 5;
+/** #314: Nochmal answers in one day after which a card rests until tomorrow. Same number as client/src/reshow.js. */
+export const AGAIN_PER_DAY = 3;
 
 /**
  * §215: a card in review state — its last interval was a day or more, the
@@ -387,27 +389,32 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // §5a: a deliberately chosen session is never capped by the daily limit.
   let newAllowance = filtered ? limit : Math.max(0, newPerDay - introducedToday);
 
-  // „Höchstens gleichzeitig lernen" (#314, migration 039): new cards only
-  // while fewer than that many of the deck's cards are still open. Charlotte,
-  // 2026-10-04: „den ersten Durchlauf mit höchstens fünfzig Vokabeln und dann
-  // nachher, wenn ich die gemeistert habe, … dass dann erst die Vokabeln
-  // dazukommen." Open is answered but not yet OPEN_DAYS apart — not Noji's
-  // „Gemeistert" (three weeks), which would hold new words back for a month.
-  // What she released today on the deck page still comes (#179): the limit
-  // paces her, a tap of hers overrides it for the day.
+  // „Höchstens gleichzeitig lernen" (#314): new cards only while fewer than
+  // that many cards are still open. Charlotte, 2026-10-04: „den ersten
+  // Durchlauf mit höchstens fünfzig Vokabeln und dann nachher, wenn ich die
+  // gemeistert habe, … dass dann erst die Vokabeln dazukommen." Open is
+  // answered but not yet OPEN_DAYS apart — not Noji's „Gemeistert" (three
+  // weeks), which would hold new words back for a month.
+  //
+  // Every deck together (migration 040): with the limit on one deck she had
+  // 50 new words the next day, 35 of them in decks it did not cover. And
+  // „Nochmal üben" is held to it too — its few new cards (AGAIN_NEW) were
+  // the other 15. What she released today on a deck page still comes
+  // (#179): the limit paces her, a tap of hers overrides it for the day.
   let openLimit;
-  if (!filtered && ofDeck?.maxOpen != null) {
+  const maxOpen = db.prepare("SELECT max_open FROM user_settings WHERE user_id = ?").get(userId)?.max_open ?? null;
+  if (maxOpen != null && (!filtered || only === "again")) {
     const { open } = db
       .prepare(
         `SELECT count(*) open FROM card_state s JOIN cards c ON c.id = s.card_id
           WHERE s.user_id = ? AND c.deleted_at IS NULL AND s.reps > 0
-            AND s.due_at - coalesce(s.last_review, s.due_at) < ?${scopeSql}`,
+            AND s.due_at - coalesce(s.last_review, s.due_at) < ?`,
       )
-      .get(userId, OPEN_DAYS * DAY, ...scopeParams);
-    const room = Math.max(0, ofDeck.maxOpen - open) + releasedToday;
+      .get(userId, OPEN_DAYS * DAY);
+    const room = Math.max(0, maxOpen - open) + releasedToday;
     if (room < newAllowance) {
       newAllowance = room;
-      openLimit = { open, max: ofDeck.maxOpen };
+      openLimit = { open, max: maxOpen };
     }
   }
   // Asked for beyond the allowance, and cut to it only once `siblingsApart`
@@ -498,6 +505,25 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     );
   }
 
+  // A card she has answered Nochmal AGAIN_PER_DAY times today rests until
+  // tomorrow (#314), in every kind of session. On 2026-10-05 she answered
+  // „Erklären/beibringen" 32 times, 29 of them Nochmal: 167 of the 274
+  // answers in „100 vokabeln" came after a card's third Nochmal that day.
+  // Spread over days a word is learned; drilled in one sitting it is not.
+  // The count of each card in the queue goes with it, so the session stops
+  // bringing it round at the same number (client/src/reshow.js).
+  const againToday = new Map(
+    db
+      .prepare(
+        `SELECT card_id, count(*) n FROM review_events
+          WHERE user_id = ? AND reviewed_at >= ? AND rating = 1 GROUP BY card_id`,
+      )
+      .all(userId, dayStart)
+      .map((r) => [r.card_id, r.n]),
+  );
+  const awake = (id) => (againToday.get(id) ?? 0) < AGAIN_PER_DAY;
+  groups = { due: groups.due.filter(awake), lapsed: groups.lapsed.filter(awake), fresh: groups.fresh };
+
   // Whether today's new cards are what is missing (#137): unseen cards are
   // there, the daily limit has let through all it will. With a deck or list
   // she practises in, this is an ordinary evening, and the set sheet says so
@@ -546,6 +572,8 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     ...(progress ? { progress: progress.counts } : {}),
     newCapReached,
     maxReached,
+    // #314: Nochmal answers so far today, for the cards in this queue that have any.
+    againToday: Object.fromEntries(queue.filter((id) => againToday.has(id)).map((id) => [id, againToday.get(id)])),
     // #314: set only when „Höchstens gleichzeitig lernen" held new cards back
     // today, so the deck page can say why none (or fewer) came.
     ...(openLimit ? { openLimit } : {}),

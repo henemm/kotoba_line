@@ -141,6 +141,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
       root,
       header(),
       waitingUpdate(),
+      learning(),
       // #123: only what configures the app. The Deck group (names and counts,
       // each leading to Browse) and session length went to the Words and
       // Practise tabs, where she is when she needs them.
@@ -238,6 +239,53 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
 
   // New cards per day and the ways of practising belong to a deck since
   // #137: the deck page's Options. What is left here is about her.
+
+  // ── Learning (#314) ─────────────────────────────────────────────
+
+  /** „Unbegrenzt" and three numbers; Charlotte's own was 50. */
+  const MAX_OPEN_CHOICES = [null, 30, 50, 100];
+
+  /** The choices, and hers among them if it is another number. */
+  function openChoicesFor(current) {
+    if (MAX_OPEN_CHOICES.includes(current)) return MAX_OPEN_CHOICES;
+    return [null, ...[...MAX_OPEN_CHOICES.slice(1), current].sort((a, b) => a - b)];
+  }
+
+  /**
+   * „Höchstens gleichzeitig lernen", every deck together. Charlotte,
+   * 2026-10-04: „vielleicht den ersten Durchlauf mit höchstens fünfzig
+   * Vokabeln und dann nachher, wenn ich die gemeistert habe, … dass dann erst
+   * die Vokabeln dazukommen." Per deck for a day (v176): she started three
+   * more decks and 35 new words came where it did not apply. So it is about
+   * her, and lives here, not in a deck's options, which say „Nur für dieses
+   * Deck".
+   */
+  function learning() {
+    const current = data.settings.maxOpen ?? null;
+    return group(
+      "Lernen",
+      el(
+        "div.field",
+        {},
+        el("span.field-label", { text: "Höchstens gleichzeitig lernen" }),
+        el(
+          "div.choice",
+          { role: "group", "aria-label": "Höchstens gleichzeitig lernen" },
+          openChoicesFor(current).map((n) =>
+            el("button", {
+              type: "button",
+              text: n === null ? "Unbegrenzt" : String(n),
+              "aria-pressed": String(n === current),
+              onclick: () => n !== current && write({ maxOpen: n }),
+            }),
+          ),
+        ),
+        el("p.field-hint", {
+          text: "Für alle Decks zusammen. Neue Wörter kommen erst dazu, wenn weniger als so viele noch nicht sitzen. Ein Wort sitzt, sobald es erst nach einer Woche oder später wiederkommt.",
+        }),
+      ),
+    );
+  }
 
   // ── Appearance ──────────────────────────────────────────────────
 
