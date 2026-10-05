@@ -306,12 +306,14 @@ function currentScreen() {
       //
       // Both stay inside the deck or list she practises in (#137): the outlook
       // that counted the offer was counted there too.
-      onStart: ({ mode, only } = {}) =>
+      onStart: async ({ mode, only } = {}) => {
+        if (!only) await releaseIfHeld();
         startSession(
           only
             ? { mode, ...DEFAULT_FILTERS, ...scopeOf(state.filters), only }
             : { mode, ...state.filters },
-        ),
+        );
+      },
       filters: state.filters,
       // #252: a Reise deck is one way of practising and nothing to narrow —
       // the sheet's Start would begin a session in a way the deck does not have.
@@ -1169,6 +1171,32 @@ function openCardTopics(card, list = {}) {
     },
   });
   renderApp();
+}
+
+/**
+ * #314: a deck with nothing for today only because „Höchstens gleichzeitig
+ * lernen" holds its new words back — a tap on a way of practising takes the
+ * next batch, as „Mehr neue Wörter" does, instead of starting an empty
+ * session that returns at once. Charlotte's new „Hausaufgaben", 52 cards
+ * none of them seen, did exactly that on 2026-10-05 with 168 open elsewhere;
+ * „Mehr neue Wörter" was on the page and not what she reached for. The
+ * limit still keeps the app from pushing new words at her; it no longer
+ * stops her when she asks to practise. Offline nothing can be released and
+ * the session starts as before.
+ */
+async function releaseIfHeld() {
+  const key = state.deck?.key;
+  if (!key) return;
+  try {
+    const { today, openLimit, outlook } = await practiseNumbers();
+    if (!openLimit || (today?.total ?? 0) > 0 || !(outlook?.fresh > 0)) return;
+    const { settings } = await api.releaseNewCards(key);
+    if (state.deck?.key === key) state.deck = { ...state.deck, settings };
+    seen("more_new_by_start", key);
+    numbersChanged();
+  } catch {
+    // Offline or refused: the session starts with what there is.
+  }
 }
 
 function startSession({ mode = "choose", ...filters } = {}) {
