@@ -1,5 +1,14 @@
 [
   {
+    "version": "v177",
+    "summary": "Ein Wort, das du heute dreimal nicht wusstest, hat bis morgen Pause.",
+    "notes": [
+      "Es kommt dann weder in dieser Übung noch bei „Nochmal üben“ wieder – morgen ist es wieder dran. Am Stück gepaukt bleibt ein Wort schlechter hängen als über Tage verteilt.",
+      "„Höchstens gleichzeitig lernen“ gilt jetzt für alle Decks zusammen und steht unter Einstellungen → Lernen.",
+      "„Nochmal üben“ bringt keine neuen Wörter mehr mit, solange diese Grenze erreicht ist."
+    ]
+  },
+  {
     "version": "v176",
     "summary": "Wörter, bei denen du „Schwer“ drückst, kommen nicht mehr jeden Tag wieder.",
     "notes": [

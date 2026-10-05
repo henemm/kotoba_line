@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../src/reshow.js";
+import { AGAIN_PER_DAY, MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, restsToday, returnsAfter, takeDue } from "../src/reshow.js";
 import { installSteps, shouldOffer as offersInstallHint } from "../src/install.js";
 import { shouldOffer } from "../src/remind-offer.js";
 import { keyBytes, pushStateFrom } from "../src/push.js";
@@ -1076,6 +1077,19 @@ describe("the remembered viewport height", () => {
     const seen = fold({ tallest: 859, lowest: 859 }, { width: 0, height: 0 });
     assert.equal(seen.tallest, 859);
     assert.equal(seen.lowest, 859);
+  });
+});
+
+describe("restsToday (#314)", () => {
+  it("rests a card from its third Nochmal of the day", () => {
+    assert.deepEqual([0, 1, 2, 3, 4].map(restsToday), [false, false, false, true, true]);
+  });
+
+  it("uses the server's number, which leaves resting cards out of every queue", () => {
+    // Read from the source, not imported: the client suite runs without the
+    // server's dependencies, which queue.js needs.
+    const source = readFileSync(new URL("../../server/src/queue.js", import.meta.url), "utf8");
+    assert.equal(Number(source.match(/export const AGAIN_PER_DAY = (\d+);/)[1]), AGAIN_PER_DAY);
   });
 });
 

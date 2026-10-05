@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, returnsAfter, takeDue } from "../../client/src/reshow.js";
+import { MAX_RESHOWS, comesRoundAgain, labelsAfter, labelsAt, reshowPosition, restsToday, returnsAfter, takeDue } from "../../client/src/reshow.js";
 import { formatInterval } from "../../client/src/screens/session.js";
 import { deckSettings } from "../src/deck-settings.js";
 import { dayIn, nextDay, startOfDay } from "../src/day.js";
@@ -161,6 +161,9 @@ export async function simulate(db, userId, {
       WHERE e.user_id = ? AND e.reviewed_at >= ? AND ${inDeck}`,
   );
 
+  // #314: Nochmal answers today — a card with AGAIN_PER_DAY of them rests
+  // until tomorrow, so it is neither owed nor brought round.
+  const againsSince = db.prepare("SELECT count(*) n FROM review_events WHERE user_id = ? AND card_id = ? AND rating = 1 AND reviewed_at >= ?");
   const lastEvent = db.prepare(
     "SELECT rating, reviewed_at FROM review_events WHERE user_id = ? AND card_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 1",
   );
@@ -240,6 +243,7 @@ export async function simulate(db, userId, {
         const last = lastEvent.get(userId, id);
         const owed = promisedBy(state, now, timeZone) || (last.rating === 1 && last.reviewed_at >= now - LAPSE_WINDOW);
         if (!owed) continue;
+        if (restsToday(againsSince.get(userId, id, dayStart).n)) continue;
         if (capped) {
           row.deferred += 1;
           continue;
@@ -311,7 +315,7 @@ export async function simulate(db, userId, {
           }
         }
 
-        if (comesRoundAgain(rating, reshows.get(id) ?? 0)) {
+        if (comesRoundAgain(rating, reshows.get(id) ?? 0) && !restsToday(againsSince.get(userId, id, dayStart).n)) {
           queue.splice(reshowPosition(i, queue.length), 0, id);
           reshows.set(id, (reshows.get(id) ?? 0) + 1);
         }
@@ -358,7 +362,8 @@ export async function simulate(db, userId, {
       // ── gleich nochmal: a card leaves the session on a Nochmal only once
       // it has come round the most times the rule allows (#214).
       for (const [id, rating] of stoppedEarly ? [] : lastInSession) {
-        if (rating === 1 && (reshows.get(id) ?? 0) < MAX_RESHOWS) {
+        // …or once it rests until tomorrow, after its third Nochmal today (#314).
+        if (rating === 1 && (reshows.get(id) ?? 0) < MAX_RESHOWS && !restsToday(againsSince.get(userId, id, dayStart).n)) {
           violations.push(`${where}: Karte ${id} endete mit Nochmal und kam nicht wieder`);
         }
       }

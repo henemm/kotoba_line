@@ -32,6 +32,7 @@ describe("the settings row", () => {
       beginner: false,
       // #99: „Du hast heute noch nicht geübt", off for everyone.
       reminder: false,
+      maxOpen: null,
     });
     db.close();
   });
@@ -117,6 +118,7 @@ describe("GET /api/settings", () => {
       beginner: false,
       // #99: „Du hast heute noch nicht geübt", off for everyone.
       reminder: false,
+      maxOpen: null,
     });
     assert.deepEqual(
       body.decks.map((d) => d.key),
@@ -169,6 +171,7 @@ describe("PATCH /api/settings", () => {
       beginner: false,
       // #99: „Du hast heute noch nicht geübt", off for everyone.
       reminder: false,
+      maxOpen: null,
     });
     await app.close();
   });
@@ -197,6 +200,7 @@ describe("PATCH /api/settings", () => {
       beginner: false,
       // #99: „Du hast heute noch nicht geübt", off for everyone.
       reminder: false,
+      maxOpen: null,
     });
     await app.close();
   });

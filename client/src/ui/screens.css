@@ -3027,6 +3027,13 @@
   font-size: 16px;
   font-weight: 600;
 }
+/* #314: what a choice above it does, in the row-detail's voice. */
+.settings .field-hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
 :is(.settings, .deck-options) .choice {
   display: flex;
   gap: 8px;

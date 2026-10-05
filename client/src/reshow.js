@@ -38,6 +38,21 @@ export function comesRoundAgain(rating, timesSoFar = 0) {
   return rating === RATING_AGAIN && timesSoFar < MAX_RESHOWS;
 }
 
+/**
+ * #314: Nochmal answers in one of her days after which a card rests until
+ * tomorrow — it neither comes round again in this session nor in the next
+ * one today. On 2026-10-05 she answered one word 32 times, 29 of them
+ * Nochmal; 167 of 274 answers in her deck came after a word's third. Same
+ * number as AGAIN_PER_DAY in server/src/queue.js, which leaves resting
+ * cards out of every queue.
+ */
+export const AGAIN_PER_DAY = 3;
+
+/** Whether a card that has had `againsToday` Nochmal today (this one included) rests until tomorrow. */
+export function restsToday(againsToday) {
+  return againsToday >= AGAIN_PER_DAY;
+}
+
 /** Where in the queue the card goes: at the end, behind every card still to come (#310). */
 export function reshowPosition(index, length) {
   return length;

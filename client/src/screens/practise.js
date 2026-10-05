@@ -196,14 +196,15 @@ export function practiseScreen({
   }
 
   /**
-   * #314: the deck's „Höchstens gleichzeitig lernen" held new words back
-   * today. Said where the count of new ones is, so a 0 there reads as her
-   * own setting at work and not as the deck running dry.
+   * #314: „Höchstens gleichzeitig lernen" held new words back today. Said
+   * where the count of new ones is, so a 0 there reads as her own setting at
+   * work and not as the deck running dry — and that the number is every
+   * deck's, since it is not this deck's open words alone (migration 040).
    */
   function openNote(limit) {
     if (!limit) return null;
     return el("p.deck-open-note", {
-      text: `Neue Wörter kommen dazu, sobald weniger als ${num(limit.max)} noch nicht sitzen – gerade sind es ${num(limit.open)}.`,
+      text: `Neue Wörter kommen dazu, sobald weniger als ${num(limit.max)} noch nicht sitzen – gerade sind es ${num(limit.open)}, in allen Decks zusammen.`,
     });
   }
 

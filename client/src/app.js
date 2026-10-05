@@ -567,7 +567,6 @@ function openDeckOptions() {
           hiddenModes: settings.hiddenModes,
           newPerDay: settings.newPerDay,
           maxPerDay: settings.maxPerDay ?? null,
-          maxOpen: settings.maxOpen ?? null,
           ...(settings.flipFront ? { flipFront: settings.flipFront } : {}),
           ...(reversing ? { reverse: patch.reverse } : {}),
         })

@@ -67,7 +67,9 @@ describe("thirty days of practice (#242)", () => {
     assert.equal(ratings["neu:1"].sameSession, 100);
     // At the end of the session (#310): after every card still to come, at
     // this simulation's 20 s an answer. Ten cards on (#272) it was 4 Min.
-    assert.equal(ratings["neu:1"].median, "26 Min");
+    // 26 Min until #314 let a card rest after its third Nochmal of the day:
+    // fewer cards come round, so a session's end is a little further off.
+    assert.equal(ratings["neu:1"].median, "29 Min");
   });
 
   it("brings Schwer and Gut back in the same session when their minutes run out in it (#242)", async () => {
