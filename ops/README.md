@@ -280,6 +280,25 @@ henemm-infra's `monitor.sh` alerts when that stamp is older than 26 hours.
 match her romaji is left silent and named in the output; fix it in
 `import/word-sound-overrides.tsv`.
 
+## Charlotte's day, on Telegram (#318)
+
+`ops/daily-report.sh`, installed by `ops/deploy.sh` as
+`/srv/kotoba/bin/daily-report.sh`, sends Henning the Tokyo day that just
+ended — answers and cards, ratings, the card that came most often, cards
+resting after three Nochmal, new words per deck, open cards against her
+limit — through henemm-infra's `notify-telegram.sh` (topic Info). A line
+starts with ⚠ where #314 says a number should not be. It exists because a
+promise to "look again in a few days" is kept by nothing between sessions.
+
+```
+30 15 * * * /srv/kotoba/bin/daily-report.sh >> /home/hem/backups/kotoba-daily-report.log 2>&1
+```
+
+15:30 UTC is 00:30 in Tokyo. On a sent report it stamps
+`~/backups/kotoba-daily-report.success`; henemm-infra's `monitor.sh`
+(`check_kotoba_daily_report`) alerts when that is older than 26 hours.
+`--dry-run` prints instead of sending, `--day YYYY-MM-DD` reports another day.
+
 ## Checking a deploy actually worked
 
 Three things, from a browser on the phone:

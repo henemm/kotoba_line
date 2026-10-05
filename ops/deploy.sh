@@ -160,7 +160,8 @@ mkdir -p /srv/kotoba/bin
 install -m 755 ops/seen.sh /srv/kotoba/bin/seen.sh
 install -m 644 ops/watches.tsv /srv/kotoba/bin/watches.tsv
 install -m 755 ops/device-log.sh /srv/kotoba/bin/device-log.sh
-echo "  seen.sh, watches.tsv ($(grep -cv '^#' ops/watches.tsv) open watches), device-log.sh"
+install -m 755 ops/daily-report.sh /srv/kotoba/bin/daily-report.sh
+echo "  seen.sh, watches.tsv ($(grep -cv '^#' ops/watches.tsv) open watches), device-log.sh, daily-report.sh"
 
 say "Checks"
 # These are the three that actually catch a broken deploy, and the third is the
