@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { plainRomaji, romajiParts } from "../romaji.js";
+import { baseFormHint, plainRomaji, romajiParts } from "../romaji.js";
 import { mediaUrl, prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
@@ -2322,13 +2322,24 @@ export function typingAnswers(card, pool) {
  */
 /**
  * #322: a sentence's romaji with the card's word in bold, as the Japanese
- * line has it. `sentence_romaji_marked` came with v180's server; a card
- * synced before has only the plain one.
+ * line has it — and, when the sentence has the word in another form, the
+ * card's own form after it: „ani ga imasu (iru)." Henning read „ani ga
+ * imasu." under いる as a sentence without the word; the bold alone shows
+ * where it is, the card's form shows that it is the same word. Taken from
+ * the card, nothing made up. `sentence_romaji_marked` came with v180's
+ * server; a card synced before has only the plain one.
  */
 function markedRomaji(card) {
-  return romajiParts(card.sentence_romaji_marked ?? card.sentence_romaji).map((p) =>
-    p.marked ? el("b", { text: p.text }) : p.text,
-  );
+  const parts = romajiParts(card.sentence_romaji_marked ?? card.sentence_romaji);
+  // Once, after the last marked word: 知っています marks „shitte imasu", one
+  // word to the card, and two hints would read as two.
+  const last = parts.findLastIndex((p) => p.marked);
+  const marked = parts.filter((p) => p.marked).map((p) => p.text).join("");
+  const hint = last < 0 ? undefined : baseFormHint(marked, wordRomaji(card));
+  return parts.map((p, i) => {
+    if (!p.marked) return p.text;
+    return [el("b", { text: p.text }), i === last && hint ? el("span.base-form", { text: ` (${hint})` }) : null];
+  });
 }
 
 export function speakPeek(card, useSentence) {

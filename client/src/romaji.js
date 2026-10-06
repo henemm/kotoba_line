@@ -176,6 +176,19 @@ export function romajiParts(text) {
   return parts;
 }
 
+/**
+ * The card's word as on the card, to put after the marked one when the
+ * sentence has it in another form (#322, Henning): „ani ga imasu (iru)."
+ * Undefined when the two are the same word as written — case, spaces and
+ * hyphens aside — or when there is no word to give.
+ */
+export function baseFormHint(marked, base) {
+  if (!base) return undefined;
+  const fold = (s) => String(s).toLowerCase().replace(/[^a-zāēīōū0-9]/g, "");
+  // A card read two ways (何: „nani / nan") names the one the sentence uses.
+  return base.split("/").some((one) => fold(one) === fold(marked)) ? undefined : base;
+}
+
 /** The same without its marks — for speech, a hint, a comparison. */
 export function plainRomaji(text) {
   return romajiParts(text).map((p) => p.text).join("");

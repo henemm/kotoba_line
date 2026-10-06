@@ -2093,6 +2093,11 @@
   color: var(--rail);
   font-weight: 800;
 }
+/* #322: the card's own form after a word the sentence bends — „(iru)". */
+.base-form {
+  color: var(--ink-muted);
+  font-weight: 400;
+}
 
 .reveal {
   animation: rise 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
