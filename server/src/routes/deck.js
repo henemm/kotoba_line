@@ -75,7 +75,14 @@ export default async function deckRoutes(app) {
                   CASE WHEN word_audio_generated_for = word THEN word_audio_checked END AS word_audio_checked,
                   -- The sentence in romaji (migration 028), by the sentence
                   -- itself: a changed sentence finds none rather than an old one.
-                  (SELECT r.romaji FROM sentence_romaji r WHERE r.sentence = cards.sentence) AS sentence_romaji
+                  --
+                  -- #322: the import keeps Kaishi's <b> on the card's word.
+                  -- Plain in the old field, which shells before v180 print as
+                  -- text; marked in a new one, which a device stores with the
+                  -- card even before its shell can draw it — so updating the
+                  -- app later still finds the marks, with no second sync.
+                  (SELECT replace(replace(r.romaji, '<b>', ''), '</b>', '') FROM sentence_romaji r WHERE r.sentence = cards.sentence) AS sentence_romaji,
+                  (SELECT r.romaji FROM sentence_romaji r WHERE r.sentence = cards.sentence) AS sentence_romaji_marked
              FROM cards
             WHERE updated_at > ?
             ORDER BY frequency_rank IS NULL, frequency_rank ASC, id ASC

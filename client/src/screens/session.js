@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { plainRomaji, romajiParts } from "../romaji.js";
 import { mediaUrl, prime, say, stop, unlock } from "../audio.js";
 import { deckCatchingUp, loadDeck, pickDistractors, shuffle } from "../deck.js";
 import { modeByKey } from "../modes.js";
@@ -830,7 +831,7 @@ export function sessionScreen({
    */
   function sentenceRomajiLine(card) {
     if (!romaji || !japanese || !card.sentence_romaji) return null;
-    return el("p.romaji.sentence-romaji.reveal", { text: card.sentence_romaji });
+    return el("p.romaji.sentence-romaji.reveal", {}, markedRomaji(card));
   }
 
   /**
@@ -1805,7 +1806,7 @@ export function sessionScreen({
       return el(
         "div.sentence-line.reveal",
         {},
-        el("div.sentence-copy", {}, el("p.sentence.latin", { text: card.sentence_romaji })),
+        el("div.sentence-copy", {}, el("p.sentence.latin", {}, markedRomaji(card))),
         speaker(card.sentence, card.sentence_audio, {
           rate: 0.85,
           small: true,
@@ -2319,9 +2320,20 @@ export function typingAnswers(card, pool) {
  * no button rather than a guess; every Reise card has one (measured on the
  * live deck, 2026-09-19: 65 of 65).
  */
+/**
+ * #322: a sentence's romaji with the card's word in bold, as the Japanese
+ * line has it. `sentence_romaji_marked` came with v180's server; a card
+ * synced before has only the plain one.
+ */
+function markedRomaji(card) {
+  return romajiParts(card.sentence_romaji_marked ?? card.sentence_romaji).map((p) =>
+    p.marked ? el("b", { text: p.text }) : p.text,
+  );
+}
+
 export function speakPeek(card, useSentence) {
   if (isKana(card)) return undefined;
-  return (useSentence ? card.sentence_romaji : wordRomaji(card)) || undefined;
+  return (useSentence ? plainRomaji(card.sentence_romaji) : wordRomaji(card)) || undefined;
 }
 
 export function speakUsesSentence(card, speakSource, random = Math.random) {

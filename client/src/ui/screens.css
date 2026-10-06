@@ -2086,8 +2086,10 @@
   font-weight: 800;
   overflow-wrap: anywhere;
 }
-/* Kaishi marks the target word itself, so nothing has to be guessed at. */
-.sentence b {
+/* Kaishi marks the target word itself, so nothing has to be guessed at —
+   in the romaji line too (#322). */
+.sentence b,
+.sentence-romaji b {
   color: var(--rail);
   font-weight: 800;
 }

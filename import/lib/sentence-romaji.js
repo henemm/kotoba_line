@@ -103,11 +103,37 @@ function attaches(t) {
 }
 
 /**
+ * Which characters of the sentence Kaishi marks as the card's word — its
+ * <b>…</b>, counted without the tags and without spaces, as `plain` is.
+ */
+function markedChars(sentence) {
+  const marked = new Set();
+  let at = 0;
+  let inside = false;
+  for (const part of String(sentence ?? "").split(/(<\/?b>)/i)) {
+    if (/^<b>$/i.test(part)) inside = true;
+    else if (/^<\/b>$/i.test(part)) inside = false;
+    else
+      for (const ch of part.replace(/\s/g, "")) {
+        if (inside) marked.add(at);
+        at += ch.length;
+      }
+  }
+  return marked;
+}
+
+/**
  * The romaji, or `{ fail }` saying why there is none. `sentence` is the
- * card's sentence (its <b> marks are ignored), `furigana` its furigana.
+ * card's sentence, `furigana` its furigana.
+ *
+ * #322: the word Kaishi marks in the sentence (<b>…</b>) stays marked in the
+ * romaji, as whole words. In 406 of its 1,500 sentences the word is in
+ * another form than on the card — いる as います, 教える as 教えて — and with
+ * the script off „ani ga imasu." read as a sentence without the word in it.
  */
 export function sentenceRomaji(tokens, sentence, furigana) {
   const plain = String(sentence ?? "").replace(/<\/?b>/gi, "").replace(/\s/g, "");
+  const marked = markedChars(sentence);
   const units = unitsOf(furigana);
   if (units.map((x) => x.surface).join("") !== plain) return { fail: "furigana does not spell the sentence" };
   const groups = align(tokens, units);
@@ -115,8 +141,13 @@ export function sentenceRomaji(tokens, sentence, furigana) {
 
   const words = [];
   const last = () => words.length - 1;
+  let at = 0;
   for (const g of groups) {
     const t = g.first;
+    const from = at;
+    at += g.surface.length;
+    let inMark = false;
+    for (let i = from; i < at; i++) if (marked.has(i)) inMark = true;
     if (g.tokens.length === 1 && PUNCTUATION[g.surface]) {
       if (words.length === 0) return { fail: `starts with ${g.surface}` };
       words[last()].tail += PUNCTUATION[g.surface];
@@ -134,18 +165,23 @@ export function sentenceRomaji(tokens, sentence, furigana) {
     if (words.length && t.pos_detail_1 === "接尾" && HONORIFICS.has(g.surface)) {
       words[last()].tail += "-" + g.surface;
       words[last()].honorific = kana;
+      // Kaishi's card for さん or ちゃん marks only the ending: Tomu-<b>san</b>.
+      if (inMark) words[last()].honorificMarked = true;
       continue;
     }
-    if (words.length && !words[last()].tail && attaches(t)) words[last()].kana += kana;
-    else words.push({ kana, tail: "" });
+    if (words.length && !words[last()].tail && attaches(t)) {
+      words[last()].kana += kana;
+      if (inMark) words[last()].marked = true;
+    } else words.push({ kana, tail: "", marked: inMark });
   }
 
   const out = [];
   for (const w of words) {
     const romaji = /^[A-Z]$/.test(w.kana) ? w.kana : toRomaji(w.kana);
     if (!romaji) return { fail: `no romaji for ${w.kana}` };
-    const tail = w.honorific ? w.tail.replace(/-[^:.,?!…]+/, `-${toRomaji(w.honorific)}`) : w.tail;
-    out.push(romaji + tail);
+    const ending = w.honorific && (w.honorificMarked ? `<b>${toRomaji(w.honorific)}</b>` : toRomaji(w.honorific));
+    const tail = w.honorific ? w.tail.replace(/-[^:.,?!…]+/, `-${ending}`) : w.tail;
+    out.push(w.marked ? `<b>${romaji}</b>${tail}` : romaji + tail);
   }
   return { romaji: out.join(" ") };
 }

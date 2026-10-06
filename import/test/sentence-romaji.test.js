@@ -452,6 +452,23 @@ describe("sentence romaji from Kaishi's furigana and the tokenizer's word bounda
     assert.equal(romajiOf("A「山田さんですか。」B「はい。」"), "A: yamada-san desu ka. B: hai.");
   });
 
+  it("keeps Kaishi's mark on the card's word, as whole words, punctuation outside (#322)", () => {
+    const marked = (sentence, withMark) => {
+      const c = CASES.find((x) => x.sentence === sentence);
+      return sentenceRomaji(tokens(c), withMark, c.furigana).romaji;
+    };
+    assert.equal(marked("この靴はいくらですか。", "この靴は<b>いくら</b>ですか。"), "kono kutsu wa <b>ikura</b> desu ka.");
+    // The word in another form than on the card: 行く as 行った.
+    assert.equal(marked("私は去年フランスへ行った。", "私は去年フランスへ<b>行った</b>。"), "watashi wa kyonen furansu e <b>itta</b>.");
+    // A card for さん: the ending alone.
+    assert.equal(marked("あなたはトムさんですか。", "あなたはトム<b>さん</b>ですか。"), "anata wa tomu-<b>san</b> desu ka.");
+    // A mark on part of a word marks the word it is in.
+    assert.equal(
+      marked("せっかく来たんだからゆっくりして行きなさい。", "せっかく来たんだからゆっくりして<b>行き</b>なさい。"),
+      "sekkaku kita n da kara yukkuri shite <b>ikinasai</b>.",
+    );
+  });
+
   it("gives none rather than a wrong one when furigana and sentence disagree", () => {
     const c = CASES[0];
     assert.ok(sentenceRomaji(tokens(c), c.sentence, "この 靴[くつ]は").fail);

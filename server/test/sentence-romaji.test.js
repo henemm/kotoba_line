@@ -22,4 +22,17 @@ describe("the deck sends each sentence's romaji", () => {
     assert.equal(byId[1].sentence_romaji, "kono kutsu wa ikura desu ka.");
     assert.equal(byId[2].sentence_romaji, null);
   });
+
+  it("sends the word's mark in a field of its own, and the old one plain for shells before v180 (#322)", async () => {
+    const { app, db, config } = await testApp();
+    await seedUser(db);
+    db.prepare("INSERT INTO cards (id, word, word_meaning, sentence, frequency_rank, updated_at) VALUES (1, 'いる', 'x', ?, 1, 1)").run(
+      "兄が<b>います</b>。",
+    );
+    db.prepare("INSERT INTO sentence_romaji (sentence, romaji) VALUES (?, ?)").run("兄が<b>います</b>。", "ani ga <b>imasu</b>.");
+    const cookie = await signIn(app, config);
+    const [card] = (await app.inject({ method: "GET", url: "/api/deck?since=0", headers: { cookie } })).json().cards;
+    assert.equal(card.sentence_romaji, "ani ga imasu.");
+    assert.equal(card.sentence_romaji_marked, "ani ga <b>imasu</b>.");
+  });
 });
