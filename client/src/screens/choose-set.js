@@ -26,6 +26,8 @@ const ONLY = [
   { value: "starred", label: "★ Markiert" },
   { value: "lapsed", label: "Vergessen" },
   { value: "new", label: "Neu" },
+  // #320: every card of the deck she has learned, due or not.
+  { value: "all", label: "Alle gelernten" },
 ];
 
 /** The defaults are the scheduler's own answer, so opening and closing changes nothing. */

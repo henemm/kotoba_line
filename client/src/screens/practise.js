@@ -299,7 +299,7 @@ export function practiseScreen({
 
   function nothingDue(outlook, stats) {
     const offers = [];
-    const { ahead = 0, lapsed = 0, fresh = 0, nextDue } = outlook ?? {};
+    const { ahead = 0, lapsed = 0, fresh = 0, all = 0, nextDue } = outlook ?? {};
 
     // Charlotte, 2026-09-16: "Ich hätte auch gerne das ich weiter lernen kann
     // wenn ich möchte und nicht erst morgen um 11:30". The day's new cards are
@@ -351,6 +351,20 @@ export function practiseScreen({
           onStart({ only: "lapsed" }),
         ),
       );
+    }
+
+    // #320, Charlotte: „alle Karten aus dem Deck hintereinander lernen …
+    // wie wenn man durch ist mit allen Vokabeln, aber noch einmal sicher
+    // gehen möchte, dass man alle kann." Here, where a deck is done for the
+    // day — when that wish comes up.
+    if (all > 0) {
+      offers.push(
+        offer("Alle Karten durchgehen", `${cards(all)}, die du schon gelernt hast, einmal hintereinander`, () => {
+          seen("all_cards_tapped", deck?.key);
+          onStart({ only: "all" });
+        }),
+      );
+      seen("all_cards_shown", deck?.key, { oncePerDay: true });
     }
 
     return [

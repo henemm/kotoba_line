@@ -7,7 +7,7 @@ import { openDatabase } from "../src/db.js";
 import { startOfDay } from "../src/day.js";
 import { releaseNewCards } from "../src/deck-settings.js";
 import { ingestEvents } from "../src/events.js";
-import { AGAIN_PER_DAY, OPEN_DAYS, queueForUser } from "../src/queue.js";
+import { AGAIN_PER_DAY, OPEN_DAYS, outlookForUser, queueForUser } from "../src/queue.js";
 import { updateSettings } from "../src/settings.js";
 import { previewIntervals, stateFromEvents } from "../src/scheduler.js";
 import { cookieValue, seedUser, testApp } from "./helpers.js";
@@ -217,5 +217,28 @@ describe("a card rests after its third Nochmal of the day (#314)", () => {
     const q = queue(db, userId, D2);
     assert.ok(q.cardIds.includes(1));
     assert.equal(q.againToday[1], undefined);
+  });
+});
+
+describe("Alle Karten durchgehen (#320)", () => {
+  it("brings every card of the deck she has answered, due or not, and none she has not", async () => {
+    const { db, userId } = await learner();
+    // Leicht: four days off, so none of these is due tomorrow.
+    answer(db, userId, [1, 2, 3], 4, D1);
+    const q = queue(db, userId, D2, "kaishi", { only: "all" });
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [1, 2, 3]);
+    assert.equal(queue(db, userId, D2).cardIds.filter((id) => id <= 3).length, 0);
+  });
+
+  it("stays inside the deck", async () => {
+    const { db, userId } = await learner();
+    answer(db, userId, [1, 1001], 3, D1);
+    assert.deepEqual(queue(db, userId, D2, "hiragana", { only: "all" }).cardIds, [1001]);
+  });
+
+  it("is counted for the finished deck page's offer", async () => {
+    const { db, userId } = await learner();
+    answer(db, userId, [1, 2, 3], 4, D1);
+    assert.equal(outlookForUser(db, userId, D2, { deckKey: "kaishi", timeZone: TZ }).all, 3);
   });
 });

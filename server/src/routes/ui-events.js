@@ -10,6 +10,8 @@ export const UI_EVENT_NAMES = [
   "more_new_tapped",
   // #314: a line tapped in a deck the open limit had left empty.
   "more_new_by_start",
+  "all_cards_shown", // #320: the finished deck page offered „Alle Karten durchgehen"
+  "all_cards_tapped",
   "break_hint_shown", // #218: "Kleine Pause?" appeared in a session
   "break_hint_dismissed",
   "kana_grid_shown", // #208: a kana deck's page showed its letters

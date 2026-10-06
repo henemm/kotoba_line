@@ -1,5 +1,12 @@
 [
   {
+    "version": "v179",
+    "summary": "Neu: „Alle Karten durchgehen“ – jedes Wort eines Decks, das du schon gelernt hast, einmal hintereinander.",
+    "notes": [
+      "Der Knopf erscheint, wenn ein Deck für heute fertig ist. Du findest es auch unter „Deine Auswahl“ als „Alle gelernten“. Was du dabei nicht weißt, kommt danach früher wieder."
+    ]
+  },
+  {
     "version": "v178",
     "summary": "Ein neues Deck lässt sich wieder üben, auch wenn gerade viele Wörter offen sind.",
     "notes": [
