@@ -160,6 +160,40 @@ export function searchRomaji(word, reading) {
   return [...new Set(keys)].map((k) => ` ${k}|`).join("");
 }
 
+/**
+ * A sentence's romaji in parts, with the card's word marked (#322). The
+ * import keeps Kaishi's <b>…</b> on the word (import/lib/sentence-romaji.js),
+ * because in 406 of 1,500 sentences it is in another form than on the card:
+ * いる as „imasu". Only <b> is read; anything else stays text.
+ */
+export function romajiParts(text) {
+  const parts = [];
+  for (const piece of String(text ?? "").split(/(<b>.*?<\/b>)/)) {
+    if (!piece) continue;
+    const m = piece.match(/^<b>(.*?)<\/b>$/);
+    parts.push(m ? { text: m[1], marked: true } : { text: piece, marked: false });
+  }
+  return parts;
+}
+
+/**
+ * The card's word as on the card, to put after the marked one when the
+ * sentence has it in another form (#322, Henning): „ani ga imasu (iru)."
+ * Undefined when the two are the same word as written — case, spaces and
+ * hyphens aside — or when there is no word to give.
+ */
+export function baseFormHint(marked, base) {
+  if (!base) return undefined;
+  const fold = (s) => String(s).toLowerCase().replace(/[^a-zāēīōū0-9]/g, "");
+  // A card read two ways (何: „nani / nan") names the one the sentence uses.
+  return base.split("/").some((one) => fold(one) === fold(marked)) ? undefined : base;
+}
+
+/** The same without its marks — for speech, a hint, a comparison. */
+export function plainRomaji(text) {
+  return romajiParts(text).map((p) => p.text).join("");
+}
+
 export function toRomaji(kana) {
   if (!kana) return undefined;
 

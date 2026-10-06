@@ -2086,10 +2086,17 @@
   font-weight: 800;
   overflow-wrap: anywhere;
 }
-/* Kaishi marks the target word itself, so nothing has to be guessed at. */
-.sentence b {
+/* Kaishi marks the target word itself, so nothing has to be guessed at —
+   in the romaji line too (#322). */
+.sentence b,
+.sentence-romaji b {
   color: var(--rail);
   font-weight: 800;
+}
+/* #322: the card's own form after a word the sentence bends — „(iru)". */
+.base-form {
+  color: var(--ink-muted);
+  font-weight: 400;
 }
 
 .reveal {

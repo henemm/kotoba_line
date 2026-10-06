@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toRomaji } from "../src/romaji.js";
+import { baseFormHint, plainRomaji, romajiParts, toRomaji } from "../src/romaji.js";
 
 test("plain gojuon", () => {
   assert.equal(toRomaji("あい"), "ai");
@@ -71,3 +71,31 @@ test("a space in the input is preserved — toRomaji has no word-boundary logic 
   assert.equal(toRomaji("としょかん でにほんごの"), "toshokan denihongono");
 });
 
+
+test("#322 splits out the marked word", () => {
+  assert.deepEqual(romajiParts("ani ga <b>imasu</b>."), [
+    { text: "ani ga ", marked: false },
+    { text: "imasu", marked: true },
+    { text: ".", marked: false },
+  ]);
+});
+
+test("#322 reads one without a mark as plain text, as before the import kept it", () => {
+  assert.deepEqual(romajiParts("kono kutsu wa ikura desu ka."), [{ text: "kono kutsu wa ikura desu ka.", marked: false }]);
+});
+
+test("#322 drops the mark where only the words are wanted", () => {
+  assert.equal(plainRomaji("ani ga <b>imasu</b>."), "ani ga imasu.");
+  assert.equal(plainRomaji(undefined), "");
+});
+
+test("#322 names the card's form only when the sentence bends the word", () => {
+  assert.equal(baseFormHint("imasu", "iru"), "iru");
+  assert.equal(baseFormHint("oshiete", "oshieru"), "oshieru");
+  assert.equal(baseFormHint("ikura", "ikura"), undefined);
+  // Written the same, case and hyphens aside.
+  assert.equal(baseFormHint("Tomu-san", "tomusan"), undefined);
+  assert.equal(baseFormHint("imasu", undefined), undefined);
+  // Read two ways: the sentence's way is not a different form.
+  assert.equal(baseFormHint("nan", "nani / nan"), undefined);
+});

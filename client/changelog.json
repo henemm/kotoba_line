@@ -1,5 +1,12 @@
 [
   {
+    "version": "v180",
+    "summary": "Im Beispielsatz in Romaji ist das Wort der Karte jetzt hervorgehoben.",
+    "notes": [
+      "Oft steht es im Satz in einer anderen Form als auf der Karte – „iru“ zum Beispiel als „imasu“. Dann steht die Form von der Karte in Klammern dahinter: „ani ga imasu (iru).“"
+    ]
+  },
+  {
     "version": "v179",
     "summary": "Neu: „Alle Karten durchgehen“ – jedes Wort eines Decks, das du schon gelernt hast, einmal hintereinander.",
     "notes": [
