@@ -220,25 +220,35 @@ describe("a card rests after its third Nochmal of the day (#314)", () => {
   });
 });
 
-describe("Alle Karten durchgehen (#320)", () => {
-  it("brings every card of the deck she has answered, due or not, and none she has not", async () => {
-    const { db, userId } = await learner();
+describe("Ganzes Deck üben (#320)", () => {
+  it("brings every card of the deck, due or not, seen or not", async () => {
+    const { db, userId } = await learner(5);
     // Leicht: four days off, so none of these is due tomorrow.
     answer(db, userId, [1, 2, 3], 4, D1);
     const q = queue(db, userId, D2, "kaishi", { only: "all" });
-    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [1, 2, 3]);
-    assert.equal(queue(db, userId, D2).cardIds.filter((id) => id <= 3).length, 0);
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [1, 2, 3, 4, 5]);
+  });
+
+  it("brings the cards resting after three Nochmal too — v179 left them out and she missed them", async () => {
+    const { db, userId } = await learner(5);
+    for (let k = 0; k < AGAIN_PER_DAY; k++) answer(db, userId, [1], 1, D1 + k * 120);
+    assert.ok(queue(db, userId, D1 + 3600, "kaishi", { only: "all" }).cardIds.includes(1));
+  });
+
+  it("walks past the open limit, as her own choice", async () => {
+    const { db, userId } = await learner(15);
+    limitAt(db, userId, 10);
+    answer(db, userId, TEN, 2, D1);
+    assert.equal(queue(db, userId, D2, "kaishi", { only: "all" }).cardIds.length, 15);
   });
 
   it("stays inside the deck", async () => {
-    const { db, userId } = await learner();
-    answer(db, userId, [1, 1001], 3, D1);
-    assert.deepEqual(queue(db, userId, D2, "hiragana", { only: "all" }).cardIds, [1001]);
+    const { db, userId } = await learner(3);
+    assert.equal(queue(db, userId, D2, "hiragana", { only: "all" }).cardIds.every((id) => id > 1000), true);
   });
 
   it("is counted for the finished deck page's offer", async () => {
-    const { db, userId } = await learner();
-    answer(db, userId, [1, 2, 3], 4, D1);
-    assert.equal(outlookForUser(db, userId, D2, { deckKey: "kaishi", timeZone: TZ }).all, 3);
+    const { db, userId } = await learner(5);
+    assert.equal(outlookForUser(db, userId, D2, { deckKey: "kaishi", timeZone: TZ }).all, 5);
   });
 });

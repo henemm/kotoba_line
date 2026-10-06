@@ -65,6 +65,7 @@ export function practiseScreen({
   onStart,
   onDrillTopic,
   onChooseSet,
+  onChooseWholeDeck,
   // #209: the open deck has topics to choose from, Kaishi's or her own.
   topicsHere = false,
   // #179: take one more batch of new cards into today, in this deck.
@@ -357,12 +358,27 @@ export function practiseScreen({
     // wie wenn man durch ist mit allen Vokabeln, aber noch einmal sicher
     // gehen möchte, dass man alle kann." Here, where a deck is done for the
     // day — when that wish comes up.
-    if (all > 0) {
+    //
+    // The tap chooses the set; it does not start a session. v179 started
+    // one, in Bedeutungen wählen, and she wrote back: „man kann dann nur
+    // auswählen zwischen vier verschiedenen … das möchte ich nicht … wenn
+    // ich das ganze Deck wiederholen möchte, dann würde ich gerne einfach
+    // Karten umdrehen" — and on another day the four answers are what she
+    // wants. So the page redraws with „Nur: Ganzes Deck" and her lines, as
+    // „Mehr neue Wörter" redraws with cards on it (#179).
+    // Once chosen, the offer says so where her finger is — „Nur: Ganzes
+    // Deck" sits below the lines, off the screen on her phone (WebKit,
+    // 394 × 859), and a tap that changes nothing in sight gets tapped again.
+    // Words, not cards: a word and its reverse are one round apart (#284).
+    if (all > 0 && onChooseWholeDeck) {
+      const words = `${all} ${all === 1 ? "Wort" : "Wörter"}`;
       offers.push(
-        offer("Alle Karten durchgehen", `${cards(all)}, die du schon gelernt hast, einmal hintereinander`, () => {
-          seen("all_cards_tapped", deck?.key);
-          onStart({ only: "all" });
-        }),
+        filters?.only === "all"
+          ? offer("✓ Ganzes Deck ausgewählt", `Alle ${words} – tippe darunter auf eine Übung, z. B. „Karten umdrehen“`, () => {})
+          : offer("Ganzes Deck üben", `Alle ${words} – du wählst darunter, wie du übst`, () => {
+              seen("all_cards_tapped", deck?.key);
+              onChooseWholeDeck();
+            }),
       );
       seen("all_cards_shown", deck?.key, { oncePerDay: true });
     }

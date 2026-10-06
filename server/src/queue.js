@@ -476,13 +476,15 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     // #320, Charlotte: „ein Knopf, wo man einfach alle Karten aus dem Deck
     // hintereinander lernen kann, wie wenn man durch ist mit allen Vokabeln,
     // aber noch einmal sicher gehen möchte, dass man alle kann." Every card
-    // of the deck she has answered at least once, due or not. Not the ones
-    // she has never seen: those would walk past „Höchstens gleichzeitig
-    // lernen", which she asked for herself. Her answers count as any others
-    // do — a word she misses here comes back sooner, which is the point of
-    // checking. A word and its reverse apart, as everywhere (#284).
+    // of the deck, due or not, seen or not, resting or not: v179 brought
+    // only the ones she had learned and that were not resting, 34 of the 86
+    // she had learned in „Hausaufgaben", and she read it as „nur die
+    // fünfunddreißig … nicht mal ganzes Deck". It walks past „Höchstens
+    // gleichzeitig lernen" on purpose — her choice, as „Mehr neue Wörter"
+    // is. Her answers count as any others do. A word and its reverse stay
+    // apart (#284), or one card would give away the other's answer.
     groups = siblingsApart(
-      { due: run("AND s.card_id IS NOT NULL", "ORDER BY s.due_at ASC"), lapsed: [], fresh: [] },
+      { due: run("", "ORDER BY s.card_id IS NULL, s.due_at ASC, c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC"), lapsed: [], fresh: [] },
       db,
     );
   }
@@ -536,7 +538,8 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
       .map((r) => [r.card_id, r.n]),
   );
   const awake = (id) => (againToday.get(id) ?? 0) < AGAIN_PER_DAY;
-  groups = { due: groups.due.filter(awake), lapsed: groups.lapsed.filter(awake), fresh: groups.fresh };
+  // „Ganzes Deck" (#320) is every card, those resting included.
+  if (only !== "all") groups = { due: groups.due.filter(awake), lapsed: groups.lapsed.filter(awake), fresh: groups.fresh };
 
   // Whether today's new cards are what is missing (#137): unseen cards are
   // there, the daily limit has let through all it will. With a deck or list
@@ -859,7 +862,7 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
   // a set she chose, so the daily limit does not apply to it — that is what
   // makes this an offer rather than a promise the queue would break.
   const fresh = queueForUser(db, userId, { deckKey, deck, list, only: "new", timeZone }, now).available;
-  // #320: every card she has learned here, for „Alle Karten durchgehen".
+  // #320: every word of the deck, for „Ganzes Deck üben".
   const all = queueForUser(db, userId, { deckKey, deck, list, only: "all", timeZone }, now).available;
 
   const visible = visibleTo(userId);
