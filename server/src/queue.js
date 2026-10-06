@@ -63,7 +63,7 @@ const AHEAD_WINDOW_DAYS = 2;
 // 50 open, 15–56 answers a day; at 3 days the limit almost never held.
 export const OPEN_DAYS = 7;
 
-export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again"];
+export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again", "all"];
 
 /** #271: the new cards "Nochmal" after a session mixes in — „ein paar neue". */
 export const AGAIN_NEW = 5;
@@ -472,6 +472,20 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     groups = { due: asked.filter((id) => found.has(id)), lapsed: [], fresh: fresh.slice(0, AGAIN_NEW) };
   } else if (only === "lapsed") groups = { due: [], lapsed, fresh: [] };
   else if (only === "new") groups = { due: [], lapsed: [], fresh };
+  else if (only === "all") {
+    // #320, Charlotte: „ein Knopf, wo man einfach alle Karten aus dem Deck
+    // hintereinander lernen kann, wie wenn man durch ist mit allen Vokabeln,
+    // aber noch einmal sicher gehen möchte, dass man alle kann." Every card
+    // of the deck she has answered at least once, due or not. Not the ones
+    // she has never seen: those would walk past „Höchstens gleichzeitig
+    // lernen", which she asked for herself. Her answers count as any others
+    // do — a word she misses here comes back sooner, which is the point of
+    // checking. A word and its reverse apart, as everywhere (#284).
+    groups = siblingsApart(
+      { due: run("AND s.card_id IS NOT NULL", "ORDER BY s.due_at ASC"), lapsed: [], fresh: [] },
+      db,
+    );
+  }
   else if (only === "ahead") {
     // #90: design 10 offers this when nothing is due, and it is what it says —
     // cards the scheduler will ask for within two days, soonest first. Anything
@@ -845,6 +859,8 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
   // a set she chose, so the daily limit does not apply to it — that is what
   // makes this an offer rather than a promise the queue would break.
   const fresh = queueForUser(db, userId, { deckKey, deck, list, only: "new", timeZone }, now).available;
+  // #320: every card she has learned here, for „Alle Karten durchgehen".
+  const all = queueForUser(db, userId, { deckKey, deck, list, only: "all", timeZone }, now).available;
 
   const visible = visibleTo(userId);
   const scope = [];
@@ -870,7 +886,7 @@ export function outlookForUser(db, userId, now = Math.floor(Date.now() / 1000), 
     nextDue = { count: n, at, when: whenOnClock(at, now, timeZone) };
   }
 
-  return { ahead, lapsed, fresh, nextDue };
+  return { ahead, lapsed, fresh, all, nextDue };
 }
 
 /**
