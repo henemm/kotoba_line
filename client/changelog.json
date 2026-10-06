@@ -1,5 +1,13 @@
 [
   {
+    "version": "v181",
+    "summary": "„Ganzes Deck üben“: wirklich alle Wörter eines Decks – und du wählst, wie du übst.",
+    "notes": [
+      "Der Knopf startet nicht mehr gleich „Bedeutungen wählen“. Er wählt das ganze Deck aus, und darunter tippst du auf „Karten umdrehen“ oder eine andere Übung.",
+      "Es kommen alle Wörter, auch neue und auch die, die heute schon Pause hätten. Nur ein Wort und seine Gegenrichtung kommen nicht in derselben Runde."
+    ]
+  },
+  {
     "version": "v180",
     "summary": "Im Beispielsatz in Romaji ist das Wort der Karte jetzt hervorgehoben.",
     "notes": [

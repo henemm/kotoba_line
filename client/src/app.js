@@ -307,7 +307,9 @@ function currentScreen() {
       // Both stay inside the deck or list she practises in (#137): the outlook
       // that counted the offer was counted there too.
       onStart: async ({ mode, only } = {}) => {
-        if (!only) await releaseIfHeld();
+        // A chosen set („Ganzes Deck", a topic) is not the day's queue the
+        // open limit held empty.
+        if (!only && !state.filters.only && !state.filters.tag) await releaseIfHeld();
         startSession(
           only
             ? { mode, ...DEFAULT_FILTERS, ...scopeOf(state.filters), only }
@@ -319,6 +321,11 @@ function currentScreen() {
       // the sheet's Start would begin a session in a way the deck does not have.
       onChooseSet: isTravelDeck(state.deck?.key) ? undefined : openSheet,
       onDrillTopic: openSheet,
+      // #320: „Ganzes Deck üben" chooses the set and leaves the way to her.
+      onChooseWholeDeck: () => {
+        keepFilters({ ...DEFAULT_FILTERS, only: "all" });
+        renderApp();
+      },
       topicsHere: topicsHere(),
       // #179: one more batch of new cards into today. The deck's own settings
       // are kept in step so the page can say how big the next batch is, and
