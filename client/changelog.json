@@ -1,5 +1,12 @@
 [
   {
+    "version": "v182",
+    "summary": "„Ganzes Deck üben“ steht jetzt immer unter den Übungen, nicht erst, wenn ein Deck für heute fertig ist.",
+    "notes": [
+      "Antippen wählt das ganze Deck aus, dann tippst du oben auf „Karten umdrehen“ oder eine andere Übung. Nochmal antippen bringt dich zurück zu den Karten für heute."
+    ]
+  },
+  {
     "version": "v181",
     "summary": "„Ganzes Deck üben“: wirklich alle Wörter eines Decks – und du wählst, wie du übst.",
     "notes": [

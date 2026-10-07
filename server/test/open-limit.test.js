@@ -7,7 +7,7 @@ import { openDatabase } from "../src/db.js";
 import { startOfDay } from "../src/day.js";
 import { releaseNewCards } from "../src/deck-settings.js";
 import { ingestEvents } from "../src/events.js";
-import { AGAIN_PER_DAY, OPEN_DAYS, outlookForUser, queueForUser } from "../src/queue.js";
+import { AGAIN_PER_DAY, OPEN_DAYS, queueForUser } from "../src/queue.js";
 import { updateSettings } from "../src/settings.js";
 import { previewIntervals, stateFromEvents } from "../src/scheduler.js";
 import { cookieValue, seedUser, testApp } from "./helpers.js";
@@ -245,10 +245,5 @@ describe("Ganzes Deck üben (#320)", () => {
   it("stays inside the deck", async () => {
     const { db, userId } = await learner(3);
     assert.equal(queue(db, userId, D2, "hiragana", { only: "all" }).cardIds.every((id) => id > 1000), true);
-  });
-
-  it("is counted for the finished deck page's offer", async () => {
-    const { db, userId } = await learner(5);
-    assert.equal(outlookForUser(db, userId, D2, { deckKey: "kaishi", timeZone: TZ }).all, 5);
   });
 });
