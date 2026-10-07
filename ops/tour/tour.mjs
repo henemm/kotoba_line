@@ -347,7 +347,7 @@ export const SCREENS = [
   { name: "Decks", steps: [] },
   { name: "Kaishi", steps: [deck("Kaishi")] },
   { name: "Kaishi · Optionen", steps: [deck("Kaishi"), tapText("Optionen")] },
-  { name: "Kaishi · Nach Thema üben", steps: [deck("Kaishi"), (p) => p.locator("button.deck-more").click()] },
+  { name: "Kaishi · Nach Thema üben", steps: [deck("Kaishi"), (p) => p.locator("button.deck-more:not(.whole-deck)").click()] },
   ...MODES.flatMap(([mode, button]) => [
     { name: `${mode} · vorne`, steps: [deck("Kaishi"), way(button), idle(1500)] },
     { name: `${mode} · Rückseite`, steps: [deck("Kaishi"), way(button), idle(1500), reveal, idle(900)] },

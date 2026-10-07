@@ -689,6 +689,17 @@
   font-size: 18px;
   font-weight: 700;
 }
+/* #320: two lines, what it is and what to do next. */
+.whole-deck .copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.whole-deck .detail {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-muted);
+}
 .deck-more {
   margin: 14px var(--gutter) 0;
   width: auto;

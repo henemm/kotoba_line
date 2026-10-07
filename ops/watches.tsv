@@ -11,4 +11,4 @@
 273	2026-09-24	streak_shown,streak_stats_tapped	Sieht Charlotte nach der Übung die Serie wie bei Noji, und tippt sie „Statistik“ an?
 284	2026-09-24	reverse_shown,reverse_on,reverse_off	Kommen bei Charlotte die Gegenrichtungen beim Karte-Umdrehen dran, und schaltet sie selbst welche an oder aus?
 312	2026-09-29	answer_recorded,answer_played,sound_tapped	Spricht Charlotte beim Üben (Mikrofon „Antwort aufnehmen“), hört sie sich an, und tippt sie auf ♪ – vor allem beim Karte-Umdrehen?
-320	2026-10-06	all_cards_shown,all_cards_tapped	Sieht Charlotte „Ganzes Deck üben“ (fertiges Deck), und tippt sie es an?
+320	2026-10-06	all_cards_shown,all_cards_tapped	Tippt Charlotte „Ganzes Deck üben“ an (seit v182 immer unter den Übungen)?

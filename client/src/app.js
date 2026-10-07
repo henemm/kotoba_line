@@ -322,8 +322,8 @@ function currentScreen() {
       onChooseSet: isTravelDeck(state.deck?.key) ? undefined : openSheet,
       onDrillTopic: openSheet,
       // #320: „Ganzes Deck üben" chooses the set and leaves the way to her.
-      onChooseWholeDeck: () => {
-        keepFilters({ ...DEFAULT_FILTERS, only: "all" });
+      onChooseWholeDeck: (on) => {
+        keepFilters(on ? { ...DEFAULT_FILTERS, only: "all" } : { ...DEFAULT_FILTERS });
         renderApp();
       },
       topicsHere: topicsHere(),
