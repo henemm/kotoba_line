@@ -1,5 +1,13 @@
 [
   {
+    "version": "v183",
+    "summary": "Weniger Karten auf einmal: Von den Wörtern, die noch nicht sitzen, kommen in jedem Deck nur so viele dran, wie du unter „Höchstens gleichzeitig lernen“ eingestellt hast.",
+    "notes": [
+      "Es sind die Wörter, die du am längsten lernst. Die anderen warten und rücken nach, sobald davon welche sitzen. In der Kartenliste steht bei ihnen „Wartet“. Wörter, die schon sitzen, wiederholst du wie immer.",
+      "„Ganzes Deck üben“ bringt alle Wörter, die du schon hattest. Neue nur, solange im Deck Platz ist."
+    ]
+  },
+  {
     "version": "v182",
     "summary": "„Ganzes Deck üben“ steht jetzt immer unter den Übungen, nicht erst, wenn ein Deck für heute fertig ist.",
     "notes": [

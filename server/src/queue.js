@@ -254,6 +254,42 @@ export function deckCardIds(db, userId, deckKey) {
 }
 
 /**
+ * „Höchstens gleichzeitig lernen" inside one deck (#314, 2026-10-23): the
+ * deck's open cards — answered, not yet OPEN_DAYS apart — that she met first,
+ * up to her number, are what the deck asks; the rest wait until one of those
+ * sits. Until then the setting only held new words back, and on 2026-10-23
+ * „100 vokabeln" had 218 open words and asked 100 of them at 09:18 — 95 of
+ * them answered the day before, 50 never once Gut. Her words, 2026-10-04:
+ * „den ersten Durchlauf mit höchstens fünfzig Vokabeln und dann nachher, wenn
+ * ich die gemeistert habe, … dass dann erst die Vokabeln dazukommen."
+ *
+ * Per deck, not over all of them like the new-word limit: measured on her
+ * data the same day, the 30 oldest open words of all her decks lay 23 in
+ * „100 vokabeln" and 6 in Kaishi, which would have left „Lektionen",
+ * „Hausaufgaben" and Hiragana with nothing to ask (the v178 lesson).
+ *
+ * Folded from the log alone (first answer, then id), like everything else
+ * here: nothing is stored, and a card resting after its third Nochmal keeps
+ * its place — a place is freed only by a card that sits.
+ */
+export function workingSet(db, userId, deckKey, maxOpen) {
+  const visible = visibleTo(userId);
+  const params = [userId, OPEN_DAYS * DAY, ...visible.params];
+  const scope = filterClause({ deckKey }, params, userId);
+  params.push(userId);
+  const ids = db
+    .prepare(
+      `SELECT c.id FROM cards c JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
+        WHERE c.deleted_at IS NULL AND s.reps > 0 AND s.due_at - coalesce(s.last_review, s.due_at) < ?
+          AND ${visible.sql} ${scope}
+        ORDER BY (SELECT min(e.reviewed_at) FROM review_events e WHERE e.user_id = ? AND e.card_id = c.id), c.id`,
+    )
+    .all(...params)
+    .map((r) => r.id);
+  return { open: ids.length, room: Math.max(0, maxOpen - ids.length), waiting: new Set(ids.slice(maxOpen)) };
+}
+
+/**
  * #284: a word and its reverse never in one session. The one met second is
  * answered by the one met first — measured live on 2026-09-24: 食べる came
  * due as "essen" and, two cards later, new as 食べる, with "essen" still on
@@ -369,20 +405,28 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     return db.prepare(sql).all(...params, ...extraParams).map((r) => r.id);
   };
 
+  const maxOpen = db.prepare("SELECT max_open FROM user_settings WHERE user_id = ?").get(userId)?.max_open ?? null;
+  // The deck's working set (#314): the day's cards, Vorausüben and „Fehler
+  // wiederholen" ask only inside it. A set she picked herself — starred, a
+  // topic, „Ganzes Deck", „Nochmal üben" — is hers and not cut.
+  const held = maxOpen != null && inDeck ? workingSet(db, userId, deckKey, maxOpen) : undefined;
+  const inSet = (ids) =>
+    held && (!filtered || only === "lapsed" || only === "ahead") ? ids.filter((id) => !held.waiting.has(id)) : ids;
+
   // ── group 1: due ────────────────────────────────────────────────
-  const due = run(
-    `AND s.card_id IS NOT NULL AND ${DUE_SQL}`,
-    "ORDER BY s.due_at ASC",
-    dueBoundaryParams(dayEnd, now),
+  const due = inSet(
+    run(`AND s.card_id IS NOT NULL AND ${DUE_SQL}`, "ORDER BY s.due_at ASC", dueBoundaryParams(dayEnd, now)),
   );
 
   // ── group 2: recently lapsed ────────────────────────────────────
   // Her last answer was Nochmal, within the window. Self-terminating: one
   // Gut takes the card out again, and then the button's promise holds.
-  const lapsed = run(
-    `AND s.card_id IS NOT NULL AND s.last_review >= ? AND ${LAST_RATING_SQL} = 1`,
-    "ORDER BY s.last_review DESC",
-    [now - LAPSE_WINDOW_DAYS * DAY],
+  const lapsed = inSet(
+    run(
+      `AND s.card_id IS NOT NULL AND s.last_review >= ? AND ${LAST_RATING_SQL} = 1`,
+      "ORDER BY s.last_review DESC",
+      [now - LAPSE_WINDOW_DAYS * DAY],
+    ),
   );
 
   // ── group 3: new ────────────────────────────────────────────────
@@ -402,21 +446,29 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   // the other 15. What she released today on a deck page still comes
   // (#179): the limit paces her, a tap of hers overrides it for the day.
   let openLimit;
-  const maxOpen = db.prepare("SELECT max_open FROM user_settings WHERE user_id = ?").get(userId)?.max_open ?? null;
-  if (maxOpen != null && (!filtered || only === "again")) {
-    const { open } = db
+  const openEverywhere = () =>
+    db
       .prepare(
         `SELECT count(*) open FROM card_state s JOIN cards c ON c.id = s.card_id
           WHERE s.user_id = ? AND c.deleted_at IS NULL AND s.reps > 0
             AND s.due_at - coalesce(s.last_review, s.due_at) < ?`,
       )
-      .get(userId, OPEN_DAYS * DAY);
+      .get(userId, OPEN_DAYS * DAY).open;
+  if (maxOpen != null && (!filtered || only === "again")) {
+    const open = openEverywhere();
     const room = Math.max(0, maxOpen - open) + releasedToday;
     if (room < newAllowance) {
       newAllowance = room;
       openLimit = { open, max: maxOpen };
     }
   }
+  // …and never more new words into a deck than its working set has room for,
+  // in any session and past „Mehr neue Wörter" too (#314): a word let in
+  // beyond it would wait from the next day on, met once and then gone.
+  if (held && held.room < newAllowance) newAllowance = held.room;
+  // For the deck page: how many of this deck's open words wait. `open` is
+  // always there, because a shell before v183 prints it.
+  if (held?.waiting.size > 0) openLimit = { open: openLimit?.open ?? openEverywhere(), max: maxOpen, waiting: held.waiting.size };
   // Asked for beyond the allowance, and cut to it only once `siblingsApart`
   // has taken out the reverses that wait for another day (#284): cut first,
   // every one of those took the place of a new card — measured on a copy of
@@ -479,14 +531,18 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     // of the deck, due or not, seen or not, resting or not: v179 brought
     // only the ones she had learned and that were not resting, 34 of the 86
     // she had learned in „Hausaufgaben", and she read it as „nur die
-    // fünfunddreißig … nicht mal ganzes Deck". It walks past „Höchstens
-    // gleichzeitig lernen" on purpose — her choice, as „Mehr neue Wörter"
-    // is. Her answers count as any others do. A word and its reverse stay
-    // apart (#284), or one card would give away the other's answer.
-    groups = siblingsApart(
-      { due: run("", "ORDER BY s.card_id IS NULL, s.due_at ASC, c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC"), lapsed: [], fresh: [] },
-      db,
-    );
+    // fünfunddreißig … nicht mal ganzes Deck". It walks past the working
+    // set on purpose — her choice. Her answers count as any others do. A
+    // word and its reverse stay apart (#284), or one card would give away
+    // the other's answer.
+    //
+    // Words she has never met only as far as the working set has room
+    // (#314): on 2026-10-23 one tap brought 109 of them into „100 vokabeln",
+    // every one then open and asked again the next morning — 180 cards.
+    const order = "ORDER BY s.due_at ASC, c.frequency_rank IS NULL, c.frequency_rank ASC, c.id ASC";
+    const met = run("AND s.card_id IS NOT NULL", order);
+    const unmet = run("AND s.card_id IS NULL", order);
+    groups = siblingsApart({ due: [...met, ...(held ? unmet.slice(0, held.room) : unmet)], lapsed: [], fresh: [] }, db);
   }
   else if (only === "ahead") {
     // #90: design 10 offers this when nothing is due, and it is what it says —
@@ -509,11 +565,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     // A word and its reverse apart here too (#284).
     groups = siblingsApart(
       {
-        due: run(
-          "AND s.card_id IS NOT NULL AND s.due_at <= ?",
-          "ORDER BY s.due_at ASC",
-          [now + AHEAD_WINDOW_DAYS * DAY],
-        ),
+        due: inSet(run("AND s.card_id IS NOT NULL AND s.due_at <= ?", "ORDER BY s.due_at ASC", [now + AHEAD_WINDOW_DAYS * DAY])),
         lapsed: [],
         fresh: [],
       },
@@ -651,10 +703,14 @@ export function deckDue(db, userId, deckKey, now = Math.floor(Date.now() / 1000)
     JOIN card_state s ON s.card_id = c.id AND s.user_id = ?
     WHERE c.deleted_at IS NULL AND ${visible.sql} ${filterClause({ deckKey }, params, userId)}`;
   const today = Date.parse(`${dayIn(now, timeZone)}T00:00:00Z`);
+  // #314: a word outside the deck's working set is not „Heute", however long
+  // ago its day was — it waits for a place.
+  const maxOpen = db.prepare("SELECT max_open FROM user_settings WHERE user_id = ?").get(userId)?.max_open ?? null;
+  const waiting = maxOpen == null ? new Set() : workingSet(db, userId, deckKey, maxOpen).waiting;
   const due = {};
   for (const row of db.prepare(sql).all(...params)) {
     const days = Math.round((Date.parse(`${dayIn(row.due_at, timeZone)}T00:00:00Z`) - today) / 86400000);
-    due[row.id] = { band: progressBand(row), days: Math.max(0, days) };
+    due[row.id] = { band: progressBand(row), days: Math.max(0, days), ...(waiting.has(row.id) ? { waits: true } : {}) };
   }
   return due;
 }

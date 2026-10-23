@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { visibleTo } from "./cards.js";
 import { dayIn, startOfDay, validTimeZone } from "./day.js";
+import { decksForUser } from "./queue.js";
 
 /**
  * "Deine nächsten Karten sind bereit" (#248), as Noji does it: "When done
@@ -178,16 +179,26 @@ export function remindersDue(db, now) {
       .prepare("SELECT 1 FROM push_log WHERE user_id = ? AND kind = 'reminder' AND sent_at >= ? LIMIT 1")
       .get(userId, dayStart);
     if (sent) continue;
-    const visible = visibleTo(userId);
-    const { n } = db
-      .prepare(
-        `SELECT count(*) AS n FROM card_state s JOIN cards c ON c.id = s.card_id
-          WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql} AND s.due_at <= ?`,
-      )
-      .get(userId, ...visible.params, now);
-    out.push({ userId, cards: n });
+    out.push({ userId, cards: dueCount(db, userId, now, timeZone) });
   }
   return out;
+}
+
+/**
+ * The cards waiting for her, for the reminder. With „Höchstens gleichzeitig
+ * lernen" set it is what her deck list shows (#314): on 2026-10-23 the plain
+ * count would have said 169 for „100 vokabeln" alone, where the deck asks 30.
+ */
+function dueCount(db, userId, now, timeZone) {
+  const maxOpen = db.prepare("SELECT max_open FROM user_settings WHERE user_id = ?").get(userId)?.max_open ?? null;
+  if (maxOpen != null) return decksForUser(db, userId, now, timeZone ?? undefined).reduce((n, d) => n + (d.today?.review ?? 0), 0);
+  const visible = visibleTo(userId);
+  return db
+    .prepare(
+      `SELECT count(*) AS n FROM card_state s JOIN cards c ON c.id = s.card_id
+        WHERE s.user_id = ? AND c.deleted_at IS NULL AND ${visible.sql} AND s.due_at <= ?`,
+    )
+    .get(userId, ...visible.params, now).n;
 }
 
 /** What the notification says. Plain German, for her (spec §12). */

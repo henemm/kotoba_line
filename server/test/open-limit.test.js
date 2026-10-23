@@ -7,7 +7,7 @@ import { openDatabase } from "../src/db.js";
 import { startOfDay } from "../src/day.js";
 import { releaseNewCards } from "../src/deck-settings.js";
 import { ingestEvents } from "../src/events.js";
-import { AGAIN_PER_DAY, OPEN_DAYS, queueForUser } from "../src/queue.js";
+import { AGAIN_PER_DAY, OPEN_DAYS, deckDue, queueForUser } from "../src/queue.js";
 import { updateSettings } from "../src/settings.js";
 import { previewIntervals, stateFromEvents } from "../src/scheduler.js";
 import { cookieValue, seedUser, testApp } from "./helpers.js";
@@ -134,9 +134,18 @@ describe("Höchstens gleichzeitig lernen, every deck together (#314)", () => {
   it("gives way to what she releases on the deck page (#179)", async () => {
     const { db, userId } = await learner();
     limitAt(db, userId, 10);
-    answer(db, userId, TEN, 2, D1);
+    // Ten open in Hiragana; Kaishi's own working set is empty.
+    answer(db, userId, [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010], 2, D1);
     releaseNewCards(db, userId, "kaishi", "2026-10-06");
     assert.equal(queue(db, userId, D2).today.fresh, 10);
+  });
+
+  it("but never past the deck's own working set — those words would wait from tomorrow on", async () => {
+    const { db, userId } = await learner();
+    limitAt(db, userId, 10);
+    answer(db, userId, TEN, 2, D1);
+    releaseNewCards(db, userId, "kaishi", "2026-10-06");
+    assert.equal(queue(db, userId, D2).today.fresh, 0);
   });
 
   it("holds „Nochmal üben“ to it too — its few new cards were how 15 got past it", async () => {
@@ -147,11 +156,13 @@ describe("Höchstens gleichzeitig lernen, every deck together (#314)", () => {
     assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [1, 2]);
   });
 
-  it("does not hold back a set she chose", async () => {
+  it("does not hold back a set she chose, while the deck has room", async () => {
     const { db, userId } = await learner();
     limitAt(db, userId, 10);
-    answer(db, userId, TEN, 2, D1);
-    assert.ok(queue(db, userId, D2, "kaishi", { only: "new" }).cardIds.length > 0);
+    answer(db, userId, [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010], 2, D1);
+    assert.equal(queue(db, userId, D2, "kaishi", { only: "new" }).cardIds.length, 10);
+    // A full deck has none to offer, so „Mehr neue Wörter" is not shown.
+    assert.equal(queue(db, userId, D2, "hiragana", { only: "new" }).cardIds.length, 0);
   });
 
   it("moved from her deck to her account (migration 040)", () => {
@@ -220,6 +231,87 @@ describe("a card rests after its third Nochmal of the day (#314)", () => {
   });
 });
 
+describe("The deck's working set (#314, 2026-10-23)", () => {
+  // Twelve open in Kaishi with a limit of ten: 1–10 met first, 11 and 12 later.
+  async function twelveOpen() {
+    const l = await learner();
+    limitAt(l.db, l.userId, 10);
+    answer(l.db, l.userId, TEN, 2, D1);
+    answer(l.db, l.userId, [11, 12], 2, D1 + 3600);
+    return l;
+  }
+
+  it("asks only the oldest open words; the rest wait, and the page says how many", async () => {
+    const { db, userId } = await twelveOpen();
+    const q = queue(db, userId, D2 + 2 * DAY);
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), TEN);
+    assert.equal(q.openLimit.waiting, 2);
+    assert.equal(q.openLimit.open, 12);
+  });
+
+  it("orders by first answer, not by id", async () => {
+    const { db, userId } = await learner();
+    limitAt(db, userId, 10);
+    answer(db, userId, [20], 2, D1);
+    answer(db, userId, TEN, 2, D1 + 3600);
+    const q = queue(db, userId, D2 + 2 * DAY);
+    assert.ok(q.cardIds.includes(20));
+    assert.ok(!q.cardIds.includes(10));
+  });
+
+  it("keeps a resting card's place — a place is freed only by a word that sits", async () => {
+    const { db, userId } = await twelveOpen();
+    const day = D2 + 2 * DAY;
+    for (let k = 0; k < AGAIN_PER_DAY; k++) answer(db, userId, [1], 1, day + k * 120);
+    const q = queue(db, userId, day + 3600);
+    assert.ok(!q.cardIds.includes(1));
+    assert.ok(!q.cardIds.includes(11) && !q.cardIds.includes(12));
+  });
+
+  it(`lets the next one in once a word is ${OPEN_DAYS} days apart`, async () => {
+    const { db, userId } = await twelveOpen();
+    answer(db, userId, [1], 4, D2);
+    answer(db, userId, [1], 4, D2 + 6 * DAY);
+    const q = queue(db, userId, D2 + 6 * DAY + 3600, "kaishi", { only: "ahead" });
+    assert.ok(q.cardIds.includes(11));
+    assert.ok(!q.cardIds.includes(12));
+  });
+
+  it("holds in Vorausüben and „Fehler wiederholen“ too", async () => {
+    const { db, userId } = await twelveOpen();
+    answer(db, userId, [11], 1, D1 + 7200);
+    assert.ok(!queue(db, userId, D1 + 8000, "kaishi", { only: "ahead" }).cardIds.includes(11));
+    assert.ok(!queue(db, userId, D1 + 8000, "kaishi", { only: "lapsed" }).cardIds.includes(11));
+  });
+
+  it("is per deck: Hiragana asks its own words whatever waits in Kaishi", async () => {
+    const { db, userId } = await twelveOpen();
+    answer(db, userId, [1001, 1002], 2, D1);
+    const q = queue(db, userId, D2 + 2 * DAY, "hiragana");
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [1001, 1002]);
+    assert.equal(q.openLimit?.waiting, undefined);
+  });
+
+  it("leaves a set she chose alone: starred, a topic, Nochmal üben", async () => {
+    const { db, userId } = await twelveOpen();
+    const q = queue(db, userId, D2 + 2 * DAY, "kaishi", { only: "again", cards: [11, 12] });
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [11, 12]);
+  });
+
+  it("marks the waiting ones in the deck's card list, instead of „Heute“", async () => {
+    const { db, userId } = await twelveOpen();
+    const due = deckDue(db, userId, "kaishi", D2 + 2 * DAY, TZ);
+    assert.equal(due[11].waits, true);
+    assert.equal(due[1].waits, undefined);
+  });
+
+  it("changes nothing without the setting", async () => {
+    const { db, userId } = await learner();
+    answer(db, userId, [...TEN, 11, 12], 2, D1);
+    assert.equal(queue(db, userId, D2 + 2 * DAY).today.review, 12);
+  });
+});
+
 describe("Ganzes Deck üben (#320)", () => {
   it("brings every card of the deck, due or not, seen or not", async () => {
     const { db, userId } = await learner(5);
@@ -235,11 +327,20 @@ describe("Ganzes Deck üben (#320)", () => {
     assert.ok(queue(db, userId, D1 + 3600, "kaishi", { only: "all" }).cardIds.includes(1));
   });
 
-  it("walks past the open limit, as her own choice", async () => {
+  it("walks past the working set: every word she has met, waiting or not", async () => {
     const { db, userId } = await learner(15);
     limitAt(db, userId, 10);
-    answer(db, userId, TEN, 2, D1);
-    assert.equal(queue(db, userId, D2, "kaishi", { only: "all" }).cardIds.length, 15);
+    answer(db, userId, [...TEN, 11, 12], 2, D1);
+    const q = queue(db, userId, D2, "kaishi", { only: "all" });
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), [...TEN, 11, 12]);
+  });
+
+  it("brings words she has never met only as far as the working set has room (#314, 2026-10-23: one tap, 109)", async () => {
+    const { db, userId } = await learner(15);
+    limitAt(db, userId, 10);
+    answer(db, userId, [1, 2, 3, 4, 5, 6, 7], 2, D1);
+    const q = queue(db, userId, D2, "kaishi", { only: "all" });
+    assert.deepEqual([...q.cardIds].sort((a, b) => a - b), TEN);
   });
 
   it("stays inside the deck", async () => {
