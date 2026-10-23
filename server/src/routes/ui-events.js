@@ -54,6 +54,7 @@ export const UI_EVENT_NAMES = [
   "answer_recorded", // #312: she recorded her own answer in a session (detail: the way)
   "answer_played", // #312: …and listened to it
   "sound_tapped", // #312: she tapped a card's ♪ in a session (detail: the way)
+  "words_waiting_shown", // #314: a deck page said words wait (detail: deck key:how many)
 ];
 
 const schema = {

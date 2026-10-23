@@ -209,9 +209,12 @@ export function practiseScreen({
    */
   function openNote(limit) {
     if (!limit) return null;
+    // Once a day per deck, with the count: whether the line of waiting words
+    // gets shorter is the measure of this (ops/watches.tsv).
+    if (limit.waiting > 0) seen("words_waiting_shown", `${deck?.key}:${limit.waiting}`, { oncePerDay: true });
     const text =
       limit.waiting > 0
-        ? `Hier kommen nur die ${num(limit.max)} Wörter dran, die du am längsten lernst. ${num(limit.waiting)} weitere warten, bis davon welche sitzen – dann rücken sie nach.`
+        ? `Von den Wörtern, die noch nicht sitzen, kommen hier nur die ${num(limit.max)} dran, die du am längsten lernst. ${num(limit.waiting)} weitere warten und rücken nach, sobald davon welche sitzen. Wörter, die schon sitzen, wiederholst du wie immer.`
         : `Neue Wörter kommen dazu, sobald weniger als ${num(limit.max)} noch nicht sitzen – gerade sind es ${num(limit.open)}, in allen Decks zusammen.`;
     return el("p.deck-open-note", { text });
   }
