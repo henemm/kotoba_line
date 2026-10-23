@@ -66,6 +66,9 @@ export function practiseScreen({
   onDrillTopic,
   onChooseSet,
   onChooseWholeDeck,
+  // #314: „Höchstens gleichzeitig lernen" is set, so „Ganzes Deck" brings
+  // unseen words only as far as the deck has room (server/src/queue.js).
+  openLimited = false,
   // #209: the open deck has topics to choose from, Kaishi's or her own.
   topicsHere = false,
   // #179: take one more batch of new cards into today, in this deck.
@@ -198,16 +201,19 @@ export function practiseScreen({
   }
 
   /**
-   * #314: „Höchstens gleichzeitig lernen" held new words back today. Said
-   * where the count of new ones is, so a 0 there reads as her own setting at
-   * work and not as the deck running dry — and that the number is every
-   * deck's, since it is not this deck's open words alone (migration 040).
+   * #314: „Höchstens gleichzeitig lernen" at work. Said where the count is,
+   * so a small number reads as her own setting and not as the deck running
+   * dry. Since 2026-10-23 a deck asks only its oldest open words, up to that
+   * number (`waiting` are the rest); new words still wait for every deck
+   * together (migration 040).
    */
   function openNote(limit) {
     if (!limit) return null;
-    return el("p.deck-open-note", {
-      text: `Neue Wörter kommen dazu, sobald weniger als ${num(limit.max)} noch nicht sitzen – gerade sind es ${num(limit.open)}, in allen Decks zusammen.`,
-    });
+    const text =
+      limit.waiting > 0
+        ? `Hier kommen nur die ${num(limit.max)} Wörter dran, die du am längsten lernst. ${num(limit.waiting)} weitere warten, bis davon welche sitzen – dann rücken sie nach.`
+        : `Neue Wörter kommen dazu, sobald weniger als ${num(limit.max)} noch nicht sitzen – gerade sind es ${num(limit.open)}, in allen Decks zusammen.`;
+    return el("p.deck-open-note", { text });
   }
 
   function emptyDeck() {
@@ -421,7 +427,9 @@ export function practiseScreen({
         el("span.detail", {
           text: chosen
             ? "Tippe oben auf eine Übung, z. B. „Karten umdrehen“. Nochmal tippen: zurück zu den Karten für heute."
-            : "Alle Wörter dieses Decks – du wählst oben, wie du übst",
+            : openLimited
+              ? "Alle Wörter, die du schon hattest, und neue nur, solange Platz ist – du wählst oben, wie du übst"
+              : "Alle Wörter dieses Decks – du wählst oben, wie du übst",
         }),
       ),
     );

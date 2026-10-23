@@ -186,7 +186,14 @@ export function deckCardsBlock({ deck, japanese = true, onCard, onAdd }) {
     // clock and cap, in the colours the deck page counts them in.
     const when = due[card.id];
     const label = when
-      ? el("span.deck-card-due", {}, el(`span.band-dot.${when.band}`, { "aria-hidden": "true" }), dueLabel(when.days))
+      ? el(
+          "span.deck-card-due",
+          {},
+          el(`span.band-dot.${when.band}`, { "aria-hidden": "true" }),
+          // #314: outside the deck's working set it is not „Heute" — it waits
+          // until one of the words before it sits.
+          when.waits ? "Wartet" : dueLabel(when.days),
+        )
       : null;
     return el("button.deck-card", { type: "button", onclick: () => onCard?.(card) }, el("span.copy", {}, label, meaning, word));
   }

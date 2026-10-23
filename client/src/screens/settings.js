@@ -281,7 +281,7 @@ export function settingsScreen({ user, update, onSignOut, onSettings }) {
           ),
         ),
         el("p.field-hint", {
-          text: "Für alle Decks zusammen. Neue Wörter kommen erst dazu, wenn weniger als so viele noch nicht sitzen. Ein Wort sitzt, sobald es erst nach einer Woche oder später wiederkommt.",
+          text: "In jedem Deck kommen höchstens so viele Wörter dran, die noch nicht sitzen – die, die du am längsten lernst. Die anderen warten, bis davon welche sitzen. Neue Wörter kommen erst dazu, wenn in allen Decks zusammen weniger als so viele noch nicht sitzen. Ein Wort sitzt, sobald es erst nach einer Woche oder später wiederkommt.",
         }),
       ),
     );

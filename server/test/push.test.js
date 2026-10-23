@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { startOfDay } from "../src/day.js";
 import { ingestEvents } from "../src/events.js";
-import { SETTLE_SECONDS, isQuiet, message, readyToAnnounce, runPush, subscribe, vapidKeys } from "../src/push.js";
+import { SETTLE_SECONDS, isQuiet, message, readyToAnnounce, remindersDue, runPush, subscribe, vapidKeys } from "../src/push.js";
 import { seedCards, seedUser, signIn, testApp } from "./helpers.js";
 
 const TZ = "Asia/Tokyo";
@@ -267,6 +267,15 @@ describe("Du hast heute noch nicht geübt (#99)", () => {
     assert.deepEqual(sent, [at(18, 0, 1)], sent.map((t) => (t - DAY0 - DAY) / 3600).join(", "));
     const kinds = db.prepare("SELECT kind FROM push_log WHERE kind = 'reminder'").all().map((r) => r.kind);
     assert.deepEqual(kinds, ["reminder"]);
+  });
+
+  it("counts what her decks ask, not every card past its day, with „Höchstens gleichzeitig lernen“ (#314)", async () => {
+    const { db, userId } = await fixture();
+    remind(db, userId);
+    for (let id = 1; id <= 12; id++) answer(db, userId, id, 2, at(9, id, -3));
+    assert.equal(remindersDue(db, at(18, 0, 1))[0].cards, 12);
+    db.prepare("UPDATE user_settings SET max_open = 10 WHERE user_id = ?").run(userId);
+    assert.equal(remindersDue(db, at(18, 0, 1))[0].cards, 10);
   });
 
   it("does not come on a day she has practised, however early", async () => {
