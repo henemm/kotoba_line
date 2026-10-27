@@ -6,6 +6,7 @@ import { updateSheet } from "./screens/update-sheet.js";
 import { practiseScreen } from "./screens/practise.js";
 import { decksScreen } from "./screens/decks.js";
 import { deckOptionsSheet } from "./screens/deck-options.js";
+import { bandSheet } from "./screens/band-sheet.js";
 import { jokerSpentScreen, statsScreen, streakResetScreen } from "./screens/stats.js";
 import { streakScreen } from "./screens/streak.js";
 import { browseScreen } from "./screens/browse.js";
@@ -355,7 +356,7 @@ function currentScreen() {
   }
   if (state.tab === "words") return (state.words ??= wordsScreen());
   // "Cards seen" leads to the words behind the number.
-  if (state.tab === "stats") return statsScreen({ onBrowse: () => goToTab("words") });
+  if (state.tab === "stats") return statsScreen({ onBrowse: () => goToTab("words"), onPractiseBand: openBandSheet });
   return settingsScreen({
     user: state.user,
     // #103: only while a version waits. Update here is the same swap as the
@@ -970,6 +971,24 @@ function openSheet() {
   });
   renderApp();
   loadTopics();
+}
+
+/**
+ * Stats → a legend row: practise those cards again, in the way she picks. The
+ * numbers on that screen count every deck, so the session has no deck either.
+ */
+function openBandSheet(band, label) {
+  seen("band_sheet_opened", band);
+  state.sheet = bandSheet({
+    label,
+    onClose: closeSheet,
+    onPick: (mode) => {
+      seen("band_session_started", `${band}:${mode}`);
+      state.sheet = undefined;
+      startSession({ mode, ...DEFAULT_FILTERS, only: `band_${band}` });
+    },
+  });
+  renderApp();
 }
 
 /**

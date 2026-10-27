@@ -1261,6 +1261,28 @@
   align-items: center;
   gap: 9px;
 }
+/* Stats → a band: the whole row is the button, like „Karten gesehen". */
+.stats button.legend-row {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.stats button.legend-row .section-chevron {
+  margin-left: 4px;
+}
+/* Over the floating tab bar, like Deck-Optionen: at z-index 5 it covered „Abbrechen". */
+.sheet-scrim.band-scrim {
+  position: fixed;
+  z-index: 20;
+}
+.band-sheet .deck-ways-list {
+  margin: 0;
+}
 .stats .swatch {
   width: 10px;
   height: 10px;

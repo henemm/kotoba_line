@@ -65,6 +65,10 @@ function onlyLabel(only) {
   if (only === "ahead") return "In zwei Tagen fällig";
   // #271: the summary's "Nochmal" — not on the sheet, reached only from there.
   if (only === "again") return "Nochmal üben";
+  // Stats → a band; the label is the Stats screen's own.
+  if (only === "band_learning") return "Am Lernen";
+  if (only === "band_young") return "Jung";
+  if (only === "band_mature") return "Gefestigt";
   return ONLY.find((o) => o.value === only)?.label.replace("★ ", "") ?? only;
 }
 

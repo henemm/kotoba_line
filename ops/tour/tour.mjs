@@ -366,6 +366,11 @@ export const SCREENS = [
     steps: [tab("Suche"), (p) => p.locator("input.browse-search-input").fill("taberu"), idle(1500), (p) => p.locator("button.row-copy").first().click()],
   },
   { name: "Statistik", steps: [tab("Statistik")] },
+  // After a finished session, or the account has no cards and no band to tap.
+  {
+    name: "Statistik · Stufe üben",
+    steps: [deck("Hiragana"), way("Bedeutungen wählen"), idle(1200), finish, idle(1500), pastStreak, idle(1500), tapText("Fertig"), idle(800), tab("Statistik"), idle(800), (p) => p.locator("button.legend-row.tappable").first().click(), idle(400)],
+  },
   { name: "Einstellungen", steps: [tab("Einstellungen")] },
   // #260: the sheet the travellers are sent to. It is the only screen written
   // entirely from a screenshot of someone else's phone, so it is the one most

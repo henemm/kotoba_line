@@ -63,7 +63,10 @@ const AHEAD_WINDOW_DAYS = 2;
 // 50 open, 15–56 answers a day; at 3 days the limit almost never held.
 export const OPEN_DAYS = 7;
 
-export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again", "all"];
+// `band_*` are the Stats tab's maturity bands (stats.js), tapped there to
+// practise what a bar counts. Across every deck: the Stats numbers are too.
+export const BAND_ONLY = { band_learning: "learning", band_young: "young", band_mature: "mature" };
+export const ONLY_MODES = ["starred", "lapsed", "new", "ahead", "again", "all", ...Object.keys(BAND_ONLY)];
 
 /** #271: the new cards "Nochmal" after a session mixes in — „ein paar neue". */
 export const AGAIN_NEW = 5;
@@ -544,6 +547,20 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     const unmet = run("AND s.card_id IS NULL", order);
     groups = siblingsApart({ due: [...met, ...(held ? unmet.slice(0, held.room) : unmet)], lapsed: [], fresh: [] }, db);
   }
+  else if (BAND_ONLY[only]) {
+    // Stats → a legend row: every card the bar counts, due or not, in the
+    // order the scheduler would ask for them. Hers, so not cut by the working
+    // set and not by "resting" (below); a word and its reverse stay apart.
+    const inBand = new Set(
+      db
+        .prepare("SELECT card_id, due_at, last_review, reps FROM card_state WHERE user_id = ?")
+        .all(userId)
+        .filter((state) => maturityBand(state) === BAND_ONLY[only])
+        .map((state) => state.card_id),
+    );
+    const met = run("AND s.card_id IS NOT NULL", "ORDER BY s.due_at ASC, c.id ASC").filter((id) => inBand.has(id));
+    groups = siblingsApart({ due: met, lapsed: [], fresh: [] }, db);
+  }
   else if (only === "ahead") {
     // #90: design 10 offers this when nothing is due, and it is what it says —
     // cards the scheduler will ask for within two days, soonest first. Anything
@@ -601,7 +618,7 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
   );
   const awake = (id) => (againToday.get(id) ?? 0) < AGAIN_PER_DAY;
   // „Ganzes Deck" (#320) is every card, those resting included.
-  if (only !== "all") groups = { due: groups.due.filter(awake), lapsed: groups.lapsed.filter(awake), fresh: groups.fresh };
+  if (only !== "all" && !BAND_ONLY[only]) groups = { due: groups.due.filter(awake), lapsed: groups.lapsed.filter(awake), fresh: groups.fresh };
 
   // Whether today's new cards are what is missing (#137): unseen cards are
   // there, the daily limit has let through all it will. With a deck or list

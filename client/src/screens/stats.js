@@ -244,7 +244,7 @@ export function streakResetScreen({ stats, onContinue }) {
  * The maturity bands and the topic bars are a grey-to-white ramp on purpose —
  * the four saturated colours belong to the modes and are not reused.
  */
-export function statsScreen({ onBrowse } = {}) {
+export function statsScreen({ onBrowse, onPractiseBand } = {}) {
   const root = el("div.stats");
   render(root, el("div.loading", { text: "…" }));
 
@@ -515,15 +515,19 @@ export function statsScreen({ onBrowse } = {}) {
       el(
         "div.maturity-legend",
         {},
-        MATURITY.map((b) =>
-          el(
-            "div.legend-row",
-            {},
+        MATURITY.map((b) => {
+          // „Neu" is cards answered once and not yet in a rhythm: nothing to
+          // practise again there. The other three open the way-sheet.
+          const tappable = onPractiseBand && b.key !== "new" && (counts[b.key] ?? 0) > 0;
+          return el(
+            tappable ? "button.legend-row.tappable" : "div.legend-row",
+            tappable ? { type: "button", onclick: () => onPractiseBand(b.key, b.label, counts[b.key]) } : {},
             el("span.swatch", { style: { background: b.colour } }),
             el("span.legend-label", { text: b.label }),
             el("span.legend-value.tabular", { text: num(counts[b.key] ?? 0) }),
-          ),
-        ),
+            tappable ? el("span.section-chevron", { text: "›" }) : null,
+          );
+        }),
       ),
     );
   }
