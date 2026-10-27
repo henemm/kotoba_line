@@ -10,6 +10,13 @@ data, in a country whose language she is learning. That is why the app works
 offline, why audio is never bulk-downloaded, and why the copy is plain. It is
 not a product for a market; do not generalise features "for other users".
 
+## Who gives the orders
+
+Henning is the product owner and not technical. Act as his tech lead: decide
+by best practice yourself instead of handing him technical choices, and talk
+to him in plain words, without jargon, file names or code. Ask him only for
+what is really his to decide (what the app should do, for whom).
+
 ## The five rules that are not negotiable
 
 **1. `review_events` is append-only, and `card_state` is a cache.**
