@@ -565,7 +565,17 @@ export function queueForUser(db, userId, opts = {}, now = Math.floor(Date.now() 
     // A word and its reverse apart here too (#284).
     groups = siblingsApart(
       {
-        due: inSet(run("AND s.card_id IS NOT NULL AND s.due_at <= ?", "ORDER BY s.due_at ASC", [now + AHEAD_WINDOW_DAYS * DAY])),
+        // Not a card she already answered today: a Nochmal or Schwer leaves
+        // its next due inside the window, and the same card came back on
+        // every tap of Vorausüben (Charlotte, 2026-10-27).
+        due: inSet(
+          run(
+            `AND s.card_id IS NOT NULL AND s.due_at <= ?
+             AND NOT EXISTS (SELECT 1 FROM review_events e WHERE e.user_id = ? AND e.card_id = c.id AND e.reviewed_at >= ?)`,
+            "ORDER BY s.due_at ASC",
+            [now + AHEAD_WINDOW_DAYS * DAY, userId, dayStart],
+          ),
+        ),
         lapsed: [],
         fresh: [],
       },

@@ -1,5 +1,13 @@
 [
   {
+    "version": "v184",
+    "summary": "Vorausüben: Du wählst jetzt selbst, wie du übst – auch „Karten umdrehen“. Und eine Karte, die du heute schon geübt hast, kommt nicht gleich wieder.",
+    "notes": [
+      "Tippe auf „Vorausüben“, dann oben auf die Übung, die du möchtest.",
+      "Karten, die du heute schon beantwortet hast, fehlen beim Vorausüben."
+    ]
+  },
+  {
     "version": "v183",
     "summary": "Weniger Karten auf einmal: Von den Wörtern, die noch nicht sitzen, kommen in jedem Deck nur so viele dran, wie du unter „Höchstens gleichzeitig lernen“ eingestellt hast.",
     "notes": [

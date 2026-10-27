@@ -66,6 +66,9 @@ export function practiseScreen({
   onDrillTopic,
   onChooseSet,
   onChooseWholeDeck,
+  // Vorausüben chooses the set like „Ganzes Deck" does and leaves the way to
+  // her; the offer used to start a session itself, always in „Aussuchen".
+  onChooseAhead,
   // #314: „Höchstens gleichzeitig lernen" is set, so „Ganzes Deck" brings
   // unseen words only as far as the deck has room (server/src/queue.js).
   openLimited = false,
@@ -337,10 +340,14 @@ export function practiseScreen({
     // "If a row has nothing behind it the row is dropped, not disabled." Both
     // counts are the server's own count of the session the row starts, so a
     // row that is shown always has cards behind it (#90).
-    if (ahead > 0) {
+    if (filters?.only === "ahead" && onChooseAhead) {
+      offers.push(
+        offer("✓ Vorausüben ausgewählt", "Tippe oben auf eine Übung. Nochmal tippen: zurück.", () => onChooseAhead(false)),
+      );
+    } else if (ahead > 0) {
       offers.push(
         offer("Vorausüben", `${cards(ahead)} in den nächsten zwei Tagen fällig`, () =>
-          onStart({ only: "ahead" }),
+          onChooseAhead ? onChooseAhead(true) : onStart({ only: "ahead" }),
         ),
       );
     }
@@ -441,7 +448,7 @@ export function practiseScreen({
   function setLine() {
     if (!onChooseSet) return null;
     // „Ganzes Deck" says itself in wholeDeckLine; twice would read as two sets.
-    if (filters?.only === "all") return null;
+    if (filters?.only === "all" || (filters?.only === "ahead" && onChooseAhead)) return null;
     const chosen = !isDefault(filters);
     // #209: the topics were behind "Weitere Auswahl", a name that does not
     // say they are there — Charlotte missed them. Where a deck has topics, the
