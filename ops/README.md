@@ -190,6 +190,35 @@ against what it would actually do, rather than taken on trust.
 
 ## Updating
 
+**Normally nobody does this by hand (#331).** `ops/auto-deploy.sh` runs from
+cron every 5 minutes in its own clone, `~/kotoba_deploy` (always exactly
+`origin/main`). It deploys the newest commit on main once GitHub's CI is green
+for exactly that commit and, if `client/` differs from what is live, the
+shell's `VERSION` has moved. Before an API deploy it copies the database to
+`~/backups/kotoba-pre-deploy/` (last 7 kept) and keeps the running image as
+`kotoba-line-server:previous`; after any deploy it checks the public health
+URL and that the served `sw.js` is the new version. If anything fails, the old
+shell and the old image are put back, the commit is marked failed (not retried
+until a new commit arrives) and Henning gets a Telegram message. A success
+sends a short one too, and stamps `~/backups/kotoba-auto-deploy.success`, which
+henemm-infra's `monitor.sh` (`check_kotoba_auto_deploy`) watches.
+
+```sh
+touch /srv/kotoba/auto-deploy.off     # pause; rm it to go on
+ops/auto-deploy.sh --dry-run          # what it would do right now
+crontab -e                            # remove the auto-deploy line to switch it off
+```
+
+First time (already done on this server): `git clone` into `~/kotoba_deploy`,
+install the script to `/srv/kotoba/bin/`, `ops/status.sh` shows nothing
+pending, `/srv/kotoba/bin/auto-deploy.sh --adopt` once, then the cron line
+`*/5 * * * * /srv/kotoba/bin/auto-deploy.sh >> ~/backups/kotoba-auto-deploy.log 2>&1`.
+What it does **not** replace: the browser tour (`ops/tour`) before merging a
+client change, and the PIN / nginx steps above. Manual deploys still work and
+need no coordination — the script compares files on disk, not its own notes.
+
+By hand, from the repository directory:
+
 From the repository directory (`cd ~/kotoba_line`, or wherever you cloned it):
 
 ```sh
