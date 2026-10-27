@@ -539,8 +539,14 @@ describe("the calendar on the Stats tab (#98)", () => {
     seedCards(db, 12);
     const uid = (n) => `9f8e7d6c-5b4a-4321-8765-${String(n).padStart(12, "0")}`;
 
-    // 23:30 on the 14th in Berlin is already 06:30 on the 15th in Tokyo.
-    const t = Date.parse("2026-09-14T21:30:00Z") / 1000;
+    // 21:30 UTC is late evening in Berlin and already 06:30 the next day in
+    // Tokyo. Relative to today, because the calendar only reaches five weeks
+    // back — a fixed date here stopped being on it (2026-10-27).
+    const evening = new Date(Date.now() - 3 * 86400_000);
+    evening.setUTCHours(21, 30, 0, 0);
+    const t = evening.getTime() / 1000;
+    const berlinDay = evening.toISOString().slice(0, 10);
+    const tokyoDay = new Date(evening.getTime() + 86400_000).toISOString().slice(0, 10);
     ingestEvents(
       db,
       user.id,
@@ -552,10 +558,10 @@ describe("the calendar on the Stats tab (#98)", () => {
       (await app.inject({ method: "GET", url: "/api/stats", headers: { cookie, "x-time-zone": zone } })).json().history;
 
     const berlin = await read("Europe/Berlin");
-    assert.equal(berlin.find((d) => d.day === "2026-09-14")?.reviews, 11);
+    assert.equal(berlin.find((d) => d.day === berlinDay)?.reviews, 11);
     const tokyo = await read("Asia/Tokyo");
-    assert.equal(tokyo.find((d) => d.day === "2026-09-15")?.reviews, 11);
-    assert.equal(tokyo.find((d) => d.day === "2026-09-14")?.reviews ?? 0, 0);
+    assert.equal(tokyo.find((d) => d.day === tokyoDay)?.reviews, 11);
+    assert.equal(tokyo.find((d) => d.day === berlinDay)?.reviews ?? 0, 0);
     await app.close();
   });
 });
