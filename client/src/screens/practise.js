@@ -40,7 +40,7 @@ const START_LABELS = {
   flip: "Karten umdrehen",
 };
 
-function startLabel(mode) {
+export function startLabel(mode) {
   return START_LABELS[mode.key] ?? mode.en;
 }
 

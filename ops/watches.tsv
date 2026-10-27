@@ -13,3 +13,4 @@
 312	2026-09-29	answer_recorded,answer_played,sound_tapped	Spricht Charlotte beim Üben (Mikrofon „Antwort aufnehmen“), hört sie sich an, und tippt sie auf ♪ – vor allem beim Karte-Umdrehen?
 320	2026-10-06	all_cards_shown,all_cards_tapped	Tippt Charlotte „Ganzes Deck üben“ an (seit v182 immer unter den Übungen)?
 314	2026-10-23	words_waiting_shown	Wird die Reihe wartender Wörter kürzer (Zahl hinter dem Deck), und bleibt „100 vokabeln“ bei höchstens ~50 Karten am Tag?
+329	2026-10-27	band_sheet_opened,band_session_started	Tippt Charlotte in der Statistik auf eine Stufe („Gefestigt“ …) und übt sie noch einmal – und in welcher Übungsart?

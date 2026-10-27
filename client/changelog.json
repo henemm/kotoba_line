@@ -1,5 +1,13 @@
 [
   {
+    "version": "v186",
+    "summary": "In der Statistik tippst du jetzt auf „Am Lernen“, „Jung“ oder „Gefestigt“ und übst genau diese Karten noch einmal – in der Übungsart, die du aussuchst.",
+    "notes": [
+      "Statistik, bei „Karten gesehen“: Tippe auf eine Zeile, zum Beispiel „Gefestigt“. Dann wählst du, wie du üben möchtest.",
+      "Es kommen alle Karten dieser Zeile dran, aus allen deinen Decks, auch die, die heute noch nicht fällig sind. Deine Antworten zählen ganz normal."
+    ]
+  },
+  {
     "version": "v185",
     "summary": "Auch bei „Letzte Fehler“ wählst du jetzt selbst, wie du übst – zum Beispiel „Karten umdrehen“.",
     "notes": [

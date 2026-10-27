@@ -773,6 +773,19 @@ describe("the endpoints", () => {
     await app.close();
   });
 
+  it("GET /api/queue accepts the Stats bands, with no deck and with a mode", async () => {
+    const { app, db, config, user } = await fixture();
+    const cookie = await signIn(app, config);
+    const now = Math.floor(Date.now() / 1000);
+    setState(db, user.id, 1, { dueAt: now + 20 * DAY, lastReview: now - 30 * DAY });
+    const res = await app.inject({ method: "GET", url: "/api/queue?only=band_mature&mode=flip", headers: { cookie } });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json().cardIds, [1]);
+    const bad = await app.inject({ method: "GET", url: "/api/queue?only=band_new", headers: { cookie } });
+    assert.equal(bad.statusCode, 400);
+    await app.close();
+  });
+
   it("counts the day in the zone the device sends, and Tokyo without one (#122)", async () => {
     const { app, db, config, user } = await fixture();
     const cookie = await signIn(app, config);
@@ -989,6 +1002,29 @@ describe("a deck's progress in Noji's three bands (#159)", () => {
     assert.deepEqual(queueForUser(db, user.id, { deckKey: "kaishi", tag: "school" }, NOW).progress, answer.progress);
     // Without a deck there is no deck to describe.
     assert.equal(queueForUser(db, user.id, {}, NOW).progress, undefined);
+    db.close();
+  });
+});
+
+describe("practising a Stats band (band_*)", () => {
+  it("brings every card of that band across decks, due or not, and nobody else's", async () => {
+    const { db, user } = await fixture();
+    // Mature: interval 30 days — one due, one not. Young: 5 days. Learning: under a day.
+    setState(db, user.id, 1, { dueAt: NOW - 60, lastReview: NOW - 30 * DAY });
+    setState(db, user.id, 2, { dueAt: NOW + 20 * DAY, lastReview: NOW - 10 * DAY });
+    setState(db, user.id, 35, { dueAt: NOW + 5 * DAY, lastReview: NOW - 30 * DAY });
+    setState(db, user.id, 3, { dueAt: NOW + 3 * DAY, lastReview: NOW - 2 * DAY });
+    setState(db, user.id, 4, { dueAt: NOW + 3600, lastReview: NOW - 3600 });
+    const other = await seedUser(db, { handle: "yui" });
+    setState(db, other.id, 5, { dueAt: NOW + 100 * DAY, lastReview: NOW - 100 * DAY });
+
+    const ids = (only, opts = {}) => queueForUser(db, user.id, { only, ...opts }, NOW).cardIds.sort((a, b) => a - b);
+    assert.deepEqual(ids("band_mature"), [1, 2, 35]);
+    assert.deepEqual(ids("band_young"), [3]);
+    assert.deepEqual(ids("band_learning"), [4]);
+    // The deck scope still narrows it, and a card that rested today is still hers to practise.
+    assert.deepEqual(ids("band_mature", { deckKey: "kaishi" }), [1, 2]);
+    assert.equal(queueForUser(db, user.id, { only: "band_mature" }, NOW).available, 3);
     db.close();
   });
 });
