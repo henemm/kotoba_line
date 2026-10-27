@@ -1,5 +1,12 @@
 [
   {
+    "version": "v185",
+    "summary": "Auch bei „Letzte Fehler“ wählst du jetzt selbst, wie du übst – zum Beispiel „Karten umdrehen“.",
+    "notes": [
+      "Tippe auf „Letzte Fehler“, dann oben auf die Übung, die du möchtest."
+    ]
+  },
+  {
     "version": "v184",
     "summary": "Vorausüben: Du wählst jetzt selbst, wie du übst – auch „Karten umdrehen“. Und eine Karte, die du heute schon geübt hast, kommt nicht gleich wieder.",
     "notes": [

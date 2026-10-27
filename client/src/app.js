@@ -323,8 +323,8 @@ function currentScreen() {
       onDrillTopic: openSheet,
       // #320: „Ganzes Deck üben" chooses the set and leaves the way to her.
       openLimited: state.settings?.maxOpen != null,
-      onChooseAhead: (on) => {
-        keepFilters(on ? { ...DEFAULT_FILTERS, only: "ahead" } : { ...DEFAULT_FILTERS });
+      onChooseOnly: (only) => {
+        keepFilters(only ? { ...DEFAULT_FILTERS, only } : { ...DEFAULT_FILTERS });
         renderApp();
       },
       onChooseWholeDeck: (on) => {
