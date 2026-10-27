@@ -161,7 +161,11 @@ install -m 755 ops/seen.sh /srv/kotoba/bin/seen.sh
 install -m 644 ops/watches.tsv /srv/kotoba/bin/watches.tsv
 install -m 755 ops/device-log.sh /srv/kotoba/bin/device-log.sh
 install -m 755 ops/daily-report.sh /srv/kotoba/bin/daily-report.sh
-echo "  seen.sh, watches.tsv ($(grep -cv '^#' ops/watches.tsv) open watches), device-log.sh, daily-report.sh"
+# The auto-deploy watcher is replaced by a rename, never overwritten: it is
+# very likely the process running this script, and bash reads a file as it goes.
+install -m 755 ops/auto-deploy.sh /srv/kotoba/bin/.auto-deploy.sh.new
+mv -f /srv/kotoba/bin/.auto-deploy.sh.new /srv/kotoba/bin/auto-deploy.sh
+echo "  seen.sh, watches.tsv ($(grep -cv '^#' ops/watches.tsv) open watches), device-log.sh, daily-report.sh, auto-deploy.sh"
 
 say "Checks"
 # These are the three that actually catch a broken deploy, and the third is the

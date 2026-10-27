@@ -191,6 +191,13 @@ version, import columns that are empty, audio nginx cannot read, and prints the
 remaining commands in order. It changes nothing. Prefer it over any instruction
 in prose — including one of mine in a chat message.
 
+**Since #331 a merge to main goes live by itself**, within about 5 minutes of
+CI turning green (`ops/auto-deploy.sh`, cron, its own clone `~/kotoba_deploy`;
+details and the pause file in `ops/README.md`). Do not run `ops/deploy.sh`
+after a merge "to be sure"; look at Telegram (✅ live / 🔴 rolled back) or
+`ops/status.sh`. The tour is still on you *before* merging a client change —
+CI does not run it. Manual deploys below remain valid for trying a branch.
+
 Three places, and they are not the same place:
 
 ```
