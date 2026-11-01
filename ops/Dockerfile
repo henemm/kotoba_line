@@ -26,6 +26,13 @@ ENV NODE_ENV=production \
 # needs its own copy.
 RUN apk add --no-cache ffmpeg
 
+# Security (henemm-security#294): the base image ships npm, whose bundled
+# packages (brace-expansion, picomatch, sigstore, ip-address, pacote) carry
+# known CVEs. Nothing at runtime calls npm - the container starts `node`
+# directly - so it is removed instead of patched.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules
