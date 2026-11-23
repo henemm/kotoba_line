@@ -124,7 +124,11 @@ if $do_api; then
   KOTOBA_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
   KOTOBA_BUILT_AT=$(date +%s)
   export KOTOBA_COMMIT KOTOBA_BUILT_AT
-  $COMPOSE up -d --build
+  # henemm-security#863: --pull fetches the current node:22-alpine, so the
+  # alpine fixes (e.g. libxml2) reach the image. Without it the cached base
+  # and its cached `apk add` layer stay as old as the first build.
+  $COMPOSE build --pull
+  $COMPOSE up -d
 
   # #183: cron runs the word-sound generator from here, not from a clone —
   # ~/kotoba_line is not kept current (CLAUDE.md), and the script must match
