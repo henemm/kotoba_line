@@ -104,7 +104,9 @@ describe("POST /api/events", () => {
         events: [
           ev("good", 1, 3, T0),
           ev("no-such-card", 999, 3, T0),
-          ev("from-the-future", 2, 3, T0 + 400 * DAY),
+          // Relative to the real clock: the server compares with Date.now(), and
+          // T0 + 400 days lay in the past from 2026-11-13 on.
+          ev("from-the-future", 2, 3, Math.floor(Date.now() / 1000) + 400 * DAY),
         ],
       },
     });
