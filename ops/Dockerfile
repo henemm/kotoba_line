@@ -24,7 +24,9 @@ ENV NODE_ENV=production \
 # (server/src/audio-encode.js) shells out to this, the same way the import
 # scripts already do on the host — but this runs *in* the container, which
 # needs its own copy.
-RUN apk add --no-cache ffmpeg
+# henemm-security#863: the alpine base image lags behind alpine's security
+# fixes (libxml2 2.13.9-r2 in Nov 2026); upgrade what it ships.
+RUN apk upgrade --no-cache && apk add --no-cache ffmpeg
 
 # Security (henemm-security#294): the base image ships npm, whose bundled
 # packages (brace-expansion, picomatch, sigstore, ip-address, pacote) carry
