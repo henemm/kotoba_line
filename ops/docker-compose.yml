@@ -12,6 +12,9 @@ services:
       args:
         KOTOBA_COMMIT: ${KOTOBA_COMMIT:-unknown}
         KOTOBA_BUILT_AT: ${KOTOBA_BUILT_AT:-0}
+        # Set by ops/deploy.sh to the build date: refreshes the alpine
+        # packages once a day (henemm-security#870).
+        APK_REFRESH: ${APK_REFRESH:-0}
     image: kotoba-line-server
     restart: unless-stopped
 

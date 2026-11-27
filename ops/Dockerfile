@@ -26,7 +26,13 @@ ENV NODE_ENV=production \
 # needs its own copy.
 # henemm-security#863: the alpine base image lags behind alpine's security
 # fixes (libxml2 2.13.9-r2 in Nov 2026); upgrade what it ships.
-RUN apk upgrade --no-cache && apk add --no-cache ffmpeg
+# henemm-security#870: `build --pull` alone is not enough. When node:22-alpine
+# itself has not changed, Docker reuses this layer from the cache, and the
+# packages stay as old as the first build that day (libxml2 -r3 while alpine
+# shipped -r5). APK_REFRESH is the build date (ops/deploy.sh), so the first
+# deploy of a day fetches current packages and later ones reuse that layer.
+ARG APK_REFRESH=0
+RUN echo "apk refresh $APK_REFRESH" && apk upgrade --no-cache && apk add --no-cache ffmpeg
 
 # Security (henemm-security#294): the base image ships npm, whose bundled
 # packages (brace-expansion, picomatch, sigstore, ip-address, pacote) carry
