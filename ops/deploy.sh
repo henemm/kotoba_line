@@ -123,7 +123,10 @@ if $do_api; then
   # deployed and when is the question that row is there to answer.
   KOTOBA_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
   KOTOBA_BUILT_AT=$(date +%s)
-  export KOTOBA_COMMIT KOTOBA_BUILT_AT
+  # henemm-security#870: the build date busts the cached `apk upgrade` layer
+  # (ops/Dockerfile), so alpine's security fixes arrive with the next deploy.
+  APK_REFRESH=$(date -u +%F)
+  export KOTOBA_COMMIT KOTOBA_BUILT_AT APK_REFRESH
   # henemm-security#863: --pull fetches the current node:22-alpine, so the
   # alpine fixes (e.g. libxml2) reach the image. Without it the cached base
   # and its cached `apk add` layer stay as old as the first build.
